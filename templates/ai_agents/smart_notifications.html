@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Smart Notifications Centre | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Smart Notifications Centre{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel"><p class="eyebrow">Smart Alerts</p><h1>See urgent follow-ups, missing data, and interview-prep risks.</h1><p>The notification centre keeps the tracker operational, not passive.</p>{% include "ai_agents/_agent_nav.html" %}</section>
+    <section class="content-card"><div class="card-header"><p class="eyebrow">Action Queue</p><h2>Current Notifications</h2></div><div class="compact-list">{% for notification in notifications %}<div class="compact-list-item"><div><strong>{{ notification.priority }} — {{ notification.title }}</strong><span>{{ notification.message }} Recommended: {{ notification.recommended_action }}</span></div>{% if notification.related_url %}<a href="{{ notification.related_url }}" class="table-link">Open</a>{% endif %}</div>{% empty %}<div class="empty-state small-empty-state"><h3>No smart notifications.</h3><p>Your key follow-ups, logs, and data quality checks are clear for now.</p></div>{% endfor %}</div></section>
+</div>
+{% endblock %}

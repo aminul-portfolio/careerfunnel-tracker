@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}AI Follow-Up Writer | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}AI Follow-Up Writer{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel"><p class="eyebrow">Follow-Up Message Writer</p><h1>Generate a professional follow-up.</h1><p>Select an application and the agent writes a concise, evidence-based follow-up message.</p>{% include "ai_agents/_agent_nav.html" %}</section>
+    <section class="content-card form-card">
+        <form method="post" class="form-stack">{% csrf_token %}
+            <div class="form-group"><label>Select Application</label>{{ form.application }}</div>
+            <div class="form-actions"><button class="btn btn-primary" type="submit">Generate Follow-Up Message</button></div>
+        </form>
+    </section>
+    {% if draft %}
+    <section class="content-card">
+        <div class="card-header"><p class="eyebrow">Generated Draft</p><h2>{{ selected_application.company_name }} — {{ selected_application.job_title }}</h2><p>{{ draft.reason }}</p></div>
+        <div class="detail-item"><span>Subject</span><strong>{{ draft.subject }}</strong></div>
+        <pre class="agent-draft">{{ draft.body }}</pre>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}AI CV Gap Analyzer | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}AI CV Gap Analyzer{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel"><p class="eyebrow">AI Evidence Match</p><h1>Compare a job description against your CV evidence.</h1><p>Find matched skills, partial matches, gaps, safe keywords, and claims to avoid.</p>{% include "ai_agents/_agent_nav.html" %}</section>
+    <section class="content-card"><form method="post" class="form-stack">{% csrf_token %}<div class="form-group"><label>Job Description</label>{{ form.job_description }}</div><div class="form-group"><label>Your CV / Evidence Text</label>{{ form.cv_evidence }}</div><button class="btn btn-primary" type="submit">Analyze CV Gap</button></form></section>
+    {% if analysis %}
+    <section class="diagnosis-panel diagnosis-primary"><div><p class="eyebrow">CV Match Score</p><h2>{{ analysis.score }} / 100</h2><p>{{ analysis.recommendation }}</p></div><div class="diagnosis-action"><strong>Evidence Rule</strong><p>Use honest evidence only. Do not add tools or experience you cannot explain in interview.</p></div></section>
+    <section class="dashboard-two-column">
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Matched Skills</p><h2>Strong Evidence</h2></div><ul class="workflow-list">{% for item in analysis.matched_skills %}<li>{{ item }}</li>{% empty %}<li>No strong matches detected.</li>{% endfor %}</ul></div>
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Partial / Missing</p><h2>Gaps</h2></div><ul class="workflow-list">{% for item in analysis.partial_matches %}<li>Partial: {{ item }}</li>{% endfor %}{% for item in analysis.missing_skills %}<li>Missing: {{ item }}</li>{% empty %}<li>No major missing skills detected.</li>{% endfor %}</ul></div>
+    </section>
+    <section class="dashboard-two-column">
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Emphasise</p><h2>Your Best Proof</h2></div><ul class="workflow-list">{% for item in analysis.evidence_to_emphasise %}<li>{{ item }}</li>{% empty %}<li>Add more CV evidence text for better mapping.</li>{% endfor %}</ul></div>
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Avoid</p><h2>Claims to Avoid</h2></div><ul class="workflow-list">{% for item in analysis.claims_to_avoid %}<li>{{ item }}</li>{% endfor %}</ul></div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

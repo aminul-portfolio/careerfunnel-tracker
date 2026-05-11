@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}AI Next Best Actions | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}AI Next Best Actions{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel"><p class="eyebrow">Next Best Action Agent</p><h1>Know what to do next.</h1><p>The agent ranks follow-ups, interview prep, missing data, application volume, and funnel diagnosis into practical actions.</p>{% include "ai_agents/_agent_nav.html" %}</section>
+    <section class="content-card">
+        <div class="card-header"><p class="eyebrow">Action Queue</p><h2>Prioritised recommendations</h2></div>
+        <div class="agent-action-list">
+            {% for action in actions %}
+                <article class="agent-action-card">
+                    <span class="badge badge-primary">{{ action.priority }}</span>
+                    <h3>{{ action.title }}</h3>
+                    <p><strong>Reason:</strong> {{ action.reason }}</p>
+                    <p><strong>Recommended action:</strong> {{ action.recommended_action }}</p>
+                    {% if action.related_url %}<a href="{{ action.related_url }}" class="table-link">Open related record</a>{% endif %}
+                </article>
+            {% empty %}
+                <div class="empty-state"><h3>No action recommendations yet.</h3><p>Add more applications, follow-up dates, and interview records.</p></div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

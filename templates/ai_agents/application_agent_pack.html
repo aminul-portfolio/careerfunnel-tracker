@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}AI Agent Pack | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Application AI Pack{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel"><p class="eyebrow">Application AI Pack</p><h1>{{ application.company_name }} — {{ application.job_title }}</h1><p>One page with job fit, CV/project recommendation, follow-up draft, and interview prep.</p>{% include "ai_agents/_agent_nav.html" %}</section>
+    <section class="kpi-grid">
+        <div class="kpi-card"><p>Fit Score</p><h2>{{ analysis.fit_score }}</h2></div>
+        <div class="kpi-card"><p>Recommendation</p><h2 class="small-kpi-text">{{ analysis.recommendation }}</h2></div>
+        <div class="kpi-card"><p>CV</p><h2 class="small-kpi-text">{{ analysis.recommended_cv }}</h2></div>
+        <div class="kpi-card"><p>Top Project</p><h2 class="small-kpi-text">{{ analysis.recommended_projects.0 }}</h2></div>
+    </section>
+    <section class="dashboard-two-column">
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Follow-Up Draft</p><h2>{{ followup.subject }}</h2></div><pre class="agent-draft">{{ followup.body }}</pre></div>
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Interview Prep</p><h2>Profile angle</h2></div><p>{{ prep.profile_angle }}</p><ul class="agent-list">{% for item in prep.preparation_tasks %}<li>{{ item }}</li>{% endfor %}</ul></div>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+<header class="topbar">
+    <div><p class="eyebrow">Track intention vs outcome</p><h2>{% block page_heading %}CareerFunnel Tracker{% endblock %}</h2></div>
+    <div class="topbar-actions">
+        {% if request.user.is_authenticated %}
+            <span class="user-pill">{{ request.user.username }}</span>
+            <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button type="submit" class="btn btn-secondary">Logout</button></form>
+        {% else %}
+            <a href="{% url 'accounts:login' %}" class="btn btn-secondary">Login</a>
+            <a href="{% url 'accounts:register' %}" class="btn btn-primary">Register</a>
+        {% endif %}
+    </div>
+</header>

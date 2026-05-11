@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}CV Version A/B Testing | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}CV Version A/B Testing{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel"><p class="eyebrow">CV Performance Intelligence</p><h1>Compare CV versions by response, interview, and offer rates.</h1><p>This helps you stop guessing which CV works and start using evidence.</p>{% include "ai_agents/_agent_nav.html" %}</section>
+    <section class="content-card"><div class="card-header"><p class="eyebrow">A/B Test Results</p><h2>CV Version Performance</h2></div>{% if rows %}<div class="table-wrap"><table class="data-table"><thead><tr><th>CV Version</th><th>Applications</th><th>Responses</th><th>Interviews</th><th>Offers</th><th>Rejections</th><th>Response Rate</th><th>Interview Rate</th><th>Recommendation</th></tr></thead><tbody>{% for row in rows %}<tr><td><strong>{{ row.cv_version }}</strong></td><td>{{ row.applications }}</td><td>{{ row.responses }}</td><td>{{ row.interviews }}</td><td>{{ row.offers }}</td><td>{{ row.rejections }}</td><td>{{ row.response_rate }}%</td><td>{{ row.interview_rate }}%</td><td>{{ row.recommendation }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state"><h3>No CV version data yet.</h3><p>Add CV versions to applications to activate this report.</p></div>{% endif %}</section>
+</div>
+{% endblock %}

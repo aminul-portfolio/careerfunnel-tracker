@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}AI Weekly Coach | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}AI Weekly Coach{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel"><p class="eyebrow">Weekly Coach Agent</p><h1>{{ report.headline }}</h1><p>The coach reviews activity, funnel diagnosis, follow-ups, and interview momentum to suggest a realistic next-week plan.</p>{% include "ai_agents/_agent_nav.html" %}</section>
+    <section class="diagnosis-panel diagnosis-primary"><div><p class="eyebrow">Current Diagnosis</p><h2>{{ report.diagnosis }}</h2><p>Use this alongside your weekly review. The agent gives a working diagnosis, not a guarantee.</p></div><div class="diagnosis-action"><strong>Main Rule</strong><p>Change one thing next week based on evidence, not emotion.</p></div></section>
+    <section class="dashboard-two-column">
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Wins</p><h2>What is working</h2></div><ul class="agent-list">{% for item in report.wins %}<li>{{ item }}</li>{% endfor %}</ul></div>
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Risks</p><h2>What needs attention</h2></div><ul class="agent-list">{% for item in report.risks %}<li>{{ item }}</li>{% endfor %}</ul></div>
+    </section>
+    <section class="dashboard-two-column">
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Next Week Plan</p><h2>Focus actions</h2></div><ol class="agent-list">{% for item in report.next_week_plan %}<li>{{ item }}</li>{% endfor %}</ol></div>
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Avoid</p><h2>Protect your time</h2></div><ul class="agent-list">{% for item in report.avoid_next_week %}<li>{{ item }}</li>{% endfor %}</ul></div>
+    </section>
+</div>
+{% endblock %}

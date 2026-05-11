@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}AI Agent Hub | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}AI Agent Hub{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel">
+        <p class="eyebrow">Agentic AI Layer</p>
+        <h1>Turn tracker data into next actions.</h1>
+        <p>This local AI-style assistant analyzes job posts, recommends next actions, drafts follow-ups, prepares interview packs, and reviews the week.</p>
+        {% include "ai_agents/_agent_nav.html" %}
+    </section>
+
+    <section class="agent-feature-grid">
+        <article class="agent-card"><h3>AI Job Posting Analyzer</h3><p>Paste a job description and get a fit score, apply/skip recommendation, CV suggestion, and project match.</p><a class="table-link" href="{% url 'ai_agents:job_posting_analyzer' %}">Open analyzer</a></article>
+        <article class="agent-card"><h3>AI Next Best Action Agent</h3><p>Reviews applications, follow-ups, interviews, and funnel diagnosis to decide what deserves attention first.</p><a class="table-link" href="{% url 'ai_agents:next_best_actions' %}">Open next actions</a></article>
+        <article class="agent-card"><h3>AI Follow-Up Message Writer</h3><p>Creates professional follow-up emails based on saved application records.</p><a class="table-link" href="{% url 'ai_agents:followup_writer' %}">Write follow-up</a></article>
+        <article class="agent-card"><h3>AI Interview Prep Generator</h3><p>Builds a prep pack: profile angle, likely questions, projects, STAR examples, and technical topics.</p><a class="table-link" href="{% url 'ai_agents:interview_prep_generator' %}">Generate prep</a></article>
+        <article class="agent-card"><h3>AI Weekly Coach</h3><p>Summarizes wins, risks, and a realistic plan for next week.</p><a class="table-link" href="{% url 'ai_agents:weekly_coach' %}">Open coach</a></article>
+        <article class="agent-card"><h3>AI CV Gap Analyzer</h3><p>Compares a job description against your CV evidence and highlights matched, partial, and missing skills.</p><a class="table-link" href="{% url 'ai_agents:cv_gap_analyzer' %}">Analyze CV gaps</a></article>
+        <article class="agent-card"><h3>AI Cover Letter Quality Checker</h3><p>Scores a draft for role alignment, company relevance, project evidence, and exaggeration risk.</p><a class="table-link" href="{% url 'ai_agents:cover_letter_quality_checker' %}">Check cover letter</a></article>
+        <article class="agent-card"><h3>AI Rejection Pattern Analyzer</h3><p>Finds patterns in rejected and auto-rejected applications so you can adjust targeting.</p><a class="table-link" href="{% url 'ai_agents:rejection_pattern_analyzer' %}">Analyze rejections</a></article>
+        <article class="agent-card"><h3>CV Version A/B Testing</h3><p>Compares CV versions by response, interview, offer, and rejection rates.</p><a class="table-link" href="{% url 'ai_agents:cv_ab_testing' %}">Compare CVs</a></article>
+        <article class="agent-card"><h3>Smart Notifications Centre</h3><p>Shows overdue follow-ups, missing CV versions, missing logs, and interview prep risks.</p><a class="table-link" href="{% url 'ai_agents:smart_notifications' %}">Open notifications</a></article>
+    </section>
+
+    <section class="content-card">
+        <div class="card-header"><p class="eyebrow">Top Suggested Actions</p><h2>What the agent sees now</h2></div>
+        <div class="compact-list">
+            {% for action in actions %}
+                <div class="compact-list-item">
+                    <div><strong>{{ action.priority }} — {{ action.title }}</strong><span>{{ action.reason }}</span></div>
+                    {% if action.related_url %}<a href="{{ action.related_url }}" class="table-link">Open</a>{% endif %}
+                </div>
+            {% empty %}
+                <div class="empty-state small-empty-state"><h3>No actions yet.</h3><p>Add applications, follow-ups, and interviews to activate the agent.</p></div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

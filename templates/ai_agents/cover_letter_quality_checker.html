@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}AI Cover Letter Quality Checker | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}AI Cover Letter Quality Checker{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel"><p class="eyebrow">AI Application Quality</p><h1>Check whether your cover letter is specific, evidence-based, and role-aligned.</h1><p>The checker scores company relevance, role fit, project evidence, business value, length, and exaggeration risk.</p>{% include "ai_agents/_agent_nav.html" %}</section>
+    <section class="content-card"><form method="post" class="form-stack">{% csrf_token %}<div class="form-grid"><div class="form-group"><label>Company</label>{{ form.company_name }}</div><div class="form-group"><label>Job Title</label>{{ form.job_title }}</div></div><div class="form-group"><label>Job Description</label>{{ form.job_description }}</div><div class="form-group"><label>Cover Letter Draft</label>{{ form.cover_letter }}</div><button class="btn btn-primary" type="submit">Check Cover Letter</button></form></section>
+    {% if result %}
+    <section class="diagnosis-panel diagnosis-primary"><div><p class="eyebrow">Quality Score</p><h2>{{ result.score }} / 100 — {{ result.quality_label }}</h2><p>{{ result.evidence_warning }}</p></div><div class="diagnosis-action"><strong>Best Fix</strong><p>{% if result.recommended_fixes %}{{ result.recommended_fixes.0 }}{% else %}This draft is already in reasonable shape.{% endif %}</p></div></section>
+    <section class="dashboard-two-column"><div class="content-card"><div class="card-header"><p class="eyebrow">Strengths</p><h2>What Works</h2></div><ul class="workflow-list">{% for item in result.strengths %}<li>{{ item }}</li>{% empty %}<li>No clear strengths detected yet.</li>{% endfor %}</ul></div><div class="content-card"><div class="card-header"><p class="eyebrow">Weaknesses</p><h2>What to Improve</h2></div><ul class="workflow-list">{% for item in result.weaknesses %}<li>{{ item }}</li>{% empty %}<li>No major weakness detected.</li>{% endfor %}</ul></div></section>
+    <section class="content-card"><div class="card-header"><p class="eyebrow">Recommended Fixes</p><h2>Before Sending</h2></div><ul class="workflow-list">{% for item in result.recommended_fixes %}<li>{{ item }}</li>{% empty %}<li>Only final proofread needed.</li>{% endfor %}</ul></section>
+    {% endif %}
+</div>
+{% endblock %}

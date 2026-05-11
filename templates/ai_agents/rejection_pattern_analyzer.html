@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}AI Rejection Pattern Analyzer | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}AI Rejection Pattern Analyzer{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel"><p class="eyebrow">AI Learning Loop</p><h1>Turn rejections into targeting intelligence.</h1><p>Analyze rejected and auto-rejected applications by CV version, source, role signals, and likely causes.</p>{% include "ai_agents/_agent_nav.html" %}</section>
+    <section class="diagnosis-panel diagnosis-warning"><div><p class="eyebrow">Pattern Report</p><h2>{{ report.headline }}</h2><p>Total rejected records: {{ report.total_rejections }}</p></div><div class="diagnosis-action"><strong>Primary Recommendation</strong><p>{% if report.recommendations %}{{ report.recommendations.0 }}{% endif %}</p></div></section>
+    <section class="dashboard-two-column"><div class="content-card"><div class="card-header"><p class="eyebrow">Detected Patterns</p><h2>Signals</h2></div><ul class="workflow-list">{% for item in report.patterns %}<li>{{ item }}</li>{% endfor %}</ul></div><div class="content-card"><div class="card-header"><p class="eyebrow">Likely Causes</p><h2>Possible Reasons</h2></div><ul class="workflow-list">{% for item in report.likely_causes %}<li>{{ item }}</li>{% endfor %}</ul></div></section>
+    <section class="dashboard-two-column"><div class="content-card"><div class="card-header"><p class="eyebrow">Highest Risk</p><h2>CV / Source / Role Terms</h2></div><ul class="workflow-list">{% for item in report.highest_risk_cv_versions %}<li>CV: {{ item }}</li>{% endfor %}{% for item in report.highest_risk_sources %}<li>Source: {{ item }}</li>{% endfor %}{% for item in report.highest_risk_role_terms %}<li>Role signal: {{ item }}</li>{% endfor %}</ul></div><div class="content-card"><div class="card-header"><p class="eyebrow">Actions</p><h2>What to Change</h2></div><ul class="workflow-list">{% for item in report.recommendations %}<li>{{ item }}</li>{% endfor %}</ul></div></section>
+</div>
+{% endblock %}

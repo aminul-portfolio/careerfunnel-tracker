@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}{{ page_title }}{% endblock %}
+{% block content %}
+<div class="content-card form-card">
+    <div class="card-header"><p class="eyebrow">Application Record</p><h1>{{ page_title }}</h1><p>Capture the full application lifecycle: fit evidence, readiness, follow-up plan, CV version, and next action.</p></div>
+    <form method="post" class="form-stack">{% csrf_token %}
+        {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
+        <div class="form-section"><h2>Job Details</h2><div class="form-grid">
+            <div class="form-group"><label>Company Name</label>{{ form.company_name }}{{ form.company_name.errors }}</div>
+            <div class="form-group"><label>Job Title</label>{{ form.job_title }}{{ form.job_title.errors }}</div>
+            <div class="form-group form-wide"><label>Job URL</label>{{ form.job_url }}{{ form.job_url.errors }}</div>
+            <div class="form-group"><label>Location</label>{{ form.location }}{{ form.location.errors }}</div>
+            <div class="form-group"><label>Work Type</label>{{ form.work_type }}{{ form.work_type.errors }}</div>
+            <div class="form-group"><label>Salary Range</label>{{ form.salary_range }}{{ form.salary_range.errors }}</div>
+            <div class="form-group"><label>Source</label>{{ form.source }}{{ form.source.errors }}</div>
+            <div class="form-group"><label>Role Fit</label>{{ form.role_fit }}{{ form.role_fit.errors }}</div>
+            <div class="form-group"><label>Experience Level</label>{{ form.experience_level }}{{ form.experience_level.errors }}</div>
+        </div></div>
+        <div class="form-section"><h2>Smart Fit Inputs</h2><div class="form-grid">
+            <div class="form-group"><label>Required Skills</label>{{ form.required_skills }}{{ form.required_skills.errors }}</div>
+            <div class="form-group"><label>Job Description / Requirements</label>{{ form.job_description }}{{ form.job_description.errors }}</div>
+        </div></div>
+        <div class="form-section"><h2>Lifecycle Status</h2><div class="form-grid">
+            <div class="form-group"><label>Date Applied</label>{{ form.date_applied }}{{ form.date_applied.errors }}</div>
+            <div class="form-group"><label>Status</label>{{ form.status }}{{ form.status.errors }}</div>
+            <div class="form-group"><label>Pipeline Stage</label>{{ form.pipeline_stage }}{{ form.pipeline_stage.errors }}</div>
+            <div class="form-group"><label>Response Date</label>{{ form.response_date }}{{ form.response_date.errors }}</div>
+        </div></div>
+        <div class="form-section"><h2>Application Readiness</h2><div class="form-grid">
+            <div class="form-group"><label>CV Version</label>{{ form.cv_version }}{{ form.cv_version.errors }}</div>
+            <div class="form-group"><label>Cover Letter Version</label>{{ form.cover_letter_version }}{{ form.cover_letter_version.errors }}</div>
+            <div class="checkbox-group form-wide">{{ form.is_cv_tailored }} <label>CV tailored for this role</label></div>
+            <div class="checkbox-group form-wide">{{ form.is_cover_letter_tailored }} <label>Cover letter tailored</label></div>
+            <div class="checkbox-group form-wide">{{ form.portfolio_project_included }} <label>Portfolio project included or referenced</label></div>
+            <div class="checkbox-group form-wide">{{ form.company_researched }} <label>Company researched</label></div>
+        </div></div>
+        <div class="form-section"><h2>Follow-Up Plan</h2><div class="form-grid">
+            <div class="form-group"><label>Follow-up Date</label>{{ form.follow_up_date }}{{ form.follow_up_date.errors }}</div>
+            <div class="form-group"><label>Follow-up Status</label>{{ form.follow_up_status }}{{ form.follow_up_status.errors }}</div>
+            <div class="form-group"><label>Last Contacted Date</label>{{ form.last_contacted_date }}{{ form.last_contacted_date.errors }}</div>
+            <div class="form-group"><label>Next Action</label>{{ form.next_action }}{{ form.next_action.errors }}</div>
+        </div></div>
+        <div class="form-section"><h2>Contact</h2><div class="form-grid">
+            <div class="form-group"><label>Contact Name</label>{{ form.contact_name }}{{ form.contact_name.errors }}</div>
+            <div class="form-group"><label>Contact Email</label>{{ form.contact_email }}{{ form.contact_email.errors }}</div>
+        </div></div>
+        <div class="form-section"><h2>Notes</h2><div class="form-group"><label>Notes</label>{{ form.notes }}{{ form.notes.errors }}</div></div>
+        <div class="form-actions"><button type="submit" class="btn btn-primary">{{ submit_label }}</button><a href="{% url 'applications:application_list' %}" class="btn btn-secondary">Cancel</a></div>
+    </form>
+</div>
+{% endblock %}

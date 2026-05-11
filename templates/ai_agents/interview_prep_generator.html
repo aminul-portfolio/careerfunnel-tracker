@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}AI Interview Prep Generator | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}AI Interview Prep Generator{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel"><p class="eyebrow">Interview Prep Generator</p><h1>Create a structured prep pack.</h1><p>Select an application and generate a role-specific preparation plan.</p>{% include "ai_agents/_agent_nav.html" %}</section>
+    <section class="content-card form-card">
+        <form method="post" class="form-stack">{% csrf_token %}
+            <div class="form-group"><label>Select Application</label>{{ form.application }}</div>
+            <div class="form-actions"><button class="btn btn-primary" type="submit">Generate Interview Prep</button></div>
+        </form>
+    </section>
+    {% if prep %}
+    <section class="content-card"><div class="card-header"><p class="eyebrow">Profile Angle</p><h2>{{ selected_application.company_name }} — {{ selected_application.job_title }}</h2></div><p class="note-text">{{ prep.profile_angle }}</p></section>
+    <section class="dashboard-two-column">
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Projects</p><h2>Use these as evidence</h2></div><ol class="agent-list">{% for item in prep.projects_to_use %}<li>{{ item }}</li>{% endfor %}</ol></div>
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Technical Topics</p><h2>Revise before interview</h2></div><ul class="agent-list">{% for item in prep.technical_topics %}<li>{{ item }}</li>{% endfor %}</ul></div>
+    </section>
+    <section class="dashboard-two-column">
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Likely Questions</p><h2>Prepare answers</h2></div><ul class="agent-list">{% for item in prep.likely_questions %}<li>{{ item }}</li>{% endfor %}</ul></div>
+        <div class="content-card"><div class="card-header"><p class="eyebrow">STAR Examples</p><h2>Evidence stories</h2></div><ul class="agent-list">{% for item in prep.star_examples %}<li>{{ item }}</li>{% endfor %}</ul></div>
+    </section>
+    <section class="dashboard-two-column">
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Questions to Ask</p><h2>Employer questions</h2></div><ul class="agent-list">{% for item in prep.questions_to_ask %}<li>{{ item }}</li>{% endfor %}</ul></div>
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Prep Tasks</p><h2>Checklist</h2></div><ul class="agent-list">{% for item in prep.preparation_tasks %}<li>{{ item }}</li>{% endfor %}</ul></div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
