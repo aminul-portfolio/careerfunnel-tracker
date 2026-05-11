@@ -7,7 +7,6 @@ from django.utils import timezone
 
 from apps.applications.choices import FollowUpStatus, WorkType
 from apps.applications.models import JobApplication
-from apps.interviews.models import InterviewPrep
 
 from .services import (
     analyze_job_posting,
@@ -43,6 +42,39 @@ class AiAgentServiceTests(TestCase):
         )
         self.assertGreaterEqual(analysis.fit_score, 70)
         self.assertIn("Finance", analysis.recommended_cv)
+
+    def test_analytics_engineer_with_learning_targets_is_not_auto_rejected(self):
+        analysis = analyze_job_posting(
+            company_name="Test Company",
+            job_title="Junior Analytics Engineer",
+            location="Hybrid London",
+            job_posting=(
+                "We need SQL, Python, dbt, Airflow, dashboards and stakeholder reporting. "
+                "This is suitable for 1-2 years experience."
+            ),
+        )
+
+        self.assertGreaterEqual(analysis.fit_score, 60)
+        self.assertNotIn("dbt", analysis.deal_breakers)
+        self.assertNotIn("airflow", analysis.deal_breakers)
+        self.assertTrue(any("Learning-target tools detected" in risk for risk in analysis.risks))
+        self.assertTrue(any("AE/DE stretch target" in risk for risk in analysis.risks))
+
+    def test_true_deal_breakers_still_reduce_score(self):
+        analysis = analyze_job_posting(
+            company_name="Risk Bank",
+            job_title="Senior Data Analyst",
+            location="London",
+            job_posting=(
+                "This role requires SC clearance, ACCA, SQL, Python, and 10+ years "
+                "of experience."
+            ),
+        )
+
+        self.assertIn("sc clearance", analysis.deal_breakers)
+        self.assertIn("acca", analysis.deal_breakers)
+        self.assertLess(analysis.fit_score, 60)
+        self.assertTrue(any("Hard requirement or deal-breaker" in risk for risk in analysis.risks))
 
     def test_next_best_actions_includes_followup(self):
         actions = build_next_best_actions(self.user)
@@ -138,6 +170,7 @@ class AdvancedAiAgentFeatureTests(TestCase):
 
     def test_cv_gap_analyzer_service(self):
         from .services import analyze_cv_gap
+
         analysis = analyze_cv_gap(
             job_description="Python SQL Excel dashboard reporting dbt Snowflake",
             cv_evidence="Python Excel dashboard reporting Django projects",
@@ -147,27 +180,34 @@ class AdvancedAiAgentFeatureTests(TestCase):
 
     def test_cover_letter_quality_service(self):
         from .services import check_cover_letter_quality
+
         result = check_cover_letter_quality(
             company_name="Test Co",
             job_title="Data Analyst",
             job_description="Reporting dashboard KPI analysis",
-            cover_letter="Dear Test Co, I am applying for the Data Analyst role. My BakeOps project shows KPI reporting and dashboard analysis.",
+            cover_letter=(
+                "Dear Test Co, I am applying for the Data Analyst role. "
+                "My BakeOps project shows KPI reporting and dashboard analysis."
+            ),
         )
         self.assertGreaterEqual(result.score, 50)
 
     def test_rejection_pattern_report_builds(self):
         from .services import analyze_rejection_patterns
+
         report = analyze_rejection_patterns(self.user)
         self.assertEqual(report.total_rejections, 1)
         self.assertTrue(report.recommendations)
 
     def test_cv_ab_testing_rows_build(self):
         from .services import build_cv_ab_testing_rows
+
         rows = build_cv_ab_testing_rows(self.user)
         self.assertEqual(rows[0].cv_version, "AE_CV_v1")
 
     def test_smart_notifications_build(self):
         from .services import build_smart_notifications
+
         notifications = build_smart_notifications(self.user)
         self.assertTrue(any("daily log" in n.title.lower() or "missing" in n.title.lower() for n in notifications))
 
@@ -185,21 +225,27 @@ class AdvancedAiAgentViewTests(TestCase):
 
     def test_cv_gap_analyzer_view(self):
         self.client.login(username="advancedview", password="StrongPass12345")
-        response = self.client.post(reverse("ai_agents:cv_gap_analyzer"), {
-            "job_description": "Python SQL Excel dashboard reporting",
-            "cv_evidence": "Python Excel dashboard reporting",
-        })
+        response = self.client.post(
+            reverse("ai_agents:cv_gap_analyzer"),
+            {
+                "job_description": "Python SQL Excel dashboard reporting",
+                "cv_evidence": "Python Excel dashboard reporting",
+            },
+        )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "CV Match Score")
 
     def test_cover_letter_quality_checker_view(self):
         self.client.login(username="advancedview", password="StrongPass12345")
-        response = self.client.post(reverse("ai_agents:cover_letter_quality_checker"), {
-            "company_name": "Test Co",
-            "job_title": "Data Analyst",
-            "job_description": "KPI dashboard reporting",
-            "cover_letter": "Dear Test Co, I am applying for the Data Analyst role. BakeOps shows KPI dashboard reporting.",
-        })
+        response = self.client.post(
+            reverse("ai_agents:cover_letter_quality_checker"),
+            {
+                "company_name": "Test Co",
+                "job_title": "Data Analyst",
+                "job_description": "KPI dashboard reporting",
+                "cover_letter": "Dear Test Co, I am applying for the Data Analyst role. BakeOps shows KPI dashboard reporting.",
+            },
+        )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Quality Score")
 

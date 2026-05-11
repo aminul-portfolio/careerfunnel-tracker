@@ -12,7 +12,7 @@ from apps.interviews.models import InterviewPrep
 from apps.metrics.services import build_funnel_metrics, diagnose_funnel, safe_percentage
 from apps.weekly_review.models import WeeklyReview
 
-TARGET_TITLES = [
+TARGET_TITLES_IMMEDIATE = [
     "data analyst",
     "junior data analyst",
     "graduate data analyst",
@@ -23,10 +23,78 @@ TARGET_TITLES = [
     "finance data analyst",
     "operations data analyst",
 ]
-SENIOR_SIGNALS = ["senior", "lead", "principal", "head of", "manager", "5+ years", "minimum 5", "3+ years", "minimum 3"]
-LOCATION_SIGNALS = ["london", "croydon", "south london", "remote uk", "hybrid london", "purley"]
-CORE_SKILLS = ["python", "sql", "excel", "reporting", "dashboard", "power bi", "analytics", "pandas", "etl", "kpi", "stakeholder", "finance", "reconciliation"]
-DEAL_BREAKERS = ["dbt required", "spark", "kafka", "airflow", "aws redshift", "sc clearance", "dv clearance", "cima", "acca", "aca"]
+
+TARGET_TITLES_AE_STRETCH = [
+    "analytics engineer",
+    "junior analytics engineer",
+    "graduate analytics engineer",
+    "data engineer",
+    "junior data engineer",
+    "analytics platform engineer",
+]
+
+SENIOR_SIGNALS = [
+    "senior",
+    "lead",
+    "principal",
+    "head of",
+    "manager",
+    "5+ years",
+    "minimum 5",
+    "3+ years",
+    "minimum 3",
+]
+
+LOCATION_SIGNALS = [
+    "london",
+    "croydon",
+    "south london",
+    "remote uk",
+    "hybrid london",
+    "purley",
+]
+
+CORE_SKILLS = [
+    "python",
+    "sql",
+    "excel",
+    "reporting",
+    "dashboard",
+    "power bi",
+    "analytics",
+    "pandas",
+    "etl",
+    "kpi",
+    "stakeholder",
+    "finance",
+    "reconciliation",
+]
+
+DEAL_BREAKERS = [
+    "sc clearance",
+    "dv clearance",
+    "security clearance",
+    "cima",
+    "acca",
+    "aca",
+    "10+ years",
+    "ten years",
+    "principal",
+    "head of data",
+    "director",
+]
+
+LEARNING_TARGETS = [
+    "dbt",
+    "airflow",
+    "spark",
+    "kafka",
+    "snowflake",
+    "bigquery",
+    "aws redshift",
+    "redshift",
+    "databricks",
+]
 
 
 @dataclass(frozen=True)
@@ -90,8 +158,11 @@ def analyze_job_posting(company_name: str, job_title: str, location: str, job_po
     score = 0
     risks: list[str] = []
 
-    if any(title in text for title in TARGET_TITLES):
+    if any(title in text for title in TARGET_TITLES_IMMEDIATE):
         score += 25
+    elif any(title in text for title in TARGET_TITLES_AE_STRETCH):
+        score += 15
+        risks.append("This looks like an AE/DE stretch target; check tool gaps before applying.")
     else:
         risks.append("Role title is not clearly one of the preferred junior data/reporting/BI targets.")
 
@@ -114,11 +185,20 @@ def analyze_job_posting(company_name: str, job_title: str, location: str, job_po
     score += min(25, len(matched_skills) * 4)
 
     found_deal_breakers = [breaker for breaker in DEAL_BREAKERS if breaker in text]
+    found_learning_targets = [target for target in LEARNING_TARGETS if target in text]
+
     if found_deal_breakers:
         score -= 25
         risks.append("Hard requirement or deal-breaker signals detected.")
     else:
         score += 10
+
+    if found_learning_targets:
+        risks.append(
+            "Learning-target tools detected: "
+            + ", ".join(sorted(set(found_learning_targets)))
+            + ". Treat these as gaps to check, not automatic deal-breakers."
+        )
 
     if any(signal in text for signal in SENIOR_SIGNALS):
         score -= 15

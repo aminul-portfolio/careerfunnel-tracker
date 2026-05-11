@@ -54,11 +54,13 @@ class RoleFit(models.TextChoices):
 
 
 class ApplicationSource(models.TextChoices):
+    REED = "reed", "Reed.co.uk"
     LINKEDIN = "linkedin", "LinkedIn"
     INDEED = "indeed", "Indeed"
     GLASSDOOR = "glassdoor", "Glassdoor"
     WELCOME_TO_THE_JUNGLE = "welcome_to_the_jungle", "Welcome to the Jungle"
-    COMPANY_WEBSITE = "company_website", "Company website"
+    COMPANY_WEBSITE = "company_website", "Company Website"
     RECRUITER = "recruiter", "Recruiter"
     REFERRAL = "referral", "Referral"
+    BOOKMARKLET = "bookmarklet", "Bookmarklet"
     OTHER = "other", "Other"
