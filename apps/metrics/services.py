@@ -3,7 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 
-from apps.applications.choices import ApplicationStatus
+from django.db.models import CharField, Count, Q, Value
+from django.db.models.functions import Coalesce, NullIf, Trim
+
+from apps.applications.choices import ApplicationSource, ApplicationStatus
 from apps.applications.models import JobApplication
 from apps.daily_log.models import DailyLog
 from apps.weekly_review.choices import FunnelDiagnosis
@@ -39,6 +42,19 @@ class FunnelMetrics:
 
 
 @dataclass(frozen=True)
+class SourceROIRow:
+    source: str
+    source_label: str
+    total_applications: int
+    responses: int
+    interviews: int
+    offers: int
+    response_rate: float
+    interview_rate: float
+    offer_rate: float
+
+
+@dataclass(frozen=True)
 class FunnelDiagnosisResult:
     diagnosis_code: str
     diagnosis_label: str
@@ -52,6 +68,69 @@ def safe_percentage(numerator: int, denominator: int) -> float:
     if denominator == 0:
         return 0.0
     return round((numerator / denominator) * 100, 2)
+
+
+_RESPONSE_STATUSES = (
+    ApplicationStatus.ACKNOWLEDGED,
+    ApplicationStatus.SCREENING_CALL,
+    ApplicationStatus.TECHNICAL_SCREEN,
+    ApplicationStatus.INTERVIEW,
+    ApplicationStatus.OFFER,
+    ApplicationStatus.REJECTED,
+    ApplicationStatus.AUTO_REJECTED,
+)
+_INTERVIEW_STATUSES = (ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER)
+
+
+def _source_choice_label(code: str) -> str:
+    try:
+        return ApplicationSource(code).label
+    except ValueError:
+        return code or ApplicationSource.OTHER.label
+
+
+def build_source_roi(user) -> list[SourceROIRow]:
+    response_q = Q(status__in=_RESPONSE_STATUSES)
+    interview_q = Q(status__in=_INTERVIEW_STATUSES)
+    offer_q = Q(status=ApplicationStatus.OFFER)
+    normalized_source = Coalesce(
+        NullIf(Trim("source"), Value("", output_field=CharField())),
+        Value(ApplicationSource.OTHER.value, output_field=CharField()),
+        output_field=CharField(max_length=40),
+    )
+    groups = (
+        JobApplication.objects.filter(user=user)
+        .annotate(_roi_source=normalized_source)
+        .values("_roi_source")
+        .annotate(
+            total_applications=Count("id"),
+            responses=Count("id", filter=response_q),
+            interviews=Count("id", filter=interview_q),
+            offers=Count("id", filter=offer_q),
+        )
+    )
+    rows: list[SourceROIRow] = []
+    for row in groups:
+        code = row["_roi_source"]
+        total = row["total_applications"]
+        responses = row["responses"]
+        interviews = row["interviews"]
+        offers = row["offers"]
+        rows.append(
+            SourceROIRow(
+                source=code,
+                source_label=_source_choice_label(code),
+                total_applications=total,
+                responses=responses,
+                interviews=interviews,
+                offers=offers,
+                response_rate=safe_percentage(responses, total),
+                interview_rate=safe_percentage(interviews, total),
+                offer_rate=safe_percentage(offers, total),
+            )
+        )
+    rows.sort(key=lambda r: (-r.response_rate, -r.interview_rate, -r.total_applications))
+    return rows
 
 
 def build_funnel_metrics(user) -> FunnelMetrics:

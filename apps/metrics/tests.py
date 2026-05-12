@@ -5,11 +5,11 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.applications.choices import ApplicationStatus
+from apps.applications.choices import ApplicationSource, ApplicationStatus
 from apps.applications.models import JobApplication
 from apps.daily_log.models import DailyLog
 
-from .services import build_funnel_metrics, diagnose_funnel, safe_percentage
+from .services import build_funnel_metrics, build_source_roi, diagnose_funnel, safe_percentage
 
 
 class MetricsServiceTests(TestCase):
@@ -47,6 +47,97 @@ class MetricsServiceTests(TestCase):
     def test_diagnosis_without_applications(self):
         diagnosis = diagnose_funnel(build_funnel_metrics(self.user))
         self.assertEqual(diagnosis.diagnosis_label, "Unknown / not enough data")
+
+
+class SourceROIAnalyticsTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="roi_user", password="StrongPass12345")
+
+    def _create_app(self, **kwargs):
+        defaults = {
+            "user": self.user,
+            "company_name": "Acme",
+            "job_title": "Analyst",
+            "date_applied": date(2026, 5, 1),
+            "status": ApplicationStatus.SUBMITTED,
+            "source": ApplicationSource.OTHER,
+        }
+        defaults.update(kwargs)
+        return JobApplication.objects.create(**defaults)
+
+    def test_build_source_roi_empty_returns_empty_list(self):
+        self.assertEqual(build_source_roi(self.user), [])
+
+    def test_build_source_roi_groups_by_source(self):
+        self._create_app(source=ApplicationSource.LINKEDIN, company_name="A")
+        self._create_app(source=ApplicationSource.LINKEDIN, company_name="B")
+        self._create_app(source=ApplicationSource.INDEED, company_name="C")
+        rows = build_source_roi(self.user)
+        self.assertEqual(len(rows), 2)
+        by_source = {r.source: r for r in rows}
+        self.assertEqual(by_source[ApplicationSource.LINKEDIN].total_applications, 2)
+        self.assertEqual(by_source[ApplicationSource.LINKEDIN].source_label, "LinkedIn")
+        self.assertEqual(by_source[ApplicationSource.INDEED].total_applications, 1)
+        self.assertEqual(by_source[ApplicationSource.INDEED].source_label, "Indeed")
+
+    def test_build_source_roi_response_rate(self):
+        self._create_app(source=ApplicationSource.REED, company_name="C1", status=ApplicationStatus.SUBMITTED)
+        self._create_app(source=ApplicationSource.REED, company_name="C2", status=ApplicationStatus.SUBMITTED)
+        self._create_app(source=ApplicationSource.REED, company_name="C3", status=ApplicationStatus.ACKNOWLEDGED)
+        self._create_app(source=ApplicationSource.REED, company_name="C4", status=ApplicationStatus.AUTO_REJECTED)
+        rows = build_source_roi(self.user)
+        reed = next(r for r in rows if r.source == ApplicationSource.REED)
+        self.assertEqual(reed.responses, 2)
+        self.assertEqual(reed.total_applications, 4)
+        self.assertEqual(reed.response_rate, 50.0)
+
+    def test_build_source_roi_interview_rate_counts_interview_and_offer(self):
+        self._create_app(source=ApplicationSource.GLASSDOOR, company_name="G1", status=ApplicationStatus.SUBMITTED)
+        self._create_app(source=ApplicationSource.GLASSDOOR, company_name="G2", status=ApplicationStatus.INTERVIEW)
+        self._create_app(source=ApplicationSource.GLASSDOOR, company_name="G3", status=ApplicationStatus.INTERVIEW)
+        self._create_app(source=ApplicationSource.GLASSDOOR, company_name="G4", status=ApplicationStatus.OFFER)
+        self._create_app(source=ApplicationSource.GLASSDOOR, company_name="G5", status=ApplicationStatus.ACKNOWLEDGED)
+        rows = build_source_roi(self.user)
+        g = next(r for r in rows if r.source == ApplicationSource.GLASSDOOR)
+        self.assertEqual(g.interviews, 3)
+        self.assertEqual(g.total_applications, 5)
+        self.assertEqual(g.interview_rate, 60.0)
+
+    def test_build_source_roi_offer_rate(self):
+        self._create_app(source=ApplicationSource.REFERRAL, company_name="R1", status=ApplicationStatus.OFFER)
+        self._create_app(source=ApplicationSource.REFERRAL, company_name="R2", status=ApplicationStatus.INTERVIEW)
+        self._create_app(source=ApplicationSource.REFERRAL, company_name="R3", status=ApplicationStatus.SUBMITTED)
+        self._create_app(source=ApplicationSource.REFERRAL, company_name="R4", status=ApplicationStatus.SUBMITTED)
+        rows = build_source_roi(self.user)
+        ref = next(r for r in rows if r.source == ApplicationSource.REFERRAL)
+        self.assertEqual(ref.offers, 1)
+        self.assertEqual(ref.offer_rate, 25.0)
+
+    def test_build_source_roi_blank_source_normalizes_to_other_bucket(self):
+        JobApplication.objects.create(
+            user=self.user,
+            company_name="BlankCo",
+            job_title="Role",
+            date_applied=date(2026, 5, 2),
+            status=ApplicationStatus.SUBMITTED,
+            source="",
+        )
+        self._create_app(source=ApplicationSource.OTHER, company_name="OtherCo")
+        rows = build_source_roi(self.user)
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(row.source, ApplicationSource.OTHER)
+        self.assertEqual(row.total_applications, 2)
+
+    def test_build_source_roi_sorts_by_response_then_interview_then_volume(self):
+        self._create_app(source=ApplicationSource.LINKEDIN, company_name="L1", status=ApplicationStatus.ACKNOWLEDGED)
+        self._create_app(source=ApplicationSource.LINKEDIN, company_name="L2", status=ApplicationStatus.ACKNOWLEDGED)
+        self._create_app(source=ApplicationSource.INDEED, company_name="I1", status=ApplicationStatus.SUBMITTED)
+        self._create_app(source=ApplicationSource.INDEED, company_name="I2", status=ApplicationStatus.SUBMITTED)
+        self._create_app(source=ApplicationSource.INDEED, company_name="I3", status=ApplicationStatus.SUBMITTED)
+        self._create_app(source=ApplicationSource.INDEED, company_name="I4", status=ApplicationStatus.SUBMITTED)
+        rows = build_source_roi(self.user)
+        self.assertEqual([r.source for r in rows], [ApplicationSource.LINKEDIN, ApplicationSource.INDEED])
 
 
 class MetricsViewTests(TestCase):
