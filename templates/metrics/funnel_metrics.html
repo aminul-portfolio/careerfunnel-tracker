@@ -1,1 +1,175 @@
-{% extends "base.html" %}{% block title %}Funnel Metrics | CareerFunnel Tracker{% endblock %}{% block page_heading %}Funnel Metrics{% endblock %}{% block content %}<div class="dashboard-grid"><section class="hero-panel"><p class="eyebrow">Funnel Intelligence</p><h1>See where the job-search funnel is leaking.</h1><p>This page converts your application records, daily logs, and weekly reviews into a diagnosis.</p></section><section class="diagnosis-panel {{ diagnosis_panel_class }}"><div><p class="eyebrow">Current Diagnosis</p><h2>{{ diagnosis.diagnosis_title }}</h2><p>{{ diagnosis.explanation }}</p></div><div class="diagnosis-action"><strong>Recommended Action</strong><p>{{ diagnosis.recommended_action }}</p></div></section><section class="kpi-grid"><div class="kpi-card"><p>Total Applications</p><h2>{{ metrics.total_applications }}</h2></div><div class="kpi-card"><p>Response Rate</p><h2>{{ metrics.response_rate }}%</h2></div><div class="kpi-card"><p>Interview Rate</p><h2>{{ metrics.interview_rate }}%</h2></div><div class="kpi-card"><p>Offer Rate</p><h2>{{ metrics.offer_rate }}%</h2></div></section><section class="content-card"><div class="card-header"><p class="eyebrow">Application Funnel</p><h2>Stage-by-Stage Breakdown</h2></div><div class="funnel-stack">{% for row in funnel_stage_rows %}<div class="funnel-row"><div><strong>{{ row.stage }}</strong><p>{{ row.description }}</p></div><div class="funnel-numbers"><span>{{ row.count }}</span><small>{{ row.rate }}</small></div></div>{% endfor %}</div></section><section class="content-card"><div class="card-header"><p class="eyebrow">Daily Discipline</p><h2>Target vs Actual</h2></div><div class="detail-grid"><div class="detail-item"><span>Daily Target Total</span><strong>{{ metrics.daily_target_total }}</strong></div><div class="detail-item"><span>Daily Actual Total</span><strong>{{ metrics.daily_actual_total }}</strong></div><div class="detail-item"><span>Total Variance</span><strong>{{ metrics.daily_variance_total }}</strong></div><div class="detail-item"><span>Daily Target Hit Rate</span><strong>{{ metrics.daily_target_hit_rate }}%</strong></div></div></section></div>{% endblock %}
+{% extends "base.html" %}
+{% block title %}Funnel Metrics | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Funnel Metrics{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel">
+        <p class="eyebrow">Funnel Intelligence</p>
+        <h1>See where the job-search funnel is leaking.</h1>
+        <p>This page converts your application records, daily logs, and weekly reviews into a diagnosis.</p>
+    </section>
+    <section class="diagnosis-panel {{ diagnosis_panel_class }}">
+        <div>
+            <p class="eyebrow">Current Diagnosis</p>
+            <h2>{{ diagnosis.diagnosis_title }}</h2>
+            <p>{{ diagnosis.explanation }}</p>
+        </div>
+        <div class="diagnosis-action">
+            <strong>Recommended Action</strong>
+            <p>{{ diagnosis.recommended_action }}</p>
+        </div>
+    </section>
+    <section class="kpi-grid">
+        <div class="kpi-card">
+            <p>Total Applications</p>
+            <h2>{{ metrics.total_applications }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Response Rate</p>
+            <h2>{{ metrics.response_rate }}%</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Interview Rate</p>
+            <h2>{{ metrics.interview_rate }}%</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Offer Rate</p>
+            <h2>{{ metrics.offer_rate }}%</h2>
+        </div>
+    </section>
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Application Funnel</p>
+            <h2>Stage-by-Stage Breakdown</h2>
+        </div>
+        <div class="funnel-stack">
+            {% for row in funnel_stage_rows %}
+            <div class="funnel-row">
+                <div>
+                    <strong>{{ row.stage }}</strong>
+                    <p>{{ row.description }}</p>
+                </div>
+                <div class="funnel-numbers">
+                    <span>{{ row.count }}</span>
+                    <small>{{ row.rate }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Daily Discipline</p>
+            <h2>Target vs Actual</h2>
+        </div>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span>Daily Target Total</span>
+                <strong>{{ metrics.daily_target_total }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Daily Actual Total</span>
+                <strong>{{ metrics.daily_actual_total }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Total Variance</span>
+                <strong>{{ metrics.daily_variance_total }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Daily Target Hit Rate</span>
+                <strong>{{ metrics.daily_target_hit_rate }}%</strong>
+            </div>
+        </div>
+    </section>
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Source ROI</p>
+            <h2>Application source performance</h2>
+            <p>Grouped from real JobApplication records by application source.</p>
+        </div>
+        {% if source_roi_rows %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>Applications</th>
+                        <th>Responses</th>
+                        <th>Response Rate</th>
+                        <th>Interviews</th>
+                        <th>Interview Rate</th>
+                        <th>Offers</th>
+                        <th>Offer Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in source_roi_rows %}
+                    <tr>
+                        <td><strong>{{ row.source_label }}</strong></td>
+                        <td>{{ row.total_applications }}</td>
+                        <td>{{ row.responses }}</td>
+                        <td>{{ row.response_rate }}%</td>
+                        <td>{{ row.interviews }}</td>
+                        <td>{{ row.interview_rate }}%</td>
+                        <td>{{ row.offers }}</td>
+                        <td>{{ row.offer_rate }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state small-empty-state">
+            <p>No source ROI data yet. Add applications with sources to populate this table.</p>
+        </div>
+        {% endif %}
+    </section>
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">CV Version Performance</p>
+            <h2>CV version outcome comparison</h2>
+            <p>This is performance tracking, not scientific A/B testing.</p>
+        </div>
+        {% if cv_version_rows %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>CV Version</th>
+                        <th>Applications</th>
+                        <th>Responses</th>
+                        <th>Response Rate</th>
+                        <th>Interviews</th>
+                        <th>Interview Rate</th>
+                        <th>Offers</th>
+                        <th>Offer Rate</th>
+                        <th>Rejections</th>
+                        <th>Rejection Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in cv_version_rows %}
+                    <tr>
+                        <td><strong>{{ row.cv_version }}</strong></td>
+                        <td>{{ row.total_applications }}</td>
+                        <td>{{ row.responses }}</td>
+                        <td>{{ row.response_rate }}%</td>
+                        <td>{{ row.interviews }}</td>
+                        <td>{{ row.interview_rate }}%</td>
+                        <td>{{ row.offers }}</td>
+                        <td>{{ row.offer_rate }}%</td>
+                        <td>{{ row.rejections }}</td>
+                        <td>{{ row.rejection_rate }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state small-empty-state">
+            <p>No CV version data yet. Add applications with CV versions to populate this table.</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
