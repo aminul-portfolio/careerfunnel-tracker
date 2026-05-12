@@ -55,6 +55,22 @@ class SourceROIRow:
 
 
 @dataclass(frozen=True)
+class CVVersionPerformanceRow:
+    """One row of CV Version Performance analytics (grouped metrics, not A/B testing)."""
+
+    cv_version: str
+    total_applications: int
+    responses: int
+    interviews: int
+    offers: int
+    rejections: int
+    response_rate: float
+    interview_rate: float
+    offer_rate: float
+    rejection_rate: float
+
+
+@dataclass(frozen=True)
 class FunnelDiagnosisResult:
     diagnosis_code: str
     diagnosis_label: str
@@ -130,6 +146,59 @@ def build_source_roi(user) -> list[SourceROIRow]:
             )
         )
     rows.sort(key=lambda r: (-r.response_rate, -r.interview_rate, -r.total_applications))
+    return rows
+
+
+def build_cv_version_performance(user) -> list[CVVersionPerformanceRow]:
+    """Aggregate JobApplication rows into CV Version Performance metrics by cv_version."""
+    response_q = Q(status__in=_RESPONSE_STATUSES)
+    interview_q = Q(status__in=_INTERVIEW_STATUSES)
+    offer_q = Q(status=ApplicationStatus.OFFER)
+    rejection_q = Q(
+        status__in=(ApplicationStatus.REJECTED, ApplicationStatus.AUTO_REJECTED)
+    )
+    normalized_cv = Coalesce(
+        NullIf(Trim("cv_version"), Value("", output_field=CharField())),
+        Value("Unspecified", output_field=CharField()),
+        output_field=CharField(max_length=120),
+    )
+    groups = (
+        JobApplication.objects.filter(user=user)
+        .annotate(_cv_perf_version=normalized_cv)
+        .values("_cv_perf_version")
+        .annotate(
+            total_applications=Count("id"),
+            responses=Count("id", filter=response_q),
+            interviews=Count("id", filter=interview_q),
+            offers=Count("id", filter=offer_q),
+            rejections=Count("id", filter=rejection_q),
+        )
+    )
+    rows: list[CVVersionPerformanceRow] = []
+    for row in groups:
+        version = row["_cv_perf_version"]
+        total = row["total_applications"]
+        responses = row["responses"]
+        interviews = row["interviews"]
+        offers = row["offers"]
+        rejections = row["rejections"]
+        rows.append(
+            CVVersionPerformanceRow(
+                cv_version=version,
+                total_applications=total,
+                responses=responses,
+                interviews=interviews,
+                offers=offers,
+                rejections=rejections,
+                response_rate=safe_percentage(responses, total),
+                interview_rate=safe_percentage(interviews, total),
+                offer_rate=safe_percentage(offers, total),
+                rejection_rate=safe_percentage(rejections, total),
+            )
+        )
+    rows.sort(
+        key=lambda r: (-r.response_rate, -r.interview_rate, -r.total_applications)
+    )
     return rows
 
 

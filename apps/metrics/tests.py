@@ -9,7 +9,13 @@ from apps.applications.choices import ApplicationSource, ApplicationStatus
 from apps.applications.models import JobApplication
 from apps.daily_log.models import DailyLog
 
-from .services import build_funnel_metrics, build_source_roi, diagnose_funnel, safe_percentage
+from .services import (
+    build_cv_version_performance,
+    build_funnel_metrics,
+    build_source_roi,
+    diagnose_funnel,
+    safe_percentage,
+)
 
 
 class MetricsServiceTests(TestCase):
@@ -138,6 +144,103 @@ class SourceROIAnalyticsTests(TestCase):
         self._create_app(source=ApplicationSource.INDEED, company_name="I4", status=ApplicationStatus.SUBMITTED)
         rows = build_source_roi(self.user)
         self.assertEqual([r.source for r in rows], [ApplicationSource.LINKEDIN, ApplicationSource.INDEED])
+
+
+class CVVersionPerformanceAnalyticsTests(TestCase):
+    """Tests for CV Version Performance analytics (service-level grouping and rates)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="cv_perf_user", password="StrongPass12345")
+
+    def _create_app(self, **kwargs):
+        defaults = {
+            "user": self.user,
+            "company_name": "Acme",
+            "job_title": "Analyst",
+            "date_applied": date(2026, 5, 1),
+            "status": ApplicationStatus.SUBMITTED,
+            "source": ApplicationSource.OTHER,
+            "cv_version": "v1",
+        }
+        defaults.update(kwargs)
+        return JobApplication.objects.create(**defaults)
+
+    def test_build_cv_version_performance_empty_returns_empty_list(self):
+        self.assertEqual(build_cv_version_performance(self.user), [])
+
+    def test_build_cv_version_performance_groups_by_cv_version(self):
+        self._create_app(cv_version="Analytics CV", company_name="A1")
+        self._create_app(cv_version="Analytics CV", company_name="A2")
+        self._create_app(cv_version="Generalist CV", company_name="B1")
+        rows = build_cv_version_performance(self.user)
+        self.assertEqual(len(rows), 2)
+        by_cv = {r.cv_version: r for r in rows}
+        self.assertEqual(by_cv["Analytics CV"].total_applications, 2)
+        self.assertEqual(by_cv["Generalist CV"].total_applications, 1)
+
+    def test_build_cv_version_performance_blank_cv_version_is_unspecified(self):
+        self._create_app(cv_version="", company_name="Blank1")
+        self._create_app(cv_version="   ", company_name="Spaces")
+        self._create_app(cv_version="Named", company_name="NamedCo")
+        rows = build_cv_version_performance(self.user)
+        by_cv = {r.cv_version: r for r in rows}
+        self.assertIn("Unspecified", by_cv)
+        self.assertEqual(by_cv["Unspecified"].total_applications, 2)
+        self.assertEqual(by_cv["Named"].total_applications, 1)
+
+    def test_build_cv_version_performance_response_rate(self):
+        self._create_app(cv_version="v-test", company_name="C1", status=ApplicationStatus.SUBMITTED)
+        self._create_app(cv_version="v-test", company_name="C2", status=ApplicationStatus.SUBMITTED)
+        self._create_app(cv_version="v-test", company_name="C3", status=ApplicationStatus.ACKNOWLEDGED)
+        self._create_app(cv_version="v-test", company_name="C4", status=ApplicationStatus.AUTO_REJECTED)
+        rows = build_cv_version_performance(self.user)
+        row = next(r for r in rows if r.cv_version == "v-test")
+        self.assertEqual(row.responses, 2)
+        self.assertEqual(row.total_applications, 4)
+        self.assertEqual(row.response_rate, 50.0)
+
+    def test_build_cv_version_performance_interview_rate(self):
+        self._create_app(cv_version="v-int", company_name="G1", status=ApplicationStatus.SUBMITTED)
+        self._create_app(cv_version="v-int", company_name="G2", status=ApplicationStatus.INTERVIEW)
+        self._create_app(cv_version="v-int", company_name="G3", status=ApplicationStatus.INTERVIEW)
+        self._create_app(cv_version="v-int", company_name="G4", status=ApplicationStatus.OFFER)
+        self._create_app(cv_version="v-int", company_name="G5", status=ApplicationStatus.ACKNOWLEDGED)
+        rows = build_cv_version_performance(self.user)
+        row = next(r for r in rows if r.cv_version == "v-int")
+        self.assertEqual(row.interviews, 3)
+        self.assertEqual(row.total_applications, 5)
+        self.assertEqual(row.interview_rate, 60.0)
+
+    def test_build_cv_version_performance_offer_rate(self):
+        self._create_app(cv_version="v-off", company_name="R1", status=ApplicationStatus.OFFER)
+        self._create_app(cv_version="v-off", company_name="R2", status=ApplicationStatus.INTERVIEW)
+        self._create_app(cv_version="v-off", company_name="R3", status=ApplicationStatus.SUBMITTED)
+        self._create_app(cv_version="v-off", company_name="R4", status=ApplicationStatus.SUBMITTED)
+        rows = build_cv_version_performance(self.user)
+        row = next(r for r in rows if r.cv_version == "v-off")
+        self.assertEqual(row.offers, 1)
+        self.assertEqual(row.offer_rate, 25.0)
+
+    def test_build_cv_version_performance_rejection_rate(self):
+        self._create_app(cv_version="v-rej", company_name="J1", status=ApplicationStatus.REJECTED)
+        self._create_app(cv_version="v-rej", company_name="J2", status=ApplicationStatus.AUTO_REJECTED)
+        self._create_app(cv_version="v-rej", company_name="J3", status=ApplicationStatus.SUBMITTED)
+        self._create_app(cv_version="v-rej", company_name="J4", status=ApplicationStatus.ACKNOWLEDGED)
+        rows = build_cv_version_performance(self.user)
+        row = next(r for r in rows if r.cv_version == "v-rej")
+        self.assertEqual(row.rejections, 2)
+        self.assertEqual(row.total_applications, 4)
+        self.assertEqual(row.rejection_rate, 50.0)
+
+    def test_build_cv_version_performance_sorts_by_response_then_interview_then_volume(self):
+        self._create_app(cv_version="high-response", company_name="H1", status=ApplicationStatus.ACKNOWLEDGED)
+        self._create_app(cv_version="high-response", company_name="H2", status=ApplicationStatus.ACKNOWLEDGED)
+        self._create_app(cv_version="low-response", company_name="L1", status=ApplicationStatus.SUBMITTED)
+        self._create_app(cv_version="low-response", company_name="L2", status=ApplicationStatus.SUBMITTED)
+        self._create_app(cv_version="low-response", company_name="L3", status=ApplicationStatus.SUBMITTED)
+        self._create_app(cv_version="low-response", company_name="L4", status=ApplicationStatus.SUBMITTED)
+        rows = build_cv_version_performance(self.user)
+        self.assertEqual([r.cv_version for r in rows], ["high-response", "low-response"])
 
 
 class MetricsViewTests(TestCase):
