@@ -5,6 +5,7 @@ from .services import (
     build_cv_version_performance,
     build_funnel_metrics,
     build_funnel_stage_rows,
+    build_rejection_pattern_report,
     build_source_roi,
     diagnose_funnel,
     get_diagnosis_panel_class,
@@ -25,5 +26,6 @@ def funnel_metrics(request):
             "diagnosis_panel_class": get_diagnosis_panel_class(diagnosis.severity),
             "source_roi_rows": build_source_roi(request.user),
             "cv_version_rows": build_cv_version_performance(request.user),
+            "rejection_report": build_rejection_pattern_report(request.user),
         },
     )

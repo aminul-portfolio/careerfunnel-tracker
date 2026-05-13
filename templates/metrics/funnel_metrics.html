@@ -171,5 +171,116 @@
         </div>
         {% endif %}
     </section>
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Rejection Pattern Analysis</p>
+            <h2>Where applications are breaking down</h2>
+            <p class="trust-note">Built from real JobApplication outcomes. Rejection statuses include rejected and auto-rejected.</p>
+        </div>
+        {% if rejection_report.sample_warning %}
+        <div class="diagnosis-panel diagnosis-warning">
+            <div>
+                <p class="eyebrow">Sample size</p>
+                <p>{{ rejection_report.sample_warning }}</p>
+            </div>
+        </div>
+        {% endif %}
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span>Total Applications</span>
+                <strong>{{ rejection_report.total_applications }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Total Rejections</span>
+                <strong>{{ rejection_report.total_rejections }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Auto Rejections</span>
+                <strong>{{ rejection_report.auto_rejections }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Rejection Rate</span>
+                <strong>{{ rejection_report.rejection_rate }}%</strong>
+            </div>
+            <div class="detail-item">
+                <span>Auto-Rejection Rate</span>
+                <strong>{{ rejection_report.auto_rejection_rate }}%</strong>
+            </div>
+            <div class="detail-item">
+                <span>Seniority Risk Count</span>
+                <strong>{{ rejection_report.seniority_risk_count }}</strong>
+            </div>
+        </div>
+        <h3>Recommended Actions</h3>
+        {% if rejection_report.recommendations %}
+        <ul class="agent-list">
+            {% for rec in rejection_report.recommendations %}
+            <li>{{ rec }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state small-empty-state">
+            <p>No rejection recommendations available yet.</p>
+        </div>
+        {% endif %}
+        <h3>Rejections by source</h3>
+        {% if rejection_report.by_source %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>Rejections</th>
+                        <th>Applications</th>
+                        <th>Rejection Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rejection_report.by_source %}
+                    <tr>
+                        <td><strong>{{ row.source_label }}</strong></td>
+                        <td>{{ row.rejection_count }}</td>
+                        <td>{{ row.total_applications }}</td>
+                        <td>{{ row.rejection_rate }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state small-empty-state">
+            <p>No source-level rejection data yet.</p>
+        </div>
+        {% endif %}
+        <h3>Rejections by CV version</h3>
+        {% if rejection_report.by_cv_version %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>CV Version</th>
+                        <th>Rejections</th>
+                        <th>Applications</th>
+                        <th>Rejection Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rejection_report.by_cv_version %}
+                    <tr>
+                        <td><strong>{{ row.cv_version }}</strong></td>
+                        <td>{{ row.rejection_count }}</td>
+                        <td>{{ row.total_applications }}</td>
+                        <td>{{ row.rejection_rate }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state small-empty-state">
+            <p>No CV-version rejection data yet.</p>
+        </div>
+        {% endif %}
+    </section>
 </div>
 {% endblock %}
