@@ -10,6 +10,7 @@ from apps.applications.models import JobApplication
 from apps.daily_log.models import DailyLog
 
 from .services import (
+    build_application_quality_report,
     build_cv_version_performance,
     build_funnel_metrics,
     build_rejection_pattern_report,
@@ -405,6 +406,236 @@ class RejectionPatternReportTests(TestCase):
         report = build_rejection_pattern_report(self.user)
         joined = " ".join(report.recommendations)
         self.assertIn("senior", joined.lower())
+
+
+class ApplicationQualityReportTests(TestCase):
+    """Sprint 3A Task 1: application completeness and stretch-role signals."""
+
+    _JD_40 = "x" * 40
+    _SKILLS_10 = "y" * 10
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="quality_user", password="StrongPass12345")
+
+    def _clean_defaults(self):
+        return {
+            "user": self.user,
+            "company_name": "Acme Corp",
+            "job_title": "Data Analyst",
+            "date_applied": date(2026, 5, 1),
+            "status": ApplicationStatus.SUBMITTED,
+            "source": ApplicationSource.LINKEDIN,
+            "cv_version": "v1",
+            "job_description": self._JD_40,
+            "required_skills": self._SKILLS_10,
+            "follow_up_date": date(2026, 5, 10),
+        }
+
+    def _create_app(self, **kwargs):
+        d = self._clean_defaults()
+        d.update(kwargs)
+        return JobApplication.objects.create(**d)
+
+    def test_empty_data_returns_sensible_report(self):
+        report = build_application_quality_report(self.user)
+        self.assertEqual(report.total_applications, 0)
+        self.assertEqual(report.applications_with_issues, 0)
+        self.assertEqual(report.quality_issue_rate, 0.0)
+        self.assertEqual(report.missing_cv_version_count, 0)
+        self.assertEqual(report.missing_source_count, 0)
+        self.assertEqual(report.missing_job_description_count, 0)
+        self.assertEqual(report.missing_required_skills_count, 0)
+        self.assertEqual(report.missing_follow_up_count, 0)
+        self.assertEqual(report.seniority_risk_count, 0)
+        self.assertEqual(report.issue_rows, ())
+        self.assertEqual(len(report.recommendations), 1)
+        self.assertIn("Log job applications", report.recommendations[0])
+
+    def test_clean_applications_return_zero_issues(self):
+        self._create_app(company_name="CoA")
+        self._create_app(company_name="CoB", date_applied=date(2026, 5, 2))
+        report = build_application_quality_report(self.user)
+        self.assertEqual(report.total_applications, 2)
+        self.assertEqual(report.applications_with_issues, 0)
+        self.assertEqual(report.quality_issue_rate, 0.0)
+        self.assertEqual(report.issue_rows, ())
+        self.assertEqual(len(report.recommendations), 1)
+        self.assertIn("continue logging", report.recommendations[0].lower())
+
+    def test_missing_cv_version_detected(self):
+        self._create_app(company_name="NoCv", cv_version="")
+        self._create_app(company_name="SpacesCv", cv_version="   ")
+        report = build_application_quality_report(self.user)
+        self.assertEqual(report.missing_cv_version_count, 2)
+        self.assertEqual(report.applications_with_issues, 2)
+        rows = {r.company_name: r for r in report.issue_rows}
+        self.assertIn("Missing CV version", rows["NoCv"].issues)
+        self.assertEqual(rows["NoCv"].issue_count, 1)
+
+    def test_missing_or_other_source_detected(self):
+        self._create_app(company_name="BlankSrc", source="")
+        self._create_app(company_name="OtherSrc", source=ApplicationSource.OTHER)
+        self._create_app(company_name="SpacesSrc", source="   ")
+        report = build_application_quality_report(self.user)
+        self.assertEqual(report.missing_source_count, 3)
+        for name in ("BlankSrc", "OtherSrc", "SpacesSrc"):
+            row = next(r for r in report.issue_rows if r.company_name == name)
+            self.assertIn("Missing precise source", row.issues)
+
+    def test_thin_job_description_detected(self):
+        self._create_app(company_name="Thin", job_description="x" * 39)
+        self._create_app(company_name="Empty", job_description="")
+        self._create_app(company_name="Spaces", job_description="   ")
+        report = build_application_quality_report(self.user)
+        self.assertEqual(report.missing_job_description_count, 3)
+        for cn in ("Thin", "Empty", "Spaces"):
+            row = next(r for r in report.issue_rows if r.company_name == cn)
+            self.assertIn("Missing or thin job description", row.issues)
+
+    def test_missing_required_skills_detected(self):
+        self._create_app(company_name="ShortSkills", required_skills="y" * 9)
+        self._create_app(company_name="NoSkills", required_skills="")
+        report = build_application_quality_report(self.user)
+        self.assertEqual(report.missing_required_skills_count, 2)
+        for cn in ("ShortSkills", "NoSkills"):
+            row = next(r for r in report.issue_rows if r.company_name == cn)
+            self.assertIn("Missing required skills", row.issues)
+
+    def test_missing_follow_up_only_for_active_pipeline_statuses(self):
+        self._create_app(
+            company_name="SubNoFu",
+            status=ApplicationStatus.SUBMITTED,
+            follow_up_date=None,
+        )
+        self._create_app(
+            company_name="AckNoFu",
+            status=ApplicationStatus.ACKNOWLEDGED,
+            follow_up_date=None,
+        )
+        self._create_app(
+            company_name="ScreenNoFu",
+            status=ApplicationStatus.SCREENING_CALL,
+            follow_up_date=None,
+        )
+        self._create_app(
+            company_name="TechNoFu",
+            status=ApplicationStatus.TECHNICAL_SCREEN,
+            follow_up_date=None,
+        )
+        self._create_app(
+            company_name="IntNoFu",
+            status=ApplicationStatus.INTERVIEW,
+            follow_up_date=None,
+        )
+        report = build_application_quality_report(self.user)
+        self.assertEqual(report.missing_follow_up_count, 5)
+        for cn in (
+            "SubNoFu",
+            "AckNoFu",
+            "ScreenNoFu",
+            "TechNoFu",
+            "IntNoFu",
+        ):
+            row = next(r for r in report.issue_rows if r.company_name == cn)
+            self.assertIn("Missing follow-up date", row.issues)
+
+    def test_missing_follow_up_not_flagged_for_offer_rejected_auto_rejected(self):
+        self._create_app(
+            company_name="OfferNoFu",
+            status=ApplicationStatus.OFFER,
+            follow_up_date=None,
+        )
+        self._create_app(
+            company_name="RejNoFu",
+            status=ApplicationStatus.REJECTED,
+            follow_up_date=None,
+        )
+        self._create_app(
+            company_name="AutoRejNoFu",
+            status=ApplicationStatus.AUTO_REJECTED,
+            follow_up_date=None,
+        )
+        self._create_app(
+            company_name="NoRespNoFu",
+            status=ApplicationStatus.NO_RESPONSE,
+            follow_up_date=None,
+        )
+        report = build_application_quality_report(self.user)
+        self.assertEqual(report.missing_follow_up_count, 0)
+        self.assertEqual(report.applications_with_issues, 0)
+        self.assertEqual(report.issue_rows, ())
+
+    def test_seniority_stretch_role_risk_detected(self):
+        self._create_app(
+            company_name="SeniorTitle",
+            job_title="Senior Data Analyst",
+        )
+        self._create_app(
+            company_name="SkillsSig",
+            job_title="Analyst",
+            required_skills="We need minimum 5 years of SQL experience.",
+        )
+        self._create_app(
+            company_name="JdSig",
+            job_title="Analyst",
+            job_description=self._JD_40 + " Head of department collaboration.",
+        )
+        report = build_application_quality_report(self.user)
+        self.assertEqual(report.seniority_risk_count, 3)
+        for cn in ("SeniorTitle", "SkillsSig", "JdSig"):
+            row = next(r for r in report.issue_rows if r.company_name == cn)
+            self.assertIn("Seniority or stretch-role risk", row.issues)
+
+    def test_issue_rows_issue_count_matches_issues_len(self):
+        self._create_app(
+            company_name="Multi",
+            cv_version="",
+            source=ApplicationSource.OTHER,
+            job_description="",
+            required_skills="",
+            follow_up_date=None,
+            status=ApplicationStatus.SUBMITTED,
+            job_title="Lead Engineer",
+        )
+        report = build_application_quality_report(self.user)
+        self.assertEqual(len(report.issue_rows), 1)
+        row = report.issue_rows[0]
+        self.assertEqual(row.issue_count, len(row.issues))
+        self.assertGreaterEqual(row.issue_count, 5)
+
+    def test_recommendations_returned_when_issues_exist(self):
+        self._create_app(company_name="Bad", cv_version="", source=ApplicationSource.OTHER)
+        report = build_application_quality_report(self.user)
+        self.assertGreaterEqual(len(report.recommendations), 1)
+        joined = " ".join(report.recommendations).lower()
+        self.assertIn("cv", joined)
+        self.assertIn("source", joined)
+
+    def test_issue_rows_sorted_by_count_date_company(self):
+        self._create_app(
+            company_name="Beta",
+            date_applied=date(2026, 5, 1),
+            cv_version="",
+            source=ApplicationSource.LINKEDIN,
+        )
+        self._create_app(
+            company_name="Alpha",
+            date_applied=date(2026, 5, 10),
+            cv_version="",
+            source=ApplicationSource.LINKEDIN,
+        )
+        self._create_app(
+            company_name="Gamma",
+            date_applied=date(2026, 5, 15),
+            cv_version="",
+            source=ApplicationSource.LINKEDIN,
+            job_description="",
+        )
+        report = build_application_quality_report(self.user)
+        names = [r.company_name for r in report.issue_rows]
+        self.assertEqual(names[0], "Gamma")
+        self.assertEqual(set(names[1:]), {"Alpha", "Beta"})
+        self.assertLess(names.index("Alpha"), names.index("Beta"))
 
 
 class MetricsViewTests(TestCase):

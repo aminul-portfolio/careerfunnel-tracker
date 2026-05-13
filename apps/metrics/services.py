@@ -497,6 +497,271 @@ def get_diagnosis_panel_class(severity: str) -> str:
     return {"success": "diagnosis-success", "primary": "diagnosis-primary", "warning": "diagnosis-warning", "danger": "diagnosis-danger", "neutral": "diagnosis-neutral"}.get(severity, "diagnosis-neutral")
 
 
+_ACTIVE_PIPELINE_FOR_FOLLOWUP = (
+    ApplicationStatus.SUBMITTED,
+    ApplicationStatus.ACKNOWLEDGED,
+    ApplicationStatus.SCREENING_CALL,
+    ApplicationStatus.TECHNICAL_SCREEN,
+    ApplicationStatus.INTERVIEW,
+)
+
+_ISSUE_MISSING_CV = "Missing CV version"
+_ISSUE_MISSING_SOURCE = "Missing precise source"
+_ISSUE_THIN_JD = "Missing or thin job description"
+_ISSUE_MISSING_SKILLS = "Missing required skills"
+_ISSUE_MISSING_FOLLOWUP = "Missing follow-up date"
+_ISSUE_SENIORITY = "Seniority or stretch-role risk"
+
+
+def _strip_or_empty(value: str | None) -> str:
+    if value is None:
+        return ""
+    return value.strip()
+
+
+def _is_missing_cv_version(cv_version: str | None) -> bool:
+    return _strip_or_empty(cv_version) == ""
+
+
+def _is_missing_precise_source(source: str | None) -> bool:
+    s = _strip_or_empty(source)
+    return s == "" or s == ApplicationSource.OTHER.value
+
+
+def _is_thin_job_description(job_description: str | None) -> bool:
+    t = _strip_or_empty(job_description)
+    return t == "" or len(t) < 40
+
+
+def _is_missing_required_skills(required_skills: str | None) -> bool:
+    t = _strip_or_empty(required_skills)
+    return t == "" or len(t) < 10
+
+
+def _needs_follow_up_date(status: str, follow_up_date) -> bool:
+    if status not in _ACTIVE_PIPELINE_FOR_FOLLOWUP:
+        return False
+    return follow_up_date is None
+
+
+def _text_has_seniority_signal_fragment(text: str | None) -> bool:
+    blob = _strip_or_empty(text).lower()
+    if not blob:
+        return False
+    return any(sig in blob for sig in _SENIORITY_SIGNALS)
+
+
+def _application_has_seniority_risk(app: JobApplication) -> bool:
+    return (
+        _text_has_seniority_signal_fragment(app.job_title)
+        or _text_has_seniority_signal_fragment(app.required_skills)
+        or _text_has_seniority_signal_fragment(app.job_description)
+    )
+
+
+def _collect_issues_for_application(app: JobApplication) -> list[str]:
+    issues: list[str] = []
+    if _is_missing_cv_version(app.cv_version):
+        issues.append(_ISSUE_MISSING_CV)
+    if _is_missing_precise_source(app.source):
+        issues.append(_ISSUE_MISSING_SOURCE)
+    if _is_thin_job_description(app.job_description):
+        issues.append(_ISSUE_THIN_JD)
+    if _is_missing_required_skills(app.required_skills):
+        issues.append(_ISSUE_MISSING_SKILLS)
+    if _needs_follow_up_date(app.status, app.follow_up_date):
+        issues.append(_ISSUE_MISSING_FOLLOWUP)
+    if _application_has_seniority_risk(app):
+        issues.append(_ISSUE_SENIORITY)
+    return issues
+
+
+def _recommended_action_for_issues(issues: tuple[str, ...]) -> str:
+    parts: list[str] = []
+    if _ISSUE_MISSING_FOLLOWUP in issues:
+        parts.append(
+            "Set follow-up dates for applications still in active pipeline stages."
+        )
+    if _ISSUE_MISSING_CV in issues:
+        parts.append(
+            "Assign CV versions so CV performance can be measured against outcomes."
+        )
+    if _ISSUE_MISSING_SOURCE in issues:
+        parts.append(
+            "Add precise sources such as LinkedIn, Reed.co.uk, company website, recruiter, or referral."
+        )
+    if _ISSUE_THIN_JD in issues or _ISSUE_MISSING_SKILLS in issues:
+        parts.append(
+            "Save role evidence (job description and required skills) for better fit and rejection analysis."
+        )
+    if _ISSUE_SENIORITY in issues:
+        parts.append(
+            "Review whether this application targets a realistic role given seniority or stretch-role signals."
+        )
+    return " ".join(parts) if parts else ""
+
+
+def _build_application_quality_recommendations(
+    *,
+    total_applications: int,
+    has_any_issues: bool,
+    any_missing_followup: bool,
+    any_missing_cv: bool,
+    any_missing_source: bool,
+    any_thin_jd_or_skills: bool,
+    any_seniority: bool,
+) -> tuple[str, ...]:
+    if total_applications == 0:
+        return (
+            "Log job applications in the tracker; the quality report will highlight incomplete records as you add them.",
+        )
+    if not has_any_issues:
+        return (
+            "No data quality issues detected; continue logging applications consistently.",
+        )
+    recs: list[str] = []
+    if any_missing_followup:
+        recs.append(
+            "Set follow-up dates for applications still in submitted, acknowledged, screening, technical, or interview stages."
+        )
+    if any_missing_cv:
+        recs.append(
+            "Assign CV versions across applications so version performance can be measured reliably."
+        )
+    if any_missing_source:
+        recs.append(
+            "Replace generic or blank sources with precise channels such as LinkedIn, Reed.co.uk, company website, recruiter, or referral."
+        )
+    if any_thin_jd_or_skills:
+        recs.append(
+            "Capture job descriptions and required skills so role fit and rejection analysis stay evidence-based."
+        )
+    if any_seniority:
+        recs.append(
+            "Review applications that show seniority or stretch-role signals and confirm they are realistic target roles."
+        )
+    return tuple(recs) if recs else tuple()
+
+
+@dataclass(frozen=True)
+class ApplicationQualityIssue:
+    application_id: int
+    company_name: str
+    job_title: str
+    status: str
+    issue_count: int
+    issues: tuple[str, ...]
+    recommended_action: str
+
+
+@dataclass(frozen=True)
+class ApplicationQualityReport:
+    total_applications: int
+    applications_with_issues: int
+    quality_issue_rate: float
+    missing_cv_version_count: int
+    missing_source_count: int
+    missing_job_description_count: int
+    missing_required_skills_count: int
+    missing_follow_up_count: int
+    seniority_risk_count: int
+    issue_rows: tuple[ApplicationQualityIssue, ...]
+    recommendations: tuple[str, ...]
+
+
+def build_application_quality_report(user) -> ApplicationQualityReport:
+    """Scan JobApplication rows for incomplete or low-quality fields and stretch-role signals."""
+    applications = list(JobApplication.objects.filter(user=user))
+    total = len(applications)
+
+    missing_cv = 0
+    missing_src = 0
+    missing_jd = 0
+    missing_skills = 0
+    missing_fu = 0
+    seniority = 0
+
+    any_missing_followup = False
+    any_missing_cv = False
+    any_missing_source = False
+    any_thin_jd_or_skills = False
+    any_seniority = False
+
+    issue_rows_list: list[ApplicationQualityIssue] = []
+
+    for app in applications:
+        issues = _collect_issues_for_application(app)
+        if _is_missing_cv_version(app.cv_version):
+            missing_cv += 1
+            any_missing_cv = True
+        if _is_missing_precise_source(app.source):
+            missing_src += 1
+            any_missing_source = True
+        if _is_thin_job_description(app.job_description):
+            missing_jd += 1
+            any_thin_jd_or_skills = True
+        if _is_missing_required_skills(app.required_skills):
+            missing_skills += 1
+            any_thin_jd_or_skills = True
+        if _needs_follow_up_date(app.status, app.follow_up_date):
+            missing_fu += 1
+            any_missing_followup = True
+        if _application_has_seniority_risk(app):
+            seniority += 1
+            any_seniority = True
+
+        if issues:
+            it = tuple(issues)
+            issue_rows_list.append(
+                ApplicationQualityIssue(
+                    application_id=app.pk,
+                    company_name=app.company_name,
+                    job_title=app.job_title,
+                    status=app.status,
+                    issue_count=len(it),
+                    issues=it,
+                    recommended_action=_recommended_action_for_issues(it),
+                )
+            )
+
+    applications_with_issues = len(issue_rows_list)
+    quality_rate = safe_percentage(applications_with_issues, total)
+    has_any_issues = applications_with_issues > 0
+
+    date_by_app_id = {a.pk: a.date_applied for a in applications}
+    issue_rows_list.sort(
+        key=lambda r: (
+            -r.issue_count,
+            -date_by_app_id[r.application_id].toordinal(),
+            r.company_name.lower(),
+        )
+    )
+
+    recommendations = _build_application_quality_recommendations(
+        total_applications=total,
+        has_any_issues=has_any_issues,
+        any_missing_followup=any_missing_followup,
+        any_missing_cv=any_missing_cv,
+        any_missing_source=any_missing_source,
+        any_thin_jd_or_skills=any_thin_jd_or_skills,
+        any_seniority=any_seniority,
+    )
+
+    return ApplicationQualityReport(
+        total_applications=total,
+        applications_with_issues=applications_with_issues,
+        quality_issue_rate=quality_rate,
+        missing_cv_version_count=missing_cv,
+        missing_source_count=missing_src,
+        missing_job_description_count=missing_jd,
+        missing_required_skills_count=missing_skills,
+        missing_follow_up_count=missing_fu,
+        seniority_risk_count=seniority,
+        issue_rows=tuple(issue_rows_list),
+        recommendations=recommendations,
+    )
+
+
 def build_funnel_stage_rows(metrics: FunnelMetrics):
     return [
         {"stage": "Applications Submitted", "count": metrics.total_applications, "rate": "100%", "description": "Total number of logged job applications."},
