@@ -12,6 +12,7 @@ from apps.daily_log.models import DailyLog
 from .services import (
     build_application_quality_report,
     build_cv_version_performance,
+    build_data_quality_report,
     build_funnel_metrics,
     build_rejection_pattern_report,
     build_source_roi,
@@ -636,6 +637,200 @@ class ApplicationQualityReportTests(TestCase):
         self.assertEqual(names[0], "Gamma")
         self.assertEqual(set(names[1:]), {"Alpha", "Beta"})
         self.assertLess(names.index("Alpha"), names.index("Beta"))
+
+
+class DataQualityReportTests(TestCase):
+    """Sprint 4A: aggregate data quality for analytics governance."""
+
+    _JD_40 = "x" * 40
+    _SKILLS_10 = "y" * 10
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="dq_user", password="StrongPass12345")
+
+    def _clean_defaults(self):
+        return {
+            "user": self.user,
+            "company_name": "Acme Corp",
+            "job_title": "Data Analyst",
+            "date_applied": date(2026, 5, 1),
+            "status": ApplicationStatus.SUBMITTED,
+            "source": ApplicationSource.LINKEDIN,
+            "cv_version": "v1",
+            "job_description": self._JD_40,
+            "required_skills": self._SKILLS_10,
+            "follow_up_date": date(2026, 5, 10),
+        }
+
+    def _create_app(self, **kwargs):
+        d = self._clean_defaults()
+        d.update(kwargs)
+        return JobApplication.objects.create(**d)
+
+    def test_empty_data_returns_sensible_report(self):
+        report = build_data_quality_report(self.user)
+        self.assertEqual(report.total_applications, 0)
+        self.assertEqual(report.analytics_ready_applications, 0)
+        self.assertEqual(report.analytics_ready_rate, 0.0)
+        self.assertEqual(report.data_quality_score, 0.0)
+        self.assertEqual(report.missing_source_count, 0)
+        self.assertEqual(report.missing_cv_version_count, 0)
+        self.assertEqual(report.missing_job_description_count, 0)
+        self.assertEqual(report.missing_required_skills_count, 0)
+        self.assertEqual(report.missing_follow_up_count, 0)
+        self.assertEqual(report.generic_source_count, 0)
+        for c in report.checks:
+            self.assertEqual(c.issue_count, 0)
+            self.assertEqual(c.severity, "success")
+        self.assertEqual(len(report.recommendations), 1)
+        self.assertIn("Log job applications", report.recommendations[0])
+
+    def test_clean_applications_produce_full_data_quality_score(self):
+        self._create_app(company_name="CoA")
+        self._create_app(company_name="CoB", date_applied=date(2026, 5, 2))
+        report = build_data_quality_report(self.user)
+        self.assertEqual(report.total_applications, 2)
+        self.assertEqual(report.analytics_ready_applications, 2)
+        self.assertEqual(report.analytics_ready_rate, 100.0)
+        self.assertEqual(report.data_quality_score, 100.0)
+        self.assertEqual(report.missing_source_count, 0)
+        self.assertTrue(any("continue logging" in r.lower() for r in report.recommendations))
+
+    def test_missing_source_is_counted(self):
+        self._create_app(company_name="BlankSrc", source="")
+        self._create_app(company_name="SpacesSrc", source="   ")
+        report = build_data_quality_report(self.user)
+        self.assertEqual(report.missing_source_count, 2)
+        self.assertEqual(report.generic_source_count, 0)
+        self.assertEqual(report.analytics_ready_applications, 0)
+        precise = next(c for c in report.checks if c.check_name == "Precise application source")
+        self.assertEqual(precise.issue_count, 2)
+        self.assertEqual(precise.severity, "danger")
+
+    def test_generic_other_source_is_counted(self):
+        self._create_app(company_name="OtherOnly", source=ApplicationSource.OTHER)
+        report = build_data_quality_report(self.user)
+        self.assertEqual(report.generic_source_count, 1)
+        self.assertEqual(report.missing_source_count, 1)
+        generic_chk = next(
+            c for c in report.checks if "generic" in c.check_name.lower()
+        )
+        self.assertEqual(generic_chk.issue_count, 1)
+        self.assertEqual(generic_chk.severity, "danger")
+
+    def test_missing_cv_version_is_counted(self):
+        self._create_app(company_name="NoCv", cv_version="")
+        self._create_app(company_name="SpaceCv", cv_version="   ")
+        report = build_data_quality_report(self.user)
+        self.assertEqual(report.missing_cv_version_count, 2)
+        cv_chk = next(c for c in report.checks if "CV version" in c.check_name)
+        self.assertEqual(cv_chk.issue_count, 2)
+
+    def test_thin_job_description_is_counted(self):
+        self._create_app(company_name="Thin", job_description="x" * 39)
+        report = build_data_quality_report(self.user)
+        self.assertEqual(report.missing_job_description_count, 1)
+        jd_chk = next(c for c in report.checks if "Job description" in c.check_name)
+        self.assertEqual(jd_chk.issue_count, 1)
+
+    def test_missing_required_skills_is_counted(self):
+        self._create_app(company_name="Short", required_skills="y" * 9)
+        report = build_data_quality_report(self.user)
+        self.assertEqual(report.missing_required_skills_count, 1)
+        sk_chk = next(c for c in report.checks if "Required skills" in c.check_name)
+        self.assertEqual(sk_chk.issue_count, 1)
+
+    def test_missing_follow_up_counted_only_for_active_statuses(self):
+        self._create_app(
+            company_name="SubNoFu",
+            status=ApplicationStatus.SUBMITTED,
+            follow_up_date=None,
+        )
+        self._create_app(
+            company_name="RejNoFu",
+            status=ApplicationStatus.REJECTED,
+            follow_up_date=None,
+        )
+        report = build_data_quality_report(self.user)
+        self.assertEqual(report.missing_follow_up_count, 1)
+        fu_chk = next(c for c in report.checks if "Follow-up" in c.check_name)
+        self.assertEqual(fu_chk.issue_count, 1)
+
+    def test_follow_up_date_does_not_block_analytics_ready(self):
+        self._create_app(
+            company_name="ReadyNoFu",
+            status=ApplicationStatus.SUBMITTED,
+            follow_up_date=None,
+        )
+        report = build_data_quality_report(self.user)
+        self.assertEqual(report.missing_follow_up_count, 1)
+        self.assertEqual(report.analytics_ready_applications, 1)
+        self.assertEqual(report.data_quality_score, 100.0)
+
+    def test_analytics_ready_applications_counted_correctly(self):
+        self._create_app(company_name="ReadyA")
+        self._create_app(
+            company_name="NotReady",
+            cv_version="",
+        )
+        report = build_data_quality_report(self.user)
+        self.assertEqual(report.analytics_ready_applications, 1)
+        self.assertEqual(report.analytics_ready_rate, 50.0)
+
+    def test_data_quality_score_matches_analytics_ready_rate(self):
+        self._create_app(company_name="R1")
+        self._create_app(company_name="R2", source=ApplicationSource.OTHER)
+        self._create_app(company_name="R3", job_description="x" * 39)
+        report = build_data_quality_report(self.user)
+        expected = safe_percentage(report.analytics_ready_applications, report.total_applications)
+        self.assertEqual(report.analytics_ready_rate, expected)
+        self.assertEqual(report.data_quality_score, expected)
+        self.assertEqual(report.data_quality_score, report.analytics_ready_rate)
+
+    def test_check_severity_danger_when_completion_rate_below_70(self):
+        for i in range(6):
+            self._create_app(company_name=f"Ok{i}", date_applied=date(2026, 5, i + 1))
+        for i in range(4):
+            self._create_app(
+                company_name=f"Bad{i}",
+                date_applied=date(2026, 6, i + 1),
+                source="",
+            )
+        report = build_data_quality_report(self.user)
+        precise = next(c for c in report.checks if c.check_name == "Precise application source")
+        self.assertEqual(precise.issue_count, 4)
+        self.assertEqual(precise.completion_rate, 60.0)
+        self.assertEqual(precise.severity, "danger")
+
+    def test_check_severity_warning_when_issues_exist_but_completion_at_or_above_70(self):
+        for i in range(8):
+            self._create_app(company_name=f"Ok{i}", date_applied=date(2026, 5, i + 1))
+        for i in range(2):
+            self._create_app(
+                company_name=f"Bad{i}",
+                date_applied=date(2026, 6, i + 1),
+                source="",
+            )
+        report = build_data_quality_report(self.user)
+        precise = next(c for c in report.checks if c.check_name == "Precise application source")
+        self.assertEqual(precise.issue_count, 2)
+        self.assertEqual(precise.completion_rate, 80.0)
+        self.assertEqual(precise.severity, "warning")
+
+    def test_check_severity_success_when_issue_count_is_zero(self):
+        self._create_app(company_name="Solo")
+        report = build_data_quality_report(self.user)
+        for c in report.checks:
+            if c.issue_count == 0:
+                self.assertEqual(c.severity, "success")
+
+    def test_recommendations_returned_for_gaps(self):
+        self._create_app(company_name="Gap", cv_version="", source=ApplicationSource.OTHER)
+        report = build_data_quality_report(self.user)
+        self.assertGreaterEqual(len(report.recommendations), 1)
+        joined = " ".join(report.recommendations).lower()
+        self.assertIn("source", joined)
+        self.assertIn("cv", joined)
 
 
 class MetricsViewTests(TestCase):

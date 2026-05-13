@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 
 from django.db.models import CharField, Count, Q, Value
@@ -669,6 +669,32 @@ class ApplicationQualityReport:
     recommendations: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class DataQualityCheck:
+    check_name: str
+    issue_count: int
+    total_applications: int
+    completion_rate: float
+    severity: str
+    recommendation: str
+
+
+@dataclass(frozen=True)
+class DataQualityReport:
+    total_applications: int
+    analytics_ready_applications: int
+    analytics_ready_rate: float
+    data_quality_score: float
+    missing_source_count: int
+    missing_cv_version_count: int
+    missing_job_description_count: int
+    missing_required_skills_count: int
+    missing_follow_up_count: int
+    generic_source_count: int
+    checks: tuple[DataQualityCheck, ...]
+    recommendations: tuple[str, ...]
+
+
 def build_application_quality_report(user) -> ApplicationQualityReport:
     """Scan JobApplication rows for incomplete or low-quality fields and stretch-role signals."""
     applications = list(JobApplication.objects.filter(user=user))
@@ -760,6 +786,201 @@ def build_application_quality_report(user) -> ApplicationQualityReport:
         issue_rows=tuple(issue_rows_list),
         recommendations=recommendations,
     )
+
+
+def _is_generic_source_channel(source: str | None) -> bool:
+    return _strip_or_empty(source) == ApplicationSource.OTHER.value
+
+
+def _application_is_analytics_ready(app: JobApplication) -> bool:
+    return (
+        not _is_missing_precise_source(app.source)
+        and not _is_missing_cv_version(app.cv_version)
+        and not _is_thin_job_description(app.job_description)
+        and not _is_missing_required_skills(app.required_skills)
+    )
+
+
+def _data_quality_check_severity(*, issue_count: int, total_applications: int) -> str:
+    if issue_count == 0:
+        return "success"
+    completion_rate = safe_percentage(total_applications - issue_count, total_applications)
+    if completion_rate < 70.0:
+        return "danger"
+    return "warning"
+
+
+def _data_quality_check(
+    *,
+    check_name: str,
+    issue_count: int,
+    total_applications: int,
+    recommendation_ok: str,
+    recommendation_action: str,
+) -> DataQualityCheck:
+    completion_rate = safe_percentage(total_applications - issue_count, total_applications)
+    severity = _data_quality_check_severity(
+        issue_count=issue_count, total_applications=total_applications
+    )
+    recommendation = (
+        recommendation_ok if issue_count == 0 else recommendation_action
+    )
+    return DataQualityCheck(
+        check_name=check_name,
+        issue_count=issue_count,
+        total_applications=total_applications,
+        completion_rate=completion_rate,
+        severity=severity,
+        recommendation=recommendation,
+    )
+
+
+def _build_data_quality_recommendations(report: DataQualityReport) -> tuple[str, ...]:
+    recs: list[str] = []
+    if report.total_applications == 0:
+        return (
+            "Log job applications in the tracker first; analytics and data quality reporting need application history.",
+        )
+    if report.missing_source_count > 0 or report.generic_source_count > 0:
+        recs.append(
+            "Replace blank or generic 'Other' sources with precise channels (LinkedIn, Reed.co.uk, Indeed, company website, recruiter, referral) so reporting can attribute outcomes."
+        )
+    if report.missing_cv_version_count > 0:
+        recs.append(
+            "Assign CV versions to applications so CV performance metrics stay trustworthy."
+        )
+    if (
+        report.missing_job_description_count > 0
+        or report.missing_required_skills_count > 0
+    ):
+        recs.append(
+            "Capture job descriptions and required skills from postings so analytics stay evidence-based."
+        )
+    if report.missing_follow_up_count > 0:
+        recs.append(
+            "Add follow-up dates for applications in submitted, acknowledged, screening, technical, or interview stages."
+        )
+    major_issues = (
+        report.missing_source_count > 0
+        or report.missing_cv_version_count > 0
+        or report.missing_job_description_count > 0
+        or report.missing_required_skills_count > 0
+    )
+    if report.data_quality_score >= 90.0 and not major_issues:
+        recs.append(
+            "Data quality is strong for analytics; continue logging applications consistently."
+        )
+    return tuple(recs)
+
+
+def build_data_quality_report(user) -> DataQualityReport:
+    """Summarise field completeness and governance signals for JobApplication analytics."""
+    applications = list(JobApplication.objects.filter(user=user))
+    total = len(applications)
+
+    missing_src = 0
+    generic_src = 0
+    missing_cv = 0
+    missing_jd = 0
+    missing_skills = 0
+    missing_fu = 0
+    analytics_ready = 0
+
+    for app in applications:
+        if _is_missing_precise_source(app.source):
+            missing_src += 1
+        if _is_generic_source_channel(app.source):
+            generic_src += 1
+        if _is_missing_cv_version(app.cv_version):
+            missing_cv += 1
+        if _is_thin_job_description(app.job_description):
+            missing_jd += 1
+        if _is_missing_required_skills(app.required_skills):
+            missing_skills += 1
+        if _needs_follow_up_date(app.status, app.follow_up_date):
+            missing_fu += 1
+        if _application_is_analytics_ready(app):
+            analytics_ready += 1
+
+    analytics_ready_rate = safe_percentage(analytics_ready, total)
+    data_quality_score = analytics_ready_rate
+
+    checks = (
+        _data_quality_check(
+            check_name="Precise application source",
+            issue_count=missing_src,
+            total_applications=total,
+            recommendation_ok="Every application has a non-blank, specific source (not 'Other').",
+            recommendation_action=(
+                "Replace blank, whitespace-only, or 'Other' sources with precise channels "
+                "such as LinkedIn, Reed.co.uk, Indeed, company website, recruiter, or referral."
+            ),
+        ),
+        _data_quality_check(
+            check_name="Specific source channel (not generic 'Other')",
+            issue_count=generic_src,
+            total_applications=total,
+            recommendation_ok="No applications use the generic 'Other' source label.",
+            recommendation_action=(
+                "Replace the generic 'Other' label with the exact job board, referral, "
+                "or path you used for each application."
+            ),
+        ),
+        _data_quality_check(
+            check_name="CV version recorded",
+            issue_count=missing_cv,
+            total_applications=total,
+            recommendation_ok="CV versions are present on all applications.",
+            recommendation_action=(
+                "Assign a CV version to each application so CV performance analytics stay comparable."
+            ),
+        ),
+        _data_quality_check(
+            check_name="Job description evidence (40+ characters)",
+            issue_count=missing_jd,
+            total_applications=total,
+            recommendation_ok="Job descriptions meet the minimum length for evidence-based analysis.",
+            recommendation_action=(
+                "Paste or summarise at least 40 characters of the job description for each role."
+            ),
+        ),
+        _data_quality_check(
+            check_name="Required skills captured (10+ characters)",
+            issue_count=missing_skills,
+            total_applications=total,
+            recommendation_ok="Required skills text meets the minimum length on all applications.",
+            recommendation_action=(
+                "Capture at least 10 characters of required skills from each job posting."
+            ),
+        ),
+        _data_quality_check(
+            check_name="Follow-up date (active pipeline only)",
+            issue_count=missing_fu,
+            total_applications=total,
+            recommendation_ok="Active pipeline applications have follow-up dates set.",
+            recommendation_action=(
+                "Set follow-up dates for applications in submitted, acknowledged, screening, "
+                "technical, or interview stages."
+            ),
+        ),
+    )
+
+    report = DataQualityReport(
+        total_applications=total,
+        analytics_ready_applications=analytics_ready,
+        analytics_ready_rate=analytics_ready_rate,
+        data_quality_score=data_quality_score,
+        missing_source_count=missing_src,
+        missing_cv_version_count=missing_cv,
+        missing_job_description_count=missing_jd,
+        missing_required_skills_count=missing_skills,
+        missing_follow_up_count=missing_fu,
+        generic_source_count=generic_src,
+        checks=checks,
+        recommendations=(),
+    )
+    recommendations = _build_data_quality_recommendations(report)
+    return replace(report, recommendations=recommendations)
 
 
 def build_funnel_stage_rows(metrics: FunnelMetrics):
