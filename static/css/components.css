@@ -31,6 +31,37 @@
     line-height: 1.4;
 }
 
+.reviewer-note {
+    margin: 1rem 0 0;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.evidence-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.evidence-strip-item {
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--color-primary);
+    font-size: 0.8rem;
+    font-weight: 800;
+    padding: 0.45rem 0.7rem;
+}
+
+.page-proof-list {
+    margin: 1rem 0 0;
+    padding-left: 1.2rem;
+    color: var(--color-muted);
+    line-height: 1.6;
+}
+
 .funnel-stack {
     display: grid;
     gap: 0.75rem;

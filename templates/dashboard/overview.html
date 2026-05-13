@@ -8,11 +8,16 @@
     <section class="hero-panel dashboard-hero">
         <div>
             <p class="eyebrow">CareerFunnel Tracker</p>
-            <h1>Job-search intelligence dashboard</h1>
+            <h1>Portfolio job-search evidence dashboard</h1>
             <p>
-                Track application activity, response quality, interview movement, daily discipline,
-                and the current funnel diagnosis from one operational command centre.
+                A reviewer-friendly view of application activity, response quality, interview movement,
+                daily discipline, and the current funnel diagnosis for a portfolio walkthrough.
             </p>
+            <div class="evidence-strip">
+                <span class="evidence-strip-item">Reviewer evidence</span>
+                <span class="evidence-strip-item">Authenticated records</span>
+                <span class="evidence-strip-item">BI-style analysis ready</span>
+            </div>
         </div>
 
         <div class="hero-actions">
@@ -60,7 +65,8 @@
             <h2>{{ summary.diagnosis_title }}</h2>
             <p>{{ summary.diagnosis_explanation }}</p>
             <p class="trust-note">
-                Calculated from your logged applications, statuses, daily logs, and funnel metrics.
+                Calculated from authenticated tracker records across applications, statuses, daily logs,
+                and funnel metrics.
             </p>
         </div>
 
@@ -97,7 +103,8 @@
             </div>
 
             <p class="trust-note">
-                This is a real-data summary. No mock conversion values are used.
+                Reviewer note: this snapshot uses the logged tracker data shown across the app.
+                No mock conversion values are used.
             </p>
         </div>
 
@@ -125,6 +132,9 @@
                     <strong>{{ summary.daily_target_hit_rate }}%</strong>
                 </div>
             </div>
+            <p class="reviewer-note">
+                Built for portfolio walkthroughs where consistency, targets, and follow-through need to be visible.
+            </p>
         </div>
     </section>
 
@@ -156,6 +166,9 @@
                     <p>Add your first application to start the funnel.</p>
                 </div>
             {% endif %}
+            <p class="reviewer-note">
+                Application records link back to the underlying evidence for review context.
+            </p>
         </div>
 
         <div class="content-card">
@@ -185,6 +198,9 @@
                     <p>Add daily activity to measure consistency.</p>
                 </div>
             {% endif %}
+            <p class="reviewer-note">
+                Daily logs provide the evidence trail behind activity targets and actual output.
+            </p>
         </div>
     </section>
 
@@ -232,6 +248,9 @@
                 <p>Complete your first weekly review after a full week of applications.</p>
             </div>
         {% endif %}
+        <p class="reviewer-note">
+            Weekly reviews summarise the decision record behind funnel diagnosis and next actions.
+        </p>
     </section>
 
 </div>
