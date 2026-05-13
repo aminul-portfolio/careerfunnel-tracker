@@ -13,30 +13,54 @@ from apps.weekly_review.models import WeeklyReview
 from .services import build_full_tracker_workbook
 
 
+XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+EXPORT_ROUTE_NAMES = [
+    "exports:export_center",
+    "exports:export_applications",
+    "exports:export_daily_logs",
+    "exports:export_weekly_reviews",
+    "exports:export_interviews",
+    "exports:export_notes",
+    "exports:export_full_tracker",
+]
+
+WORKBOOK_EXPORT_ROUTE_NAMES = [
+    "exports:export_applications",
+    "exports:export_daily_logs",
+    "exports:export_weekly_reviews",
+    "exports:export_interviews",
+    "exports:export_notes",
+    "exports:export_full_tracker",
+]
+
+
 class ExportViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
 
-    def test_export_center_requires_login(self):
-        response = self.client.get(reverse("exports:export_center"))
-        self.assertEqual(response.status_code, 302)
-
-    def test_export_center_loads_for_logged_in_user(self):
+    def test_authenticated_users_can_access_existing_export_routes(self):
         self.client.login(username="aminul", password="StrongPass12345")
-        response = self.client.get(reverse("exports:export_center"))
-        self.assertEqual(response.status_code, 200)
+        for route_name in EXPORT_ROUTE_NAMES:
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                self.assertEqual(response.status_code, 200)
 
-    def test_applications_export_downloads_excel(self):
+    def test_workbook_exports_return_xlsx_responses(self):
         self.client.login(username="aminul", password="StrongPass12345")
-        response = self.client.get(reverse("exports:export_applications"))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response["Content-Type"], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        for route_name in WORKBOOK_EXPORT_ROUTE_NAMES:
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response["Content-Type"], XLSX_CONTENT_TYPE)
+                self.assertIn(".xlsx", response["Content-Disposition"])
 
-    def test_full_tracker_export_downloads_excel(self):
-        self.client.login(username="aminul", password="StrongPass12345")
-        response = self.client.get(reverse("exports:export_full_tracker"))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response["Content-Type"], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    def test_export_routes_require_login(self):
+        for route_name in EXPORT_ROUTE_NAMES:
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                self.assertEqual(response.status_code, 302)
+                self.assertNotEqual(response["Location"], reverse(route_name))
 
 
 class ExportServiceTests(TestCase):

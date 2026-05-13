@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 
-from .services import build_applications_workbook, build_daily_logs_workbook, build_full_tracker_workbook, build_notes_workbook, build_weekly_reviews_workbook
+from .services import build_applications_workbook, build_daily_logs_workbook, build_full_tracker_workbook, build_interviews_workbook, build_notes_workbook, build_weekly_reviews_workbook
 
 
 def build_excel_response(file_bytes: bytes, filename: str) -> HttpResponse:
@@ -43,6 +43,7 @@ def export_interviews(request):
     return build_excel_response(file_bytes, filename)
 
 
+@login_required
 def export_notes(request):
     return build_excel_response(build_notes_workbook(request.user), dated_filename("careerfunnel_notes_decisions"))
 
