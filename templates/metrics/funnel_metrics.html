@@ -282,5 +282,103 @@
         </div>
         {% endif %}
     </section>
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Application Quality</p>
+            <h2>Applications needing better evidence</h2>
+            <p class="trust-note">Built from real JobApplication records. Flags incomplete records that weaken tracking, follow-up, and analytics quality.</p>
+        </div>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span>Total Applications</span>
+                <strong>{{ application_quality_report.total_applications }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Applications With Issues</span>
+                <strong>{{ application_quality_report.applications_with_issues }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Quality Issue Rate</span>
+                <strong>{{ application_quality_report.quality_issue_rate }}%</strong>
+            </div>
+            <div class="detail-item">
+                <span>Missing CV Version</span>
+                <strong>{{ application_quality_report.missing_cv_version_count }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Missing Source</span>
+                <strong>{{ application_quality_report.missing_source_count }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Missing Job Description</span>
+                <strong>{{ application_quality_report.missing_job_description_count }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Missing Required Skills</span>
+                <strong>{{ application_quality_report.missing_required_skills_count }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Missing Follow-Up Date</span>
+                <strong>{{ application_quality_report.missing_follow_up_count }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Seniority Risk Count</span>
+                <strong>{{ application_quality_report.seniority_risk_count }}</strong>
+            </div>
+        </div>
+        <h3>Recommended Actions</h3>
+        {% if application_quality_report.recommendations %}
+        <ul class="agent-list">
+            {% for rec in application_quality_report.recommendations %}
+            <li>{{ rec }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state small-empty-state">
+            <p>No application quality recommendations available yet.</p>
+        </div>
+        {% endif %}
+        <h3>Applications needing action</h3>
+        {% if application_quality_report.issue_rows %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Company</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Issues</th>
+                        <th>Recommended Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in application_quality_report.issue_rows %}
+                    <tr>
+                        <td><strong>{{ row.company_name }}</strong></td>
+                        <td>{{ row.job_title }}</td>
+                        <td>{{ row.status }}</td>
+                        <td>
+                            {% if row.issues %}
+                            <ul class="agent-list">
+                                {% for issue in row.issues %}
+                                <li>{{ issue }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                        <td>{{ row.recommended_action }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state small-empty-state">
+            <p>No application quality issues detected.</p>
+        </div>
+        {% endif %}
+    </section>
 </div>
 {% endblock %}

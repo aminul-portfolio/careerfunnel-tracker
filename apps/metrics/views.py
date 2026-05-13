@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from .services import (
+    build_application_quality_report,
     build_cv_version_performance,
     build_funnel_metrics,
     build_funnel_stage_rows,
@@ -27,5 +28,8 @@ def funnel_metrics(request):
             "source_roi_rows": build_source_roi(request.user),
             "cv_version_rows": build_cv_version_performance(request.user),
             "rejection_report": build_rejection_pattern_report(request.user),
+            "application_quality_report": build_application_quality_report(
+                request.user
+            ),
         },
     )
