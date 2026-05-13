@@ -380,5 +380,99 @@
         </div>
         {% endif %}
     </section>
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Data Quality</p>
+            <h2>Analytics readiness and data trust</h2>
+            <p class="trust-note">Built from real JobApplication records. Shows whether the data is complete enough for reliable analytics.</p>
+        </div>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span>Total Applications</span>
+                <strong>{{ data_quality_report.total_applications }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Analytics-Ready Applications</span>
+                <strong>{{ data_quality_report.analytics_ready_applications }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Analytics-Ready Rate</span>
+                <strong>{{ data_quality_report.analytics_ready_rate }}%</strong>
+            </div>
+            <div class="detail-item">
+                <span>Data Quality Score</span>
+                <strong>{{ data_quality_report.data_quality_score }}%</strong>
+            </div>
+            <div class="detail-item">
+                <span>Missing Source</span>
+                <strong>{{ data_quality_report.missing_source_count }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Generic Source</span>
+                <strong>{{ data_quality_report.generic_source_count }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Missing CV Version</span>
+                <strong>{{ data_quality_report.missing_cv_version_count }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Missing Job Description</span>
+                <strong>{{ data_quality_report.missing_job_description_count }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Missing Required Skills</span>
+                <strong>{{ data_quality_report.missing_required_skills_count }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Missing Follow-Up Date</span>
+                <strong>{{ data_quality_report.missing_follow_up_count }}</strong>
+            </div>
+        </div>
+        <h3>Recommended Cleanup Actions</h3>
+        {% if data_quality_report.recommendations %}
+        <ul class="agent-list">
+            {% for rec in data_quality_report.recommendations %}
+            <li>{{ rec }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state small-empty-state">
+            <p>No data quality recommendations available yet.</p>
+        </div>
+        {% endif %}
+        <h3>Data quality checks</h3>
+        {% if data_quality_report.checks %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Check</th>
+                        <th>Issues</th>
+                        <th>Applications</th>
+                        <th>Completion Rate</th>
+                        <th>Severity</th>
+                        <th>Recommendation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in data_quality_report.checks %}
+                    <tr>
+                        <td><strong>{{ row.check_name }}</strong></td>
+                        <td>{{ row.issue_count }}</td>
+                        <td>{{ row.total_applications }}</td>
+                        <td>{{ row.completion_rate }}%</td>
+                        <td>{{ row.severity }}</td>
+                        <td>{{ row.recommendation }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state small-empty-state">
+            <p>No data quality checks available yet.</p>
+        </div>
+        {% endif %}
+    </section>
 </div>
 {% endblock %}

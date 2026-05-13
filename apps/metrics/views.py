@@ -4,6 +4,7 @@ from django.shortcuts import render
 from .services import (
     build_application_quality_report,
     build_cv_version_performance,
+    build_data_quality_report,
     build_funnel_metrics,
     build_funnel_stage_rows,
     build_rejection_pattern_report,
@@ -31,5 +32,6 @@ def funnel_metrics(request):
             "application_quality_report": build_application_quality_report(
                 request.user
             ),
+            "data_quality_report": build_data_quality_report(request.user),
         },
     )
