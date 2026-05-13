@@ -7,11 +7,21 @@
         <p class="eyebrow">Funnel Intelligence</p>
         <h1>See where the job-search funnel is leaking.</h1>
         <p>This page converts your application records, daily logs, and weekly reviews into a diagnosis.</p>
+        <p class="trust-note">Built from stored application, daily log, and review records so reviewers can trace each metric back to captured activity.</p>
     </section>
-    <section class="diagnosis-panel {{ diagnosis_panel_class }}">
+    <nav class="section-nav" aria-label="Metrics sections">
+        <a href="#application-funnel">Funnel</a>
+        <a href="#source-roi">Source ROI</a>
+        <a href="#cv-performance">CV Performance</a>
+        <a href="#rejections">Rejections</a>
+        <a href="#application-quality">Application Quality</a>
+        <a href="#data-quality">Data Quality</a>
+    </nav>
+    <section id="current-diagnosis" class="diagnosis-panel {{ diagnosis_panel_class }}">
         <div>
             <p class="eyebrow">Current Diagnosis</p>
             <h2>{{ diagnosis.diagnosis_title }}</h2>
+            <p class="section-note">Read this first for the plain-English interpretation of the current funnel health.</p>
             <p>{{ diagnosis.explanation }}</p>
         </div>
         <div class="diagnosis-action">
@@ -19,7 +29,7 @@
             <p>{{ diagnosis.recommended_action }}</p>
         </div>
     </section>
-    <section class="kpi-grid">
+    <section id="kpi-cards" class="kpi-grid">
         <div class="kpi-card">
             <p>Total Applications</p>
             <h2>{{ metrics.total_applications }}</h2>
@@ -37,10 +47,11 @@
             <h2>{{ metrics.offer_rate }}%</h2>
         </div>
     </section>
-    <section class="content-card">
+    <section id="application-funnel" class="content-card">
         <div class="card-header">
             <p class="eyebrow">Application Funnel</p>
             <h2>Stage-by-Stage Breakdown</h2>
+            <p class="section-note">Shows how applications progress from submission through responses, interviews, offers, and outcomes.</p>
         </div>
         <div class="funnel-stack">
             {% for row in funnel_stage_rows %}
@@ -57,10 +68,11 @@
             {% endfor %}
         </div>
     </section>
-    <section class="content-card">
+    <section id="daily-discipline" class="content-card">
         <div class="card-header">
             <p class="eyebrow">Daily Discipline</p>
             <h2>Target vs Actual</h2>
+            <p class="section-note">Compares planned application activity with the daily log totals used by the tracker.</p>
         </div>
         <div class="detail-grid">
             <div class="detail-item">
@@ -81,11 +93,12 @@
             </div>
         </div>
     </section>
-    <section class="content-card">
+    <section id="source-roi" class="content-card">
         <div class="card-header">
             <p class="eyebrow">Source ROI</p>
             <h2>Application source performance</h2>
             <p>Grouped from real JobApplication records by application source.</p>
+            <p class="table-context">Use this table to compare which sourcing channels are producing responses, interviews, and offers.</p>
         </div>
         {% if source_roi_rows %}
         <div class="table-wrap">
@@ -124,11 +137,12 @@
         </div>
         {% endif %}
     </section>
-    <section class="content-card">
+    <section id="cv-performance" class="content-card">
         <div class="card-header">
             <p class="eyebrow">CV Version Performance</p>
             <h2>CV version outcome comparison</h2>
             <p>This is performance tracking, not scientific A/B testing.</p>
+            <p class="table-context">Use this as a directional comparison of outcomes attached to each stored CV version.</p>
         </div>
         {% if cv_version_rows %}
         <div class="table-wrap">
@@ -171,11 +185,12 @@
         </div>
         {% endif %}
     </section>
-    <section class="content-card">
+    <section id="rejections" class="content-card">
         <div class="card-header">
             <p class="eyebrow">Rejection Pattern Analysis</p>
             <h2>Where applications are breaking down</h2>
             <p class="trust-note">Built from real JobApplication outcomes. Rejection statuses include rejected and auto-rejected.</p>
+            <p class="section-note">Highlights rejection volume, repeated patterns, and the cleanup actions most likely to improve future applications.</p>
         </div>
         {% if rejection_report.sample_warning %}
         <div class="diagnosis-panel diagnosis-warning">
@@ -224,6 +239,7 @@
         </div>
         {% endif %}
         <h3>Rejections by source</h3>
+        <p class="table-context">Compares rejection patterns across the same application source groups used above.</p>
         {% if rejection_report.by_source %}
         <div class="table-wrap">
             <table class="data-table">
@@ -253,6 +269,7 @@
         </div>
         {% endif %}
         <h3>Rejections by CV version</h3>
+        <p class="table-context">Shows whether rejection patterns are clustering around particular CV versions.</p>
         {% if rejection_report.by_cv_version %}
         <div class="table-wrap">
             <table class="data-table">
@@ -282,11 +299,12 @@
         </div>
         {% endif %}
     </section>
-    <section class="content-card">
+    <section id="application-quality" class="content-card">
         <div class="card-header">
             <p class="eyebrow">Application Quality</p>
             <h2>Applications needing better evidence</h2>
             <p class="trust-note">Built from real JobApplication records. Flags incomplete records that weaken tracking, follow-up, and analytics quality.</p>
+            <p class="section-note">Use this section to identify application records that need clearer evidence before their metrics can be trusted.</p>
         </div>
         <div class="detail-grid">
             <div class="detail-item">
@@ -339,6 +357,7 @@
         </div>
         {% endif %}
         <h3>Applications needing action</h3>
+        <p class="table-context">Lists the specific applications whose missing fields or risk flags need attention.</p>
         {% if application_quality_report.issue_rows %}
         <div class="table-wrap">
             <table class="data-table">
@@ -365,7 +384,7 @@
                                 {% endfor %}
                             </ul>
                             {% else %}
-                            —
+                            -
                             {% endif %}
                         </td>
                         <td>{{ row.recommended_action }}</td>
@@ -380,11 +399,12 @@
         </div>
         {% endif %}
     </section>
-    <section class="content-card">
+    <section id="data-quality" class="content-card">
         <div class="card-header">
             <p class="eyebrow">Data Quality</p>
             <h2>Analytics readiness and data trust</h2>
             <p class="trust-note">Built from real JobApplication records. Shows whether the data is complete enough for reliable analytics.</p>
+            <p class="section-note">Summarizes the completeness checks that determine how reliable the page's analytics are.</p>
         </div>
         <div class="detail-grid">
             <div class="detail-item">
@@ -441,6 +461,7 @@
         </div>
         {% endif %}
         <h3>Data quality checks</h3>
+        <p class="table-context">Each row explains one readiness check, how many records are affected, and the recommended cleanup.</p>
         {% if data_quality_report.checks %}
         <div class="table-wrap">
             <table class="data-table">

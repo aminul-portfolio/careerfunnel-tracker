@@ -76,3 +76,35 @@
         grid-template-columns: 1fr;
     }
 }
+
+.section-nav {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    background: white;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    box-shadow: var(--shadow-soft);
+}
+
+.section-nav a {
+    color: var(--color-primary);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.section-note,
+.table-context {
+    color: var(--color-muted);
+    line-height: 1.5;
+}
+
+.section-note {
+    margin: 0.5rem 0 1rem;
+}
+
+.table-context {
+    margin: 0.5rem 0 0;
+    font-size: 0.9rem;
+}
