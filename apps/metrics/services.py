@@ -202,6 +202,241 @@ def build_cv_version_performance(user) -> list[CVVersionPerformanceRow]:
     return rows
 
 
+_REJECTION_STATUSES = (ApplicationStatus.REJECTED, ApplicationStatus.AUTO_REJECTED)
+_REJECTION_Q = Q(status__in=_REJECTION_STATUSES)
+_AUTO_REJECTION_Q = Q(status=ApplicationStatus.AUTO_REJECTED)
+
+_SENIORITY_SIGNALS = (
+    "senior",
+    "lead",
+    "principal",
+    "manager",
+    "head of",
+    "3+ years",
+    "5+ years",
+    "minimum 3",
+    "minimum 5",
+)
+
+
+def _seniority_risk_q() -> Q:
+    q = Q()
+    for field in ("job_title", "required_skills", "job_description"):
+        for sig in _SENIORITY_SIGNALS:
+            q |= Q(**{f"{field}__icontains": sig})
+    return q
+
+
+_SAMPLE_WARNING_LOW_VOLUME = (
+    "Not enough applications yet for strong pattern conclusions. Treat this as directional only."
+)
+
+
+@dataclass(frozen=True)
+class RejectionGroupRow:
+    """Per-source rejection counts and rates (denominator = all applications from that source)."""
+
+    source: str
+    source_label: str
+    rejection_count: int
+    total_applications: int
+    rejection_rate: float
+
+
+@dataclass(frozen=True)
+class RejectionCvVersionRow:
+    """Per-CV-version rejection counts and rates (denominator = all applications using that version)."""
+
+    cv_version: str
+    rejection_count: int
+    total_applications: int
+    rejection_rate: float
+
+
+@dataclass(frozen=True)
+class RejectionPatternReport:
+    total_applications: int
+    total_rejections: int
+    auto_rejections: int
+    rejection_rate: float
+    auto_rejection_rate: float
+    has_enough_data: bool
+    sample_warning: str
+    by_source: tuple[RejectionGroupRow, ...]
+    by_cv_version: tuple[RejectionCvVersionRow, ...]
+    seniority_risk_count: int
+    recommendations: tuple[str, ...]
+
+
+def _build_rejection_recommendations(
+    *,
+    total_applications: int,
+    total_rejections: int,
+    auto_rejections: int,
+    auto_rejection_rate: float,
+    seniority_risk_count: int,
+    by_source: tuple[RejectionGroupRow, ...],
+    overall_rejection_rate: float,
+) -> tuple[str, ...]:
+    recs: list[str] = []
+
+    if total_applications == 0:
+        recs.append(
+            "Log job applications in the tracker first; rejection pattern analysis needs application history."
+        )
+        return tuple(recs)
+
+    if total_applications < 20:
+        recs.append(
+            "Collect at least 20 logged applications before drawing strong conclusions from rejection patterns."
+        )
+
+    auto_high = auto_rejection_rate >= 25.0 and auto_rejections > 0
+    if auto_high:
+        recs.append(
+            "Auto-rejection rate is elevated; review CV targeting, keywords, and whether each role is a realistic fit."
+        )
+
+    if seniority_risk_count > 0:
+        recs.append(
+            "Several rejections align with senior or stretch-role signals; consider narrowing to roles that match your level."
+        )
+
+    source_hotspot = False
+    if by_source and total_rejections >= 3:
+        top_source = max(by_source, key=lambda r: (r.rejection_count, r.total_applications))
+        source_hotspot = (
+            top_source.rejection_count >= 3
+            and top_source.rejection_rate >= 40.0
+            and top_source.rejection_count >= max(1, int(0.35 * total_rejections))
+        )
+        if source_hotspot:
+            recs.append(
+                f"Review the {top_source.source_label} channel: it shows a concentration of rejections relative to volume."
+            )
+
+    if total_applications >= 20:
+        if not auto_high and seniority_risk_count == 0 and not source_hotspot:
+            if overall_rejection_rate < 70.0:
+                recs.append(
+                    "No single major red flag detected; keep logging applications and compare rejection rates across sources and CV versions."
+                )
+            else:
+                recs.append(
+                    "Overall rejection rate is high; continue refining targeting while comparing sources and CV versions side by side."
+                )
+
+    if not recs:
+        recs.append(
+            "Continue logging applications and compare sources and CV versions as more outcomes arrive."
+        )
+
+    return tuple(recs)
+
+
+def build_rejection_pattern_report(user) -> RejectionPatternReport:
+    base = JobApplication.objects.filter(user=user)
+    total_applications = base.count()
+    total_rejections = base.filter(_REJECTION_Q).count()
+    auto_rejections = base.filter(_AUTO_REJECTION_Q).count()
+    rejection_rate = safe_percentage(total_rejections, total_applications)
+    auto_rejection_rate = safe_percentage(auto_rejections, total_applications)
+
+    has_enough_data = total_applications >= 20
+    sample_warning = "" if has_enough_data else _SAMPLE_WARNING_LOW_VOLUME
+
+    normalized_source = Coalesce(
+        NullIf(Trim("source"), Value("", output_field=CharField())),
+        Value(ApplicationSource.OTHER.value, output_field=CharField()),
+        output_field=CharField(max_length=40),
+    )
+    source_groups = (
+        JobApplication.objects.filter(user=user)
+        .annotate(_rej_source=normalized_source)
+        .values("_rej_source")
+        .annotate(
+            total_applications=Count("id"),
+            rejection_count=Count("id", filter=_REJECTION_Q),
+        )
+    )
+    by_source_list: list[RejectionGroupRow] = []
+    for row in source_groups:
+        code = row["_rej_source"]
+        total = row["total_applications"]
+        rej = row["rejection_count"]
+        by_source_list.append(
+            RejectionGroupRow(
+                source=code,
+                source_label=_source_choice_label(code),
+                rejection_count=rej,
+                total_applications=total,
+                rejection_rate=safe_percentage(rej, total),
+            )
+        )
+    by_source_list.sort(
+        key=lambda r: (-r.rejection_count, -r.total_applications, r.source_label)
+    )
+    by_source = tuple(by_source_list)
+
+    normalized_cv = Coalesce(
+        NullIf(Trim("cv_version"), Value("", output_field=CharField())),
+        Value("Unspecified", output_field=CharField()),
+        output_field=CharField(max_length=120),
+    )
+    cv_groups = (
+        JobApplication.objects.filter(user=user)
+        .annotate(_rej_cv=normalized_cv)
+        .values("_rej_cv")
+        .annotate(
+            total_applications=Count("id"),
+            rejection_count=Count("id", filter=_REJECTION_Q),
+        )
+    )
+    by_cv_list: list[RejectionCvVersionRow] = []
+    for row in cv_groups:
+        version = row["_rej_cv"]
+        total = row["total_applications"]
+        rej = row["rejection_count"]
+        by_cv_list.append(
+            RejectionCvVersionRow(
+                cv_version=version,
+                rejection_count=rej,
+                total_applications=total,
+                rejection_rate=safe_percentage(rej, total),
+            )
+        )
+    by_cv_list.sort(
+        key=lambda r: (-r.rejection_count, -r.total_applications, r.cv_version)
+    )
+    by_cv_version = tuple(by_cv_list)
+
+    seniority_risk_count = base.filter(_REJECTION_Q & _seniority_risk_q()).count()
+
+    recommendations = _build_rejection_recommendations(
+        total_applications=total_applications,
+        total_rejections=total_rejections,
+        auto_rejections=auto_rejections,
+        auto_rejection_rate=auto_rejection_rate,
+        seniority_risk_count=seniority_risk_count,
+        by_source=by_source,
+        overall_rejection_rate=rejection_rate,
+    )
+
+    return RejectionPatternReport(
+        total_applications=total_applications,
+        total_rejections=total_rejections,
+        auto_rejections=auto_rejections,
+        rejection_rate=rejection_rate,
+        auto_rejection_rate=auto_rejection_rate,
+        has_enough_data=has_enough_data,
+        sample_warning=sample_warning,
+        by_source=by_source,
+        by_cv_version=by_cv_version,
+        seniority_risk_count=seniority_risk_count,
+        recommendations=recommendations,
+    )
+
+
 def build_funnel_metrics(user) -> FunnelMetrics:
     applications = JobApplication.objects.filter(user=user)
     total_applications = applications.count()
