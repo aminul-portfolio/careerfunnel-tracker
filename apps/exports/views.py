@@ -3,7 +3,14 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 
-from .services import build_applications_workbook, build_daily_logs_workbook, build_full_tracker_workbook, build_interviews_workbook, build_notes_workbook, build_weekly_reviews_workbook
+from .services import (
+    build_applications_workbook,
+    build_daily_logs_workbook,
+    build_full_tracker_workbook,
+    build_interviews_workbook,
+    build_notes_workbook,
+    build_weekly_reviews_workbook,
+)
 
 
 def build_excel_response(file_bytes: bytes, filename: str) -> HttpResponse:

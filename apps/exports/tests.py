@@ -12,7 +12,6 @@ from apps.weekly_review.models import WeeklyReview
 
 from .services import build_full_tracker_workbook
 
-
 XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 EXPORT_ROUTE_NAMES = [

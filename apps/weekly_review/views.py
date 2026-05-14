@@ -5,7 +5,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import WeeklyReviewForm
 from .models import WeeklyReview
-from .services import build_weekly_review_summary, build_weekly_review_table_rows, get_diagnosis_badge_class, get_variance_badge_class
+from .services import (
+    build_weekly_review_summary,
+    build_weekly_review_table_rows,
+    get_diagnosis_badge_class,
+    get_variance_badge_class,
+)
 
 
 @login_required

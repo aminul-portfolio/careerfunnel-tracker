@@ -3,15 +3,20 @@ from django.shortcuts import get_object_or_404, render
 
 from apps.applications.models import JobApplication
 
-from .forms import ApplicationChoiceForm, CoverLetterQualityForm, CVGapAnalyzerForm, JobPostingAnalyzerForm
+from .forms import (
+    ApplicationChoiceForm,
+    CoverLetterQualityForm,
+    CVGapAnalyzerForm,
+    JobPostingAnalyzerForm,
+)
 from .services import (
-    analyze_job_posting,
-    build_next_best_actions,
-    build_weekly_coach_report,
-    build_cv_ab_testing_rows,
-    build_smart_notifications,
     analyze_cv_gap,
+    analyze_job_posting,
     analyze_rejection_patterns,
+    build_cv_ab_testing_rows,
+    build_next_best_actions,
+    build_smart_notifications,
+    build_weekly_coach_report,
     check_cover_letter_quality,
     generate_followup_message,
     generate_interview_prep,
