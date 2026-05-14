@@ -18,8 +18,21 @@ def note_list(request):
     if important_filter == "1":
         notes = notes.filter(is_important=True)
     if search_query:
-        notes = notes.filter(Q(title__icontains=search_query) | Q(content__icontains=search_query) | Q(tags__icontains=search_query))
-    return render(request, "notes/note_list.html", {"notes": notes, "note_type_filter": note_type_filter or "", "search_query": search_query or "", "important_filter": important_filter or ""})
+        notes = notes.filter(
+            Q(title__icontains=search_query)
+            | Q(content__icontains=search_query)
+            | Q(tags__icontains=search_query)
+        )
+    return render(
+        request,
+        "notes/note_list.html",
+        {
+            "notes": notes,
+            "note_type_filter": note_type_filter or "",
+            "search_query": search_query or "",
+            "important_filter": important_filter or "",
+        },
+    )
 
 
 @login_required
@@ -40,7 +53,15 @@ def note_create(request):
             return redirect(note.get_absolute_url())
     else:
         form = NoteForm()
-    return render(request, "notes/note_form.html", {"form": form, "page_title": "Add Note / Decision", "submit_label": "Save Note"})
+    return render(
+        request,
+        "notes/note_form.html",
+        {
+            "form": form,
+            "page_title": "Add Note / Decision",
+            "submit_label": "Save Note",
+        },
+    )
 
 
 @login_required
@@ -54,7 +75,16 @@ def note_update(request, pk):
             return redirect(note.get_absolute_url())
     else:
         form = NoteForm(instance=note)
-    return render(request, "notes/note_form.html", {"form": form, "page_title": "Edit Note / Decision", "submit_label": "Update Note", "note": note})
+    return render(
+        request,
+        "notes/note_form.html",
+        {
+            "form": form,
+            "page_title": "Edit Note / Decision",
+            "submit_label": "Update Note",
+            "note": note,
+        },
+    )
 
 
 @login_required

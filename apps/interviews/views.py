@@ -30,7 +30,15 @@ def interview_create(request):
             return redirect(interview.get_absolute_url())
     else:
         form = InterviewPrepForm(user=request.user)
-    return render(request, "interviews/interview_form.html", {"form": form, "page_title": "Add Interview Prep", "submit_label": "Save Interview Prep"})
+    return render(
+        request,
+        "interviews/interview_form.html",
+        {
+            "form": form,
+            "page_title": "Add Interview Prep",
+            "submit_label": "Save Interview Prep",
+        },
+    )
 
 
 @login_required
@@ -44,7 +52,15 @@ def interview_update(request, pk):
             return redirect(interview.get_absolute_url())
     else:
         form = InterviewPrepForm(instance=interview, user=request.user)
-    return render(request, "interviews/interview_form.html", {"form": form, "page_title": "Edit Interview Prep", "submit_label": "Update Interview Prep"})
+    return render(
+        request,
+        "interviews/interview_form.html",
+        {
+            "form": form,
+            "page_title": "Edit Interview Prep",
+            "submit_label": "Update Interview Prep",
+        },
+    )
 
 
 @login_required

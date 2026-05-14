@@ -7,11 +7,22 @@ class InterviewPrepForm(forms.ModelForm):
     class Meta:
         model = InterviewPrep
         fields = [
-            "application", "interview_date", "stage", "outcome", "interviewer_names",
-            "expected_topics", "projects_to_mention", "questions_to_prepare",
-            "profile_answer_prepared", "company_answer_prepared", "project_walkthrough_prepared",
-            "sql_practice_done", "python_practice_done", "star_examples_prepared",
-            "questions_for_employer_prepared", "reflection",
+            "application",
+            "interview_date",
+            "stage",
+            "outcome",
+            "interviewer_names",
+            "expected_topics",
+            "projects_to_mention",
+            "questions_to_prepare",
+            "profile_answer_prepared",
+            "company_answer_prepared",
+            "project_walkthrough_prepared",
+            "sql_practice_done",
+            "python_practice_done",
+            "star_examples_prepared",
+            "questions_for_employer_prepared",
+            "reflection",
         ]
         widgets = {
             "application": forms.Select(attrs={"class": "form-control"}),
@@ -29,4 +40,6 @@ class InterviewPrepForm(forms.ModelForm):
         user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         if user is not None:
-            self.fields["application"].queryset = self.fields["application"].queryset.filter(user=user)
+            self.fields["application"].queryset = self.fields["application"].queryset.filter(
+                user=user
+            )

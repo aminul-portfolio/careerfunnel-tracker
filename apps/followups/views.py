@@ -14,7 +14,11 @@ def followup_list(request):
     return render(
         request,
         "followups/followup_list.html",
-        {"applications": applications, "due_followups": due_followups, "due_count": due_followups.count()},
+        {
+            "applications": applications,
+            "due_followups": due_followups,
+            "due_count": due_followups.count(),
+        },
     )
 
 

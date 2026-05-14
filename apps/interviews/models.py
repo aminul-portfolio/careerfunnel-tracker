@@ -8,11 +8,27 @@ from .choices import InterviewOutcome, InterviewStage
 
 
 class InterviewPrep(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="interview_preps")
-    application = models.ForeignKey(JobApplication, on_delete=models.CASCADE, related_name="interview_preps")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="interview_preps",
+    )
+    application = models.ForeignKey(
+        JobApplication,
+        on_delete=models.CASCADE,
+        related_name="interview_preps",
+    )
     interview_date = models.DateField()
-    stage = models.CharField(max_length=30, choices=InterviewStage.choices, default=InterviewStage.SCREENING)
-    outcome = models.CharField(max_length=30, choices=InterviewOutcome.choices, default=InterviewOutcome.SCHEDULED)
+    stage = models.CharField(
+        max_length=30,
+        choices=InterviewStage.choices,
+        default=InterviewStage.SCREENING,
+    )
+    outcome = models.CharField(
+        max_length=30,
+        choices=InterviewOutcome.choices,
+        default=InterviewOutcome.SCHEDULED,
+    )
     interviewer_names = models.CharField(max_length=240, blank=True)
     expected_topics = models.TextField(blank=True)
     projects_to_mention = models.TextField(blank=True)

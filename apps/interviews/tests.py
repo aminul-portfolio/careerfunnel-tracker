@@ -12,7 +12,12 @@ from .models import InterviewPrep
 class InterviewPrepTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
-        self.application = JobApplication.objects.create(user=self.user, company_name="Test Co", job_title="Data Analyst", date_applied=date(2026, 5, 1))
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Test Co",
+            job_title="Data Analyst",
+            date_applied=date(2026, 5, 1),
+        )
 
     def test_readiness_score(self):
         interview = InterviewPrep.objects.create(
@@ -30,6 +35,14 @@ class InterviewPrepTests(TestCase):
 
     def test_interview_create_works(self):
         self.client.login(username="aminul", password="StrongPass12345")
-        response = self.client.post(reverse("interviews:interview_create"), {"application": self.application.pk, "interview_date": "2026-05-10", "stage": "screening", "outcome": "scheduled"})
+        response = self.client.post(
+            reverse("interviews:interview_create"),
+            {
+                "application": self.application.pk,
+                "interview_date": "2026-05-10",
+                "stage": "screening",
+                "outcome": "scheduled",
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(InterviewPrep.objects.count(), 1)

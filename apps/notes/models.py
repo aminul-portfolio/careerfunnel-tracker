@@ -6,7 +6,11 @@ from .choices import NoteType
 
 
 class Note(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="career_notes")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="career_notes",
+    )
     note_type = models.CharField(max_length=40, choices=NoteType.choices, default=NoteType.GENERAL)
     title = models.CharField(max_length=180)
     content = models.TextField()
