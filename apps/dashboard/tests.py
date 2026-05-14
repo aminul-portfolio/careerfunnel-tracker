@@ -120,6 +120,20 @@ class DashboardViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
 
+    def _create_application(self, **overrides):
+        defaults = {
+            "user": self.user,
+            "company_name": "Dashboard Co",
+            "job_title": "Data Analyst",
+            "job_url": "https://example.com/dashboard-job",
+            "required_skills": "SQL, Python",
+            "job_description": "Build dashboards and explain trends.",
+            "date_applied": timezone.localdate() - timedelta(days=7),
+            "cv_version": "Data_CV_v1",
+        }
+        defaults.update(overrides)
+        return JobApplication.objects.create(**defaults)
+
     def test_dashboard_requires_login(self):
         response = self.client.get(reverse("dashboard:overview"))
         self.assertEqual(response.status_code, 302)
@@ -128,3 +142,32 @@ class DashboardViewTests(TestCase):
         self.client.login(username="aminul", password="StrongPass12345")
         response = self.client.get(reverse("dashboard:overview"))
         self.assertEqual(response.status_code, 200)
+        self.assertIn("today_action_panel", response.context)
+        self.assertContains(response, "Today Action Panel")
+
+    def test_dashboard_displays_today_action_panel_item(self):
+        today = timezone.localdate()
+        DailyLog.objects.create(user=self.user, log_date=today)
+        application = self._create_application(
+            company_name="Action Co",
+            follow_up_date=today - timedelta(days=1),
+            follow_up_status=FollowUpStatus.DUE,
+        )
+
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(reverse("dashboard:overview"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "High - Overdue follow-up: Action Co")
+        self.assertContains(response, "Send a short follow-up and update the follow-up status.")
+        self.assertContains(response, application.get_absolute_url())
+
+    def test_dashboard_displays_today_action_panel_empty_state(self):
+        DailyLog.objects.create(user=self.user, log_date=timezone.localdate())
+
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(reverse("dashboard:overview"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["today_action_panel"], [])
+        self.assertContains(response, "Nothing urgent needs attention right now.")

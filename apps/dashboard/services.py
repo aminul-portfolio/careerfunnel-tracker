@@ -308,6 +308,7 @@ def build_today_action_panel(user, limit: int = 8) -> list[TodayActionItem]:
 def build_dashboard_context(user) -> dict:
     return {
         "summary": build_dashboard_summary(user),
+        "today_action_panel": build_today_action_panel(user),
         "recent_applications": get_recent_applications(user),
         "recent_daily_logs": get_recent_daily_logs(user),
         "recent_weekly_reviews": get_recent_weekly_reviews(user),

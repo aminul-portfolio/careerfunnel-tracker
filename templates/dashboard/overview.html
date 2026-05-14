@@ -76,6 +76,39 @@
         </div>
     </section>
 
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Decision Flow</p>
+            <h2>Today Action Panel</h2>
+        </div>
+
+        {% if today_action_panel %}
+            <div class="compact-list">
+                {% for action in today_action_panel %}
+                    <div class="compact-list-item">
+                        <div>
+                            <strong>{{ action.priority }} - {{ action.title }}</strong>
+                            <span>{{ action.reason }}</span>
+                            <span>Recommended: {{ action.recommended_action }}</span>
+                        </div>
+                        {% if action.related_url %}
+                            <a href="{{ action.related_url }}" class="table-link">Open</a>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state small-empty-state">
+                <h3>Nothing urgent needs attention right now.</h3>
+                <p>Keep logging applications, follow-ups, and daily activity.</p>
+            </div>
+        {% endif %}
+
+        <p class="reviewer-note">
+            Rule-based priorities are generated from existing applications, follow-ups, interviews, and daily logs.
+        </p>
+    </section>
+
     <section class="dashboard-two-column">
         <div class="content-card">
             <div class="card-header">
