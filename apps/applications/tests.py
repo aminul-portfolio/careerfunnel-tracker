@@ -1,10 +1,19 @@
 from datetime import date
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from .choices import ApplicationSource, ApplicationStatus, RoleFit, WorkType
+from .choices import (
+    ApplicationSource,
+    ApplicationStatus,
+    FollowUpStatus,
+    RoleFit,
+    WorkType,
+)
 from .models import JobApplication
 from .services import calculate_response_rate
 
@@ -140,6 +149,75 @@ class JobApplicationViewTests(TestCase):
         self.assertContains(response, "CareerFunnel Tracker does not send email.")
         self.assertContains(response, "copy-ready draft")
         self.assertNotContains(response, "Send Email")
+
+    def test_application_detail_displays_mark_followup_sent_button(self):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertContains(response, "Mark Follow-up Sent")
+        self.assertContains(
+            response,
+            "Use this only after you have sent the email manually outside CareerFunnel Tracker.",
+        )
+
+    def test_mark_followup_sent_requires_login(self):
+        application = self.create_application()
+
+        response = self.client.post(
+            reverse(
+                "applications:application_mark_followup_sent",
+                kwargs={"pk": application.pk},
+            ),
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_mark_followup_sent_rejects_get(self):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse(
+                "applications:application_mark_followup_sent",
+                kwargs={"pk": application.pk},
+            ),
+        )
+
+        self.assertEqual(response.status_code, 405)
+
+    @patch("django.core.mail.EmailMessage.send")
+    @patch("django.core.mail.send_mail")
+    def test_mark_followup_sent_post_updates_application_without_email(
+        self,
+        send_mail,
+        email_message_send,
+    ):
+        application = self.create_application(
+            follow_up_status=FollowUpStatus.DUE,
+            last_contacted_date=None,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.post(
+            reverse(
+                "applications:application_mark_followup_sent",
+                kwargs={"pk": application.pk},
+            ),
+            follow=True,
+        )
+        application.refresh_from_db()
+
+        self.assertRedirects(response, application.get_absolute_url())
+        self.assertEqual(application.follow_up_status, FollowUpStatus.SENT)
+        self.assertEqual(application.last_contacted_date, timezone.localdate())
+        self.assertContains(response, "Follow-up marked as sent.")
+        send_mail.assert_not_called()
+        email_message_send.assert_not_called()
+        self.assertEqual(mail.outbox, [])
 
 
 class ApplicationServiceTests(TestCase):

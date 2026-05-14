@@ -2,8 +2,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
-from apps.followups.services import build_followup_email_draft
+from apps.followups.services import build_followup_email_draft, mark_followup_sent
 
 from .forms import JobApplicationForm
 from .models import JobApplication
@@ -57,6 +58,15 @@ def application_detail(request, pk):
             "followup_email_draft": build_followup_email_draft(application),
         },
     )
+
+
+@login_required
+@require_POST
+def application_mark_followup_sent(request, pk):
+    application = get_object_or_404(JobApplication, pk=pk, user=request.user)
+    mark_followup_sent(application)
+    messages.success(request, "Follow-up marked as sent.")
+    return redirect(application.get_absolute_url())
 
 
 @login_required
