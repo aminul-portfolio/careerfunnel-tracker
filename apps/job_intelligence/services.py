@@ -5,11 +5,53 @@ from dataclasses import dataclass
 from apps.applications.choices import RoleFit, WorkType
 from apps.applications.models import JobApplication
 
-TARGET_TITLES = ["data analyst", "junior data analyst", "graduate data analyst", "reporting analyst", "bi analyst", "insights analyst", "finance data analyst", "operations data analyst"]
-BAD_TITLE_WORDS = ["senior", "lead", "principal", "manager", "head of", "data scientist", "machine learning", "quant"]
+TARGET_TITLES = [
+    "data analyst",
+    "junior data analyst",
+    "graduate data analyst",
+    "reporting analyst",
+    "bi analyst",
+    "insights analyst",
+    "finance data analyst",
+    "operations data analyst",
+]
+BAD_TITLE_WORDS = [
+    "senior",
+    "lead",
+    "principal",
+    "manager",
+    "head of",
+    "data scientist",
+    "machine learning",
+    "quant",
+]
 GOOD_LOCATION_WORDS = ["london", "croydon", "south london", "remote uk", "hybrid london", "purley"]
-GOOD_SKILLS = ["python", "sql", "excel", "reporting", "dashboard", "kpi", "analytics", "pandas", "power bi", "data analysis", "finance", "etl"]
-DEAL_BREAKERS = ["5+ years", "minimum 5 years", "3+ years", "minimum 3 years", "senior", "spark", "kafka", "airflow", "aws redshift", "dbt required"]
+GOOD_SKILLS = [
+    "python",
+    "sql",
+    "excel",
+    "reporting",
+    "dashboard",
+    "kpi",
+    "analytics",
+    "pandas",
+    "power bi",
+    "data analysis",
+    "finance",
+    "etl",
+]
+DEAL_BREAKERS = [
+    "5+ years",
+    "minimum 5 years",
+    "3+ years",
+    "minimum 3 years",
+    "senior",
+    "spark",
+    "kafka",
+    "airflow",
+    "aws redshift",
+    "dbt required",
+]
 
 
 @dataclass(frozen=True)
@@ -42,7 +84,9 @@ def calculate_job_fit_score(application: JobApplication) -> tuple[int, list[str]
     score = 0
     reasons: list[str] = []
 
-    if any(title in text for title in TARGET_TITLES) and not any(word in text for word in BAD_TITLE_WORDS):
+    if any(title in text for title in TARGET_TITLES) and not any(
+        word in text for word in BAD_TITLE_WORDS
+    ):
         score += 25
         reasons.append("Target role title appears suitable.")
     elif application.role_fit == RoleFit.STRONG:
@@ -52,7 +96,11 @@ def calculate_job_fit_score(application: JobApplication) -> tuple[int, list[str]
         score += 12
         reasons.append("Role fit is medium, so it may be worth selective effort.")
 
-    if application.work_type in {WorkType.REMOTE, WorkType.HYBRID, WorkType.FLEXIBLE} or any(word in text for word in GOOD_LOCATION_WORDS):
+    if application.work_type in {
+        WorkType.REMOTE,
+        WorkType.HYBRID,
+        WorkType.FLEXIBLE,
+    } or any(word in text for word in GOOD_LOCATION_WORDS):
         score += 20
         reasons.append("Location/work pattern appears workable.")
 
@@ -88,24 +136,71 @@ def fit_label(score: int) -> str:
 
 def recommend_cv(application: JobApplication) -> tuple[str, str]:
     text = _text(application)
-    if any(word in text for word in ["finance", "risk", "ledger", "reconciliation", "fx", "reporting analyst"]):
-        return "Finance_DA_CV_v1", "Finance/reporting language appears in the role. Use finance operations and KPI evidence."
+    if any(
+        word in text
+        for word in [
+            "finance",
+            "risk",
+            "ledger",
+            "reconciliation",
+            "fx",
+            "reporting analyst",
+        ]
+    ):
+        return (
+            "Finance_DA_CV_v1",
+            "Finance/reporting language appears in the role. "
+            "Use finance operations and KPI evidence.",
+        )
     if any(word in text for word in ["bi", "dashboard", "power bi", "reporting", "insights"]):
-        return "BI_Reporting_CV_v1", "The role appears dashboard/reporting focused. Emphasise metrics, dashboards, and reporting outputs."
-    if any(word in text for word in ["analytics engineer", "etl", "data product", "pipeline", "api"]):
-        return "AE_Data_Product_CV_v1", "The role mentions engineering/data-product signals. Emphasise ETL, API, and data-product projects."
-    return "DA_CV_v2", "Default to the Data Analyst CV because the role does not clearly require a specialist CV."
+        return (
+            "BI_Reporting_CV_v1",
+            "The role appears dashboard/reporting focused. "
+            "Emphasise metrics, dashboards, and reporting outputs.",
+        )
+    if any(
+        word in text
+        for word in ["analytics engineer", "etl", "data product", "pipeline", "api"]
+    ):
+        return (
+            "AE_Data_Product_CV_v1",
+            "The role mentions engineering/data-product signals. "
+            "Emphasise ETL, API, and data-product projects.",
+        )
+    return (
+        "DA_CV_v2",
+        "Default to the Data Analyst CV because the role does not clearly require "
+        "a specialist CV.",
+    )
 
 
 def recommend_projects(application: JobApplication) -> tuple[list[str], str]:
     text = _text(application)
     if any(word in text for word in ["finance", "risk", "trading", "market", "portfolio"]):
-        return ["TradeIntel 360", "RiskWise Planner", "MarketVista Dashboard"], "Finance/risk context detected. Use FinTech analytics evidence."
+        return (
+            ["TradeIntel 360", "RiskWise Planner", "MarketVista Dashboard"],
+            "Finance/risk context detected. Use FinTech analytics evidence.",
+        )
     if any(word in text for word in ["operations", "kpi", "waste", "product", "margin"]):
-        return ["BakeOps Intelligence", "CareerFunnel Tracker", "MarketVista Dashboard"], "Operational analytics context detected. Use KPI and decision-support projects."
+        return (
+            [
+                "BakeOps Intelligence",
+                "CareerFunnel Tracker",
+                "MarketVista Dashboard",
+            ],
+            "Operational analytics context detected. "
+            "Use KPI and decision-support projects.",
+        )
     if any(word in text for word in ["api", "etl", "pipeline", "integration"]):
-        return ["DataBridge Market API", "MarketVista Dashboard", "TradeIntel 360"], "Data ingestion or ETL signals detected. Use pipeline/API projects."
-    return ["BakeOps Intelligence", "MarketVista Dashboard", "CareerFunnel Tracker"], "General analytics role detected. Use broad dashboard, KPI, and workflow evidence."
+        return (
+            ["DataBridge Market API", "MarketVista Dashboard", "TradeIntel 360"],
+            "Data ingestion or ETL signals detected. Use pipeline/API projects.",
+        )
+    return (
+        ["BakeOps Intelligence", "MarketVista Dashboard", "CareerFunnel Tracker"],
+        "General analytics role detected. "
+        "Use broad dashboard, KPI, and workflow evidence.",
+    )
 
 
 def calculate_readiness(application: JobApplication) -> tuple[int, list[str]]:
@@ -116,7 +211,8 @@ def calculate_readiness(application: JobApplication) -> tuple[int, list[str]]:
         "Cover letter tailored": application.is_cover_letter_tailored,
         "Portfolio project included": application.portfolio_project_included,
         "Company researched": application.company_researched,
-        "Role fit marked strong or medium": application.role_fit in {RoleFit.STRONG, RoleFit.MEDIUM},
+        "Role fit marked strong or medium": application.role_fit
+        in {RoleFit.STRONG, RoleFit.MEDIUM},
         "Job URL saved": bool(application.job_url),
         "Follow-up date set": bool(application.follow_up_date),
         "Required skills captured": bool(application.required_skills),
@@ -135,7 +231,10 @@ def determine_next_action(application: JobApplication, score: int, readiness: in
         return "Send a polite follow-up today."
     if application.status in {"screening_call", "technical_screen", "interview"}:
         return "Prepare interview answers and project walkthrough evidence."
-    return application.next_action or "Application looks ready. Submit or monitor the next response."
+    return (
+        application.next_action
+        or "Application looks ready. Submit or monitor the next response."
+    )
 
 
 def build_smart_review(application: JobApplication) -> SmartApplicationReview:
