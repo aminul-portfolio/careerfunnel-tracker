@@ -311,6 +311,14 @@ http://127.0.0.1:8000/
 
 ---
 
+## Optional Deployment Preparation
+
+Deployment is optional and would require environment-specific setup. The project already includes `gunicorn` and `whitenoise` in `requirements.txt`, and WhiteNoise static-file settings are configured.
+
+Before any hosted deployment, set `SECRET_KEY`, `DEBUG=False`, and `ALLOWED_HOSTS` for the target environment. SQLite is used for local development, so a real hosted deployment would also need a production database configuration. Run `python manage.py collectstatic` during deployment preparation.
+
+---
+
 ## Demo Login
 
 ```text
