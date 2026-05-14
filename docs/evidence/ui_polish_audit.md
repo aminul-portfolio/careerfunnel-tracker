@@ -2,11 +2,11 @@
 
 ## Purpose
 
-This document defines the Sprint 6 UI polish scope for CareerFunnel Tracker.
+This document records the completed Sprint 6 UI polish scope for CareerFunnel Tracker.
 
 The goal is to improve reviewer first impression, readability, and portfolio presentation without changing backend logic, analytics calculations, models, migrations, or core product behaviour.
 
-Sprint 6 should polish what already exists. It should not become a redesign sprint or a new feature sprint.
+Sprint 6 polished what already existed. It did not become a redesign sprint or a new feature sprint.
 
 ---
 
@@ -16,8 +16,8 @@ Sprint 6 should polish what already exists. It should not become a redesign spri
 |---|---|
 | Stable branch before Sprint 6 | `main` |
 | Sprint 6 branch | `sprint-6-ui-polish-portfolio-presentation` |
-| Latest completed tag | `sprint-5-complete` |
-| Current verified tests before Sprint 6 | 133 passing |
+| Latest completed tag | `sprint-6-complete` |
+| Current verified tests after Sprint 6 | 133 passing |
 | Current product stage | Analytics, export, evidence, and documentation foundation complete |
 | Main risk | Over-polishing, accidental redesign, or touching backend logic unnecessarily |
 
@@ -25,7 +25,7 @@ Sprint 6 should polish what already exists. It should not become a redesign spri
 
 ## Sprint 6 Principle
 
-Sprint 6 should follow this rule:
+Sprint 6 followed this rule:
 
 ```text
 Improve presentation without changing product logic.
@@ -68,7 +68,7 @@ Avoid:
 | Daily Logs | Supports activity tracking and daily discipline. | Low | Low | Keep as-is unless obvious readability issues appear. |
 | Weekly Reviews | Supports review workflow and diagnosis. | Low | Low | Keep as-is unless obvious table/readability issue appears. |
 | Notes | Supports decisions, lessons, and strategy. | Low | Low | Keep as-is unless empty state or list readability needs a minor improvement. |
-| AI Agents / Deterministic Assistance | Needs careful wording to avoid exaggerated AI claims. | Medium | Medium | Use “deterministic assistance” or “rule-based assistant” wording where relevant. Avoid live AI claims. |
+| AI Agents / Deterministic Assistance | Needs careful wording to avoid exaggerated AI claims. | Medium | Medium | Use "deterministic assistance" or "rule-based assistant" wording where relevant. Avoid live AI claims. |
 
 ---
 
@@ -96,7 +96,7 @@ Avoid:
 
 ## Sprint 6A - UI Polish Audit + Encoding Cleanup
 
-Status: In progress.
+Status: Completed.
 
 Scope:
 
@@ -272,7 +272,7 @@ Do not add:
 
 # Final Sprint 6 Success Criteria
 
-Sprint 6 is successful when:
+Sprint 6 was completed with:
 
 - UI polish audit exists.
 - Metrics page readability is improved.

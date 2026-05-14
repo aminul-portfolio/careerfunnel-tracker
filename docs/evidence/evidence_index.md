@@ -15,10 +15,8 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 | Item | Current State |
 |---|---|
 | Current stable branch | `main` |
-| Current active Sprint 5 branch | `sprint-5-export-evidence-centre` |
-| Latest completed sprint tag | `sprint-4-complete` |
-| Current verified test count before Sprint 5 | 134 tests passing |
-| Current verified test count after Sprint 5A/5B | 133 tests passing |
+| Latest completed sprint tag | `sprint-6-complete` |
+| Current verified test count | 133 tests passing |
 | Main evidence folder | `docs/evidence/screenshots/` |
 | Analytics documentation folder | `docs/analytics/` |
 
@@ -284,22 +282,25 @@ This sprint proves the project is more than a Django CRUD app. It demonstrates d
 
 ### Status
 
-In progress on branch:
+Completed and tagged.
 
-```text
-sprint-5-export-evidence-centre
-```
-
-### Planned Tag
+### Git Tag
 
 ```text
 sprint-5-complete
 ```
 
-### Planned Evidence Screenshot
+### Main Evidence Screenshot
 
 ```text
 docs/evidence/screenshots/sprint-5-export-evidence-centre.png
+```
+
+### Documentation Evidence
+
+```text
+docs/evidence/evidence_index.md
+README.md
 ```
 
 ### Sprint 5A Evidence
@@ -337,7 +338,7 @@ What it proves:
 - Trust and evidence note was added.
 - Export links were preserved.
 
-### Planned Sprint 5C Evidence
+### Sprint 5C Evidence
 
 This file:
 
@@ -352,7 +353,7 @@ What it proves:
 - Reviewer walkthrough path is documented.
 - Project proof is traceable.
 
-### Planned Sprint 5D Evidence
+### Sprint 5D Evidence
 
 README upgrade:
 
@@ -360,7 +361,7 @@ README upgrade:
 README.md
 ```
 
-What it should prove:
+What it proves:
 
 - Project purpose is clear.
 - Feature list is current.
@@ -369,6 +370,47 @@ What it should prove:
 - Test status is visible.
 - Known limitations are honest.
 - Portfolio value is clear.
+
+---
+
+## Sprint 6 - UI Polish + Portfolio Presentation
+
+### Status
+
+Completed and tagged.
+
+### Git Tag
+
+```text
+sprint-6-complete
+```
+
+### Main Evidence Screenshots
+
+```text
+docs/evidence/screenshots/sprint-6-dashboard-final-polish.png
+docs/evidence/screenshots/sprint-6-metrics-final-polish.png
+docs/evidence/screenshots/sprint-6-export-centre-final-polish.png
+```
+
+### Documentation Evidence
+
+```text
+docs/evidence/ui_polish_audit.md
+docs/evidence/portfolio_presentation_notes.md
+```
+
+### What This Screenshot Set Proves
+
+- Dashboard presentation was polished without changing analytics logic.
+- Metrics page readability was improved while preserving rule-based calculations.
+- Export Centre presentation remained reviewer-ready.
+- Sprint 6 stayed within UI polish, screenshot evidence, and portfolio presentation scope.
+- No fake users, fake customers, fake AI claims, or production deployment claims were introduced.
+
+### Reviewer Value
+
+This sprint proves the project can be polished for portfolio presentation while keeping claims honest and repository behaviour stable.
 
 ---
 
@@ -382,6 +424,9 @@ What it should prove:
 | Sprint 3 | `docs/evidence/screenshots/sprint-3-application-quality-report.png` | Application Quality Report and applications needing action |
 | Sprint 4 | `docs/evidence/screenshots/sprint-4-data-quality-analytics-governance.png` | Data Quality Score, checks, and analytics governance |
 | Sprint 5 | `docs/evidence/screenshots/sprint-5-export-evidence-centre.png` | Export Centre and reviewer evidence flow |
+| Sprint 6 | `docs/evidence/screenshots/sprint-6-dashboard-final-polish.png` | Dashboard final polish |
+| Sprint 6 | `docs/evidence/screenshots/sprint-6-metrics-final-polish.png` | Metrics page final polish |
+| Sprint 6 | `docs/evidence/screenshots/sprint-6-export-centre-final-polish.png` | Export Centre final polish |
 
 ---
 
@@ -394,7 +439,8 @@ What it should prove:
 | `sprint-2b-complete` | Rejection Pattern Analysis checkpoint |
 | `sprint-3-complete` | Application Quality Intelligence checkpoint |
 | `sprint-4-complete` | Data Quality and Analytics Governance checkpoint |
-| `sprint-5-complete` | Export and Evidence Centre checkpoint, to be created after Sprint 5 merge |
+| `sprint-5-complete` | Export and Evidence Centre checkpoint |
+| `sprint-6-complete` | UI polish and portfolio presentation checkpoint |
 
 ---
 
@@ -407,7 +453,8 @@ What it should prove:
 | Sprint 2B complete | 107 | Rejection Pattern Analysis tests added |
 | Sprint 3 complete | 119 | Application Quality Report tests added |
 | Sprint 4 complete | 134 | Data Quality Report tests added |
-| Sprint 5A/5B current | 133 | Export tests consolidated into broader route coverage using subtests |
+| Sprint 5 complete | 133 | Export tests consolidated into broader route coverage using subtests |
+| Sprint 6 complete | 133 | UI polish and documentation work preserved existing test coverage |
 
 ## Test Count Note
 
@@ -453,6 +500,7 @@ docs/evidence/screenshots/sprint-2a-metrics-source-roi-cv-performance.png
 docs/evidence/screenshots/sprint-2b-rejection-pattern-analysis.png
 docs/evidence/screenshots/sprint-3-application-quality-report.png
 docs/evidence/screenshots/sprint-4-data-quality-analytics-governance.png
+docs/evidence/screenshots/sprint-6-metrics-final-polish.png
 ```
 
 Purpose:
@@ -477,6 +525,7 @@ Purpose:
 
 ```text
 /export/
+docs/evidence/screenshots/sprint-6-export-centre-final-polish.png
 ```
 
 Purpose:
@@ -603,6 +652,9 @@ Data Quality, Metric Definitions, and Analytics Lineage
 
 Sprint 5:
 Exports, Evidence Centre, and reviewer handoff
+
+Sprint 6:
+UI polish, final screenshot evidence, and portfolio presentation notes
 ```
 
 The strongest portfolio signal is that the project does not only display data. It explains where the data comes from, how it is transformed, what each metric means, what limitations exist, and what action the user should take next.

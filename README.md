@@ -27,9 +27,9 @@ The platform is intentionally evidence-based. It uses deterministic service-laye
 
 | Item | Status |
 |---|---|
-| Current sprint branch | `sprint-5-export-evidence-centre` |
-| Latest completed sprint tag | `sprint-4-complete` |
-| Current verified tests | 133 passing on Sprint 5 branch |
+| Current stable branch | `main` |
+| Latest completed sprint tag | `sprint-6-complete` |
+| Current verified tests | 133 passing |
 | Main analytics documentation | `docs/analytics/` |
 | Evidence documentation | `docs/evidence/` |
 | Screenshot evidence folder | `docs/evidence/screenshots/` |
@@ -195,7 +195,10 @@ Exports are generated from authenticated user records. No fake export data is us
 | Sprint 2B | `docs/evidence/screenshots/sprint-2b-rejection-pattern-analysis.png` | Rejection Pattern Analysis |
 | Sprint 3 | `docs/evidence/screenshots/sprint-3-application-quality-report.png` | Application Quality Report |
 | Sprint 4 | `docs/evidence/screenshots/sprint-4-data-quality-analytics-governance.png` | Data Quality and Analytics Governance |
-| Sprint 5 | `docs/evidence/screenshots/sprint-5-export-evidence-centre.png` | Export and Evidence Centre, to be added after Sprint 5 UI evidence |
+| Sprint 5 | `docs/evidence/screenshots/sprint-5-export-evidence-centre.png` | Export and Evidence Centre |
+| Sprint 6 | `docs/evidence/screenshots/sprint-6-dashboard-final-polish.png` | Dashboard final polish |
+| Sprint 6 | `docs/evidence/screenshots/sprint-6-metrics-final-polish.png` | Metrics final polish |
+| Sprint 6 | `docs/evidence/screenshots/sprint-6-export-centre-final-polish.png` | Export Centre final polish |
 
 ### Documentation Files
 
@@ -216,7 +219,8 @@ Exports are generated from authenticated user records. No fake export data is us
 | Sprint 2B | Completed | `sprint-2b-complete` | Rejection Pattern Analysis |
 | Sprint 3 | Completed | `sprint-3-complete` | Application Quality Intelligence |
 | Sprint 4 | Completed | `sprint-4-complete` | Data Quality and Analytics Governance |
-| Sprint 5 | In progress | `sprint-5-export-evidence-centre` | Export Centre and evidence handoff |
+| Sprint 5 | Completed | `sprint-5-complete` | Export Centre and evidence handoff |
+| Sprint 6 | Completed | `sprint-6-complete` | UI polish and portfolio presentation |
 
 ---
 
@@ -235,31 +239,6 @@ Exports are generated from authenticated user records. No fake export data is us
 ---
 
 ## Project Structure
-
-```text
-apps/
-├── accounts/
-├── dashboard/
-├── applications/
-├── ai_agents/
-├── followups/
-├── interviews/
-├── daily_log/
-├── weekly_review/
-├── metrics/
-├── notes/
-└── exports/
-
-docs/
-├── analytics/
-│   ├── metric_definitions.md
-│   └── analytics_lineage.md
-└── evidence/
-    ├── evidence_index.md
-    └── screenshots/
-```
-
-If your terminal displays box characters incorrectly, the same structure is:
 
 ```text
 apps/
@@ -351,7 +330,7 @@ python manage.py makemigrations --check --dry-run
 python manage.py test
 ```
 
-Current Sprint 5 branch verification:
+Current stable verification:
 
 ```text
 python manage.py check - passing

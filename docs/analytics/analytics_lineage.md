@@ -36,13 +36,16 @@ CareerFunnel Tracker follows these principles:
 
 ```text
 User enters job-search activity
-        ↓
+        |
+        v
 Bronze Layer
 Raw Django model records
-        ↓
+        |
+        v
 Silver Layer
 Normalisation, grouping, classification, and quality checks
-        ↓
+        |
+        v
 Gold Layer
 Metrics services, dashboard outputs, recommendations, and evidence screenshots
 ```

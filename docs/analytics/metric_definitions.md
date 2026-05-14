@@ -91,7 +91,7 @@ Response Count = count(JobApplication where status is in response statuses)
 **Calculation:**
 
 ```text
-Response Rate = (Response Count / Total Applications) Ã— 100
+Response Rate = (Response Count / Total Applications) * 100
 ```
 
 **Safe calculation rule:**
@@ -136,7 +136,7 @@ Interview Count = count(JobApplication where status is interview or offer)
 **Calculation:**
 
 ```text
-Interview Rate = (Interview Count / Total Applications) Ã— 100
+Interview Rate = (Interview Count / Total Applications) * 100
 ```
 
 **Safe calculation rule:**
@@ -174,7 +174,7 @@ Offer Count = count(JobApplication where status = offer)
 **Calculation:**
 
 ```text
-Offer Rate = (Offer Count / Total Applications) Ã— 100
+Offer Rate = (Offer Count / Total Applications) * 100
 ```
 
 **Safe calculation rule:**
@@ -246,7 +246,7 @@ Daily Variance Total = Daily Actual Total - Daily Target Total
 **Calculation:**
 
 ```text
-Daily Target Hit Rate = (Daily Actual Total / Daily Target Total) Ã— 100
+Daily Target Hit Rate = (Daily Actual Total / Daily Target Total) * 100
 ```
 
 **Safe calculation rule:**
@@ -276,9 +276,9 @@ Total Applications = count(applications from source)
 Responses = count(response statuses from source)
 Interviews = count(interview statuses from source)
 Offers = count(offer statuses from source)
-Response Rate = Responses / Total Applications Ã— 100
-Interview Rate = Interviews / Total Applications Ã— 100
-Offer Rate = Offers / Total Applications Ã— 100
+Response Rate = Responses / Total Applications * 100
+Interview Rate = Interviews / Total Applications * 100
+Offer Rate = Offers / Total Applications * 100
 ```
 
 **Source fields:** `JobApplication.source`, `JobApplication.status`
@@ -291,7 +291,7 @@ Blank or missing source values are treated as Other
 
 **Why it matters:** This helps compare channels such as LinkedIn, Reed.co.uk, Indeed, company websites, recruiters, and referrals.
 
-**Known limitation:** This is not financial ROI. It is outcome performance by source. The term â€œROIâ€ means application-channel return in job-search outcomes.
+**Known limitation:** This is not financial ROI. It is outcome performance by source. The term "ROI" means application-channel return in job-search outcomes.
 
 ---
 
@@ -311,10 +311,10 @@ Responses = count(response statuses)
 Interviews = count(interview statuses)
 Offers = count(offer statuses)
 Rejections = count(rejected + auto_rejected)
-Response Rate = Responses / Total Applications Ã— 100
-Interview Rate = Interviews / Total Applications Ã— 100
-Offer Rate = Offers / Total Applications Ã— 100
-Rejection Rate = Rejections / Total Applications Ã— 100
+Response Rate = Responses / Total Applications * 100
+Interview Rate = Interviews / Total Applications * 100
+Offer Rate = Offers / Total Applications * 100
+Rejection Rate = Rejections / Total Applications * 100
 ```
 
 **Source fields:** `JobApplication.cv_version`, `JobApplication.status`
@@ -379,7 +379,7 @@ Auto-Rejections = count(JobApplication where status = auto_rejected)
 **Calculation:**
 
 ```text
-Rejection Rate = (Total Rejections / Total Applications) Ã— 100
+Rejection Rate = (Total Rejections / Total Applications) * 100
 ```
 
 **Safe calculation rule:**
@@ -401,7 +401,7 @@ If Total Applications = 0, Rejection Rate = 0.0
 **Calculation:**
 
 ```text
-Auto-Rejection Rate = (Auto-Rejections / Total Applications) Ã— 100
+Auto-Rejection Rate = (Auto-Rejections / Total Applications) * 100
 ```
 
 **Safe calculation rule:**
@@ -425,7 +425,7 @@ If Total Applications = 0, Auto-Rejection Rate = 0.0
 ```text
 Rejection Count = count(rejected + auto_rejected from source)
 Total Applications = count(applications from source)
-Rejection Rate = Rejection Count / Total Applications Ã— 100
+Rejection Rate = Rejection Count / Total Applications * 100
 ```
 
 **Why it matters:** This helps detect weak channels or poor-fit platforms.
@@ -443,7 +443,7 @@ Rejection Rate = Rejection Count / Total Applications Ã— 100
 ```text
 Rejection Count = count(rejected + auto_rejected using CV version)
 Total Applications = count(applications using CV version)
-Rejection Rate = Rejection Count / Total Applications Ã— 100
+Rejection Rate = Rejection Count / Total Applications * 100
 ```
 
 **Why it matters:** This helps identify CV versions that may need improvement.
@@ -478,7 +478,7 @@ Seniority Risk Count = count(applications where job_title, required_skills, or j
 
 **Why it matters:** This helps detect whether the user is applying to roles above the intended target level.
 
-**Known limitation:** Keyword detection is directional. Some roles may include words like â€œmanagerâ€ in a non-senior context.
+**Known limitation:** Keyword detection is directional. Some roles may include words like "manager" in a non-senior context.
 
 ---
 
@@ -512,7 +512,7 @@ seniority or stretch-role risk
 **Calculation:**
 
 ```text
-Quality Issue Rate = (Applications With Issues / Total Applications) Ã— 100
+Quality Issue Rate = (Applications With Issues / Total Applications) * 100
 ```
 
 **Safe calculation rule:**
@@ -643,7 +643,7 @@ Analytics-Ready Applications = count(applications meeting all analytics-ready cr
 **Calculation:**
 
 ```text
-Analytics-Ready Rate = (Analytics-Ready Applications / Total Applications) Ã— 100
+Analytics-Ready Rate = (Analytics-Ready Applications / Total Applications) * 100
 ```
 
 **Safe calculation rule:**
@@ -679,7 +679,7 @@ Data Quality Score = Analytics-Ready Rate
 **Calculation:**
 
 ```text
-Completion Rate = ((Total Applications - Issue Count) / Total Applications) Ã— 100
+Completion Rate = ((Total Applications - Issue Count) / Total Applications) * 100
 ```
 
 **Safe calculation rule:**
