@@ -6,7 +6,17 @@ from .models import DailyLog
 class DailyLogForm(forms.ModelForm):
     class Meta:
         model = DailyLog
-        fields = ["log_date", "target_applications", "actual_applications", "cover_letters_drafted", "responses_received", "calls_received", "hours_spent", "energy_level", "notes"]
+        fields = [
+            "log_date",
+            "target_applications",
+            "actual_applications",
+            "cover_letters_drafted",
+            "responses_received",
+            "calls_received",
+            "hours_spent",
+            "energy_level",
+            "notes",
+        ]
         widgets = {
             "log_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
             "target_applications": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
@@ -14,7 +24,9 @@ class DailyLogForm(forms.ModelForm):
             "cover_letters_drafted": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
             "responses_received": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
             "calls_received": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
-            "hours_spent": forms.NumberInput(attrs={"class": "form-control", "min": 0, "step": "0.25"}),
+            "hours_spent": forms.NumberInput(
+                attrs={"class": "form-control", "min": 0, "step": "0.25"}
+            ),
             "energy_level": forms.NumberInput(attrs={"class": "form-control", "min": 1, "max": 5}),
             "notes": forms.Textarea(attrs={"class": "form-control", "rows": 5}),
         }

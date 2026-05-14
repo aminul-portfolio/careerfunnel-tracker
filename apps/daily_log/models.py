@@ -4,7 +4,11 @@ from django.urls import reverse
 
 
 class DailyLog(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="daily_logs")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="daily_logs",
+    )
     log_date = models.DateField()
     target_applications = models.PositiveIntegerField(default=0)
     actual_applications = models.PositiveIntegerField(default=0)

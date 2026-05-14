@@ -6,7 +6,24 @@ from .models import WeeklyReview
 class WeeklyReviewForm(forms.ModelForm):
     class Meta:
         model = WeeklyReview
-        fields = ["week_starting", "week_ending", "target_applications", "actual_applications", "responses_received", "screening_calls", "technical_screens", "interviews", "offers", "rejections", "diagnosis", "mood", "what_worked", "what_blocked", "lessons_learned", "change_next_week"]
+        fields = [
+            "week_starting",
+            "week_ending",
+            "target_applications",
+            "actual_applications",
+            "responses_received",
+            "screening_calls",
+            "technical_screens",
+            "interviews",
+            "offers",
+            "rejections",
+            "diagnosis",
+            "mood",
+            "what_worked",
+            "what_blocked",
+            "lessons_learned",
+            "change_next_week",
+        ]
         widgets = {
             "week_starting": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
             "week_ending": forms.DateInput(attrs={"class": "form-control", "type": "date"}),

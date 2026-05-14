@@ -6,7 +6,11 @@ from .choices import FunnelDiagnosis, WeeklyMood
 
 
 class WeeklyReview(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="weekly_reviews")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="weekly_reviews",
+    )
     week_starting = models.DateField()
     week_ending = models.DateField()
     target_applications = models.PositiveIntegerField(default=0)
@@ -17,7 +21,11 @@ class WeeklyReview(models.Model):
     interviews = models.PositiveIntegerField(default=0)
     offers = models.PositiveIntegerField(default=0)
     rejections = models.PositiveIntegerField(default=0)
-    diagnosis = models.CharField(max_length=40, choices=FunnelDiagnosis.choices, default=FunnelDiagnosis.UNKNOWN)
+    diagnosis = models.CharField(
+        max_length=40,
+        choices=FunnelDiagnosis.choices,
+        default=FunnelDiagnosis.UNKNOWN,
+    )
     mood = models.CharField(max_length=20, choices=WeeklyMood.choices, default=WeeklyMood.MIXED)
     what_worked = models.TextField(blank=True)
     what_blocked = models.TextField(blank=True)

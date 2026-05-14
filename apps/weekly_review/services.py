@@ -25,7 +25,14 @@ class WeeklyReviewSummary:
 
 def build_weekly_review_summary(user) -> WeeklyReviewSummary:
     reviews = WeeklyReview.objects.filter(user=user)
-    aggregate = reviews.aggregate(target_sum=Sum("target_applications"), actual_sum=Sum("actual_applications"), responses_sum=Sum("responses_received"), screening_sum=Sum("screening_calls"), interviews_sum=Sum("interviews"), offers_sum=Sum("offers"))
+    aggregate = reviews.aggregate(
+        target_sum=Sum("target_applications"),
+        actual_sum=Sum("actual_applications"),
+        responses_sum=Sum("responses_received"),
+        screening_sum=Sum("screening_calls"),
+        interviews_sum=Sum("interviews"),
+        offers_sum=Sum("offers"),
+    )
     total_target = aggregate["target_sum"] or 0
     total_actual = aggregate["actual_sum"] or 0
     total_responses = aggregate["responses_sum"] or 0
@@ -37,7 +44,19 @@ def build_weekly_review_summary(user) -> WeeklyReviewSummary:
         average_response_rate = round((total_responses / total_actual) * 100, 2)
         average_interview_rate = round((total_interviews / total_actual) * 100, 2)
         average_offer_rate = round((total_offers / total_actual) * 100, 2)
-    return WeeklyReviewSummary(reviews.count(), total_target, total_actual, total_actual - total_target, total_responses, aggregate["screening_sum"] or 0, total_interviews, total_offers, average_response_rate, average_interview_rate, average_offer_rate)
+    return WeeklyReviewSummary(
+        reviews.count(),
+        total_target,
+        total_actual,
+        total_actual - total_target,
+        total_responses,
+        aggregate["screening_sum"] or 0,
+        total_interviews,
+        total_offers,
+        average_response_rate,
+        average_interview_rate,
+        average_offer_rate,
+    )
 
 
 def get_variance_badge_class(variance: int) -> str:
@@ -62,10 +81,25 @@ def get_diagnosis_badge_class(diagnosis: str) -> str:
 
 
 def build_weekly_review_table_rows(reviews):
-    return [{"review": review, "variance_badge_class": get_variance_badge_class(review.application_variance), "diagnosis_badge_class": get_diagnosis_badge_class(review.diagnosis)} for review in reviews]
+    return [
+        {
+            "review": review,
+            "variance_badge_class": get_variance_badge_class(
+                review.application_variance
+            ),
+            "diagnosis_badge_class": get_diagnosis_badge_class(review.diagnosis),
+        }
+        for review in reviews
+    ]
 
 
-def suggest_diagnosis(actual_applications: int, responses_received: int, screening_calls: int, interviews: int, offers: int) -> str:
+def suggest_diagnosis(
+    actual_applications: int,
+    responses_received: int,
+    screening_calls: int,
+    interviews: int,
+    offers: int,
+) -> str:
     if actual_applications == 0:
         return FunnelDiagnosis.LOW_ACTIVITY
     response_rate = responses_received / actual_applications

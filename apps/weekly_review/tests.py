@@ -14,11 +14,23 @@ class WeeklyReviewModelTests(TestCase):
         self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
 
     def test_application_variance_calculates_correctly(self):
-        review = WeeklyReview.objects.create(user=self.user, week_starting=date(2026, 5, 4), week_ending=date(2026, 5, 10), target_applications=15, actual_applications=12)
+        review = WeeklyReview.objects.create(
+            user=self.user,
+            week_starting=date(2026, 5, 4),
+            week_ending=date(2026, 5, 10),
+            target_applications=15,
+            actual_applications=12,
+        )
         self.assertEqual(review.application_variance, -3)
 
     def test_response_rate_calculates_correctly(self):
-        review = WeeklyReview.objects.create(user=self.user, week_starting=date(2026, 5, 4), week_ending=date(2026, 5, 10), actual_applications=10, responses_received=2)
+        review = WeeklyReview.objects.create(
+            user=self.user,
+            week_starting=date(2026, 5, 4),
+            week_ending=date(2026, 5, 10),
+            actual_applications=10,
+            responses_received=2,
+        )
         self.assertEqual(review.response_rate, 20.0)
 
 
@@ -37,7 +49,27 @@ class WeeklyReviewViewTests(TestCase):
 
     def test_user_can_create_weekly_review(self):
         self.client.login(username="aminul", password="StrongPass12345")
-        response = self.client.post(reverse("weekly_review:weekly_review_create"), {"week_starting": "2026-05-04", "week_ending": "2026-05-10", "target_applications": 15, "actual_applications": 12, "responses_received": 2, "screening_calls": 1, "technical_screens": 0, "interviews": 0, "offers": 0, "rejections": 1, "diagnosis": FunnelDiagnosis.SCREENING, "mood": WeeklyMood.STEADY, "what_worked": "Applied consistently.", "what_blocked": "Some roles were not suitable.", "lessons_learned": "Need stronger targeting.", "change_next_week": "Focus on junior roles."})
+        response = self.client.post(
+            reverse("weekly_review:weekly_review_create"),
+            {
+                "week_starting": "2026-05-04",
+                "week_ending": "2026-05-10",
+                "target_applications": 15,
+                "actual_applications": 12,
+                "responses_received": 2,
+                "screening_calls": 1,
+                "technical_screens": 0,
+                "interviews": 0,
+                "offers": 0,
+                "rejections": 1,
+                "diagnosis": FunnelDiagnosis.SCREENING,
+                "mood": WeeklyMood.STEADY,
+                "what_worked": "Applied consistently.",
+                "what_blocked": "Some roles were not suitable.",
+                "lessons_learned": "Need stronger targeting.",
+                "change_next_week": "Focus on junior roles.",
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.assertTrue(WeeklyReview.objects.filter(week_ending="2026-05-10").exists())
 
