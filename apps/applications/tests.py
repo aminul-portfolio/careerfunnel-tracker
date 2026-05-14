@@ -6,6 +6,7 @@ from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.formats import date_format
 
 from .choices import (
     ApplicationSource,
@@ -168,18 +169,47 @@ class JobApplicationViewTests(TestCase):
         self.assertContains(response, "Click Mark Follow-up Sent after sending.")
 
     def test_application_detail_displays_mark_followup_sent_button(self):
-        application = self.create_application()
+        application = self.create_application(follow_up_status=FollowUpStatus.DUE)
         self.client.login(username="aminul", password="StrongPass12345")
+        mark_followup_url = reverse(
+            "applications:application_mark_followup_sent",
+            kwargs={"pk": application.pk},
+        )
 
         response = self.client.get(
             reverse("applications:application_detail", kwargs={"pk": application.pk}),
         )
 
         self.assertContains(response, "Mark Follow-up Sent")
+        self.assertContains(response, f'action="{mark_followup_url}"')
         self.assertContains(
             response,
             "Use this only after you have sent the email manually outside CareerFunnel Tracker.",
         )
+
+    def test_application_detail_displays_completed_state_for_sent_followup(self):
+        last_contacted_date = date(2026, 5, 12)
+        application = self.create_application(
+            follow_up_status=FollowUpStatus.SENT,
+            last_contacted_date=last_contacted_date,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+        mark_followup_url = reverse(
+            "applications:application_mark_followup_sent",
+            kwargs={"pk": application.pk},
+        )
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertContains(response, "Follow-up already marked as sent.")
+        self.assertContains(
+            response,
+            f"Last contacted: {date_format(last_contacted_date, 'DATE_FORMAT')}",
+        )
+        self.assertNotContains(response, f'action="{mark_followup_url}"')
+        self.assertContains(response, "CareerFunnel Tracker does not send email.")
 
     def test_mark_followup_sent_requires_login(self):
         application = self.create_application()
