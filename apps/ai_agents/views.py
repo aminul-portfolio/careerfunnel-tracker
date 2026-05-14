@@ -43,7 +43,11 @@ def job_posting_analyzer(request):
             )
     else:
         form = JobPostingAnalyzerForm()
-    return render(request, "ai_agents/job_posting_analyzer.html", {"form": form, "analysis": analysis})
+    return render(
+        request,
+        "ai_agents/job_posting_analyzer.html",
+        {"form": form, "analysis": analysis},
+    )
 
 
 @login_required
@@ -103,7 +107,9 @@ def application_agent_pack(request, pk):
         company_name=application.company_name,
         job_title=application.job_title,
         location=application.location,
-        job_posting=" ".join([application.required_skills, application.job_description, application.notes]),
+        job_posting=" ".join(
+            [application.required_skills, application.job_description, application.notes]
+        ),
     )
     return render(
         request,
@@ -141,7 +147,11 @@ def cover_letter_quality_checker(request):
             )
     else:
         form = CoverLetterQualityForm()
-    return render(request, "ai_agents/cover_letter_quality_checker.html", {"form": form, "result": result})
+    return render(
+        request,
+        "ai_agents/cover_letter_quality_checker.html",
+        {"form": form, "result": result},
+    )
 
 
 @login_required

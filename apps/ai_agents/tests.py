@@ -149,7 +149,9 @@ class AiAgentViewTests(TestCase):
 
     def test_application_agent_pack_loads(self):
         self.client.login(username="aminul", password="StrongPass12345")
-        response = self.client.get(reverse("ai_agents:application_agent_pack", kwargs={"pk": self.application.pk}))
+        response = self.client.get(
+            reverse("ai_agents:application_agent_pack", kwargs={"pk": self.application.pk})
+        )
         self.assertEqual(response.status_code, 200)
 
 
@@ -209,7 +211,12 @@ class AdvancedAiAgentFeatureTests(TestCase):
         from .services import build_smart_notifications
 
         notifications = build_smart_notifications(self.user)
-        self.assertTrue(any("daily log" in n.title.lower() or "missing" in n.title.lower() for n in notifications))
+        self.assertTrue(
+            any(
+                "daily log" in n.title.lower() or "missing" in n.title.lower()
+                for n in notifications
+            )
+        )
 
 
 class AdvancedAiAgentViewTests(TestCase):
@@ -243,7 +250,10 @@ class AdvancedAiAgentViewTests(TestCase):
                 "company_name": "Test Co",
                 "job_title": "Data Analyst",
                 "job_description": "KPI dashboard reporting",
-                "cover_letter": "Dear Test Co, I am applying for the Data Analyst role. BakeOps shows KPI dashboard reporting.",
+                "cover_letter": (
+                    "Dear Test Co, I am applying for the Data Analyst role. "
+                    "BakeOps shows KPI dashboard reporting."
+                ),
             },
         )
         self.assertEqual(response.status_code, 200)
