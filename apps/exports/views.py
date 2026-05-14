@@ -14,7 +14,10 @@ from .services import (
 
 
 def build_excel_response(file_bytes: bytes, filename: str) -> HttpResponse:
-    response = HttpResponse(file_bytes, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response = HttpResponse(
+        file_bytes,
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
 
@@ -30,17 +33,26 @@ def export_center(request):
 
 @login_required
 def export_applications(request):
-    return build_excel_response(build_applications_workbook(request.user), dated_filename("careerfunnel_applications"))
+    return build_excel_response(
+        build_applications_workbook(request.user),
+        dated_filename("careerfunnel_applications"),
+    )
 
 
 @login_required
 def export_daily_logs(request):
-    return build_excel_response(build_daily_logs_workbook(request.user), dated_filename("careerfunnel_daily_logs"))
+    return build_excel_response(
+        build_daily_logs_workbook(request.user),
+        dated_filename("careerfunnel_daily_logs"),
+    )
 
 
 @login_required
 def export_weekly_reviews(request):
-    return build_excel_response(build_weekly_reviews_workbook(request.user), dated_filename("careerfunnel_weekly_reviews"))
+    return build_excel_response(
+        build_weekly_reviews_workbook(request.user),
+        dated_filename("careerfunnel_weekly_reviews"),
+    )
 
 
 @login_required
@@ -52,9 +64,15 @@ def export_interviews(request):
 
 @login_required
 def export_notes(request):
-    return build_excel_response(build_notes_workbook(request.user), dated_filename("careerfunnel_notes_decisions"))
+    return build_excel_response(
+        build_notes_workbook(request.user),
+        dated_filename("careerfunnel_notes_decisions"),
+    )
 
 
 @login_required
 def export_full_tracker(request):
-    return build_excel_response(build_full_tracker_workbook(request.user), dated_filename("careerfunnel_full_tracker"))
+    return build_excel_response(
+        build_full_tracker_workbook(request.user),
+        dated_filename("careerfunnel_full_tracker"),
+    )

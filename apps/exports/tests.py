@@ -36,7 +36,10 @@ WORKBOOK_EXPORT_ROUTE_NAMES = [
 
 class ExportViewTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+        self.user = User.objects.create_user(
+            username="aminul",
+            password="StrongPass12345",
+        )
 
     def test_authenticated_users_can_access_existing_export_routes(self):
         self.client.login(username="aminul", password="StrongPass12345")
@@ -64,13 +67,37 @@ class ExportViewTests(TestCase):
 
 class ExportServiceTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+        self.user = User.objects.create_user(
+            username="aminul",
+            password="StrongPass12345",
+        )
 
     def test_full_tracker_workbook_builds_bytes(self):
-        JobApplication.objects.create(user=self.user, company_name="Example Ltd", job_title="Data Analyst", date_applied=date(2026, 5, 9), status=ApplicationStatus.SUBMITTED)
-        DailyLog.objects.create(user=self.user, log_date=date(2026, 5, 9), target_applications=3, actual_applications=2)
-        WeeklyReview.objects.create(user=self.user, week_starting=date(2026, 5, 4), week_ending=date(2026, 5, 10), target_applications=15, actual_applications=12)
-        Note.objects.create(user=self.user, title="CV decision", content="Use Data Analyst CV version for junior roles.")
+        JobApplication.objects.create(
+            user=self.user,
+            company_name="Example Ltd",
+            job_title="Data Analyst",
+            date_applied=date(2026, 5, 9),
+            status=ApplicationStatus.SUBMITTED,
+        )
+        DailyLog.objects.create(
+            user=self.user,
+            log_date=date(2026, 5, 9),
+            target_applications=3,
+            actual_applications=2,
+        )
+        WeeklyReview.objects.create(
+            user=self.user,
+            week_starting=date(2026, 5, 4),
+            week_ending=date(2026, 5, 10),
+            target_applications=15,
+            actual_applications=12,
+        )
+        Note.objects.create(
+            user=self.user,
+            title="CV decision",
+            content="Use Data Analyst CV version for junior roles.",
+        )
         file_bytes = build_full_tracker_workbook(self.user)
         self.assertIsInstance(file_bytes, bytes)
         self.assertGreater(len(file_bytes), 1000)
