@@ -37,17 +37,49 @@ class MetricsServiceTests(TestCase):
         self.assertEqual(metrics.response_rate, 0.0)
 
     def test_metrics_calculates_application_counts(self):
-        JobApplication.objects.create(user=self.user, company_name="Company A", job_title="Data Analyst", date_applied=date(2026, 5, 1), status=ApplicationStatus.SUBMITTED)
-        JobApplication.objects.create(user=self.user, company_name="Company B", job_title="BI Analyst", date_applied=date(2026, 5, 2), status=ApplicationStatus.ACKNOWLEDGED)
-        JobApplication.objects.create(user=self.user, company_name="Company C", job_title="Reporting Analyst", date_applied=date(2026, 5, 3), status=ApplicationStatus.INTERVIEW)
+        JobApplication.objects.create(
+            user=self.user,
+            company_name="Company A",
+            job_title="Data Analyst",
+            date_applied=date(2026, 5, 1),
+            status=ApplicationStatus.SUBMITTED,
+        )
+        JobApplication.objects.create(
+            user=self.user,
+            company_name="Company B",
+            job_title="BI Analyst",
+            date_applied=date(2026, 5, 2),
+            status=ApplicationStatus.ACKNOWLEDGED,
+        )
+        JobApplication.objects.create(
+            user=self.user,
+            company_name="Company C",
+            job_title="Reporting Analyst",
+            date_applied=date(2026, 5, 3),
+            status=ApplicationStatus.INTERVIEW,
+        )
         metrics = build_funnel_metrics(self.user)
         self.assertEqual(metrics.total_applications, 3)
         self.assertEqual(metrics.response_count, 2)
         self.assertEqual(metrics.response_rate, 66.67)
 
     def test_metrics_calculates_daily_log_totals(self):
-        DailyLog.objects.create(user=self.user, log_date=date(2026, 5, 9), target_applications=3, actual_applications=2, hours_spent=Decimal("2.50"), energy_level=4)
-        DailyLog.objects.create(user=self.user, log_date=date(2026, 5, 10), target_applications=3, actual_applications=3, hours_spent=Decimal("3.00"), energy_level=4)
+        DailyLog.objects.create(
+            user=self.user,
+            log_date=date(2026, 5, 9),
+            target_applications=3,
+            actual_applications=2,
+            hours_spent=Decimal("2.50"),
+            energy_level=4,
+        )
+        DailyLog.objects.create(
+            user=self.user,
+            log_date=date(2026, 5, 10),
+            target_applications=3,
+            actual_applications=3,
+            hours_spent=Decimal("3.00"),
+            energy_level=4,
+        )
         metrics = build_funnel_metrics(self.user)
         self.assertEqual(metrics.daily_target_total, 6)
         self.assertEqual(metrics.daily_actual_total, 5)
@@ -90,10 +122,26 @@ class SourceROIAnalyticsTests(TestCase):
         self.assertEqual(by_source[ApplicationSource.INDEED].source_label, "Indeed")
 
     def test_build_source_roi_response_rate(self):
-        self._create_app(source=ApplicationSource.REED, company_name="C1", status=ApplicationStatus.SUBMITTED)
-        self._create_app(source=ApplicationSource.REED, company_name="C2", status=ApplicationStatus.SUBMITTED)
-        self._create_app(source=ApplicationSource.REED, company_name="C3", status=ApplicationStatus.ACKNOWLEDGED)
-        self._create_app(source=ApplicationSource.REED, company_name="C4", status=ApplicationStatus.AUTO_REJECTED)
+        self._create_app(
+            source=ApplicationSource.REED,
+            company_name="C1",
+            status=ApplicationStatus.SUBMITTED,
+        )
+        self._create_app(
+            source=ApplicationSource.REED,
+            company_name="C2",
+            status=ApplicationStatus.SUBMITTED,
+        )
+        self._create_app(
+            source=ApplicationSource.REED,
+            company_name="C3",
+            status=ApplicationStatus.ACKNOWLEDGED,
+        )
+        self._create_app(
+            source=ApplicationSource.REED,
+            company_name="C4",
+            status=ApplicationStatus.AUTO_REJECTED,
+        )
         rows = build_source_roi(self.user)
         reed = next(r for r in rows if r.source == ApplicationSource.REED)
         self.assertEqual(reed.responses, 2)
@@ -101,11 +149,31 @@ class SourceROIAnalyticsTests(TestCase):
         self.assertEqual(reed.response_rate, 50.0)
 
     def test_build_source_roi_interview_rate_counts_interview_and_offer(self):
-        self._create_app(source=ApplicationSource.GLASSDOOR, company_name="G1", status=ApplicationStatus.SUBMITTED)
-        self._create_app(source=ApplicationSource.GLASSDOOR, company_name="G2", status=ApplicationStatus.INTERVIEW)
-        self._create_app(source=ApplicationSource.GLASSDOOR, company_name="G3", status=ApplicationStatus.INTERVIEW)
-        self._create_app(source=ApplicationSource.GLASSDOOR, company_name="G4", status=ApplicationStatus.OFFER)
-        self._create_app(source=ApplicationSource.GLASSDOOR, company_name="G5", status=ApplicationStatus.ACKNOWLEDGED)
+        self._create_app(
+            source=ApplicationSource.GLASSDOOR,
+            company_name="G1",
+            status=ApplicationStatus.SUBMITTED,
+        )
+        self._create_app(
+            source=ApplicationSource.GLASSDOOR,
+            company_name="G2",
+            status=ApplicationStatus.INTERVIEW,
+        )
+        self._create_app(
+            source=ApplicationSource.GLASSDOOR,
+            company_name="G3",
+            status=ApplicationStatus.INTERVIEW,
+        )
+        self._create_app(
+            source=ApplicationSource.GLASSDOOR,
+            company_name="G4",
+            status=ApplicationStatus.OFFER,
+        )
+        self._create_app(
+            source=ApplicationSource.GLASSDOOR,
+            company_name="G5",
+            status=ApplicationStatus.ACKNOWLEDGED,
+        )
         rows = build_source_roi(self.user)
         g = next(r for r in rows if r.source == ApplicationSource.GLASSDOOR)
         self.assertEqual(g.interviews, 3)
@@ -113,10 +181,26 @@ class SourceROIAnalyticsTests(TestCase):
         self.assertEqual(g.interview_rate, 60.0)
 
     def test_build_source_roi_offer_rate(self):
-        self._create_app(source=ApplicationSource.REFERRAL, company_name="R1", status=ApplicationStatus.OFFER)
-        self._create_app(source=ApplicationSource.REFERRAL, company_name="R2", status=ApplicationStatus.INTERVIEW)
-        self._create_app(source=ApplicationSource.REFERRAL, company_name="R3", status=ApplicationStatus.SUBMITTED)
-        self._create_app(source=ApplicationSource.REFERRAL, company_name="R4", status=ApplicationStatus.SUBMITTED)
+        self._create_app(
+            source=ApplicationSource.REFERRAL,
+            company_name="R1",
+            status=ApplicationStatus.OFFER,
+        )
+        self._create_app(
+            source=ApplicationSource.REFERRAL,
+            company_name="R2",
+            status=ApplicationStatus.INTERVIEW,
+        )
+        self._create_app(
+            source=ApplicationSource.REFERRAL,
+            company_name="R3",
+            status=ApplicationStatus.SUBMITTED,
+        )
+        self._create_app(
+            source=ApplicationSource.REFERRAL,
+            company_name="R4",
+            status=ApplicationStatus.SUBMITTED,
+        )
         rows = build_source_roi(self.user)
         ref = next(r for r in rows if r.source == ApplicationSource.REFERRAL)
         self.assertEqual(ref.offers, 1)
@@ -139,14 +223,32 @@ class SourceROIAnalyticsTests(TestCase):
         self.assertEqual(row.total_applications, 2)
 
     def test_build_source_roi_sorts_by_response_then_interview_then_volume(self):
-        self._create_app(source=ApplicationSource.LINKEDIN, company_name="L1", status=ApplicationStatus.ACKNOWLEDGED)
-        self._create_app(source=ApplicationSource.LINKEDIN, company_name="L2", status=ApplicationStatus.ACKNOWLEDGED)
-        self._create_app(source=ApplicationSource.INDEED, company_name="I1", status=ApplicationStatus.SUBMITTED)
-        self._create_app(source=ApplicationSource.INDEED, company_name="I2", status=ApplicationStatus.SUBMITTED)
-        self._create_app(source=ApplicationSource.INDEED, company_name="I3", status=ApplicationStatus.SUBMITTED)
-        self._create_app(source=ApplicationSource.INDEED, company_name="I4", status=ApplicationStatus.SUBMITTED)
+        self._create_app(
+            source=ApplicationSource.LINKEDIN,
+            company_name="L1",
+            status=ApplicationStatus.ACKNOWLEDGED,
+        )
+        self._create_app(
+            source=ApplicationSource.LINKEDIN,
+            company_name="L2",
+            status=ApplicationStatus.ACKNOWLEDGED,
+        )
+        self._create_app(
+            source=ApplicationSource.INDEED, company_name="I1", status=ApplicationStatus.SUBMITTED
+        )
+        self._create_app(
+            source=ApplicationSource.INDEED, company_name="I2", status=ApplicationStatus.SUBMITTED
+        )
+        self._create_app(
+            source=ApplicationSource.INDEED, company_name="I3", status=ApplicationStatus.SUBMITTED
+        )
+        self._create_app(
+            source=ApplicationSource.INDEED, company_name="I4", status=ApplicationStatus.SUBMITTED
+        )
         rows = build_source_roi(self.user)
-        self.assertEqual([r.source for r in rows], [ApplicationSource.LINKEDIN, ApplicationSource.INDEED])
+        self.assertEqual(
+            [r.source for r in rows], [ApplicationSource.LINKEDIN, ApplicationSource.INDEED]
+        )
 
 
 class CVVersionPerformanceAnalyticsTests(TestCase):
@@ -192,10 +294,22 @@ class CVVersionPerformanceAnalyticsTests(TestCase):
         self.assertEqual(by_cv["Named"].total_applications, 1)
 
     def test_build_cv_version_performance_response_rate(self):
-        self._create_app(cv_version="v-test", company_name="C1", status=ApplicationStatus.SUBMITTED)
-        self._create_app(cv_version="v-test", company_name="C2", status=ApplicationStatus.SUBMITTED)
-        self._create_app(cv_version="v-test", company_name="C3", status=ApplicationStatus.ACKNOWLEDGED)
-        self._create_app(cv_version="v-test", company_name="C4", status=ApplicationStatus.AUTO_REJECTED)
+        self._create_app(
+            cv_version="v-test",
+            company_name="C1",
+            status=ApplicationStatus.SUBMITTED,
+        )
+        self._create_app(
+            cv_version="v-test",
+            company_name="C2",
+            status=ApplicationStatus.SUBMITTED,
+        )
+        self._create_app(
+            cv_version="v-test", company_name="C3", status=ApplicationStatus.ACKNOWLEDGED
+        )
+        self._create_app(
+            cv_version="v-test", company_name="C4", status=ApplicationStatus.AUTO_REJECTED
+        )
         rows = build_cv_version_performance(self.user)
         row = next(r for r in rows if r.cv_version == "v-test")
         self.assertEqual(row.responses, 2)
@@ -207,7 +321,9 @@ class CVVersionPerformanceAnalyticsTests(TestCase):
         self._create_app(cv_version="v-int", company_name="G2", status=ApplicationStatus.INTERVIEW)
         self._create_app(cv_version="v-int", company_name="G3", status=ApplicationStatus.INTERVIEW)
         self._create_app(cv_version="v-int", company_name="G4", status=ApplicationStatus.OFFER)
-        self._create_app(cv_version="v-int", company_name="G5", status=ApplicationStatus.ACKNOWLEDGED)
+        self._create_app(
+            cv_version="v-int", company_name="G5", status=ApplicationStatus.ACKNOWLEDGED
+        )
         rows = build_cv_version_performance(self.user)
         row = next(r for r in rows if r.cv_version == "v-int")
         self.assertEqual(row.interviews, 3)
@@ -226,9 +342,13 @@ class CVVersionPerformanceAnalyticsTests(TestCase):
 
     def test_build_cv_version_performance_rejection_rate(self):
         self._create_app(cv_version="v-rej", company_name="J1", status=ApplicationStatus.REJECTED)
-        self._create_app(cv_version="v-rej", company_name="J2", status=ApplicationStatus.AUTO_REJECTED)
+        self._create_app(
+            cv_version="v-rej", company_name="J2", status=ApplicationStatus.AUTO_REJECTED
+        )
         self._create_app(cv_version="v-rej", company_name="J3", status=ApplicationStatus.SUBMITTED)
-        self._create_app(cv_version="v-rej", company_name="J4", status=ApplicationStatus.ACKNOWLEDGED)
+        self._create_app(
+            cv_version="v-rej", company_name="J4", status=ApplicationStatus.ACKNOWLEDGED
+        )
         rows = build_cv_version_performance(self.user)
         row = next(r for r in rows if r.cv_version == "v-rej")
         self.assertEqual(row.rejections, 2)
@@ -236,12 +356,24 @@ class CVVersionPerformanceAnalyticsTests(TestCase):
         self.assertEqual(row.rejection_rate, 50.0)
 
     def test_build_cv_version_performance_sorts_by_response_then_interview_then_volume(self):
-        self._create_app(cv_version="high-response", company_name="H1", status=ApplicationStatus.ACKNOWLEDGED)
-        self._create_app(cv_version="high-response", company_name="H2", status=ApplicationStatus.ACKNOWLEDGED)
-        self._create_app(cv_version="low-response", company_name="L1", status=ApplicationStatus.SUBMITTED)
-        self._create_app(cv_version="low-response", company_name="L2", status=ApplicationStatus.SUBMITTED)
-        self._create_app(cv_version="low-response", company_name="L3", status=ApplicationStatus.SUBMITTED)
-        self._create_app(cv_version="low-response", company_name="L4", status=ApplicationStatus.SUBMITTED)
+        self._create_app(
+            cv_version="high-response", company_name="H1", status=ApplicationStatus.ACKNOWLEDGED
+        )
+        self._create_app(
+            cv_version="high-response", company_name="H2", status=ApplicationStatus.ACKNOWLEDGED
+        )
+        self._create_app(
+            cv_version="low-response", company_name="L1", status=ApplicationStatus.SUBMITTED
+        )
+        self._create_app(
+            cv_version="low-response", company_name="L2", status=ApplicationStatus.SUBMITTED
+        )
+        self._create_app(
+            cv_version="low-response", company_name="L3", status=ApplicationStatus.SUBMITTED
+        )
+        self._create_app(
+            cv_version="low-response", company_name="L4", status=ApplicationStatus.SUBMITTED
+        )
         rows = build_cv_version_performance(self.user)
         self.assertEqual([r.cv_version for r in rows], ["high-response", "low-response"])
 
@@ -250,11 +382,14 @@ class RejectionPatternReportTests(TestCase):
     """Tests for rejection pattern analytics (Sprint 2B Task 1)."""
 
     _LOW_SAMPLE_WARNING = (
-        "Not enough applications yet for strong pattern conclusions. Treat this as directional only."
+        "Not enough applications yet for strong pattern conclusions. "
+        "Treat this as directional only."
     )
 
     def setUp(self):
-        self.user = User.objects.create_user(username="rej_pattern_user", password="StrongPass12345")
+        self.user = User.objects.create_user(
+            username="rej_pattern_user", password="StrongPass12345"
+        )
 
     def _create_app(self, **kwargs):
         defaults = {
@@ -348,9 +483,17 @@ class RejectionPatternReportTests(TestCase):
         self.assertEqual(by_src[ApplicationSource.INDEED].rejection_rate, 50.0)
 
     def test_rejections_grouped_by_cv_version(self):
-        self._create_app(cv_version="vA", company_name="A1", status=ApplicationStatus.REJECTED)
-        self._create_app(cv_version="vA", company_name="A2", status=ApplicationStatus.SUBMITTED)
-        self._create_app(cv_version="vB", company_name="B1", status=ApplicationStatus.AUTO_REJECTED)
+        self._create_app(
+            cv_version="vA", company_name="A1", status=ApplicationStatus.REJECTED
+        )
+        self._create_app(
+            cv_version="vA", company_name="A2", status=ApplicationStatus.SUBMITTED
+        )
+        self._create_app(
+            cv_version="vB",
+            company_name="B1",
+            status=ApplicationStatus.AUTO_REJECTED,
+        )
         report = build_rejection_pattern_report(self.user)
         by_cv = {r.cv_version: r for r in report.by_cv_version}
         self.assertEqual(by_cv["vA"].rejection_count, 1)
@@ -361,7 +504,9 @@ class RejectionPatternReportTests(TestCase):
 
     def test_blank_cv_version_normalized_to_unspecified(self):
         self._create_app(cv_version="", company_name="U1", status=ApplicationStatus.REJECTED)
-        self._create_app(cv_version="   ", company_name="U2", status=ApplicationStatus.AUTO_REJECTED)
+        self._create_app(
+            cv_version="   ", company_name="U2", status=ApplicationStatus.AUTO_REJECTED
+        )
         report = build_rejection_pattern_report(self.user)
         by_cv = {r.cv_version: r for r in report.by_cv_version}
         self.assertIn("Unspecified", by_cv)
@@ -712,9 +857,7 @@ class DataQualityReportTests(TestCase):
         report = build_data_quality_report(self.user)
         self.assertEqual(report.generic_source_count, 1)
         self.assertEqual(report.missing_source_count, 1)
-        generic_chk = next(
-            c for c in report.checks if "generic" in c.check_name.lower()
-        )
+        generic_chk = next(c for c in report.checks if "generic" in c.check_name.lower())
         self.assertEqual(generic_chk.issue_count, 1)
         self.assertEqual(generic_chk.severity, "danger")
 

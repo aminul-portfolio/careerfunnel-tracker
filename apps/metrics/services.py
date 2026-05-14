@@ -154,9 +154,7 @@ def build_cv_version_performance(user) -> list[CVVersionPerformanceRow]:
     response_q = Q(status__in=_RESPONSE_STATUSES)
     interview_q = Q(status__in=_INTERVIEW_STATUSES)
     offer_q = Q(status=ApplicationStatus.OFFER)
-    rejection_q = Q(
-        status__in=(ApplicationStatus.REJECTED, ApplicationStatus.AUTO_REJECTED)
-    )
+    rejection_q = Q(status__in=(ApplicationStatus.REJECTED, ApplicationStatus.AUTO_REJECTED))
     normalized_cv = Coalesce(
         NullIf(Trim("cv_version"), Value("", output_field=CharField())),
         Value("Unspecified", output_field=CharField()),
@@ -196,9 +194,7 @@ def build_cv_version_performance(user) -> list[CVVersionPerformanceRow]:
                 rejection_rate=safe_percentage(rejections, total),
             )
         )
-    rows.sort(
-        key=lambda r: (-r.response_rate, -r.interview_rate, -r.total_applications)
-    )
+    rows.sort(key=lambda r: (-r.response_rate, -r.interview_rate, -r.total_applications))
     return rows
 
 
@@ -245,7 +241,10 @@ class RejectionGroupRow:
 
 @dataclass(frozen=True)
 class RejectionCvVersionRow:
-    """Per-CV-version rejection counts and rates (denominator = all applications using that version)."""
+    """Per-CV-version rejection counts and rates.
+
+    Denominator = all applications using that version.
+    """
 
     cv_version: str
     rejection_count: int
@@ -282,24 +281,28 @@ def _build_rejection_recommendations(
 
     if total_applications == 0:
         recs.append(
-            "Log job applications in the tracker first; rejection pattern analysis needs application history."
+            "Log job applications in the tracker first; rejection pattern "
+            "analysis needs application history."
         )
         return tuple(recs)
 
     if total_applications < 20:
         recs.append(
-            "Collect at least 20 logged applications before drawing strong conclusions from rejection patterns."
+            "Collect at least 20 logged applications before drawing strong "
+            "conclusions from rejection patterns."
         )
 
     auto_high = auto_rejection_rate >= 25.0 and auto_rejections > 0
     if auto_high:
         recs.append(
-            "Auto-rejection rate is elevated; review CV targeting, keywords, and whether each role is a realistic fit."
+            "Auto-rejection rate is elevated; review CV targeting, keywords, "
+            "and whether each role is a realistic fit."
         )
 
     if seniority_risk_count > 0:
         recs.append(
-            "Several rejections align with senior or stretch-role signals; consider narrowing to roles that match your level."
+            "Several rejections align with senior or stretch-role signals; "
+            "consider narrowing to roles that match your level."
         )
 
     source_hotspot = False
@@ -312,23 +315,29 @@ def _build_rejection_recommendations(
         )
         if source_hotspot:
             recs.append(
-                f"Review the {top_source.source_label} channel: it shows a concentration of rejections relative to volume."
+                f"Review the {top_source.source_label} channel: it shows a "
+                "concentration of rejections relative to volume."
             )
 
     if total_applications >= 20:
         if not auto_high and seniority_risk_count == 0 and not source_hotspot:
             if overall_rejection_rate < 70.0:
                 recs.append(
-                    "No single major red flag detected; keep logging applications and compare rejection rates across sources and CV versions."
+                    "No single major red flag detected; keep logging "
+                    "applications and compare rejection rates across sources "
+                    "and CV versions."
                 )
             else:
                 recs.append(
-                    "Overall rejection rate is high; continue refining targeting while comparing sources and CV versions side by side."
+                    "Overall rejection rate is high; continue refining "
+                    "targeting while comparing sources and CV versions side "
+                    "by side."
                 )
 
     if not recs:
         recs.append(
-            "Continue logging applications and compare sources and CV versions as more outcomes arrive."
+            "Continue logging applications and compare sources and CV "
+            "versions as more outcomes arrive."
         )
 
     return tuple(recs)
@@ -373,9 +382,7 @@ def build_rejection_pattern_report(user) -> RejectionPatternReport:
                 rejection_rate=safe_percentage(rej, total),
             )
         )
-    by_source_list.sort(
-        key=lambda r: (-r.rejection_count, -r.total_applications, r.source_label)
-    )
+    by_source_list.sort(key=lambda r: (-r.rejection_count, -r.total_applications, r.source_label))
     by_source = tuple(by_source_list)
 
     normalized_cv = Coalesce(
@@ -405,9 +412,7 @@ def build_rejection_pattern_report(user) -> RejectionPatternReport:
                 rejection_rate=safe_percentage(rej, total),
             )
         )
-    by_cv_list.sort(
-        key=lambda r: (-r.rejection_count, -r.total_applications, r.cv_version)
-    )
+    by_cv_list.sort(key=lambda r: (-r.rejection_count, -r.total_applications, r.cv_version))
     by_cv_version = tuple(by_cv_list)
 
     seniority_risk_count = base.filter(_REJECTION_Q & _seniority_risk_q()).count()
@@ -449,16 +454,30 @@ def build_funnel_metrics(user) -> FunnelMetrics:
     rejected_count = applications.filter(status=ApplicationStatus.REJECTED).count()
     auto_rejected_count = applications.filter(status=ApplicationStatus.AUTO_REJECTED).count()
     no_response_count = applications.filter(status=ApplicationStatus.NO_RESPONSE).count()
-    response_statuses = [ApplicationStatus.ACKNOWLEDGED, ApplicationStatus.SCREENING_CALL, ApplicationStatus.TECHNICAL_SCREEN, ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER, ApplicationStatus.REJECTED, ApplicationStatus.AUTO_REJECTED]
+    response_statuses = [
+        ApplicationStatus.ACKNOWLEDGED,
+        ApplicationStatus.SCREENING_CALL,
+        ApplicationStatus.TECHNICAL_SCREEN,
+        ApplicationStatus.INTERVIEW,
+        ApplicationStatus.OFFER,
+        ApplicationStatus.REJECTED,
+        ApplicationStatus.AUTO_REJECTED,
+    ]
     response_count = applications.filter(status__in=response_statuses).count()
-    screening_stage_count = screening_call_count + technical_screen_count + interview_count + offer_count
+    screening_stage_count = (
+        screening_call_count + technical_screen_count + interview_count + offer_count
+    )
     interview_stage_count = interview_count + offer_count
     rejection_total = rejected_count + auto_rejected_count
     daily_logs = DailyLog.objects.filter(user=user)
     daily_target_total = sum(log.target_applications for log in daily_logs)
     daily_actual_total = sum(log.actual_applications for log in daily_logs)
     daily_logs_count = daily_logs.count()
-    daily_target_hit_rate = 0.0 if daily_logs_count == 0 else safe_percentage(sum(1 for log in daily_logs if log.target_met), daily_logs_count)
+    daily_target_hit_rate = (
+        0.0
+        if daily_logs_count == 0
+        else safe_percentage(sum(1 for log in daily_logs if log.target_met), daily_logs_count)
+    )
     total_hours_spent = sum((log.hours_spent for log in daily_logs), Decimal("0.00"))
     weekly_reviews = WeeklyReview.objects.filter(user=user)
     latest_weekly_review = weekly_reviews.first()
@@ -468,33 +487,150 @@ def build_funnel_metrics(user) -> FunnelMetrics:
     else:
         latest_weekly_diagnosis = FunnelDiagnosis.UNKNOWN
         latest_weekly_diagnosis_label = "Unknown / not enough data"
-    return FunnelMetrics(total_applications, submitted_count, acknowledged_count, screening_call_count, technical_screen_count, interview_count, offer_count, rejected_count, auto_rejected_count, no_response_count, response_count, safe_percentage(response_count, total_applications), safe_percentage(screening_stage_count, total_applications), safe_percentage(interview_stage_count, total_applications), safe_percentage(offer_count, total_applications), safe_percentage(rejection_total, total_applications), daily_target_total, daily_actual_total, daily_actual_total - daily_target_total, daily_target_hit_rate, total_hours_spent, weekly_reviews.count(), latest_weekly_diagnosis, latest_weekly_diagnosis_label)
+    return FunnelMetrics(
+        total_applications,
+        submitted_count,
+        acknowledged_count,
+        screening_call_count,
+        technical_screen_count,
+        interview_count,
+        offer_count,
+        rejected_count,
+        auto_rejected_count,
+        no_response_count,
+        response_count,
+        safe_percentage(response_count, total_applications),
+        safe_percentage(screening_stage_count, total_applications),
+        safe_percentage(interview_stage_count, total_applications),
+        safe_percentage(offer_count, total_applications),
+        safe_percentage(rejection_total, total_applications),
+        daily_target_total,
+        daily_actual_total,
+        daily_actual_total - daily_target_total,
+        daily_target_hit_rate,
+        total_hours_spent,
+        weekly_reviews.count(),
+        latest_weekly_diagnosis,
+        latest_weekly_diagnosis_label,
+    )
 
 
 def diagnose_funnel(metrics: FunnelMetrics) -> FunnelDiagnosisResult:
     if metrics.total_applications == 0:
-        return FunnelDiagnosisResult(FunnelDiagnosis.UNKNOWN, "Unknown / not enough data", "No application data yet", "There are no logged applications yet, so the platform cannot diagnose where the funnel is leaking.", "Start by logging every application you submit. After 10 to 15 applications, the funnel diagnosis becomes more meaningful.", "neutral")
+        return FunnelDiagnosisResult(
+            FunnelDiagnosis.UNKNOWN,
+            "Unknown / not enough data",
+            "No application data yet",
+            "There are no logged applications yet, so the platform cannot "
+            "diagnose where the funnel is leaking.",
+            "Start by logging every application you submit. After 10 to 15 "
+            "applications, the funnel diagnosis becomes more meaningful.",
+            "neutral",
+        )
     if metrics.daily_actual_total == 0 and metrics.daily_target_total > 0:
-        return FunnelDiagnosisResult(FunnelDiagnosis.LOW_ACTIVITY, "Low activity / consistency issue", "The main issue is activity volume", "You set application targets, but the actual number of applications is still zero. This suggests the first bottleneck is execution consistency.", "Reduce the daily target if needed, but submit applications consistently.", "danger")
+        return FunnelDiagnosisResult(
+            FunnelDiagnosis.LOW_ACTIVITY,
+            "Low activity / consistency issue",
+            "The main issue is activity volume",
+            "You set application targets, but the actual number of "
+            "applications is still zero. This suggests the first bottleneck "
+            "is execution consistency.",
+            "Reduce the daily target if needed, but submit applications consistently.",
+            "danger",
+        )
     if metrics.total_applications < 10:
-        return FunnelDiagnosisResult(FunnelDiagnosis.UNKNOWN, "Unknown / not enough data", "Not enough volume for a reliable diagnosis", "The tracker has fewer than 10 applications. That is not enough data to judge whether the problem is CV targeting, screening, or interviews.", "Reach at least 10 properly targeted applications before making a strong conclusion.", "warning")
+        return FunnelDiagnosisResult(
+            FunnelDiagnosis.UNKNOWN,
+            "Unknown / not enough data",
+            "Not enough volume for a reliable diagnosis",
+            "The tracker has fewer than 10 applications. That is not enough "
+            "data to judge whether the problem is CV targeting, screening, "
+            "or interviews.",
+            "Reach at least 10 properly targeted applications before making a strong conclusion.",
+            "warning",
+        )
     if metrics.response_rate == 0:
-        return FunnelDiagnosisResult(FunnelDiagnosis.CV_TARGETING, "CV / targeting issue", "Applications are not converting into responses", "You have enough application volume, but the response rate is zero. This usually points to a CV-positioning issue, role targeting issue, or mismatch between the job requirements and the evidence shown in the application.", "Review the CV headline, project evidence, keywords, and job targeting.", "danger")
+        return FunnelDiagnosisResult(
+            FunnelDiagnosis.CV_TARGETING,
+            "CV / targeting issue",
+            "Applications are not converting into responses",
+            "You have enough application volume, but the response rate is "
+            "zero. This usually points to a CV-positioning issue, role "
+            "targeting issue, or mismatch between the job requirements and "
+            "the evidence shown in the application.",
+            "Review the CV headline, project evidence, keywords, and job targeting.",
+            "danger",
+        )
     if metrics.response_rate < 10:
-        return FunnelDiagnosisResult(FunnelDiagnosis.CV_TARGETING, "CV / targeting issue", "Response rate is weak", "The response rate is below 10%. That suggests applications are getting some traction, but not enough to show strong role alignment.", "Tighten targeting. Focus on roles where your analytics evidence directly matches the role.", "warning")
+        return FunnelDiagnosisResult(
+            FunnelDiagnosis.CV_TARGETING,
+            "CV / targeting issue",
+            "Response rate is weak",
+            "The response rate is below 10%. That suggests applications are "
+            "getting some traction, but not enough to show strong role "
+            "alignment.",
+            "Tighten targeting. Focus on roles where your analytics evidence "
+            "directly matches the role.",
+            "warning",
+        )
     if metrics.response_count > 0 and metrics.screening_rate == 0:
-        return FunnelDiagnosisResult(FunnelDiagnosis.MESSAGING_FIT, "Messaging / role-fit issue", "Responses are not becoming screening calls", "You are getting some responses, but they are not converting into screening calls.", "Improve cover-letter clarity and recruiter follow-up.", "warning")
+        return FunnelDiagnosisResult(
+            FunnelDiagnosis.MESSAGING_FIT,
+            "Messaging / role-fit issue",
+            "Responses are not becoming screening calls",
+            "You are getting some responses, but they are not converting into screening calls.",
+            "Improve cover-letter clarity and recruiter follow-up.",
+            "warning",
+        )
     if metrics.screening_rate > 0 and metrics.interview_rate == 0:
-        return FunnelDiagnosisResult(FunnelDiagnosis.SCREENING, "Screening-call issue", "Screening calls are not becoming interviews", "The funnel is reaching screening calls but not progressing into interviews.", "Prepare a stronger 60-second profile answer and clear project explanations.", "warning")
+        return FunnelDiagnosisResult(
+            FunnelDiagnosis.SCREENING,
+            "Screening-call issue",
+            "Screening calls are not becoming interviews",
+            "The funnel is reaching screening calls but not progressing into interviews.",
+            "Prepare a stronger 60-second profile answer and clear project explanations.",
+            "warning",
+        )
     if metrics.interview_rate > 0 and metrics.offer_rate == 0:
-        return FunnelDiagnosisResult(FunnelDiagnosis.INTERVIEW, "Interview performance issue", "Interviews are not becoming offers yet", "You are reaching interviews, which means the CV and initial screening are working. The current bottleneck is likely interview evidence or technical confidence.", "Practise project walkthroughs, SQL/Python/Excel interview questions, and business-case explanations.", "primary")
+        return FunnelDiagnosisResult(
+            FunnelDiagnosis.INTERVIEW,
+            "Interview performance issue",
+            "Interviews are not becoming offers yet",
+            "You are reaching interviews, which means the CV and initial "
+            "screening are working. The current bottleneck is likely "
+            "interview evidence or technical confidence.",
+            "Practise project walkthroughs, SQL/Python/Excel interview "
+            "questions, and business-case explanations.",
+            "primary",
+        )
     if metrics.offer_rate > 0:
-        return FunnelDiagnosisResult(FunnelDiagnosis.STRATEGY_WORKING, "Strategy working", "The funnel is producing offers", "The application funnel has reached offer stage. That means the overall strategy is working.", "Review which roles converted best and double down on similar job titles.", "success")
-    return FunnelDiagnosisResult(FunnelDiagnosis.UNKNOWN, "Unknown / not enough data", "Diagnosis is unclear", "The current data does not point clearly to one funnel problem yet.", "Keep logging applications, responses, calls, and interviews.", "neutral")
+        return FunnelDiagnosisResult(
+            FunnelDiagnosis.STRATEGY_WORKING,
+            "Strategy working",
+            "The funnel is producing offers",
+            "The application funnel has reached offer stage. That means the "
+            "overall strategy is working.",
+            "Review which roles converted best and double down on similar job titles.",
+            "success",
+        )
+    return FunnelDiagnosisResult(
+        FunnelDiagnosis.UNKNOWN,
+        "Unknown / not enough data",
+        "Diagnosis is unclear",
+        "The current data does not point clearly to one funnel problem yet.",
+        "Keep logging applications, responses, calls, and interviews.",
+        "neutral",
+    )
 
 
 def get_diagnosis_panel_class(severity: str) -> str:
-    return {"success": "diagnosis-success", "primary": "diagnosis-primary", "warning": "diagnosis-warning", "danger": "diagnosis-danger", "neutral": "diagnosis-neutral"}.get(severity, "diagnosis-neutral")
+    return {
+        "success": "diagnosis-success",
+        "primary": "diagnosis-primary",
+        "warning": "diagnosis-warning",
+        "danger": "diagnosis-danger",
+        "neutral": "diagnosis-neutral",
+    }.get(severity, "diagnosis-neutral")
 
 
 _ACTIVE_PIPELINE_FOR_FOLLOWUP = (
@@ -579,24 +715,23 @@ def _collect_issues_for_application(app: JobApplication) -> list[str]:
 def _recommended_action_for_issues(issues: tuple[str, ...]) -> str:
     parts: list[str] = []
     if _ISSUE_MISSING_FOLLOWUP in issues:
-        parts.append(
-            "Set follow-up dates for applications still in active pipeline stages."
-        )
+        parts.append("Set follow-up dates for applications still in active pipeline stages.")
     if _ISSUE_MISSING_CV in issues:
-        parts.append(
-            "Assign CV versions so CV performance can be measured against outcomes."
-        )
+        parts.append("Assign CV versions so CV performance can be measured against outcomes.")
     if _ISSUE_MISSING_SOURCE in issues:
         parts.append(
-            "Add precise sources such as LinkedIn, Reed.co.uk, company website, recruiter, or referral."
+            "Add precise sources such as LinkedIn, Reed.co.uk, company "
+            "website, recruiter, or referral."
         )
     if _ISSUE_THIN_JD in issues or _ISSUE_MISSING_SKILLS in issues:
         parts.append(
-            "Save role evidence (job description and required skills) for better fit and rejection analysis."
+            "Save role evidence (job description and required skills) for "
+            "better fit and rejection analysis."
         )
     if _ISSUE_SENIORITY in issues:
         parts.append(
-            "Review whether this application targets a realistic role given seniority or stretch-role signals."
+            "Review whether this application targets a realistic role given "
+            "seniority or stretch-role signals."
         )
     return " ".join(parts) if parts else ""
 
@@ -613,32 +748,36 @@ def _build_application_quality_recommendations(
 ) -> tuple[str, ...]:
     if total_applications == 0:
         return (
-            "Log job applications in the tracker; the quality report will highlight incomplete records as you add them.",
+            "Log job applications in the tracker; the quality report will "
+            "highlight incomplete records as you add them.",
         )
     if not has_any_issues:
-        return (
-            "No data quality issues detected; continue logging applications consistently.",
-        )
+        return ("No data quality issues detected; continue logging applications consistently.",)
     recs: list[str] = []
     if any_missing_followup:
         recs.append(
-            "Set follow-up dates for applications still in submitted, acknowledged, screening, technical, or interview stages."
+            "Set follow-up dates for applications still in submitted, "
+            "acknowledged, screening, technical, or interview stages."
         )
     if any_missing_cv:
         recs.append(
-            "Assign CV versions across applications so version performance can be measured reliably."
+            "Assign CV versions across applications so version performance "
+            "can be measured reliably."
         )
     if any_missing_source:
         recs.append(
-            "Replace generic or blank sources with precise channels such as LinkedIn, Reed.co.uk, company website, recruiter, or referral."
+            "Replace generic or blank sources with precise channels such as "
+            "LinkedIn, Reed.co.uk, company website, recruiter, or referral."
         )
     if any_thin_jd_or_skills:
         recs.append(
-            "Capture job descriptions and required skills so role fit and rejection analysis stay evidence-based."
+            "Capture job descriptions and required skills so role fit and "
+            "rejection analysis stay evidence-based."
         )
     if any_seniority:
         recs.append(
-            "Review applications that show seniority or stretch-role signals and confirm they are realistic target roles."
+            "Review applications that show seniority or stretch-role signals "
+            "and confirm they are realistic target roles."
         )
     return tuple(recs) if recs else tuple()
 
@@ -822,9 +961,7 @@ def _data_quality_check(
     severity = _data_quality_check_severity(
         issue_count=issue_count, total_applications=total_applications
     )
-    recommendation = (
-        recommendation_ok if issue_count == 0 else recommendation_action
-    )
+    recommendation = recommendation_ok if issue_count == 0 else recommendation_action
     return DataQualityCheck(
         check_name=check_name,
         issue_count=issue_count,
@@ -839,11 +976,14 @@ def _build_data_quality_recommendations(report: DataQualityReport) -> tuple[str,
     recs: list[str] = []
     if report.total_applications == 0:
         return (
-            "Log job applications in the tracker first; analytics and data quality reporting need application history.",
+            "Log job applications in the tracker first; analytics and data "
+            "quality reporting need application history.",
         )
     if report.missing_source_count > 0 or report.generic_source_count > 0:
         recs.append(
-            "Replace blank or generic 'Other' sources with precise channels (LinkedIn, Reed.co.uk, Indeed, company website, recruiter, referral) so reporting can attribute outcomes."
+            "Replace blank or generic 'Other' sources with precise channels "
+            "(LinkedIn, Reed.co.uk, Indeed, company website, recruiter, "
+            "referral) so reporting can attribute outcomes."
         )
     if report.missing_cv_version_count > 0:
         recs.append(
@@ -854,11 +994,13 @@ def _build_data_quality_recommendations(report: DataQualityReport) -> tuple[str,
         or report.missing_required_skills_count > 0
     ):
         recs.append(
-            "Capture job descriptions and required skills from postings so analytics stay evidence-based."
+            "Capture job descriptions and required skills from postings so "
+            "analytics stay evidence-based."
         )
     if report.missing_follow_up_count > 0:
         recs.append(
-            "Add follow-up dates for applications in submitted, acknowledged, screening, technical, or interview stages."
+            "Add follow-up dates for applications in submitted, acknowledged, "
+            "screening, technical, or interview stages."
         )
     major_issues = (
         report.missing_source_count > 0
@@ -932,14 +1074,18 @@ def build_data_quality_report(user) -> DataQualityReport:
             total_applications=total,
             recommendation_ok="CV versions are present on all applications.",
             recommendation_action=(
-                "Assign a CV version to each application so CV performance analytics stay comparable."
+                "Assign a CV version to each application so CV performance "
+                "analytics stay comparable."
             ),
         ),
         _data_quality_check(
             check_name="Job description evidence (40+ characters)",
             issue_count=missing_jd,
             total_applications=total,
-            recommendation_ok="Job descriptions meet the minimum length for evidence-based analysis.",
+            recommendation_ok=(
+                "Job descriptions meet the minimum length for evidence-based "
+                "analysis."
+            ),
             recommendation_action=(
                 "Paste or summarise at least 40 characters of the job description for each role."
             ),
@@ -985,9 +1131,34 @@ def build_data_quality_report(user) -> DataQualityReport:
 
 def build_funnel_stage_rows(metrics: FunnelMetrics):
     return [
-        {"stage": "Applications Submitted", "count": metrics.total_applications, "rate": "100%", "description": "Total number of logged job applications."},
-        {"stage": "Responses Received", "count": metrics.response_count, "rate": f"{metrics.response_rate}%", "description": "Applications that received any company response."},
-        {"stage": "Screening / Technical Stage", "count": metrics.screening_call_count + metrics.technical_screen_count, "rate": f"{metrics.screening_rate}%", "description": "Applications that reached screening call or technical screen."},
-        {"stage": "Interview Stage", "count": metrics.interview_count, "rate": f"{metrics.interview_rate}%", "description": "Applications that reached interview stage."},
-        {"stage": "Offer Stage", "count": metrics.offer_count, "rate": f"{metrics.offer_rate}%", "description": "Applications that reached offer stage."},
+        {
+            "stage": "Applications Submitted",
+            "count": metrics.total_applications,
+            "rate": "100%",
+            "description": "Total number of logged job applications.",
+        },
+        {
+            "stage": "Responses Received",
+            "count": metrics.response_count,
+            "rate": f"{metrics.response_rate}%",
+            "description": "Applications that received any company response.",
+        },
+        {
+            "stage": "Screening / Technical Stage",
+            "count": metrics.screening_call_count + metrics.technical_screen_count,
+            "rate": f"{metrics.screening_rate}%",
+            "description": "Applications that reached screening call or technical screen.",
+        },
+        {
+            "stage": "Interview Stage",
+            "count": metrics.interview_count,
+            "rate": f"{metrics.interview_rate}%",
+            "description": "Applications that reached interview stage.",
+        },
+        {
+            "stage": "Offer Stage",
+            "count": metrics.offer_count,
+            "rate": f"{metrics.offer_rate}%",
+            "description": "Applications that reached offer stage.",
+        },
     ]
