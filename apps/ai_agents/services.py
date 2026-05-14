@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -153,7 +154,12 @@ def normalise_text(*values: str) -> str:
     return " ".join(value or "" for value in values).lower()
 
 
-def analyze_job_posting(company_name: str, job_title: str, location: str, job_posting: str) -> JobPostingAnalysis:
+def analyze_job_posting(
+    company_name: str,
+    job_title: str,
+    location: str,
+    job_posting: str,
+) -> JobPostingAnalysis:
     text = normalise_text(company_name, job_title, location, job_posting)
     score = 0
     risks: list[str] = []
@@ -164,7 +170,10 @@ def analyze_job_posting(company_name: str, job_title: str, location: str, job_po
         score += 15
         risks.append("This looks like an AE/DE stretch target; check tool gaps before applying.")
     else:
-        risks.append("Role title is not clearly one of the preferred junior data/reporting/BI targets.")
+        risks.append(
+            "Role title is not clearly one of the preferred junior data/reporting/BI "
+            "targets."
+        )
 
     if any(signal in text for signal in LOCATION_SIGNALS):
         score += 20
@@ -227,9 +236,14 @@ def analyze_job_posting(company_name: str, job_title: str, location: str, job_po
         "Keep claims evidence-based and avoid overstating tools not proven in your portfolio.",
     ]
     if "sql" in matched_skills:
-        cover_letter_focus.append("Make SQL/database evidence visible through models, queries, or reporting outputs.")
+        cover_letter_focus.append(
+            "Make SQL/database evidence visible through models, queries, or reporting "
+            "outputs."
+        )
     if "excel" in matched_skills:
-        cover_letter_focus.append("Mention advanced Excel, reporting discipline, and operational accuracy.")
+        cover_letter_focus.append(
+            "Mention advanced Excel, reporting discipline, and operational accuracy."
+        )
 
     next_actions = [
         "Save the role in Applications if the fit score is acceptable.",
@@ -239,7 +253,8 @@ def analyze_job_posting(company_name: str, job_title: str, location: str, job_po
     ]
 
     explanation = (
-        "This analysis is a local rule-based AI-style assessment. It uses role title, seniority, location, skill keywords, "
+        "This analysis is a local rule-based AI-style assessment. It uses role title, "
+        "seniority, location, skill keywords, "
         "and deal-breaker signals to produce a practical apply/skip recommendation."
     )
 
@@ -259,11 +274,28 @@ def analyze_job_posting(company_name: str, job_title: str, location: str, job_po
 
 
 def recommend_cv_from_text(text: str) -> str:
-    if any(word in text for word in ["finance", "risk", "reconciliation", "ledger", "fx", "payment", "banking"]):
+    if any(
+        word in text
+        for word in [
+            "finance",
+            "risk",
+            "reconciliation",
+            "ledger",
+            "fx",
+            "payment",
+            "banking",
+        ]
+    ):
         return "Finance_DA_CV_v1"
-    if any(word in text for word in ["bi", "dashboard", "power bi", "reporting", "insights", "kpi"]):
+    if any(
+        word in text
+        for word in ["bi", "dashboard", "power bi", "reporting", "insights", "kpi"]
+    ):
         return "BI_Reporting_CV_v1"
-    if any(word in text for word in ["etl", "api", "pipeline", "analytics engineer", "data product"]):
+    if any(
+        word in text
+        for word in ["etl", "api", "pipeline", "analytics engineer", "data product"]
+    ):
         return "AE_Data_Product_CV_v1"
     return "DA_CV_v2"
 
@@ -271,7 +303,10 @@ def recommend_cv_from_text(text: str) -> str:
 def recommend_projects_from_text(text: str) -> list[str]:
     if any(word in text for word in ["finance", "risk", "trading", "market", "banking"]):
         return ["TradeIntel 360", "RiskWise Planner", "MarketVista Dashboard"]
-    if any(word in text for word in ["operations", "kpi", "margin", "waste", "product performance"]):
+    if any(
+        word in text
+        for word in ["operations", "kpi", "margin", "waste", "product performance"]
+    ):
         return ["BakeOps Intelligence", "CareerFunnel Tracker", "MarketVista Dashboard"]
     if any(word in text for word in ["etl", "api", "pipeline", "integration"]):
         return ["DataBridge Market API", "MarketVista Dashboard", "TradeIntel 360"]
@@ -283,15 +318,24 @@ def build_next_best_actions(user, limit: int = 8) -> list[AgentAction]:
     actions: list[AgentAction] = []
 
     due_followups = JobApplication.objects.filter(user=user, follow_up_date__lte=today).exclude(
-        follow_up_status__in=[FollowUpStatus.SENT, FollowUpStatus.RESPONDED, FollowUpStatus.NOT_NEEDED]
+        follow_up_status__in=[
+            FollowUpStatus.SENT,
+            FollowUpStatus.RESPONDED,
+            FollowUpStatus.NOT_NEEDED,
+        ]
     )[:5]
     for app in due_followups:
         actions.append(
             AgentAction(
                 priority="High",
                 title=f"Follow up with {app.company_name}",
-                reason=f"Follow-up date was {app.follow_up_date} and status is {app.get_follow_up_status_display()}.",
-                recommended_action="Send a short, polite follow-up and update the follow-up status.",
+                reason=(
+                    f"Follow-up date was {app.follow_up_date} and status is "
+                    f"{app.get_follow_up_status_display()}."
+                ),
+                recommended_action=(
+                    "Send a short, polite follow-up and update the follow-up status."
+                ),
                 related_url=app.get_absolute_url(),
             )
         )
@@ -306,8 +350,14 @@ def build_next_best_actions(user, limit: int = 8) -> list[AgentAction]:
             AgentAction(
                 priority="High",
                 title=f"Prepare for {interview.application.company_name} interview",
-                reason=f"Interview is scheduled for {interview.interview_date}; readiness score is {interview.readiness_score}%.",
-                recommended_action="Complete the interview checklist and prepare one project walkthrough.",
+                reason=(
+                    f"Interview is scheduled for {interview.interview_date}; "
+                    f"readiness score is {interview.readiness_score}%."
+                ),
+                recommended_action=(
+                    "Complete the interview checklist and prepare one project "
+                    "walkthrough."
+                ),
                 related_url=interview.get_absolute_url(),
             )
         )
@@ -332,7 +382,10 @@ def build_next_best_actions(user, limit: int = 8) -> list[AgentAction]:
                 priority="Medium",
                 title="Increase application volume this week",
                 reason=f"Only {weekly_apps} applications are logged this week.",
-                recommended_action="Apply to suitable junior Data Analyst, Reporting Analyst, BI Analyst, or Finance Data Analyst roles.",
+                recommended_action=(
+                    "Apply to suitable junior Data Analyst, Reporting Analyst, BI "
+                    "Analyst, or Finance Data Analyst roles."
+                ),
             )
         )
 
@@ -355,35 +408,55 @@ def generate_followup_message(application: JobApplication) -> FollowUpDraft:
     subject = f"Follow-up on {application.job_title} application"
     body = (
         f"Dear {contact},\n\n"
-        f"I hope you are well. I wanted to follow up on my application for the {application.job_title} role at {application.company_name}, "
+        f"I hope you are well. I wanted to follow up on my application for the "
+        f"{application.job_title} role at {application.company_name}, "
         f"submitted on {application.date_applied}.\n\n"
-        "I remain very interested in the opportunity because it aligns with my experience in reporting, KPI analysis, "
+        "I remain very interested in the opportunity because it aligns with my "
+        "experience in reporting, KPI analysis, "
         "Python/Django analytics projects, and business-facing data work.\n\n"
         "Please let me know if there is any further information I can provide.\n\n"
         "Kind regards,\n"
         "Aminul Islam"
     )
-    reason = "Generated because the application is ready for a polite status check without sounding pushy."
+    reason = (
+        "Generated because the application is ready for a polite status check without "
+        "sounding pushy."
+    )
     return FollowUpDraft(subject=subject, body=body, reason=reason)
 
 
 def generate_interview_prep(application: JobApplication) -> InterviewPrepPack:
-    text = normalise_text(application.job_title, application.required_skills, application.job_description, application.notes)
+    text = normalise_text(
+        application.job_title,
+        application.required_skills,
+        application.job_description,
+        application.notes,
+    )
     projects = recommend_projects_from_text(text)
     cv = recommend_cv_from_text(text)
     profile_angle = (
-        f"Position yourself as a finance/operations professional moving into analytics, using {cv} and evidence from "
+        "Position yourself as a finance/operations professional moving into analytics, "
+        f"using {cv} and evidence from "
         f"{projects[0]} to show practical KPI, reporting, and decision-support capability."
     )
     likely_questions = [
         "Tell me about yourself and your move into data analytics.",
-        f"Why are you interested in the {application.job_title} role at {application.company_name}?",
+        (
+            f"Why are you interested in the {application.job_title} role at "
+            f"{application.company_name}?"
+        ),
         "Walk me through one analytics project from problem to business output.",
         "How do you handle messy or incomplete data?",
         "How have you used Excel, Python, SQL, or dashboards in practical work?",
         "What would you do if a stakeholder challenged your analysis?",
     ]
-    technical_topics = ["Excel lookups/pivots", "SQL filtering and joins", "Python/pandas data cleaning", "KPI definitions", "Dashboard interpretation"]
+    technical_topics = [
+        "Excel lookups/pivots",
+        "SQL filtering and joins",
+        "Python/pandas data cleaning",
+        "KPI definitions",
+        "Dashboard interpretation",
+    ]
     if "power bi" in text:
         technical_topics.append("Power BI dashboard concepts")
     if "api" in text or "etl" in text:
@@ -434,9 +507,15 @@ def build_weekly_coach_report(user) -> WeeklyCoachReport:
     risks: list[str] = []
 
     if metrics.response_rate >= 15:
-        wins.append(f"Response rate is {metrics.response_rate}%, which suggests some targeting is working.")
+        wins.append(
+            f"Response rate is {metrics.response_rate}%, which suggests some "
+            "targeting is working."
+        )
     if metrics.interview_rate > 0:
-        wins.append("The funnel has reached interview stage, so CV/screening evidence is not completely failing.")
+        wins.append(
+            "The funnel has reached interview stage, so CV/screening evidence is not "
+            "completely failing."
+        )
     if hit_days > 0:
         wins.append(f"You hit the daily target on {hit_days} logged day(s) this week.")
 
@@ -445,23 +524,32 @@ def build_weekly_coach_report(user) -> WeeklyCoachReport:
     if metrics.response_rate < 10 and metrics.total_applications >= 10:
         risks.append("Response rate is still weak; CV positioning or role targeting needs review.")
     if JobApplication.objects.filter(user=user, follow_up_date__lte=today).exclude(
-        follow_up_status__in=[FollowUpStatus.SENT, FollowUpStatus.RESPONDED, FollowUpStatus.NOT_NEEDED]
+        follow_up_status__in=[
+            FollowUpStatus.SENT,
+            FollowUpStatus.RESPONDED,
+            FollowUpStatus.NOT_NEEDED,
+        ]
     ).exists():
         risks.append("There are overdue follow-ups that may be costing momentum.")
 
     if not wins:
-        wins.append("The main win is that the platform now has data to diagnose rather than guessing.")
+        wins.append(
+            "The main win is that the platform now has data to diagnose rather than "
+            "guessing."
+        )
     if not risks:
         risks.append("No major weekly risk is obvious yet; keep logging consistently.")
 
     next_week_plan = [
         "Set a realistic weekly application target and protect time for submissions.",
-        "Prioritise junior Data Analyst, Reporting Analyst, BI Analyst, and Finance Data Analyst roles.",
+        "Prioritise junior Data Analyst, Reporting Analyst, BI Analyst, and Finance "
+        "Data Analyst roles.",
         "Use the AI Job Posting Analyzer before applying to reduce weak-fit applications.",
         "Prepare interview evidence around projects, not only technical tools.",
     ]
     avoid_next_week = [
-        "Avoid senior roles with hard 3+ or 5+ year requirements unless the fit is unusually strong.",
+        "Avoid senior roles with hard 3+ or 5+ year requirements unless the fit is "
+        "unusually strong.",
         "Avoid applying without recording CV version and follow-up date.",
         "Avoid spending the whole session browsing without submitting.",
     ]
@@ -481,8 +569,6 @@ def build_weekly_coach_report(user) -> WeeklyCoachReport:
     )
 
 # --- Advanced Smart AI Assistance Layer ---
-
-from collections import Counter, defaultdict
 
 
 @dataclass(frozen=True)
@@ -543,28 +629,68 @@ class SmartNotification:
 
 
 REQUIRED_SKILLS = [
-    "python", "sql", "excel", "power bi", "tableau", "dashboard", "reporting", "kpi",
-    "pandas", "etl", "api", "data quality", "stakeholder", "finance", "reconciliation",
-    "analytics", "data modelling", "visualisation", "statistics", "snowflake", "dbt", "aws",
+    "python",
+    "sql",
+    "excel",
+    "power bi",
+    "tableau",
+    "dashboard",
+    "reporting",
+    "kpi",
+    "pandas",
+    "etl",
+    "api",
+    "data quality",
+    "stakeholder",
+    "finance",
+    "reconciliation",
+    "analytics",
+    "data modelling",
+    "visualisation",
+    "statistics",
+    "snowflake",
+    "dbt",
+    "aws",
 ]
 
 USER_EVIDENCE_MAP = {
     "python": "Python portfolio projects and data-processing workflows",
-    "django": "Django-based analytics platforms including BakeOps, MarketVista, RiskWise, and CareerFunnel",
+    "django": (
+        "Django-based analytics platforms including BakeOps, MarketVista, RiskWise, "
+        "and CareerFunnel"
+    ),
     "excel": "Advanced Excel, cashflow platform, scorecards, formulas, and reporting experience",
-    "reporting": "Operational reporting, KPI tracking, and monthly performance reporting experience",
+    "reporting": (
+        "Operational reporting, KPI tracking, and monthly performance reporting "
+        "experience"
+    ),
     "dashboard": "MarketVista, BakeOps, and CareerFunnel dashboard pages",
     "kpi": "KPI modelling in BakeOps Intelligence and operational reporting roles",
-    "finance": "Money transfer, FX, remittance, reconciliations, and finance operations background",
+    "finance": (
+        "Money transfer, FX, remittance, reconciliations, and finance operations "
+        "background"
+    ),
     "reconciliation": "FX/remittance operations and audit-ready cashflow records",
     "pandas": "Python/pandas analytics project work",
     "etl": "DataBridge Market API and analytics ETL-style workflows",
     "api": "Django API-style JSON endpoints and market-data ingestion projects",
     "stakeholder": "Agent training, operational support, and business-facing reporting experience",
-    "sql": "Database-backed Django projects and dashboard-ready data models; strengthen explicit SQL examples if needed",
+    "sql": (
+        "Database-backed Django projects and dashboard-ready data models; strengthen "
+        "explicit SQL examples if needed"
+    ),
 }
 
-HARD_GAP_TERMS = ["dbt", "snowflake", "airflow", "spark", "kafka", "aws redshift", "sc clearance", "dv clearance"]
+HARD_GAP_TERMS = [
+    "dbt",
+    "snowflake",
+    "airflow",
+    "spark",
+    "kafka",
+    "aws redshift",
+    "sc clearance",
+    "dv clearance",
+]
 
 
 def extract_skill_terms(text: str) -> list[str]:
@@ -588,7 +714,10 @@ def analyze_cv_gap(job_description: str, cv_evidence: str = "") -> CVGapAnalysis
 
     for skill in job_skills:
         if skill in evidence_text or skill in USER_EVIDENCE_MAP:
-            if skill in ["sql", "power bi", "tableau", "dbt", "snowflake", "aws"] and skill not in evidence_text:
+            if (
+                skill in ["sql", "power bi", "tableau", "dbt", "snowflake", "aws"]
+                and skill not in evidence_text
+            ):
                 partial.append(skill)
             else:
                 matched.append(skill)
@@ -613,12 +742,18 @@ def analyze_cv_gap(job_description: str, cv_evidence: str = "") -> CVGapAnalysis
         for term in hard_gaps
     ]
     if "senior" in job_text or "5+ years" in job_text or "3+ years" in job_text:
-        claims_to_avoid.append("Do not position this as a junior-friendly role without checking the seniority requirement.")
+        claims_to_avoid.append(
+            "Do not position this as a junior-friendly role without checking the "
+            "seniority requirement."
+        )
 
     if score >= 75:
         recommendation = "Strong enough to apply if seniority and location also fit."
     elif score >= 55:
-        recommendation = "Apply selectively; tailor the CV around the strongest evidence and acknowledge weaker tools carefully."
+        recommendation = (
+            "Apply selectively; tailor the CV around the strongest evidence and "
+            "acknowledge weaker tools carefully."
+        )
     else:
         recommendation = "Weak fit; skip unless the missing skills are clearly optional."
 
@@ -629,12 +764,20 @@ def analyze_cv_gap(job_description: str, cv_evidence: str = "") -> CVGapAnalysis
         missing_skills=sorted(set(missing)),
         evidence_to_emphasise=list(dict.fromkeys(evidence_to_emphasise))[:8],
         keywords_to_add_honestly=keywords_to_add,
-        claims_to_avoid=claims_to_avoid or ["Avoid exaggerating tool depth; keep evidence project-based and realistic."],
+        claims_to_avoid=claims_to_avoid
+        or [
+            "Avoid exaggerating tool depth; keep evidence project-based and realistic."
+        ],
         recommendation=recommendation,
     )
 
 
-def check_cover_letter_quality(company_name: str, job_title: str, job_description: str, cover_letter: str) -> CoverLetterQualityResult:
+def check_cover_letter_quality(
+    company_name: str,
+    job_title: str,
+    job_description: str,
+    cover_letter: str,
+) -> CoverLetterQualityResult:
     text = cover_letter.lower()
     job_text = normalise_text(company_name, job_title, job_description)
     score = 0
@@ -655,24 +798,49 @@ def check_cover_letter_quality(company_name: str, job_title: str, job_descriptio
         strengths.append("References the target role clearly.")
     else:
         weaknesses.append("Role alignment is not explicit enough.")
-        fixes.append("Mention the exact role and connect it to your analytics/reporting direction.")
+        fixes.append(
+            "Mention the exact role and connect it to your analytics/reporting "
+            "direction."
+        )
 
-    project_terms = ["bakeops", "marketvista", "riskwise", "tradeintel", "databridge", "careerfunnel"]
+    project_terms = [
+        "bakeops",
+        "marketvista",
+        "riskwise",
+        "tradeintel",
+        "databridge",
+        "careerfunnel",
+    ]
     if any(term in text for term in project_terms):
         score += 20
         strengths.append("Uses portfolio project evidence.")
     else:
         weaknesses.append("No portfolio project evidence is visible.")
-        fixes.append("Mention one relevant project, such as BakeOps for KPI/reporting roles or MarketVista for dashboards.")
+        fixes.append(
+            "Mention one relevant project, such as BakeOps for KPI/reporting roles "
+            "or MarketVista for dashboards."
+        )
 
-    business_terms = ["kpi", "reporting", "dashboard", "finance", "operations", "stakeholder", "decision", "analysis"]
+    business_terms = [
+        "kpi",
+        "reporting",
+        "dashboard",
+        "finance",
+        "operations",
+        "stakeholder",
+        "decision",
+        "analysis",
+    ]
     overlap = [term for term in business_terms if term in text and term in job_text]
     if len(overlap) >= 2:
         score += 20
         strengths.append("Connects to business/reporting language from the role.")
     else:
         weaknesses.append("Business value is not strongly connected to the job description.")
-        fixes.append("Add job-specific keywords such as KPI reporting, dashboards, stakeholder analysis, or finance operations where truthful.")
+        fixes.append(
+            "Add job-specific keywords such as KPI reporting, dashboards, "
+            "stakeholder analysis, or finance operations where truthful."
+        )
 
     if 120 <= len(cover_letter.split()) <= 320:
         score += 15
@@ -688,7 +856,9 @@ def check_cover_letter_quality(company_name: str, job_title: str, job_descriptio
         evidence_warning = "Review exaggerated claims before using this letter."
     else:
         score += 15
-        evidence_warning = "No obvious exaggeration detected; still verify every claim before sending."
+        evidence_warning = (
+            "No obvious exaggeration detected; still verify every claim before sending."
+        )
 
     score = max(0, min(100, score))
     if score >= 80:
@@ -725,7 +895,17 @@ def analyze_rejection_patterns(user) -> RejectionPatternReport:
     causes: list[str] = []
     for app in rejected:
         text = normalise_text(app.job_title, app.required_skills, app.job_description, app.notes)
-        for term in ["senior", "analytics engineer", "data engineer", "dbt", "snowflake", "aws", "power bi", "sql", "finance"]:
+        for term in [
+            "senior",
+            "analytics engineer",
+            "data engineer",
+            "dbt",
+            "snowflake",
+            "aws",
+            "power bi",
+            "sql",
+            "finance",
+        ]:
             if term in text:
                 role_terms[term] += 1
         if any(term in text for term in ["senior", "3+ years", "5+ years"]):
@@ -739,24 +919,39 @@ def analyze_rejection_patterns(user) -> RejectionPatternReport:
         f"Most common rejected source: {source_counter.most_common(1)[0][0]}.",
     ]
     if role_terms:
-        patterns.append("Frequent rejected role signals: " + ", ".join(term for term, _ in role_terms.most_common(5)) + ".")
+        patterns.append(
+            "Frequent rejected role signals: "
+            + ", ".join(term for term, _ in role_terms.most_common(5))
+            + "."
+        )
 
     recommendations = [
-        "Pause or reduce applications in the highest-risk role/source/CV combinations until evidence improves.",
+        "Pause or reduce applications in the highest-risk role/source/CV "
+        "combinations until evidence improves.",
         "Record rejection reason when known; unknown rejections are harder to learn from.",
-        "Prioritise junior Data Analyst, Reporting Analyst, BI Analyst, and Finance Data Analyst roles before senior AE/DE roles.",
+        "Prioritise junior Data Analyst, Reporting Analyst, BI Analyst, and Finance "
+        "Data Analyst roles before senior AE/DE roles.",
     ]
     if any("Hard-tool" in cause for cause in causes):
-        recommendations.append("Strengthen or de-emphasise cloud/dbt/Snowflake-heavy roles unless listed as optional.")
+        recommendations.append(
+            "Strengthen or de-emphasise cloud/dbt/Snowflake-heavy roles unless "
+            "listed as optional."
+        )
 
     return RejectionPatternReport(
         total_rejections=total,
         headline="AI Rejection Pattern Analysis",
         patterns=patterns,
-        likely_causes=list(dict.fromkeys(causes)) or ["No single obvious cause yet; add more rejection reasons and job requirements."],
+        likely_causes=list(dict.fromkeys(causes))
+        or [
+            "No single obvious cause yet; add more rejection reasons and job "
+            "requirements."
+        ],
         recommendations=recommendations,
         highest_risk_cv_versions=[f"{cv}: {count}" for cv, count in cv_counter.most_common(5)],
-        highest_risk_sources=[f"{source}: {count}" for source, count in source_counter.most_common(5)],
+        highest_risk_sources=[
+            f"{source}: {count}" for source, count in source_counter.most_common(5)
+        ],
         highest_risk_role_terms=[f"{term}: {count}" for term, count in role_terms.most_common(6)],
     )
 
@@ -779,10 +974,20 @@ def build_cv_ab_testing_rows(user) -> list[CVVersionPerformanceRow]:
     }
     for cv, records in grouped.items():
         total = len(records)
-        responses = sum(1 for app in records if app.status in response_statuses or app.response_date)
-        interviews = sum(1 for app in records if app.status in [ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER])
+        responses = sum(
+            1 for app in records if app.status in response_statuses or app.response_date
+        )
+        interviews = sum(
+            1
+            for app in records
+            if app.status in [ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER]
+        )
         offers = sum(1 for app in records if app.status == ApplicationStatus.OFFER)
-        rejections = sum(1 for app in records if app.status in [ApplicationStatus.REJECTED, ApplicationStatus.AUTO_REJECTED])
+        rejections = sum(
+            1
+            for app in records
+            if app.status in [ApplicationStatus.REJECTED, ApplicationStatus.AUTO_REJECTED]
+        )
         response_rate = safe_percentage(responses, total)
         interview_rate = safe_percentage(interviews, total)
         offer_rate = safe_percentage(offers, total)
@@ -794,7 +999,20 @@ def build_cv_ab_testing_rows(user) -> list[CVVersionPerformanceRow]:
             recommendation = "Underperforming so far — review targeting or CV positioning."
         else:
             recommendation = "Mixed result — compare against role type and source."
-        rows.append(CVVersionPerformanceRow(cv, total, responses, interviews, offers, rejections, response_rate, interview_rate, offer_rate, recommendation))
+        rows.append(
+            CVVersionPerformanceRow(
+                cv,
+                total,
+                responses,
+                interviews,
+                offers,
+                rejections,
+                response_rate,
+                interview_rate,
+                offer_rate,
+                recommendation,
+            )
+        )
 
     return sorted(rows, key=lambda row: (row.response_rate, row.applications), reverse=True)
 
@@ -804,75 +1022,114 @@ def build_smart_notifications(user, limit: int = 20) -> list[SmartNotification]:
     notifications: list[SmartNotification] = []
 
     overdue_followups = JobApplication.objects.filter(user=user, follow_up_date__lt=today).exclude(
-        follow_up_status__in=[FollowUpStatus.SENT, FollowUpStatus.RESPONDED, FollowUpStatus.NOT_NEEDED]
+        follow_up_status__in=[
+            FollowUpStatus.SENT,
+            FollowUpStatus.RESPONDED,
+            FollowUpStatus.NOT_NEEDED,
+        ]
     )[:5]
     for app in overdue_followups:
-        notifications.append(SmartNotification(
-            priority="High",
-            title=f"Overdue follow-up: {app.company_name}",
-            message=f"Follow-up was due on {app.follow_up_date} for {app.job_title}.",
-            recommended_action="Send a follow-up message or update the follow-up status.",
-            related_url=app.get_absolute_url(),
-        ))
+        notifications.append(
+            SmartNotification(
+                priority="High",
+                title=f"Overdue follow-up: {app.company_name}",
+                message=f"Follow-up was due on {app.follow_up_date} for {app.job_title}.",
+                recommended_action="Send a follow-up message or update the follow-up status.",
+                related_url=app.get_absolute_url(),
+            )
+        )
 
     due_today = JobApplication.objects.filter(user=user, follow_up_date=today).exclude(
-        follow_up_status__in=[FollowUpStatus.SENT, FollowUpStatus.RESPONDED, FollowUpStatus.NOT_NEEDED]
+        follow_up_status__in=[
+            FollowUpStatus.SENT,
+            FollowUpStatus.RESPONDED,
+            FollowUpStatus.NOT_NEEDED,
+        ]
     )[:5]
     for app in due_today:
-        notifications.append(SmartNotification(
-            priority="High",
-            title=f"Follow-up due today: {app.company_name}",
-            message=f"{app.job_title} is ready for a polite check-in.",
-            recommended_action="Use the AI Follow-Up Writer and log the contact date.",
-            related_url=app.get_absolute_url(),
-        ))
+        notifications.append(
+            SmartNotification(
+                priority="High",
+                title=f"Follow-up due today: {app.company_name}",
+                message=f"{app.job_title} is ready for a polite check-in.",
+                recommended_action="Use the AI Follow-Up Writer and log the contact date.",
+                related_url=app.get_absolute_url(),
+            )
+        )
 
     for app in JobApplication.objects.filter(user=user, cv_version="")[:5]:
-        notifications.append(SmartNotification(
-            priority="Medium",
-            title="Missing CV version",
-            message=f"{app.company_name} — {app.job_title} has no CV version recorded.",
-            recommended_action="Add the CV version so CV A/B testing remains reliable.",
-            related_url=app.get_absolute_url(),
-        ))
+        notifications.append(
+            SmartNotification(
+                priority="Medium",
+                title="Missing CV version",
+                message=f"{app.company_name} — {app.job_title} has no CV version recorded.",
+                recommended_action="Add the CV version so CV A/B testing remains reliable.",
+                related_url=app.get_absolute_url(),
+            )
+        )
 
     for app in JobApplication.objects.filter(user=user, job_url="")[:5]:
-        notifications.append(SmartNotification(
-            priority="Low",
-            title="Missing job URL",
-            message=f"{app.company_name} — {app.job_title} has no saved job URL.",
-            recommended_action="Add the URL if available for future review and evidence.",
-            related_url=app.get_absolute_url(),
-        ))
+        notifications.append(
+            SmartNotification(
+                priority="Low",
+                title="Missing job URL",
+                message=f"{app.company_name} — {app.job_title} has no saved job URL.",
+                recommended_action="Add the URL if available for future review and evidence.",
+                related_url=app.get_absolute_url(),
+            )
+        )
 
-    upcoming_interviews = InterviewPrep.objects.filter(user=user, interview_date__gte=today, interview_date__lte=today + timedelta(days=5))[:5]
+    upcoming_interviews = InterviewPrep.objects.filter(
+        user=user,
+        interview_date__gte=today,
+        interview_date__lte=today + timedelta(days=5),
+    )[:5]
     for interview in upcoming_interviews:
         if interview.readiness_score < 80:
-            notifications.append(SmartNotification(
-                priority="High",
-                title=f"Interview prep incomplete: {interview.application.company_name}",
-                message=f"Readiness score is {interview.readiness_score}% for interview on {interview.interview_date}.",
-                recommended_action="Complete checklist items and prepare one project walkthrough.",
-                related_url=interview.get_absolute_url(),
-            ))
+            notifications.append(
+                SmartNotification(
+                    priority="High",
+                    title=f"Interview prep incomplete: {interview.application.company_name}",
+                    message=(
+                        f"Readiness score is {interview.readiness_score}% for "
+                        f"interview on {interview.interview_date}."
+                    ),
+                    recommended_action=(
+                        "Complete checklist items and prepare one project walkthrough."
+                    ),
+                    related_url=interview.get_absolute_url(),
+                )
+            )
 
     if not DailyLog.objects.filter(user=user, log_date=today).exists():
-        notifications.append(SmartNotification(
-            priority="Medium",
-            title="Today’s daily log is missing",
-            message="No daily activity has been logged for today.",
-            recommended_action="Add today’s target, actual applications, and blocker notes before you stop working.",
-        ))
+        notifications.append(
+            SmartNotification(
+                priority="Medium",
+                title="Today’s daily log is missing",
+                message="No daily activity has been logged for today.",
+                recommended_action=(
+                    "Add today’s target, actual applications, and blocker notes "
+                    "before you stop working."
+                ),
+            )
+        )
 
     week_start = today - timedelta(days=today.weekday())
     week_end = week_start + timedelta(days=6)
-    if today == week_end and not WeeklyReview.objects.filter(user=user, week_ending=today).exists():
-        notifications.append(SmartNotification(
-            priority="Medium",
-            title="Weekly review due",
-            message="Today is the end of the current week and no weekly review exists yet.",
-            recommended_action="Complete the weekly review and compare it with the AI Weekly Coach.",
-        ))
+    if (
+        today == week_end
+        and not WeeklyReview.objects.filter(user=user, week_ending=today).exists()
+    ):
+        notifications.append(
+            SmartNotification(
+                priority="Medium",
+                title="Weekly review due",
+                message="Today is the end of the current week and no weekly review exists yet.",
+                recommended_action=(
+                    "Complete the weekly review and compare it with the AI Weekly Coach."
+                ),
+            )
+        )
 
     priority_rank = {"High": 0, "Medium": 1, "Low": 2}
     return sorted(notifications, key=lambda n: priority_rank.get(n.priority, 9))[:limit]
