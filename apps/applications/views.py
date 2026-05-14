@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
+from apps.followups.services import build_followup_email_draft
+
 from .forms import JobApplicationForm
 from .models import JobApplication
 from .selectors import get_user_applications
@@ -49,7 +51,11 @@ def application_detail(request, pk):
     return render(
         request,
         "applications/application_detail.html",
-        {"application": application, "badge_class": get_status_badge_class(application.status)},
+        {
+            "application": application,
+            "badge_class": get_status_badge_class(application.status),
+            "followup_email_draft": build_followup_email_draft(application),
+        },
     )
 
 

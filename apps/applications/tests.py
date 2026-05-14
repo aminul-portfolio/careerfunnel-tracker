@@ -47,6 +47,16 @@ class JobApplicationViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
 
+    def create_application(self, **overrides):
+        defaults = {
+            "user": self.user,
+            "company_name": "Example Ltd",
+            "job_title": "Junior Data Analyst",
+            "date_applied": date(2026, 5, 9),
+        }
+        defaults.update(overrides)
+        return JobApplication.objects.create(**defaults)
+
     def test_application_list_requires_login(self):
         response = self.client.get(reverse("applications:application_list"))
         self.assertEqual(response.status_code, 302)
@@ -81,6 +91,55 @@ class JobApplicationViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertTrue(JobApplication.objects.filter(company_name="Example Ltd").exists())
+
+    def test_application_detail_includes_followup_email_draft_context(self):
+        application = self.create_application(contact_email="hiring@example.com")
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("followup_email_draft", response.context)
+        self.assertEqual(
+            response.context["followup_email_draft"].recipient_email,
+            "hiring@example.com",
+        )
+
+    def test_application_detail_displays_followup_email_draft_content(self):
+        application = self.create_application(
+            contact_name="Taylor Morgan",
+            contact_email="hiring@example.com",
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertContains(response, "Follow-up Email Draft")
+        self.assertContains(response, "hiring@example.com")
+        self.assertContains(
+            response,
+            "Follow-up on Junior Data Analyst application at Example Ltd",
+        )
+        self.assertContains(response, "Dear Taylor Morgan,")
+        self.assertContains(response, "I applied for the Junior Data Analyst")
+        self.assertContains(response, "Manual draft only.")
+
+    def test_application_detail_makes_draft_manual_only(self):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertContains(response, "Manual Only")
+        self.assertContains(response, "CareerFunnel Tracker does not send email.")
+        self.assertContains(response, "copy-ready draft")
+        self.assertNotContains(response, "Send Email")
 
 
 class ApplicationServiceTests(TestCase):
