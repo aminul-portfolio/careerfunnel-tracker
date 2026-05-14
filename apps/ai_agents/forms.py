@@ -6,22 +6,37 @@ from apps.applications.models import JobApplication
 class JobPostingAnalyzerForm(forms.Form):
     company_name = forms.CharField(
         required=False,
-        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Company name, if known"}),
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "Company name, if known"}
+        ),
     )
     job_title = forms.CharField(
         required=False,
-        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Example: Junior Data Analyst"}),
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Example: Junior Data Analyst",
+            }
+        ),
     )
     location = forms.CharField(
         required=False,
-        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Example: Hybrid London / Remote UK"}),
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Example: Hybrid London / Remote UK",
+            }
+        ),
     )
     job_posting = forms.CharField(
         widget=forms.Textarea(
             attrs={
                 "class": "form-control",
                 "rows": 12,
-                "placeholder": "Paste the job description, requirements, responsibilities, and salary/location details here...",
+                "placeholder": (
+                    "Paste the job description, requirements, responsibilities, "
+                    "and salary/location details here..."
+                ),
             }
         )
     )
@@ -48,7 +63,10 @@ class CVGapAnalyzerForm(forms.Form):
             attrs={
                 "class": "form-control",
                 "rows": 10,
-                "placeholder": "Paste the job description, requirements, skills, and responsibilities here...",
+                "placeholder": (
+                    "Paste the job description, requirements, skills, and "
+                    "responsibilities here..."
+                ),
             }
         )
     )
@@ -58,7 +76,10 @@ class CVGapAnalyzerForm(forms.Form):
             attrs={
                 "class": "form-control",
                 "rows": 8,
-                "placeholder": "Optional: paste your CV summary, skills section, project evidence, or cover-letter evidence here...",
+                "placeholder": (
+                    "Optional: paste your CV summary, skills section, project "
+                    "evidence, or cover-letter evidence here..."
+                ),
             }
         ),
     )
@@ -75,8 +96,20 @@ class CoverLetterQualityForm(forms.Form):
     )
     job_description = forms.CharField(
         required=False,
-        widget=forms.Textarea(attrs={"class": "form-control", "rows": 7, "placeholder": "Paste relevant job requirements here..."}),
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 7,
+                "placeholder": "Paste relevant job requirements here...",
+            }
+        ),
     )
     cover_letter = forms.CharField(
-        widget=forms.Textarea(attrs={"class": "form-control", "rows": 12, "placeholder": "Paste your cover letter draft here..."})
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 12,
+                "placeholder": "Paste your cover letter draft here...",
+            }
+        )
     )
