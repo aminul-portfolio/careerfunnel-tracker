@@ -23,17 +23,47 @@ class JobApplication(models.Model):
     job_title = models.CharField(max_length=180)
     job_url = models.URLField(blank=True)
     location = models.CharField(max_length=160, blank=True)
-    work_type = models.CharField(max_length=20, choices=WorkType.choices, default=WorkType.UNKNOWN)
+    work_type = models.CharField(
+        max_length=20,
+        choices=WorkType.choices,
+        default=WorkType.UNKNOWN,
+    )
     salary_range = models.CharField(max_length=120, blank=True)
-    source = models.CharField(max_length=40, choices=ApplicationSource.choices, default=ApplicationSource.OTHER)
-    role_fit = models.CharField(max_length=20, choices=RoleFit.choices, default=RoleFit.UNKNOWN)
-    experience_level = models.CharField(max_length=120, blank=True, help_text="Example: graduate, junior, 0-2 years, 3+ years")
-    required_skills = models.TextField(blank=True, help_text="Paste key skills from the job description.")
-    job_description = models.TextField(blank=True, help_text="Optional short job description or copied requirements.")
+    source = models.CharField(
+        max_length=40,
+        choices=ApplicationSource.choices,
+        default=ApplicationSource.OTHER,
+    )
+    role_fit = models.CharField(
+        max_length=20,
+        choices=RoleFit.choices,
+        default=RoleFit.UNKNOWN,
+    )
+    experience_level = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="Example: graduate, junior, 0-2 years, 3+ years",
+    )
+    required_skills = models.TextField(
+        blank=True,
+        help_text="Paste key skills from the job description.",
+    )
+    job_description = models.TextField(
+        blank=True,
+        help_text="Optional short job description or copied requirements.",
+    )
 
     date_applied = models.DateField()
-    status = models.CharField(max_length=40, choices=ApplicationStatus.choices, default=ApplicationStatus.SUBMITTED)
-    pipeline_stage = models.CharField(max_length=40, choices=PipelineStage.choices, default=PipelineStage.JOB_FOUND)
+    status = models.CharField(
+        max_length=40,
+        choices=ApplicationStatus.choices,
+        default=ApplicationStatus.SUBMITTED,
+    )
+    pipeline_stage = models.CharField(
+        max_length=40,
+        choices=PipelineStage.choices,
+        default=PipelineStage.JOB_FOUND,
+    )
     response_date = models.DateField(blank=True, null=True)
 
     cv_version = models.CharField(max_length=120, blank=True)
@@ -44,7 +74,11 @@ class JobApplication(models.Model):
     company_researched = models.BooleanField(default=False)
 
     follow_up_date = models.DateField(blank=True, null=True)
-    follow_up_status = models.CharField(max_length=30, choices=FollowUpStatus.choices, default=FollowUpStatus.NOT_SET)
+    follow_up_status = models.CharField(
+        max_length=30,
+        choices=FollowUpStatus.choices,
+        default=FollowUpStatus.NOT_SET,
+    )
     last_contacted_date = models.DateField(blank=True, null=True)
     next_action = models.CharField(max_length=240, blank=True)
 
@@ -88,6 +122,10 @@ class JobApplication(models.Model):
     def is_follow_up_due(self):
         if not self.follow_up_date:
             return False
-        if self.follow_up_status in {FollowUpStatus.SENT, FollowUpStatus.RESPONDED, FollowUpStatus.NOT_NEEDED}:
+        if self.follow_up_status in {
+            FollowUpStatus.SENT,
+            FollowUpStatus.RESPONDED,
+            FollowUpStatus.NOT_NEEDED,
+        }:
             return False
         return self.follow_up_date <= timezone.localdate()

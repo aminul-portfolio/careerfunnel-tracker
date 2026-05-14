@@ -17,7 +17,11 @@ def get_applications_by_status(user, status: str) -> QuerySet[JobApplication]:
 
 
 def get_active_applications(user) -> QuerySet[JobApplication]:
-    closed_statuses = [ApplicationStatus.REJECTED, ApplicationStatus.AUTO_REJECTED, ApplicationStatus.WITHDREW]
+    closed_statuses = [
+        ApplicationStatus.REJECTED,
+        ApplicationStatus.AUTO_REJECTED,
+        ApplicationStatus.WITHDREW,
+    ]
     return get_user_applications(user).exclude(status__in=closed_statuses)
 
 

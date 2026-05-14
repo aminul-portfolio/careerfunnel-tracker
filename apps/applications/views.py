@@ -25,7 +25,10 @@ def application_list(request):
     if status_filter:
         applications = applications.filter(status=status_filter)
     if search_query:
-        applications = applications.filter(Q(company_name__icontains=search_query) | Q(job_title__icontains=search_query))
+        applications = applications.filter(
+            Q(company_name__icontains=search_query)
+            | Q(job_title__icontains=search_query),
+        )
 
     context = {
         "applications": applications,
@@ -62,7 +65,15 @@ def application_create(request):
             return redirect(application.get_absolute_url())
     else:
         form = JobApplicationForm()
-    return render(request, "applications/application_form.html", {"form": form, "page_title": "Add Application", "submit_label": "Save Application"})
+    return render(
+        request,
+        "applications/application_form.html",
+        {
+            "form": form,
+            "page_title": "Add Application",
+            "submit_label": "Save Application",
+        },
+    )
 
 
 @login_required
@@ -76,7 +87,16 @@ def application_update(request, pk):
             return redirect(application.get_absolute_url())
     else:
         form = JobApplicationForm(instance=application)
-    return render(request, "applications/application_form.html", {"form": form, "page_title": "Edit Application", "submit_label": "Update Application", "application": application})
+    return render(
+        request,
+        "applications/application_form.html",
+        {
+            "form": form,
+            "page_title": "Edit Application",
+            "submit_label": "Update Application",
+            "application": application,
+        },
+    )
 
 
 @login_required
@@ -86,4 +106,8 @@ def application_delete(request, pk):
         application.delete()
         messages.success(request, "Application deleted successfully.")
         return redirect("applications:application_list")
-    return render(request, "applications/application_confirm_delete.html", {"application": application})
+    return render(
+        request,
+        "applications/application_confirm_delete.html",
+        {"application": application},
+    )

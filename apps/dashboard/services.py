@@ -43,14 +43,58 @@ def get_current_week_range():
 def build_dashboard_summary(user) -> DashboardSummary:
     week_start, week_end = get_current_week_range()
     applications = JobApplication.objects.filter(user=user)
-    applications_this_week = applications.filter(date_applied__gte=week_start, date_applied__lte=week_end).count()
-    response_statuses = [ApplicationStatus.ACKNOWLEDGED, ApplicationStatus.SCREENING_CALL, ApplicationStatus.TECHNICAL_SCREEN, ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER, ApplicationStatus.REJECTED, ApplicationStatus.AUTO_REJECTED]
-    responses_this_week = applications.filter(date_applied__gte=week_start, date_applied__lte=week_end, status__in=response_statuses).count()
-    calls_this_week = applications.filter(date_applied__gte=week_start, date_applied__lte=week_end, status__in=[ApplicationStatus.SCREENING_CALL, ApplicationStatus.TECHNICAL_SCREEN]).count()
-    interviews_this_week = applications.filter(date_applied__gte=week_start, date_applied__lte=week_end, status__in=[ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER]).count()
+    applications_this_week = applications.filter(
+        date_applied__gte=week_start,
+        date_applied__lte=week_end,
+    ).count()
+    response_statuses = [
+        ApplicationStatus.ACKNOWLEDGED,
+        ApplicationStatus.SCREENING_CALL,
+        ApplicationStatus.TECHNICAL_SCREEN,
+        ApplicationStatus.INTERVIEW,
+        ApplicationStatus.OFFER,
+        ApplicationStatus.REJECTED,
+        ApplicationStatus.AUTO_REJECTED,
+    ]
+    responses_this_week = applications.filter(
+        date_applied__gte=week_start,
+        date_applied__lte=week_end,
+        status__in=response_statuses,
+    ).count()
+    calls_this_week = applications.filter(
+        date_applied__gte=week_start,
+        date_applied__lte=week_end,
+        status__in=[
+            ApplicationStatus.SCREENING_CALL,
+            ApplicationStatus.TECHNICAL_SCREEN,
+        ],
+    ).count()
+    interviews_this_week = applications.filter(
+        date_applied__gte=week_start,
+        date_applied__lte=week_end,
+        status__in=[ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER],
+    ).count()
     metrics = build_funnel_metrics(user)
     diagnosis = diagnose_funnel(metrics)
-    return DashboardSummary(metrics.total_applications, applications_this_week, responses_this_week, calls_this_week, interviews_this_week, metrics.response_rate, metrics.interview_rate, metrics.offer_rate, metrics.daily_target_total, metrics.daily_actual_total, metrics.daily_variance_total, metrics.daily_target_hit_rate, diagnosis.diagnosis_title, diagnosis.diagnosis_label, diagnosis.explanation, diagnosis.recommended_action, diagnosis.severity)
+    return DashboardSummary(
+        metrics.total_applications,
+        applications_this_week,
+        responses_this_week,
+        calls_this_week,
+        interviews_this_week,
+        metrics.response_rate,
+        metrics.interview_rate,
+        metrics.offer_rate,
+        metrics.daily_target_total,
+        metrics.daily_actual_total,
+        metrics.daily_variance_total,
+        metrics.daily_target_hit_rate,
+        diagnosis.diagnosis_title,
+        diagnosis.diagnosis_label,
+        diagnosis.explanation,
+        diagnosis.recommended_action,
+        diagnosis.severity,
+    )
 
 
 def get_recent_applications(user, limit: int = 5):
@@ -66,4 +110,9 @@ def get_recent_weekly_reviews(user, limit: int = 3):
 
 
 def build_dashboard_context(user) -> dict:
-    return {"summary": build_dashboard_summary(user), "recent_applications": get_recent_applications(user), "recent_daily_logs": get_recent_daily_logs(user), "recent_weekly_reviews": get_recent_weekly_reviews(user)}
+    return {
+        "summary": build_dashboard_summary(user),
+        "recent_applications": get_recent_applications(user),
+        "recent_daily_logs": get_recent_daily_logs(user),
+        "recent_weekly_reviews": get_recent_weekly_reviews(user),
+    }

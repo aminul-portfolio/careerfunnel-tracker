@@ -63,7 +63,9 @@ def calculate_interview_rate(user) -> float:
     total = applications.count()
     if total == 0:
         return 0.0
-    interview_count = applications.filter(status__in=[ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER]).count()
+    interview_count = applications.filter(
+        status__in=[ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER],
+    ).count()
     return round((interview_count / total) * 100, 2)
 
 
