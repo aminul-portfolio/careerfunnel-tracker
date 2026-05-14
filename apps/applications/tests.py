@@ -147,8 +147,25 @@ class JobApplicationViewTests(TestCase):
 
         self.assertContains(response, "Manual Only")
         self.assertContains(response, "CareerFunnel Tracker does not send email.")
-        self.assertContains(response, "copy-ready draft")
+        self.assertContains(response, "Use this manual workflow")
+        self.assertContains(response, "manual copy only")
         self.assertNotContains(response, "Send Email")
+
+    def test_application_detail_displays_manual_followup_workflow_steps(self):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertContains(response, "Manual follow-up workflow")
+        self.assertContains(response, "Review the draft below.")
+        self.assertContains(
+            response,
+            "Copy and send it manually outside CareerFunnel Tracker.",
+        )
+        self.assertContains(response, "Click Mark Follow-up Sent after sending.")
 
     def test_application_detail_displays_mark_followup_sent_button(self):
         application = self.create_application()
