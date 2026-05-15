@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from django.db.models import Count
 
-from .choices import ApplicationStatus, FollowUpStatus
+from .choices import ApplicationSource, ApplicationStatus, FollowUpStatus
 from .selectors import get_user_applications
 
 
@@ -242,3 +242,76 @@ def build_application_evidence_readiness(application) -> ApplicationEvidenceRead
         readiness_label=_determine_readiness_label(missing_items),
         recommended_next_improvement=_recommended_next_improvement(missing_items),
     )
+
+
+_SAVE_QUALITY_SEVERITY_CRITICAL = "critical"
+_SAVE_QUALITY_SEVERITY_IMPORTANT = "important"
+
+
+@dataclass(frozen=True)
+class SaveQualityWarning:
+    field_name: str
+    message: str
+    analytics_impact: str
+    severity: str
+
+
+def build_save_quality_warnings(application) -> list[SaveQualityWarning]:
+    warnings: list[SaveQualityWarning] = []
+
+    if application.source == ApplicationSource.OTHER.value:
+        warnings.append(
+            SaveQualityWarning(
+                field_name="source",
+                message="Source is Other; choose a specific channel when you can.",
+                analytics_impact=(
+                    "Source ROI cannot attribute this application to a specific channel; "
+                    "it is grouped under Other."
+                ),
+                severity=_SAVE_QUALITY_SEVERITY_CRITICAL,
+            ),
+        )
+
+    if _strip_or_empty(application.cv_version) == "":
+        warnings.append(
+            SaveQualityWarning(
+                field_name="cv_version",
+                message="CV version is not saved.",
+                analytics_impact="CV Version Performance cannot group/track this application.",
+                severity=_SAVE_QUALITY_SEVERITY_CRITICAL,
+            ),
+        )
+
+    if _strip_or_empty(application.location) == "":
+        warnings.append(
+            SaveQualityWarning(
+                field_name="location",
+                message="Location is not saved.",
+                analytics_impact="Smart Review location component scores 0.",
+                severity=_SAVE_QUALITY_SEVERITY_IMPORTANT,
+            ),
+        )
+
+    if len(_strip_or_empty(application.required_skills)) < _MIN_REQUIRED_SKILLS_CHARS:
+        warnings.append(
+            SaveQualityWarning(
+                field_name="required_skills",
+                message="Required skills are too short for reliable matching.",
+                analytics_impact=(
+                    "Smart Review skills matching and Rejection Pattern analysis are unreliable."
+                ),
+                severity=_SAVE_QUALITY_SEVERITY_IMPORTANT,
+            ),
+        )
+
+    if len(_strip_or_empty(application.job_description)) < _MIN_JOB_DESCRIPTION_CHARS:
+        warnings.append(
+            SaveQualityWarning(
+                field_name="job_description",
+                message="Job description is too short for deal-breaker detection.",
+                analytics_impact="Smart Review deal-breaker detection cannot run.",
+                severity=_SAVE_QUALITY_SEVERITY_IMPORTANT,
+            ),
+        )
+
+    return warnings

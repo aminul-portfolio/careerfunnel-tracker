@@ -33,6 +33,7 @@ from .services import (
     READINESS_LABEL_NEEDS_IMPROVEMENT,
     READINESS_LABEL_STRONG,
     build_application_evidence_readiness,
+    build_save_quality_warnings,
     calculate_response_rate,
 )
 
@@ -549,6 +550,149 @@ class ApplicationEvidenceReadinessTests(TestCase):
             readiness.recommended_next_improvement,
             "Note whether a portfolio project was included or referenced.",
         )
+
+
+class SaveQualityWarningsServiceTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+
+    def _complete_application_kwargs(self):
+        return {
+            "user": self.user,
+            "company_name": "Example Ltd",
+            "job_title": "Junior Data Analyst",
+            "date_applied": date(2026, 5, 9),
+            "source": ApplicationSource.LINKEDIN,
+            "cv_version": "DA_CV_v1",
+            "location": "Hybrid London",
+            "required_skills": "Python SQL Excel Power BI dashboards",
+            "job_description": (
+                "Junior data analyst role requiring Python, SQL, and Excel for KPI "
+                "reporting and stakeholder dashboards."
+            ),
+            "role_fit": RoleFit.STRONG,
+            "follow_up_date": date.today(),
+        }
+
+    def _warning_field_names(self, application):
+        return {warning.field_name for warning in build_save_quality_warnings(application)}
+
+    def test_complete_application_returns_empty_warning_list(self):
+        application = JobApplication.objects.create(**self._complete_application_kwargs())
+
+        self.assertEqual(build_save_quality_warnings(application), [])
+
+    def test_source_other_creates_critical_source_warning(self):
+        kwargs = self._complete_application_kwargs()
+        kwargs["source"] = ApplicationSource.OTHER
+        application = JobApplication.objects.create(**kwargs)
+
+        warnings = build_save_quality_warnings(application)
+        source_warnings = [warning for warning in warnings if warning.field_name == "source"]
+
+        self.assertEqual(len(source_warnings), 1)
+        self.assertEqual(source_warnings[0].severity, "critical")
+        self.assertEqual(source_warnings[0].field_name, "source")
+
+    def test_source_linkedin_creates_no_source_warning(self):
+        application = JobApplication.objects.create(**self._complete_application_kwargs())
+
+        self.assertNotIn("source", self._warning_field_names(application))
+
+    def test_blank_cv_version_creates_critical_cv_version_warning(self):
+        kwargs = self._complete_application_kwargs()
+        kwargs["cv_version"] = ""
+        application = JobApplication.objects.create(**kwargs)
+
+        warnings = build_save_quality_warnings(application)
+        cv_warnings = [warning for warning in warnings if warning.field_name == "cv_version"]
+
+        self.assertEqual(len(cv_warnings), 1)
+        self.assertEqual(cv_warnings[0].severity, "critical")
+        self.assertEqual(cv_warnings[0].field_name, "cv_version")
+
+    def test_filled_cv_version_creates_no_cv_version_warning(self):
+        application = JobApplication.objects.create(**self._complete_application_kwargs())
+
+        self.assertNotIn("cv_version", self._warning_field_names(application))
+
+    def test_blank_location_creates_important_location_warning(self):
+        kwargs = self._complete_application_kwargs()
+        kwargs["location"] = ""
+        application = JobApplication.objects.create(**kwargs)
+
+        warnings = build_save_quality_warnings(application)
+        location_warnings = [warning for warning in warnings if warning.field_name == "location"]
+
+        self.assertEqual(len(location_warnings), 1)
+        self.assertEqual(location_warnings[0].severity, "important")
+        self.assertEqual(location_warnings[0].field_name, "location")
+
+    def test_required_skills_shorter_than_10_chars_creates_important_warning(self):
+        kwargs = self._complete_application_kwargs()
+        kwargs["required_skills"] = "Python"
+        application = JobApplication.objects.create(**kwargs)
+
+        self.assertIn("required_skills", self._warning_field_names(application))
+
+    def test_required_skills_exactly_10_chars_creates_no_warning(self):
+        kwargs = self._complete_application_kwargs()
+        kwargs["required_skills"] = "1234567890"
+        application = JobApplication.objects.create(**kwargs)
+
+        self.assertNotIn("required_skills", self._warning_field_names(application))
+
+    def test_job_description_shorter_than_40_chars_creates_important_warning(self):
+        kwargs = self._complete_application_kwargs()
+        kwargs["job_description"] = "Short junior data analyst role."
+        application = JobApplication.objects.create(**kwargs)
+
+        self.assertIn("job_description", self._warning_field_names(application))
+
+    def test_job_description_exactly_40_chars_creates_no_warning(self):
+        kwargs = self._complete_application_kwargs()
+        kwargs["job_description"] = "a" * 40
+        application = JobApplication.objects.create(**kwargs)
+
+        self.assertNotIn("job_description", self._warning_field_names(application))
+
+    def test_multiple_gaps_return_multiple_warnings(self):
+        kwargs = self._complete_application_kwargs()
+        kwargs.update(
+            {
+                "source": ApplicationSource.OTHER,
+                "cv_version": "",
+                "location": "",
+                "required_skills": "short",
+                "job_description": "too short",
+            },
+        )
+        application = JobApplication.objects.create(**kwargs)
+
+        warnings = build_save_quality_warnings(application)
+
+        self.assertEqual(len(warnings), 5)
+        self.assertEqual(
+            self._warning_field_names(application),
+            {"source", "cv_version", "location", "required_skills", "job_description"},
+        )
+
+    def test_severity_values_are_only_critical_or_important(self):
+        kwargs = self._complete_application_kwargs()
+        kwargs.update(
+            {
+                "source": ApplicationSource.OTHER,
+                "cv_version": "",
+                "location": "",
+            },
+        )
+        application = JobApplication.objects.create(**kwargs)
+
+        severities = {warning.severity for warning in build_save_quality_warnings(application)}
+
+        self.assertTrue(severities.issubset({"critical", "important"}))
+        self.assertIn("critical", severities)
+        self.assertIn("important", severities)
 
 
 class ApplicationCreatePrefillTests(TestCase):
