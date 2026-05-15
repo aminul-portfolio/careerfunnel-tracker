@@ -4,7 +4,7 @@ from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import CharField, Count, Q, Value
+from django.db.models import CharField, Count, F, Q, Sum, Value
 from django.db.models.functions import Coalesce, NullIf, Trim
 from django.utils import timezone
 
@@ -518,16 +518,25 @@ def build_funnel_metrics(user) -> FunnelMetrics:
     )
     interview_stage_count = interview_count + offer_count
     rejection_total = rejected_count + auto_rejected_count
-    daily_logs = DailyLog.objects.filter(user=user)
-    daily_target_total = sum(log.target_applications for log in daily_logs)
-    daily_actual_total = sum(log.actual_applications for log in daily_logs)
-    daily_logs_count = daily_logs.count()
+    daily_log_stats = DailyLog.objects.filter(user=user).aggregate(
+        daily_target_total=Sum("target_applications"),
+        daily_actual_total=Sum("actual_applications"),
+        daily_logs_count=Count("id"),
+        targets_met_count=Count(
+            "id", filter=Q(actual_applications__gte=F("target_applications"))
+        ),
+        total_hours_spent=Sum("hours_spent"),
+    )
+    daily_target_total = daily_log_stats["daily_target_total"] or 0
+    daily_actual_total = daily_log_stats["daily_actual_total"] or 0
+    daily_logs_count = daily_log_stats["daily_logs_count"] or 0
+    targets_met_count = daily_log_stats["targets_met_count"] or 0
     daily_target_hit_rate = (
         0.0
         if daily_logs_count == 0
-        else safe_percentage(sum(1 for log in daily_logs if log.target_met), daily_logs_count)
+        else safe_percentage(targets_met_count, daily_logs_count)
     )
-    total_hours_spent = sum((log.hours_spent for log in daily_logs), Decimal("0.00"))
+    total_hours_spent = daily_log_stats["total_hours_spent"] or Decimal("0.00")
     weekly_reviews = WeeklyReview.objects.filter(user=user)
     latest_weekly_review = weekly_reviews.first()
     if latest_weekly_review:

@@ -39,6 +39,23 @@ class MetricsServiceTests(TestCase):
         metrics = build_funnel_metrics(self.user)
         self.assertEqual(metrics.total_applications, 0)
         self.assertEqual(metrics.response_rate, 0.0)
+        self.assertEqual(metrics.daily_target_total, 0)
+        self.assertEqual(metrics.daily_actual_total, 0)
+        self.assertEqual(metrics.daily_variance_total, 0)
+        self.assertEqual(metrics.daily_target_hit_rate, 0.0)
+        self.assertEqual(metrics.total_hours_spent, Decimal("0.00"))
+
+    def test_metrics_daily_log_empty_aggregate_returns_zero_not_none(self):
+        metrics = build_funnel_metrics(self.user)
+        self.assertIsNotNone(metrics.daily_target_total)
+        self.assertIsNotNone(metrics.daily_actual_total)
+        self.assertIsNotNone(metrics.daily_target_hit_rate)
+        self.assertIsNotNone(metrics.total_hours_spent)
+        self.assertEqual(metrics.daily_target_total, 0)
+        self.assertEqual(metrics.daily_actual_total, 0)
+        self.assertEqual(metrics.daily_variance_total, 0)
+        self.assertEqual(metrics.daily_target_hit_rate, 0.0)
+        self.assertEqual(metrics.total_hours_spent, Decimal("0.00"))
 
     def test_metrics_calculates_application_counts(self):
         JobApplication.objects.create(
@@ -87,7 +104,9 @@ class MetricsServiceTests(TestCase):
         metrics = build_funnel_metrics(self.user)
         self.assertEqual(metrics.daily_target_total, 6)
         self.assertEqual(metrics.daily_actual_total, 5)
+        self.assertEqual(metrics.daily_variance_total, -1)
         self.assertEqual(metrics.daily_target_hit_rate, 50.0)
+        self.assertEqual(metrics.total_hours_spent, Decimal("5.50"))
 
     def test_diagnosis_without_applications(self):
         diagnosis = diagnose_funnel(build_funnel_metrics(self.user))
