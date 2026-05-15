@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from apps.applications.choices import FollowUpStatus, WorkType
 from apps.applications.models import JobApplication
+from apps.job_intelligence import constants as role_fit_constants
 
 from .services import (
     analyze_job_posting,
@@ -15,6 +16,26 @@ from .services import (
     generate_followup_message,
     generate_interview_prep,
 )
+
+
+class RoleFitConstantsTests(TestCase):
+    def test_canonical_constants_importable_from_job_intelligence(self):
+        self.assertTrue(hasattr(role_fit_constants, "TARGET_TITLES"))
+
+    def test_key_constants_are_nonempty_lists(self):
+        for name in (
+            "TARGET_TITLES",
+            "TARGET_TITLES_AE_STRETCH",
+            "BAD_TITLE_WORDS",
+            "SENIOR_SIGNALS",
+            "GOOD_LOCATION_WORDS",
+            "GOOD_SKILLS",
+            "DEAL_BREAKERS",
+            "LEARNING_TARGETS",
+        ):
+            value = getattr(role_fit_constants, name)
+            self.assertIsInstance(value, list, msg=name)
+            self.assertGreater(len(value), 0, msg=name)
 
 
 class AiAgentServiceTests(TestCase):
@@ -33,7 +54,7 @@ class AiAgentServiceTests(TestCase):
             follow_up_status=FollowUpStatus.DUE,
         )
 
-    def test_job_posting_analyzer_scores_good_role(self):
+    def test_job_posting_analyzer_scores_good_role_at_strong_threshold(self):
         analysis = analyze_job_posting(
             company_name="FinSight",
             job_title="Junior Finance Data Analyst",

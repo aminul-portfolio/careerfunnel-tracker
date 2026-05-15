@@ -7,14 +7,35 @@ from django.urls import reverse
 from apps.applications.choices import RoleFit, WorkType
 from apps.applications.models import JobApplication
 
+from . import constants
 from .services import build_smart_review
+
+
+class RoleFitConstantsTests(TestCase):
+    def test_constants_module_is_importable(self):
+        self.assertTrue(hasattr(constants, "TARGET_TITLES"))
+
+    def test_key_constants_are_nonempty_lists(self):
+        for name in (
+            "TARGET_TITLES",
+            "TARGET_TITLES_AE_STRETCH",
+            "BAD_TITLE_WORDS",
+            "SENIOR_SIGNALS",
+            "GOOD_LOCATION_WORDS",
+            "GOOD_SKILLS",
+            "DEAL_BREAKERS",
+            "LEARNING_TARGETS",
+        ):
+            value = getattr(constants, name)
+            self.assertIsInstance(value, list, msg=name)
+            self.assertGreater(len(value), 0, msg=name)
 
 
 class JobIntelligenceTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
 
-    def test_smart_review_scores_good_role(self):
+    def test_smart_review_scores_good_role_at_strong_threshold(self):
         application = JobApplication.objects.create(
             user=self.user,
             company_name="Finance Co",

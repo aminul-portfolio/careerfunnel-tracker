@@ -5,53 +5,13 @@ from dataclasses import dataclass
 from apps.applications.choices import RoleFit, WorkType
 from apps.applications.models import JobApplication
 
-TARGET_TITLES = [
-    "data analyst",
-    "junior data analyst",
-    "graduate data analyst",
-    "reporting analyst",
-    "bi analyst",
-    "insights analyst",
-    "finance data analyst",
-    "operations data analyst",
-]
-BAD_TITLE_WORDS = [
-    "senior",
-    "lead",
-    "principal",
-    "manager",
-    "head of",
-    "data scientist",
-    "machine learning",
-    "quant",
-]
-GOOD_LOCATION_WORDS = ["london", "croydon", "south london", "remote uk", "hybrid london", "purley"]
-GOOD_SKILLS = [
-    "python",
-    "sql",
-    "excel",
-    "reporting",
-    "dashboard",
-    "kpi",
-    "analytics",
-    "pandas",
-    "power bi",
-    "data analysis",
-    "finance",
-    "etl",
-]
-DEAL_BREAKERS = [
-    "5+ years",
-    "minimum 5 years",
-    "3+ years",
-    "minimum 3 years",
-    "senior",
-    "spark",
-    "kafka",
-    "airflow",
-    "aws redshift",
-    "dbt required",
-]
+from .constants import (
+    BAD_TITLE_WORDS,
+    DEAL_BREAKERS,
+    GOOD_LOCATION_WORDS,
+    GOOD_SKILLS,
+    TARGET_TITLES,
+)
 
 
 @dataclass(frozen=True)

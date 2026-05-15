@@ -10,92 +10,17 @@ from apps.applications.choices import ApplicationStatus, FollowUpStatus
 from apps.applications.models import JobApplication
 from apps.daily_log.models import DailyLog
 from apps.interviews.models import InterviewPrep
+from apps.job_intelligence.constants import (
+    DEAL_BREAKERS,
+    GOOD_LOCATION_WORDS,
+    GOOD_SKILLS,
+    LEARNING_TARGETS,
+    SENIOR_SIGNALS,
+    TARGET_TITLES,
+    TARGET_TITLES_AE_STRETCH,
+)
 from apps.metrics.services import build_funnel_metrics, diagnose_funnel, safe_percentage
 from apps.weekly_review.models import WeeklyReview
-
-TARGET_TITLES_IMMEDIATE = [
-    "data analyst",
-    "junior data analyst",
-    "graduate data analyst",
-    "reporting analyst",
-    "bi analyst",
-    "business intelligence analyst",
-    "insights analyst",
-    "finance data analyst",
-    "operations data analyst",
-]
-
-TARGET_TITLES_AE_STRETCH = [
-    "analytics engineer",
-    "junior analytics engineer",
-    "graduate analytics engineer",
-    "data engineer",
-    "junior data engineer",
-    "analytics platform engineer",
-]
-
-SENIOR_SIGNALS = [
-    "senior",
-    "lead",
-    "principal",
-    "head of",
-    "manager",
-    "5+ years",
-    "minimum 5",
-    "3+ years",
-    "minimum 3",
-]
-
-LOCATION_SIGNALS = [
-    "london",
-    "croydon",
-    "south london",
-    "remote uk",
-    "hybrid london",
-    "purley",
-]
-
-CORE_SKILLS = [
-    "python",
-    "sql",
-    "excel",
-    "reporting",
-    "dashboard",
-    "power bi",
-    "analytics",
-    "pandas",
-    "etl",
-    "kpi",
-    "stakeholder",
-    "finance",
-    "reconciliation",
-]
-
-DEAL_BREAKERS = [
-    "sc clearance",
-    "dv clearance",
-    "security clearance",
-    "cima",
-    "acca",
-    "aca",
-    "10+ years",
-    "ten years",
-    "principal",
-    "head of data",
-    "director",
-]
-
-LEARNING_TARGETS = [
-    "dbt",
-    "airflow",
-    "spark",
-    "kafka",
-    "snowflake",
-    "bigquery",
-    "aws redshift",
-    "redshift",
-    "databricks",
-]
 
 
 @dataclass(frozen=True)
@@ -164,7 +89,7 @@ def analyze_job_posting(
     score = 0
     risks: list[str] = []
 
-    if any(title in text for title in TARGET_TITLES_IMMEDIATE):
+    if any(title in text for title in TARGET_TITLES):
         score += 25
     elif any(title in text for title in TARGET_TITLES_AE_STRETCH):
         score += 15
@@ -175,7 +100,7 @@ def analyze_job_posting(
             "targets."
         )
 
-    if any(signal in text for signal in LOCATION_SIGNALS):
+    if any(signal in text for signal in GOOD_LOCATION_WORDS):
         score += 20
     elif "remote" in text:
         score += 14
@@ -190,7 +115,7 @@ def analyze_job_posting(
         score += 8
         risks.append("Experience level is unclear; verify before applying.")
 
-    matched_skills = [skill for skill in CORE_SKILLS if skill in text]
+    matched_skills = [skill for skill in GOOD_SKILLS if skill in text]
     score += min(25, len(matched_skills) * 4)
 
     found_deal_breakers = [breaker for breaker in DEAL_BREAKERS if breaker in text]
