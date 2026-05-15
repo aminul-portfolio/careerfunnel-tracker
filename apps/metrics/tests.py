@@ -998,6 +998,80 @@ class DataQualityReportTests(TestCase):
         self.assertIn("source", joined)
         self.assertIn("cv", joined)
 
+    def test_analytics_impact_notes_field_exists_and_is_tuple(self):
+        report = build_data_quality_report(self.user)
+        self.assertIsInstance(report.analytics_impact_notes, tuple)
+
+    def test_analytics_impact_notes_empty_when_all_checks_pass(self):
+        self._create_app(company_name="Clean")
+        report = build_data_quality_report(self.user)
+        self.assertEqual(report.analytics_impact_notes, ())
+
+    def test_source_gap_creates_quantified_source_roi_note(self):
+        self._create_app(company_name="OtherSrc", source=ApplicationSource.OTHER)
+        report = build_data_quality_report(self.user)
+        source_notes = [
+            note for note in report.analytics_impact_notes if "Source ROI" in note
+        ]
+        self.assertEqual(len(source_notes), 1)
+        note = source_notes[0]
+        self.assertIn("of", note)
+        self.assertIn("generic 'Other' row", note)
+        self.assertNotIn("excluded", note.lower())
+        self.assertIn("cannot be attributed to a specific channel", note)
+
+    def test_cv_version_gap_creates_cv_performance_note(self):
+        self._create_app(company_name="NoCv", cv_version="")
+        report = build_data_quality_report(self.user)
+        self.assertTrue(
+            any("CV Version Performance" in note for note in report.analytics_impact_notes),
+        )
+
+    def test_job_description_gap_creates_smart_review_and_rejection_pattern_note(self):
+        self._create_app(company_name="ThinJd", job_description="x" * 39)
+        report = build_data_quality_report(self.user)
+        joined = " ".join(report.analytics_impact_notes)
+        self.assertIn("Smart Review", joined)
+        self.assertIn("Rejection Pattern", joined)
+
+    def test_required_skills_gap_creates_smart_review_and_rejection_pattern_note(self):
+        self._create_app(company_name="ShortSkills", required_skills="y" * 9)
+        report = build_data_quality_report(self.user)
+        joined = " ".join(report.analytics_impact_notes)
+        self.assertIn("Smart Review", joined)
+        self.assertIn("Rejection Pattern", joined)
+
+    def test_follow_up_gap_creates_dashboard_follow_up_reminders_note(self):
+        self._create_app(
+            company_name="NoFu",
+            status=ApplicationStatus.SUBMITTED,
+            follow_up_date=None,
+        )
+        report = build_data_quality_report(self.user)
+        self.assertTrue(
+            any(
+                "Dashboard Follow-up Reminders" in note
+                for note in report.analytics_impact_notes
+            ),
+        )
+
+    def test_existing_data_quality_report_fields_unchanged_for_known_dataset(self):
+        self._create_app(company_name="CoA")
+        self._create_app(company_name="CoB", date_applied=date(2026, 5, 2))
+        report = build_data_quality_report(self.user)
+        self.assertEqual(report.total_applications, 2)
+        self.assertEqual(report.analytics_ready_applications, 2)
+        self.assertEqual(report.analytics_ready_rate, 100.0)
+        self.assertEqual(report.data_quality_score, 100.0)
+        self.assertEqual(report.missing_source_count, 0)
+        self.assertEqual(report.missing_cv_version_count, 0)
+        self.assertEqual(report.missing_job_description_count, 0)
+        self.assertEqual(report.missing_required_skills_count, 0)
+        self.assertEqual(report.missing_follow_up_count, 0)
+        self.assertEqual(report.generic_source_count, 0)
+        self.assertEqual(len(report.checks), 6)
+        self.assertEqual(report.analytics_impact_notes, ())
+
 
 class WeeklyTrendAnalyticsTests(TestCase):
     def setUp(self):
@@ -1187,3 +1261,19 @@ class MetricsViewTests(TestCase):
         self.assertIn("rejection_report", response.context)
         self.assertIn("application_quality_report", response.context)
         self.assertIn("data_quality_report", response.context)
+
+    def test_analytics_impact_section_appears_when_notes_exist(self):
+        JobApplication.objects.create(
+            user=self.user,
+            company_name="Gap Co",
+            job_title="Data Analyst",
+            date_applied=date(2026, 5, 1),
+            status=ApplicationStatus.SUBMITTED,
+            source=ApplicationSource.OTHER,
+            cv_version="v1",
+            job_description="x" * 40,
+            required_skills="y" * 10,
+        )
+        response = self._get_funnel_metrics()
+        self.assertContains(response, "Analytics Impact")
+        self.assertContains(response, "Source ROI")

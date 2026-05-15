@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -266,9 +266,9 @@ _SENIORITY_SIGNALS = (
 
 def _seniority_risk_q() -> Q:
     q = Q()
-    for field in ("job_title", "required_skills", "job_description"):
+    for lookup_field in ("job_title", "required_skills", "job_description"):
         for sig in _SENIORITY_SIGNALS:
-            q |= Q(**{f"{field}__icontains": sig})
+            q |= Q(**{f"{lookup_field}__icontains": sig})
     return q
 
 
@@ -890,6 +890,7 @@ class DataQualityReport:
     generic_source_count: int
     checks: tuple[DataQualityCheck, ...]
     recommendations: tuple[str, ...]
+    analytics_impact_notes: tuple[str, ...] = field(default_factory=tuple)
 
 
 def build_application_quality_report(user) -> ApplicationQualityReport:
@@ -1073,6 +1074,53 @@ def _build_data_quality_recommendations(report: DataQualityReport) -> tuple[str,
     return tuple(recs)
 
 
+def _impact_count_phrase(count: int, total: int) -> str:
+    noun = "application" if count == 1 else "applications"
+    return f"{count} of {total} {noun}"
+
+
+def _build_analytics_impact_notes(report: DataQualityReport) -> tuple[str, ...]:
+    notes: list[str] = []
+    total = report.total_applications
+
+    combined_src = report.missing_source_count + report.generic_source_count
+    if combined_src > 0:
+        notes.append(
+            f"Source ROI: {_impact_count_phrase(combined_src, total)} cannot be attributed "
+            f"to a specific channel — they appear under the generic 'Other' row in the "
+            f"source breakdown."
+        )
+
+    if report.missing_cv_version_count > 0:
+        cv_gap = _impact_count_phrase(report.missing_cv_version_count, total)
+        notes.append(
+            f"CV Version Performance: {cv_gap} have no CV version recorded and are not "
+            f"grouped in the CV performance comparison."
+        )
+
+    if (
+        report.missing_job_description_count > 0
+        or report.missing_required_skills_count > 0
+    ):
+        affected_evidence = (
+            report.missing_job_description_count + report.missing_required_skills_count
+        )
+        notes.append(
+            f"Smart Review and Rejection Pattern: {_impact_count_phrase(affected_evidence, total)} "
+            f"are missing job description or required skills, so fit scoring and "
+            f"deal-breaker analysis are unreliable."
+        )
+
+    if report.missing_follow_up_count > 0:
+        follow_up_gap = _impact_count_phrase(report.missing_follow_up_count, total)
+        notes.append(
+            f"Dashboard Follow-up Reminders: {follow_up_gap} in the active pipeline have "
+            f"no follow-up date and are omitted from the daily action panel."
+        )
+
+    return tuple(notes)
+
+
 def build_data_quality_report(user) -> DataQualityReport:
     """Summarise field completeness and governance signals for JobApplication analytics."""
     applications = list(JobApplication.objects.filter(user=user))
@@ -1184,7 +1232,9 @@ def build_data_quality_report(user) -> DataQualityReport:
         recommendations=(),
     )
     recommendations = _build_data_quality_recommendations(report)
-    return replace(report, recommendations=recommendations)
+    report = replace(report, recommendations=recommendations)
+    impact_notes = _build_analytics_impact_notes(report)
+    return replace(report, analytics_impact_notes=impact_notes)
 
 
 def build_funnel_stage_rows(metrics: FunnelMetrics):

@@ -1,0 +1,14 @@
+{% if data_quality_report.analytics_impact_notes %}
+<section class="content-card">
+    <div class="card-header">
+        <p class="eyebrow">Analytics Impact</p>
+        <h2>Which reports are affected by current data gaps</h2>
+        <p class="section-note">These notes explain the consequence of each data quality gap on the analytics reports this platform produces.</p>
+    </div>
+    <ul class="workflow-list">
+        {% for note in data_quality_report.analytics_impact_notes %}
+        <li>{{ note }}</li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
