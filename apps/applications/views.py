@@ -10,6 +10,7 @@ from .forms import JobApplicationForm
 from .models import JobApplication
 from .selectors import get_user_applications
 from .services import (
+    build_application_evidence_readiness,
     build_application_summary,
     build_application_table_rows,
     calculate_interview_rate,
@@ -56,6 +57,7 @@ def application_detail(request, pk):
             "application": application,
             "badge_class": get_status_badge_class(application.status),
             "followup_email_draft": build_followup_email_draft(application),
+            "evidence_readiness": build_application_evidence_readiness(application),
         },
     )
 

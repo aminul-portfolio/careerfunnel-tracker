@@ -131,6 +131,75 @@ class JobApplicationViewTests(TestCase):
             "hiring@example.com",
         )
 
+    def test_application_detail_includes_evidence_readiness_context(self):
+        application = self.create_application(cv_version="DA_CV_v1")
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("evidence_readiness", response.context)
+        self.assertEqual(
+            response.context["evidence_readiness"],
+            build_application_evidence_readiness(application),
+        )
+
+    def test_application_detail_displays_evidence_readiness(self):
+        application = self.create_application(
+            cv_version="DA_CV_v2",
+            cover_letter_version="Tailored_CL_v2",
+            job_url="https://example.com/jobs/123",
+            required_skills="Python, SQL, Excel",
+            job_description=(
+                "Junior data analyst role focused on reporting, dashboards, "
+                "and stakeholder support."
+            ),
+            contact_email="hiring@example.com",
+            company_researched=True,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        readiness = build_application_evidence_readiness(application)
+
+        self.assertContains(response, "Evidence Readiness")
+        self.assertContains(response, readiness.readiness_label)
+        self.assertContains(response, ITEM_CV_VERSION)
+        self.assertContains(response, ITEM_PORTFOLIO_PROJECT)
+        self.assertContains(response, readiness.recommended_next_improvement)
+        self.assertContains(response, "CareerFunnel Tracker does not send email.")
+        self.assertContains(response, "Manual follow-up workflow")
+
+    def test_application_detail_displays_complete_evidence_readiness_state(self):
+        application = self.create_application(
+            cv_version="DA_CV_v2",
+            cover_letter_version="Tailored_CL_v2",
+            job_url="https://example.com/jobs/123",
+            required_skills="Python, SQL, Excel, Tableau",
+            job_description=(
+                "Junior data analyst role focused on reporting, dashboards, "
+                "and stakeholder support."
+            ),
+            contact_email="hiring@example.com",
+            company_researched=True,
+            portfolio_project_included=True,
+            follow_up_date=date(2026, 5, 20),
+            follow_up_status=FollowUpStatus.DUE,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertContains(response, READINESS_LABEL_STRONG)
+        self.assertContains(response, "All evidence items complete")
+
     def test_application_detail_displays_followup_email_draft_content(self):
         application = self.create_application(
             contact_name="Taylor Morgan",
