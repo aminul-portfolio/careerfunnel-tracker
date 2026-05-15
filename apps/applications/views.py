@@ -6,6 +6,7 @@ from django.views.decorators.http import require_POST
 
 from apps.followups.services import build_followup_email_draft, mark_followup_sent
 
+from .choices import PipelineStage, RoleFit
 from .forms import JobApplicationForm
 from .models import JobApplication
 from .selectors import get_user_applications
@@ -71,6 +72,43 @@ def application_mark_followup_sent(request, pk):
     return redirect(application.get_absolute_url())
 
 
+def _application_create_prefill_params(request):
+    return ("company_name", "job_title", "location", "fit_score")
+
+
+def _build_application_create_initial(request):
+    initial: dict[str, str] = {}
+    prefill_keys = _application_create_prefill_params(request)
+    has_prefill = any(key in request.GET for key in prefill_keys)
+
+    if "company_name" in request.GET:
+        initial["company_name"] = request.GET.get("company_name", "")
+    if "job_title" in request.GET:
+        initial["job_title"] = request.GET.get("job_title", "")
+    if "location" in request.GET:
+        initial["location"] = request.GET.get("location", "")
+
+    if "fit_score" in request.GET:
+        fit_score_raw = request.GET.get("fit_score", "")
+        if fit_score_raw != "":
+            try:
+                fit_score = int(fit_score_raw)
+            except (TypeError, ValueError):
+                pass
+            else:
+                if fit_score >= 60:
+                    initial["role_fit"] = RoleFit.STRONG
+                elif fit_score >= 40:
+                    initial["role_fit"] = RoleFit.MEDIUM
+                else:
+                    initial["role_fit"] = RoleFit.WEAK
+
+    if has_prefill:
+        initial["pipeline_stage"] = PipelineStage.FIT_CHECKED
+
+    return initial
+
+
 @login_required
 def application_create(request):
     if request.method == "POST":
@@ -82,7 +120,7 @@ def application_create(request):
             messages.success(request, "Application added successfully.")
             return redirect(application.get_absolute_url())
     else:
-        form = JobApplicationForm()
+        form = JobApplicationForm(initial=_build_application_create_initial(request))
     return render(
         request,
         "applications/application_form.html",

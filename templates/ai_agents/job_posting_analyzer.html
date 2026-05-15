@@ -29,6 +29,11 @@
         <div class="content-card"><div class="card-header"><p class="eyebrow">Portfolio Match</p><h2>Recommended Projects</h2></div><ol class="agent-list">{% for project in analysis.recommended_projects %}<li>{{ project }}</li>{% endfor %}</ol></div>
     </section>
     <section class="content-card"><div class="card-header"><p class="eyebrow">Next Actions</p><h2>Application readiness steps</h2></div><ol class="agent-list">{% for action in analysis.next_actions %}<li>{{ action }}</li>{% endfor %}</ol></section>
+    <section class="content-card">
+        <div class="card-header"><p class="eyebrow">Save to pipeline</p><h2>Save as Application</h2></div>
+        <p>This opens a pre-filled Add Application form. Nothing is saved until you review and submit the form.</p>
+        <a class="btn btn-primary" href="{% url 'applications:application_create' %}?company_name={{ form.company_name.value|urlencode }}&amp;job_title={{ form.job_title.value|urlencode }}&amp;location={{ form.location.value|urlencode }}&amp;fit_score={{ analysis.fit_score }}">Save as Application</a>
+    </section>
     {% endif %}
 </div>
 {% endblock %}

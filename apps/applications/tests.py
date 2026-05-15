@@ -1,5 +1,6 @@
 from datetime import date
 from unittest.mock import patch
+from urllib.parse import quote
 
 from django.contrib.auth.models import User
 from django.core import mail
@@ -12,6 +13,7 @@ from .choices import (
     ApplicationSource,
     ApplicationStatus,
     FollowUpStatus,
+    PipelineStage,
     RoleFit,
     WorkType,
 )
@@ -493,3 +495,143 @@ class ApplicationEvidenceReadinessTests(TestCase):
             readiness.recommended_next_improvement,
             "Note whether a portfolio project was included or referenced.",
         )
+
+
+class ApplicationCreatePrefillTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="prefill", password="StrongPass12345")
+        self.client.login(username="prefill", password="StrongPass12345")
+        self.create_url = reverse("applications:application_create")
+
+    def _get_create(self, query_string=""):
+        url = self.create_url if not query_string else f"{self.create_url}?{query_string}"
+        return self.client.get(url)
+
+    def test_application_create_get_without_params_renders_normally(self):
+        response = self._get_create()
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertEqual(form.initial.get("company_name"), None)
+        self.assertEqual(form.initial.get("pipeline_stage"), None)
+
+    def test_company_name_get_param_appears_in_form_initial(self):
+        response = self._get_create("company_name=FinSight")
+        self.assertEqual(response.context["form"].initial.get("company_name"), "FinSight")
+
+    def test_job_title_get_param_appears_in_form_initial(self):
+        response = self._get_create("job_title=Junior+Data+Analyst")
+        self.assertEqual(
+            response.context["form"].initial.get("job_title"),
+            "Junior Data Analyst",
+        )
+
+    def test_location_get_param_appears_in_form_initial(self):
+        response = self._get_create("location=Hybrid+London")
+        self.assertEqual(response.context["form"].initial.get("location"), "Hybrid London")
+
+    def test_fit_score_at_least_60_maps_to_role_fit_strong(self):
+        response = self._get_create("fit_score=60")
+        self.assertEqual(response.context["form"].initial.get("role_fit"), RoleFit.STRONG)
+
+    def test_fit_score_40_to_59_maps_to_role_fit_medium(self):
+        response = self._get_create("fit_score=45")
+        self.assertEqual(response.context["form"].initial.get("role_fit"), RoleFit.MEDIUM)
+
+    def test_fit_score_below_40_maps_to_role_fit_weak(self):
+        response = self._get_create("fit_score=25")
+        self.assertEqual(response.context["form"].initial.get("role_fit"), RoleFit.WEAK)
+
+    def test_invalid_fit_score_does_not_raise_server_error(self):
+        response = self._get_create("fit_score=not-a-number")
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context["form"].initial.get("role_fit"))
+
+    def test_pipeline_stage_fit_checked_when_prefill_params_exist(self):
+        response = self._get_create("company_name=FinSight")
+        self.assertEqual(
+            response.context["form"].initial.get("pipeline_stage"),
+            PipelineStage.FIT_CHECKED,
+        )
+
+    def test_post_create_application_flow_still_works(self):
+        response = self.client.post(
+            self.create_url,
+            {
+                "company_name": "Example Ltd",
+                "job_title": "Junior Data Analyst",
+                "job_url": "https://example.com/job",
+                "location": "London",
+                "work_type": WorkType.HYBRID,
+                "salary_range": "£30,000 - £35,000",
+                "source": ApplicationSource.LINKEDIN,
+                "role_fit": RoleFit.STRONG,
+                "date_applied": "2026-05-09",
+                "status": ApplicationStatus.SUBMITTED,
+                "response_date": "",
+                "cv_version": "DA_CV_v1",
+                "cover_letter_version": "Tailored_CL_v1",
+                "contact_name": "",
+                "contact_email": "",
+                "notes": "Good fit.",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(JobApplication.objects.filter(company_name="Example Ltd").exists())
+
+
+class JobPostingAnalyzerPrefillBridgeTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="analyzer", password="StrongPass12345")
+        self.client.login(username="analyzer", password="StrongPass12345")
+        self.analyzer_url = reverse("ai_agents:job_posting_analyzer")
+
+    def test_save_as_application_not_shown_before_analysis(self):
+        response = self.client.get(self.analyzer_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Save as Application")
+
+    def test_save_as_application_shown_after_analysis(self):
+        response = self.client.post(
+            self.analyzer_url,
+            {
+                "company_name": "FinSight",
+                "job_title": "Junior Finance Data Analyst",
+                "location": "Hybrid London",
+                "job_posting": "Python SQL Excel reporting dashboards junior 0-2 years",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Save as Application")
+        self.assertContains(response, "pre-filled Add Application form")
+        self.assertContains(response, "Nothing is saved until you review and submit")
+
+    def test_save_as_application_link_contains_encoded_get_params(self):
+        job_title = "Junior Finance Data Analyst"
+        location = "Hybrid London"
+        response = self.client.post(
+            self.analyzer_url,
+            {
+                "company_name": "FinSight",
+                "job_title": job_title,
+                "location": location,
+                "job_posting": "Python SQL Excel reporting dashboards junior 0-2 years",
+            },
+        )
+        self.assertContains(response, "company_name=FinSight")
+        self.assertContains(response, f"job_title={quote(job_title)}")
+        self.assertContains(response, f"location={quote(location)}")
+        self.assertContains(response, "fit_score=")
+
+    def test_save_as_application_link_encodes_special_characters_in_company_name(self):
+        company_name = "Smith & Jones Ltd"
+        response = self.client.post(
+            self.analyzer_url,
+            {
+                "company_name": company_name,
+                "job_title": "Junior Data Analyst",
+                "location": "London",
+                "job_posting": "Python SQL Excel reporting junior dashboard",
+            },
+        )
+        encoded_company = quote(company_name)
+        self.assertContains(response, f"company_name={encoded_company}")
