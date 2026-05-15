@@ -11,6 +11,7 @@
     </section>
     <nav class="section-nav" aria-label="Metrics sections">
         <a href="#application-funnel">Funnel</a>
+        <a href="#weekly-trend">Weekly Trend</a>
         <a href="#source-roi">Source ROI</a>
         <a href="#cv-performance">CV Performance</a>
         <a href="#rejections">Rejections</a>
@@ -91,6 +92,40 @@
                 <span>Daily Target Hit Rate</span>
                 <strong>{{ metrics.daily_target_hit_rate }}%</strong>
             </div>
+        </div>
+    </section>
+    <section id="weekly-trend" class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Weekly Trend</p>
+            <h2>Applications and responses by week</h2>
+            <p class="section-note">Last ten Monday-starting weeks from logged application dates.</p>
+        </div>
+        {% if not weekly_trend_has_data %}
+        <div class="empty-state small-empty-state">
+            <p>Not enough data yet. Log applications across at least two different weeks before week-over-week trends are meaningful.</p>
+        </div>
+        {% endif %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Week Starting</th>
+                        <th>Applications</th>
+                        <th>Responses</th>
+                        <th>Response Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in weekly_trend_rows %}
+                    <tr>
+                        <td><strong>{{ row.week_start }}</strong></td>
+                        <td>{{ row.applications }}</td>
+                        <td>{{ row.responses }}</td>
+                        <td>{{ row.response_rate }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </section>
     <section id="source-roi" class="content-card">

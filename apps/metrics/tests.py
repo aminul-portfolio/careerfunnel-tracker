@@ -2,6 +2,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.template.defaultfilters import date as format_date
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -1082,11 +1083,88 @@ class MetricsViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
 
+    def _login(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+
+    def _get_funnel_metrics(self):
+        self._login()
+        return self.client.get(reverse("metrics:funnel_metrics"))
+
+    def _create_app(self, **kwargs):
+        defaults = {
+            "user": self.user,
+            "company_name": "Acme",
+            "job_title": "Analyst",
+            "date_applied": date(2026, 5, 1),
+            "status": ApplicationStatus.SUBMITTED,
+            "source": ApplicationSource.OTHER,
+        }
+        defaults.update(kwargs)
+        return JobApplication.objects.create(**defaults)
+
     def test_funnel_metrics_requires_login(self):
         response = self.client.get(reverse("metrics:funnel_metrics"))
         self.assertEqual(response.status_code, 302)
 
     def test_funnel_metrics_loads_for_logged_in_user(self):
-        self.client.login(username="aminul", password="StrongPass12345")
-        response = self.client.get(reverse("metrics:funnel_metrics"))
+        response = self._get_funnel_metrics()
         self.assertEqual(response.status_code, 200)
+
+    def test_funnel_metrics_context_includes_weekly_trend_rows(self):
+        response = self._get_funnel_metrics()
+        self.assertIn("weekly_trend_rows", response.context)
+        self.assertEqual(len(response.context["weekly_trend_rows"]), 10)
+
+    def test_funnel_metrics_context_includes_weekly_trend_has_data(self):
+        response = self._get_funnel_metrics()
+        self.assertIn("weekly_trend_has_data", response.context)
+        self.assertFalse(response.context["weekly_trend_has_data"])
+
+    def test_weekly_trend_section_appears_on_funnel_metrics_page(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        self.assertIn('id="weekly-trend"', content)
+        self.assertIn("Weekly Trend", content)
+
+    def test_weekly_trend_table_displays_rows(self):
+        today = timezone.localdate()
+        current_monday = _monday_start(today)
+        previous_monday = current_monday - timedelta(weeks=1)
+        self._create_app(date_applied=current_monday)
+        self._create_app(date_applied=previous_monday)
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        self.assertIn("Week Starting", content)
+        self.assertIn(format_date(current_monday, "j M Y"), content)
+        self.assertIn(format_date(previous_monday, "j M Y"), content)
+        self.assertTrue(response.context["weekly_trend_has_data"])
+        active_weeks = [
+            row
+            for row in response.context["weekly_trend_rows"]
+            if row.applications > 0
+        ]
+        self.assertEqual(len(active_weeks), 2)
+
+    def test_weekly_trend_not_enough_data_message_when_fewer_than_two_active_weeks(self):
+        today = timezone.localdate()
+        current_monday = _monday_start(today)
+        self._create_app(company_name="OnlyWeek", date_applied=current_monday)
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        self.assertIn("Not enough data yet", content)
+        self.assertFalse(response.context["weekly_trend_has_data"])
+
+    def test_existing_funnel_metrics_page_behavior_unchanged(self):
+        response = self._get_funnel_metrics()
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Funnel Metrics")
+        self.assertContains(response, "Current Diagnosis")
+        self.assertContains(response, "Application Funnel")
+        self.assertIn("metrics", response.context)
+        self.assertIn("diagnosis", response.context)
+        self.assertIn("funnel_stage_rows", response.context)
+        self.assertIn("source_roi_rows", response.context)
+        self.assertIn("cv_version_rows", response.context)
+        self.assertIn("rejection_report", response.context)
+        self.assertIn("application_quality_report", response.context)
+        self.assertIn("data_quality_report", response.context)

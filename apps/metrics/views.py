@@ -9,6 +9,7 @@ from .services import (
     build_funnel_stage_rows,
     build_rejection_pattern_report,
     build_source_roi,
+    build_weekly_trend,
     diagnose_funnel,
     get_diagnosis_panel_class,
 )
@@ -18,6 +19,10 @@ from .services import (
 def funnel_metrics(request):
     metrics = build_funnel_metrics(request.user)
     diagnosis = diagnose_funnel(metrics)
+    weekly_trend_rows = build_weekly_trend(request.user)
+    weekly_trend_has_data = sum(
+        1 for row in weekly_trend_rows if row.applications > 0
+    ) >= 2
     return render(
         request,
         "metrics/funnel_metrics.html",
@@ -33,5 +38,7 @@ def funnel_metrics(request):
                 request.user
             ),
             "data_quality_report": build_data_quality_report(request.user),
+            "weekly_trend_rows": weekly_trend_rows,
+            "weekly_trend_has_data": weekly_trend_has_data,
         },
     )
