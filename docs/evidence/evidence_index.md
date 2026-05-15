@@ -15,9 +15,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 | Item | Current State |
 |---|---|
 | Current stable branch | `main` |
-| Latest completed sprint | Sprint 14 — Weekly Trend Analytics + Documentation Integrity |
-| Latest completed sprint tag | `sprint-14-complete` |
-| Current verified test count | 176 tests passing |
+| Latest completed sprint | Sprint 15 — Intake-to-Application Conversion + Evaluation Queue |
+| Latest completed sprint tag | `sprint-15-complete` |
+| Current verified test count | 204 tests passing |
 | Main evidence folder | `docs/evidence/screenshots/` |
 | Analytics documentation folder | `docs/analytics/` |
 
@@ -646,6 +646,71 @@ This sprint proves the project can add time-based funnel analytics with governed
 
 ---
 
+## Sprint 15 - Intake-to-Application Conversion + Evaluation Queue
+
+### Status
+
+Completed and tagged.
+
+### Git Tag
+
+```text
+sprint-15-complete
+```
+
+### Commits
+
+```text
+f8a652e Sprint 15B: unify role fit scoring constants
+e5617c9 Sprint 15C: add intake to application conversion bridge
+f111e06 Sprint 15D: add evaluation queue workflow
+cd972fa Sprint 15E: display fit review on application detail
+```
+
+### Screenshot Evidence
+
+```text
+docs/evidence/screenshots/sprint-15-conversion-bridge.png
+docs/evidence/screenshots/sprint-15-evaluation-queue.png
+```
+
+Capture these screenshots manually from the Job Posting Analyzer (Save as Application link after analysis) and Evaluation Queue pages before final Sprint 15 acceptance if the files are not yet in the repository.
+
+### Documentation Evidence
+
+```text
+README.md
+docs/analytics/metric_definitions.md
+docs/evidence/evidence_index.md
+```
+
+### What This Sprint Proves
+
+- Role-fit classification lists are shared from `apps/job_intelligence/constants.py` for Job Posting Analyzer and Application Smart Review.
+- Job Posting Analyzer can open a pre-filled Add Application form via GET parameters; the user must review and submit before anything is saved.
+- Evaluation Queue surfaces applications at Job Found or Fit Checked pipeline stages.
+- Application Detail shows a compact rule-based Fit Review summary from `build_smart_review(application)`.
+- Intake-to-application workflow stays manual and honest (no auto-save, auto-apply, scraping, or live AI/API claims).
+
+### Key Features Proven
+
+- Canonical constants module and shared scoring inputs.
+- Save as Application prefill bridge with fit-score to role-fit mapping.
+- `evaluation_queue` view, route, sidebar link, and template.
+- Fit Review section on application detail.
+- Regression tests for prefill, queue filtering, and Fit Review context.
+
+### Known Limitations (Sprint 15)
+
+- Fit review is rule-based and local; it is not a live AI/API integration.
+- Job Posting Analyzer pre-fills an application form only; it does not save or submit applications automatically.
+
+### Reviewer Value
+
+This sprint proves the project connects pre-application analysis to saved application records with consistent scoring, a clear evaluation queue, and honest manual submission—without fake automation or external AI dependencies.
+
+---
+
 # Screenshot Evidence Register
 
 | Sprint | Screenshot File | Main Proof |
@@ -660,6 +725,8 @@ This sprint proves the project can add time-based funnel analytics with governed
 | Sprint 6 | `docs/evidence/screenshots/sprint-6-metrics-final-polish.png` | Metrics page final polish |
 | Sprint 6 | `docs/evidence/screenshots/sprint-6-export-centre-final-polish.png` | Export Centre final polish |
 | Sprint 14 | `docs/evidence/screenshots/sprint-14-weekly-trend-analytics.png` | Weekly Trend table on Funnel Metrics |
+| Sprint 15 | `docs/evidence/screenshots/sprint-15-conversion-bridge.png` | Job Posting Analyzer Save as Application prefill bridge |
+| Sprint 15 | `docs/evidence/screenshots/sprint-15-evaluation-queue.png` | Evaluation Queue for Job Found / Fit Checked opportunities |
 
 ---
 
@@ -682,6 +749,7 @@ This sprint proves the project can add time-based funnel analytics with governed
 | `sprint-12-complete` | Status-aware follow-up action checkpoint |
 | `sprint-13-complete` | Application evidence readiness checkpoint |
 | `sprint-14-complete` | Weekly Trend analytics, Funnel Metrics table, DailyLog aggregation, and documentation checkpoint |
+| `sprint-15-complete` | Shared role-fit constants, intake prefill bridge, Evaluation Queue, Application Detail Fit Review, and documentation checkpoint |
 
 ---
 
@@ -698,6 +766,7 @@ This sprint proves the project can add time-based funnel analytics with governed
 | Sprint 6 complete | 133 | UI polish and documentation work preserved existing test coverage |
 | Sprint 13 complete | 161 | Application evidence readiness and follow-up workflow tests |
 | Sprint 14 complete | 176 | Weekly trend service, funnel metrics UI, and DailyLog aggregation tests |
+| Sprint 15 complete | 204 | Role-fit constants, intake prefill bridge, Evaluation Queue, and Fit Review tests |
 
 ## Test Count Note
 
@@ -745,12 +814,14 @@ docs/evidence/screenshots/sprint-3-application-quality-report.png
 docs/evidence/screenshots/sprint-4-data-quality-analytics-governance.png
 docs/evidence/screenshots/sprint-6-metrics-final-polish.png
 docs/evidence/screenshots/sprint-14-weekly-trend-analytics.png
+docs/evidence/screenshots/sprint-15-conversion-bridge.png
+docs/evidence/screenshots/sprint-15-evaluation-queue.png
 ```
 
 Purpose:
 
 - Follow the analytics depth progression.
-- Confirm metrics, decision support, data quality logic, and weekly trend table.
+- Confirm metrics, decision support, data quality logic, weekly trend table, intake prefill bridge, and Evaluation Queue.
 
 ## 4. Review Analytics Documentation
 
@@ -855,6 +926,8 @@ These limitations are intentional and documented to keep the portfolio honest.
 - Weekly Trend uses `date_applied`, not response date.
 - Export files are workbook exports, not automated BI pipelines.
 - No live LLM or AI integration is active.
+- Fit review and job-posting scoring are rule-based and local, not live AI/API integrations.
+- Job Posting Analyzer pre-fills the Add Application form only; it does not save or submit applications automatically.
 - No Gmail / Smart Inbox integration is active.
 - No Celery / Redis background processing is active.
 
@@ -907,6 +980,9 @@ Documentation alignment, code quality, dashboard actions, manual follow-up workf
 
 Sprint 14:
 Weekly trend analytics, Funnel Metrics table display, DailyLog aggregation optimization, and documentation integrity
+
+Sprint 15:
+Shared role-fit constants, Job Posting Analyzer to Add Application prefill bridge, Evaluation Queue, and Application Detail Fit Review
 ```
 
 The strongest portfolio signal is that the project does not only display data. It explains where the data comes from, how it is transformed, what each metric means, what limitations exist, and what action the user should take next.

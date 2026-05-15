@@ -23,6 +23,20 @@ CareerFunnel Tracker follows these principles:
 
 ---
 
+## Fit Review and Job Posting Scoring Consistency
+
+Fit Review (Application Detail), Application Smart Review, and Job Posting Analyzer use the same canonical role-fit classification lists from:
+
+```text
+apps/job_intelligence/constants.py
+```
+
+Shared inputs include target titles, location signals, skill keywords, deal-breakers, and learning-target terms. Job Posting Analyzer and Application Smart Review therefore apply the same rule-based classification inputs, which reduces score inconsistency between pre-application analysis and saved-application review.
+
+Scoring remains deterministic and local. No live AI or external API integration is used for these features.
+
+---
+
 ## Source Data
 
 | Model | Purpose |
@@ -829,6 +843,8 @@ Known limitations:
 - CV Version Performance is not scientific A/B testing.
 - Source ROI is channel-performance tracking, not financial ROI.
 - No live AI or LLM features are used.
+- Fit Review and Job Posting Analyzer scoring share constants but remain rule-based, not live AI/API integrations.
+- Job Posting Analyzer pre-fills the Add Application form only; it does not save or submit applications automatically.
 - No Gmail or inbox integration is active.
 - Analytics outputs depend on the completeness of user-entered records.
 - Weekly Trend uses application date, not response date.
