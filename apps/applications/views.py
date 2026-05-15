@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.followups.services import build_followup_email_draft, mark_followup_sent
+from apps.job_intelligence.services import build_smart_review
 
 from .choices import PipelineStage, RoleFit
 from .forms import JobApplicationForm
@@ -74,6 +75,7 @@ def application_detail(request, pk):
             "badge_class": get_status_badge_class(application.status),
             "followup_email_draft": build_followup_email_draft(application),
             "evidence_readiness": build_application_evidence_readiness(application),
+            "smart_review": build_smart_review(application),
         },
     )
 

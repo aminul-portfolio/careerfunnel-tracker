@@ -9,6 +9,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 
+from apps.job_intelligence.services import build_smart_review
+
 from .choices import (
     ApplicationSource,
     ApplicationStatus,
@@ -147,6 +149,58 @@ class JobApplicationViewTests(TestCase):
             response.context["evidence_readiness"],
             build_application_evidence_readiness(application),
         )
+
+    def test_application_detail_includes_smart_review_context(self):
+        application = self.create_application(
+            job_title="Junior Finance Data Analyst",
+            location="Hybrid London",
+            work_type=WorkType.HYBRID,
+            role_fit=RoleFit.STRONG,
+            required_skills="Python SQL Excel reporting dashboards finance",
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("smart_review", response.context)
+        self.assertEqual(
+            response.context["smart_review"],
+            build_smart_review(application),
+        )
+        self.assertIsInstance(response.context["smart_review"].job_fit_score, int)
+        self.assertIn("badge_class", response.context)
+        self.assertIn("followup_email_draft", response.context)
+        self.assertIn("evidence_readiness", response.context)
+
+    def test_application_detail_displays_fit_review_section(self):
+        application = self.create_application(
+            job_title="Junior Finance Data Analyst",
+            location="Hybrid London",
+            work_type=WorkType.HYBRID,
+            role_fit=RoleFit.STRONG,
+            required_skills="Python SQL Excel reporting dashboards finance",
+            cv_version="Finance_DA_CV_v1",
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+        smart_review = build_smart_review(application)
+        smart_review_url = reverse(
+            "job_intelligence:application_smart_review",
+            kwargs={"pk": application.pk},
+        )
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertContains(response, "Fit Review")
+        self.assertContains(response, f"{smart_review.job_fit_score}/100")
+        self.assertContains(response, smart_review.recommended_cv)
+        self.assertContains(response, f"{smart_review.readiness_score}%")
+        self.assertContains(response, "Full Smart Review")
+        self.assertContains(response, smart_review_url)
 
     def test_application_detail_displays_evidence_readiness(self):
         application = self.create_application(
