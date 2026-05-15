@@ -15,6 +15,7 @@ from .services import (
     build_application_evidence_readiness,
     build_application_summary,
     build_application_table_rows,
+    build_save_quality_warnings,
     calculate_interview_rate,
     calculate_offer_rate,
     calculate_response_rate,
@@ -134,6 +135,8 @@ def application_create(request):
             application = form.save(commit=False)
             application.user = request.user
             application.save()
+            for warning in build_save_quality_warnings(application):
+                messages.warning(request, warning.message)
             messages.success(request, "Application added successfully.")
             return redirect(application.get_absolute_url())
     else:
@@ -156,6 +159,8 @@ def application_update(request, pk):
         form = JobApplicationForm(request.POST, instance=application)
         if form.is_valid():
             form.save()
+            for warning in build_save_quality_warnings(application):
+                messages.warning(request, warning.message)
             messages.success(request, "Application updated successfully.")
             return redirect(application.get_absolute_url())
     else:

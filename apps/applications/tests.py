@@ -695,6 +695,168 @@ class SaveQualityWarningsServiceTests(TestCase):
         self.assertIn("important", severities)
 
 
+class ApplicationSaveQualityWarningViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="warnings", password="StrongPass12345")
+        self.client.login(username="warnings", password="StrongPass12345")
+        self.create_url = reverse("applications:application_create")
+
+    def _analytics_ready_post_data(self, **overrides):
+        data = {
+            "company_name": "Example Ltd",
+            "job_title": "Junior Data Analyst",
+            "job_url": "",
+            "location": "Hybrid London",
+            "work_type": WorkType.HYBRID,
+            "salary_range": "",
+            "source": ApplicationSource.LINKEDIN,
+            "role_fit": RoleFit.STRONG,
+            "experience_level": "",
+            "required_skills": "Python SQL Excel Power BI dashboards",
+            "job_description": (
+                "Junior data analyst role requiring Python, SQL, and Excel for KPI "
+                "reporting and stakeholder dashboards."
+            ),
+            "date_applied": "2026-05-09",
+            "status": ApplicationStatus.SUBMITTED,
+            "response_date": "",
+            "cv_version": "DA_CV_v1",
+            "cover_letter_version": "",
+            "contact_name": "",
+            "contact_email": "",
+            "notes": "",
+        }
+        data.update(overrides)
+        return data
+
+    def test_create_with_source_other_shows_source_roi_warning(self):
+        response = self.client.post(
+            self.create_url,
+            self._analytics_ready_post_data(source=ApplicationSource.OTHER),
+            follow=True,
+        )
+
+        self.assertContains(response, "Source ROI cannot attribute")
+        self.assertTrue(JobApplication.objects.filter(company_name="Example Ltd").exists())
+
+    def test_create_with_blank_cv_version_shows_cv_version_performance_warning(self):
+        response = self.client.post(
+            self.create_url,
+            self._analytics_ready_post_data(cv_version=""),
+            follow=True,
+        )
+
+        self.assertContains(response, "CV Version Performance analytics")
+        self.assertTrue(JobApplication.objects.filter(company_name="Example Ltd").exists())
+
+    def test_create_with_complete_analytics_fields_shows_success_without_source_warning(
+        self,
+    ):
+        response = self.client.post(
+            self.create_url,
+            self._analytics_ready_post_data(),
+            follow=True,
+        )
+
+        self.assertContains(response, "Application added successfully.")
+        self.assertNotContains(response, "Source ROI cannot attribute")
+
+    def test_create_redirect_target_is_application_detail(self):
+        response = self.client.post(self.create_url, self._analytics_ready_post_data())
+
+        application = JobApplication.objects.get(company_name="Example Ltd")
+        self.assertRedirects(response, application.get_absolute_url())
+
+    def test_update_with_source_other_shows_source_roi_warning(self):
+        application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Example Ltd",
+            job_title="Junior Data Analyst",
+            date_applied=date(2026, 5, 9),
+            source=ApplicationSource.LINKEDIN,
+            cv_version="DA_CV_v1",
+            location="Hybrid London",
+            required_skills="Python SQL Excel Power BI dashboards",
+            job_description=(
+                "Junior data analyst role requiring Python, SQL, and Excel for KPI "
+                "reporting and stakeholder dashboards."
+            ),
+        )
+        update_url = reverse("applications:application_update", kwargs={"pk": application.pk})
+
+        response = self.client.post(
+            update_url,
+            self._analytics_ready_post_data(source=ApplicationSource.OTHER),
+            follow=True,
+        )
+
+        self.assertContains(response, "Source ROI cannot attribute")
+        application.refresh_from_db()
+        self.assertEqual(application.source, ApplicationSource.OTHER)
+
+    def test_update_with_blank_cv_version_shows_cv_version_performance_warning(self):
+        application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Example Ltd",
+            job_title="Junior Data Analyst",
+            date_applied=date(2026, 5, 9),
+            source=ApplicationSource.LINKEDIN,
+            cv_version="DA_CV_v1",
+            location="Hybrid London",
+            required_skills="Python SQL Excel Power BI dashboards",
+            job_description=(
+                "Junior data analyst role requiring Python, SQL, and Excel for KPI "
+                "reporting and stakeholder dashboards."
+            ),
+        )
+        update_url = reverse("applications:application_update", kwargs={"pk": application.pk})
+
+        response = self.client.post(
+            update_url,
+            self._analytics_ready_post_data(cv_version=""),
+            follow=True,
+        )
+
+        self.assertContains(response, "CV Version Performance analytics")
+        application.refresh_from_db()
+        self.assertEqual(application.cv_version, "")
+
+    def test_update_with_complete_analytics_fields_shows_success_without_source_warning(
+        self,
+    ):
+        application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Example Ltd",
+            job_title="Junior Data Analyst",
+            date_applied=date(2026, 5, 9),
+            source=ApplicationSource.OTHER,
+            cv_version="",
+        )
+        update_url = reverse("applications:application_update", kwargs={"pk": application.pk})
+
+        response = self.client.post(
+            update_url,
+            self._analytics_ready_post_data(),
+            follow=True,
+        )
+
+        self.assertContains(response, "Application updated successfully.")
+        self.assertNotContains(response, "Source ROI cannot attribute")
+
+    def test_update_redirect_target_remains_application_detail(self):
+        application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Example Ltd",
+            job_title="Junior Data Analyst",
+            date_applied=date(2026, 5, 9),
+        )
+        update_url = reverse("applications:application_update", kwargs={"pk": application.pk})
+
+        response = self.client.post(update_url, self._analytics_ready_post_data())
+
+        self.assertRedirects(response, application.get_absolute_url())
+
+
 class ApplicationCreatePrefillTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="prefill", password="StrongPass12345")

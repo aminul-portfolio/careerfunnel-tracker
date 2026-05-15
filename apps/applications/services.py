@@ -263,7 +263,11 @@ def build_save_quality_warnings(application) -> list[SaveQualityWarning]:
         warnings.append(
             SaveQualityWarning(
                 field_name="source",
-                message="Source is Other; choose a specific channel when you can.",
+                message=(
+                    "Source is set to the generic 'Other' — Source ROI cannot attribute "
+                    "this application to a specific job board or channel. It will be "
+                    "grouped under Other."
+                ),
                 analytics_impact=(
                     "Source ROI cannot attribute this application to a specific channel; "
                     "it is grouped under Other."
@@ -276,7 +280,10 @@ def build_save_quality_warnings(application) -> list[SaveQualityWarning]:
         warnings.append(
             SaveQualityWarning(
                 field_name="cv_version",
-                message="CV version is not saved.",
+                message=(
+                    "CV version is missing — CV Version Performance analytics cannot "
+                    "track which CV was used for this application."
+                ),
                 analytics_impact="CV Version Performance cannot group/track this application.",
                 severity=_SAVE_QUALITY_SEVERITY_CRITICAL,
             ),
