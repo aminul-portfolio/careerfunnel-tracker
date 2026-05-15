@@ -635,3 +635,71 @@ class JobPostingAnalyzerPrefillBridgeTests(TestCase):
         )
         encoded_company = quote(company_name)
         self.assertContains(response, f"company_name={encoded_company}")
+
+
+class EvaluationQueueTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="queue", password="StrongPass12345")
+        self.queue_url = reverse("applications:evaluation_queue")
+        self.base_kwargs = {
+            "user": self.user,
+            "job_title": "Junior Data Analyst",
+            "date_applied": date(2026, 5, 9),
+        }
+
+    def test_evaluation_queue_requires_login(self):
+        response = self.client.get(self.queue_url)
+        self.assertEqual(response.status_code, 302)
+
+    def test_evaluation_queue_url_resolves(self):
+        self.assertEqual(self.queue_url, "/applications/evaluation/")
+
+    def test_logged_in_user_receives_200(self):
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_job_found_applications_appear(self):
+        application = JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Job Found Co",
+            pipeline_stage=PipelineStage.JOB_FOUND,
+        )
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertContains(response, "Job Found Co")
+        self.assertIn(application, list(response.context["applications"]))
+
+    def test_fit_checked_applications_appear(self):
+        application = JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Fit Checked Co",
+            pipeline_stage=PipelineStage.FIT_CHECKED,
+        )
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertContains(response, "Fit Checked Co")
+        self.assertIn(application, list(response.context["applications"]))
+
+    def test_submitted_stage_applications_do_not_appear(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Submitted Co",
+            pipeline_stage=PipelineStage.SUBMITTED,
+        )
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertNotContains(response, "Submitted Co")
+        self.assertEqual(response.context["table_rows"], [])
+
+    def test_empty_state_when_no_qualifying_applications(self):
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertContains(response, "No roles in the evaluation queue yet")
+        self.assertContains(response, "Job Posting Analyzer")
+
+    def test_sidebar_link_renders_for_logged_in_user(self):
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertContains(response, "Evaluation Queue")
+        self.assertContains(response, self.queue_url)

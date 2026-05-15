@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Evaluation Queue | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Evaluation Queue{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel">
+        <p class="eyebrow">Pre-application pipeline</p>
+        <h1>Evaluation Queue</h1>
+        <p>These roles are still being evaluated before you apply. Review fit, compare options, and move forward only when the role is worth your time.</p>
+        <div class="hero-actions">
+            <a href="{% url 'ai_agents:job_posting_analyzer' %}" class="btn btn-primary">Job Posting Analyzer</a>
+            <a href="{% url 'applications:application_list' %}" class="btn btn-secondary">All Applications</a>
+        </div>
+    </section>
+    <section class="content-card">
+        <div class="card-header card-header-row">
+            <div>
+                <p class="eyebrow">Opportunities under review</p>
+                <h2>Roles at Job Found or Fit Checked</h2>
+            </div>
+        </div>
+        {% if table_rows %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Company</th>
+                        <th>Role</th>
+                        <th>Source</th>
+                        <th>Role Fit</th>
+                        <th>Pipeline Stage</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in table_rows %}
+                    <tr>
+                        <td><strong>{{ row.application.company_name }}</strong></td>
+                        <td>{{ row.application.job_title }}</td>
+                        <td>{{ row.application.get_source_display }}</td>
+                        <td>{{ row.application.get_role_fit_display }}</td>
+                        <td>{{ row.application.get_pipeline_stage_display }}</td>
+                        <td><a href="{{ row.application.get_absolute_url }}" class="table-link">View</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No roles in the evaluation queue yet.</h3>
+            <p>Use the Job Posting Analyzer to score a role first, then save it as an application when the fit looks acceptable.</p>
+            <a href="{% url 'ai_agents:job_posting_analyzer' %}" class="btn btn-primary">Open Job Posting Analyzer</a>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

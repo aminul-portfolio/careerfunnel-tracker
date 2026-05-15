@@ -49,6 +49,21 @@ def application_list(request):
 
 
 @login_required
+def evaluation_queue(request):
+    applications = get_user_applications(request.user).filter(
+        pipeline_stage__in=[PipelineStage.JOB_FOUND, PipelineStage.FIT_CHECKED],
+    )
+    return render(
+        request,
+        "applications/evaluation_queue.html",
+        {
+            "applications": applications,
+            "table_rows": build_application_table_rows(applications),
+        },
+    )
+
+
+@login_required
 def application_detail(request, pk):
     application = get_object_or_404(JobApplication, pk=pk, user=request.user)
     return render(
