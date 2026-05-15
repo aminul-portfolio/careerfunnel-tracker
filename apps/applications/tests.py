@@ -16,7 +16,21 @@ from .choices import (
     WorkType,
 )
 from .models import JobApplication
-from .services import calculate_response_rate
+from .services import (
+    ITEM_COMPANY_RESEARCHED,
+    ITEM_CONTACT_EMAIL,
+    ITEM_CV_VERSION,
+    ITEM_FOLLOW_UP_DATE,
+    ITEM_FOLLOW_UP_STATUS,
+    ITEM_JOB_DESCRIPTION,
+    ITEM_JOB_URL,
+    ITEM_PORTFOLIO_PROJECT,
+    READINESS_LABEL_MISSING_KEY,
+    READINESS_LABEL_NEEDS_IMPROVEMENT,
+    READINESS_LABEL_STRONG,
+    build_application_evidence_readiness,
+    calculate_response_rate,
+)
 
 
 class ApplicationChoiceTests(TestCase):
@@ -290,3 +304,123 @@ class ApplicationServiceTests(TestCase):
             status=ApplicationStatus.ACKNOWLEDGED,
         )
         self.assertEqual(calculate_response_rate(self.user), 50.0)
+
+
+class ApplicationEvidenceReadinessTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+
+    def _base_application_kwargs(self):
+        return {
+            "user": self.user,
+            "company_name": "Example Ltd",
+            "job_title": "Junior Data Analyst",
+            "date_applied": date(2026, 5, 9),
+        }
+
+    def _well_prepared_kwargs(self):
+        return {
+            **self._base_application_kwargs(),
+            "cv_version": "DA_CV_v2",
+            "cover_letter_version": "Tailored_CL_v2",
+            "job_url": "https://example.com/jobs/123",
+            "required_skills": "Python, SQL, Excel, Tableau",
+            "job_description": (
+                "Junior data analyst role focused on reporting, dashboards, "
+                "and stakeholder support."
+            ),
+            "contact_email": "hiring@example.com",
+            "company_researched": True,
+            "portfolio_project_included": True,
+            "follow_up_date": date(2026, 5, 20),
+            "follow_up_status": FollowUpStatus.DUE,
+        }
+
+    def test_well_prepared_application_receives_strong_evidence_label(self):
+        application = JobApplication.objects.create(**self._well_prepared_kwargs())
+
+        readiness = build_application_evidence_readiness(application)
+
+        self.assertEqual(readiness.readiness_label, READINESS_LABEL_STRONG)
+        self.assertEqual(readiness.missing_items, ())
+        self.assertEqual(
+            readiness.recommended_next_improvement,
+            "Evidence is complete; keep records updated as the application progresses.",
+        )
+
+    def test_sparse_application_receives_missing_key_evidence_label(self):
+        application = JobApplication.objects.create(**self._base_application_kwargs())
+
+        readiness = build_application_evidence_readiness(application)
+
+        self.assertEqual(readiness.readiness_label, READINESS_LABEL_MISSING_KEY)
+
+    def test_missing_items_are_detected_correctly(self):
+        kwargs = self._well_prepared_kwargs()
+        kwargs.update({"cv_version": "", "contact_email": "", "follow_up_date": None})
+        application = JobApplication.objects.create(**kwargs)
+
+        readiness = build_application_evidence_readiness(application)
+
+        self.assertIn(ITEM_CV_VERSION, readiness.missing_items)
+        self.assertIn(ITEM_CONTACT_EMAIL, readiness.missing_items)
+        self.assertIn(ITEM_FOLLOW_UP_DATE, readiness.missing_items)
+        self.assertNotIn(ITEM_JOB_URL, readiness.missing_items)
+
+    def test_ready_items_are_detected_correctly(self):
+        kwargs = self._well_prepared_kwargs()
+        kwargs.update({"cv_version": "", "follow_up_status": FollowUpStatus.NOT_SET})
+        application = JobApplication.objects.create(**kwargs)
+
+        readiness = build_application_evidence_readiness(application)
+
+        self.assertIn(ITEM_JOB_URL, readiness.ready_items)
+        self.assertIn(ITEM_JOB_DESCRIPTION, readiness.ready_items)
+        self.assertIn(ITEM_COMPANY_RESEARCHED, readiness.ready_items)
+        self.assertNotIn(ITEM_CV_VERSION, readiness.ready_items)
+        self.assertNotIn(ITEM_FOLLOW_UP_STATUS, readiness.ready_items)
+
+    def test_recommended_next_improvement_is_deterministic_and_practical(self):
+        kwargs = self._well_prepared_kwargs()
+        kwargs["cv_version"] = ""
+        application = JobApplication.objects.create(**kwargs)
+        readiness = build_application_evidence_readiness(application)
+        self.assertEqual(
+            readiness.recommended_next_improvement,
+            "Save the CV version used for this application.",
+        )
+
+        application.cv_version = "DA_CV_v2"
+        application.cover_letter_version = ""
+        application.save(update_fields=["cv_version", "cover_letter_version"])
+        readiness = build_application_evidence_readiness(application)
+        self.assertEqual(
+            readiness.recommended_next_improvement,
+            "Save the cover letter version used for this application.",
+        )
+
+    def test_partially_prepared_application_receives_needs_improvement_label(self):
+        application = JobApplication.objects.create(
+            **self._base_application_kwargs(),
+            cv_version="DA_CV_v2",
+            cover_letter_version="Tailored_CL_v2",
+            job_url="https://example.com/jobs/123",
+            required_skills="Python, SQL, Excel",
+            job_description=(
+                "Junior data analyst role focused on reporting, dashboards, "
+                "and stakeholder support."
+            ),
+            contact_email="hiring@example.com",
+            company_researched=True,
+        )
+
+        readiness = build_application_evidence_readiness(application)
+
+        self.assertEqual(readiness.readiness_label, READINESS_LABEL_NEEDS_IMPROVEMENT)
+        self.assertIn(ITEM_PORTFOLIO_PROJECT, readiness.missing_items)
+        self.assertIn(ITEM_FOLLOW_UP_DATE, readiness.missing_items)
+        self.assertIn(ITEM_FOLLOW_UP_STATUS, readiness.missing_items)
+        self.assertEqual(
+            readiness.recommended_next_improvement,
+            "Note whether a portfolio project was included or referenced.",
+        )
