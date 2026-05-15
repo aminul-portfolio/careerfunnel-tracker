@@ -1,21 +1,24 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.applications.choices import ApplicationSource, ApplicationStatus
 from apps.applications.models import JobApplication
 from apps.daily_log.models import DailyLog
 
 from .services import (
+    _monday_start,
     build_application_quality_report,
     build_cv_version_performance,
     build_data_quality_report,
     build_funnel_metrics,
     build_rejection_pattern_report,
     build_source_roi,
+    build_weekly_trend,
     diagnose_funnel,
     safe_percentage,
 )
@@ -974,6 +977,105 @@ class DataQualityReportTests(TestCase):
         joined = " ".join(report.recommendations).lower()
         self.assertIn("source", joined)
         self.assertIn("cv", joined)
+
+
+class WeeklyTrendAnalyticsTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="weekly_trend_user", password="StrongPass12345"
+        )
+
+    def _create_app(self, **kwargs):
+        defaults = {
+            "user": self.user,
+            "company_name": "Acme",
+            "job_title": "Analyst",
+            "date_applied": date(2026, 5, 1),
+            "status": ApplicationStatus.SUBMITTED,
+            "source": ApplicationSource.OTHER,
+        }
+        defaults.update(kwargs)
+        return JobApplication.objects.create(**defaults)
+
+    def test_empty_weekly_trend_returns_fixed_rows_with_zero_counts(self):
+        rows = build_weekly_trend(self.user)
+        self.assertEqual(len(rows), 10)
+        for row in rows:
+            self.assertEqual(row.applications, 0)
+            self.assertEqual(row.responses, 0)
+            self.assertEqual(row.response_rate, 0.0)
+
+    def test_default_build_weekly_trend_returns_exactly_ten_rows(self):
+        self.assertEqual(len(build_weekly_trend(self.user)), 10)
+
+    def test_weekly_trend_rows_are_chronological(self):
+        rows = build_weekly_trend(self.user)
+        week_starts = [row.week_start for row in rows]
+        self.assertEqual(week_starts, sorted(week_starts))
+
+    def test_every_week_start_is_monday(self):
+        for row in build_weekly_trend(self.user):
+            self.assertEqual(row.week_start.weekday(), 0)
+
+    def test_application_assigned_to_monday_starting_week(self):
+        today = timezone.localdate()
+        current_monday = _monday_start(today)
+        wednesday = current_monday + timedelta(days=2)
+        self._create_app(company_name="WedApp", date_applied=wednesday)
+        rows = build_weekly_trend(self.user)
+        current_row = next(row for row in rows if row.week_start == current_monday)
+        self.assertEqual(current_row.applications, 1)
+
+    def test_responses_counted_using_response_statuses(self):
+        today = timezone.localdate()
+        current_monday = _monday_start(today)
+        self._create_app(
+            company_name="Responded",
+            date_applied=current_monday,
+            status=ApplicationStatus.ACKNOWLEDGED,
+        )
+        self._create_app(
+            company_name="NoResponse",
+            date_applied=current_monday + timedelta(days=1),
+            status=ApplicationStatus.SUBMITTED,
+        )
+        self._create_app(
+            company_name="RejectedCounts",
+            date_applied=current_monday + timedelta(days=2),
+            status=ApplicationStatus.REJECTED,
+        )
+        rows = build_weekly_trend(self.user)
+        current_row = next(row for row in rows if row.week_start == current_monday)
+        self.assertEqual(current_row.applications, 3)
+        self.assertEqual(current_row.responses, 2)
+
+    def test_applications_outside_lookback_window_are_excluded(self):
+        today = timezone.localdate()
+        current_monday = _monday_start(today)
+        first_monday = current_monday - timedelta(weeks=9)
+        before_window = first_monday - timedelta(days=7)
+        self._create_app(company_name="TooOld", date_applied=before_window)
+        rows = build_weekly_trend(self.user)
+        self.assertEqual(sum(row.applications for row in rows), 0)
+
+    def test_response_rate_uses_safe_percentage(self):
+        today = timezone.localdate()
+        current_monday = _monday_start(today)
+        self._create_app(
+            company_name="R1",
+            date_applied=current_monday,
+            status=ApplicationStatus.INTERVIEW,
+        )
+        self._create_app(
+            company_name="R2",
+            date_applied=current_monday + timedelta(days=1),
+            status=ApplicationStatus.SUBMITTED,
+        )
+        rows = build_weekly_trend(self.user)
+        current_row = next(row for row in rows if row.week_start == current_monday)
+        self.assertEqual(current_row.response_rate, 50.0)
+        empty_row = next(row for row in rows if row.applications == 0)
+        self.assertEqual(empty_row.response_rate, 0.0)
 
 
 class MetricsViewTests(TestCase):

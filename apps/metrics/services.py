@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db.models import CharField, Count, Q, Value
 from django.db.models.functions import Coalesce, NullIf, Trim
+from django.utils import timezone
 
 from apps.applications.choices import ApplicationSource, ApplicationStatus
 from apps.applications.models import JobApplication
@@ -71,6 +73,14 @@ class CVVersionPerformanceRow:
 
 
 @dataclass(frozen=True)
+class WeeklyTrendRow:
+    week_start: date
+    applications: int
+    responses: int
+    response_rate: float
+
+
+@dataclass(frozen=True)
 class FunnelDiagnosisResult:
     diagnosis_code: str
     diagnosis_label: str
@@ -96,6 +106,45 @@ _RESPONSE_STATUSES = (
     ApplicationStatus.AUTO_REJECTED,
 )
 _INTERVIEW_STATUSES = (ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER)
+
+
+def _monday_start(d: date) -> date:
+    return d - timedelta(days=d.weekday())
+
+
+def build_weekly_trend(user, weeks: int = 10) -> list[WeeklyTrendRow]:
+    today = timezone.localdate()
+    current_week_start = _monday_start(today)
+    first_week_start = current_week_start - timedelta(weeks=weeks - 1)
+    window_end = current_week_start + timedelta(days=6)
+    week_starts = [first_week_start + timedelta(weeks=offset) for offset in range(weeks)]
+    bucket_apps = dict.fromkeys(week_starts, 0)
+    bucket_responses = dict.fromkeys(week_starts, 0)
+    applications = JobApplication.objects.filter(
+        user=user,
+        date_applied__gte=first_week_start,
+        date_applied__lte=window_end,
+    ).only("date_applied", "status")
+    for app in applications:
+        week_start = _monday_start(app.date_applied)
+        if week_start not in bucket_apps:
+            continue
+        bucket_apps[week_start] += 1
+        if app.status in _RESPONSE_STATUSES:
+            bucket_responses[week_start] += 1
+    rows: list[WeeklyTrendRow] = []
+    for week_start in week_starts:
+        app_count = bucket_apps[week_start]
+        response_count = bucket_responses[week_start]
+        rows.append(
+            WeeklyTrendRow(
+                week_start=week_start,
+                applications=app_count,
+                responses=response_count,
+                response_rate=safe_percentage(response_count, app_count),
+            )
+        )
+    return rows
 
 
 def _source_choice_label(code: str) -> str:
