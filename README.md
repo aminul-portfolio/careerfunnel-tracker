@@ -28,13 +28,14 @@ The platform is intentionally evidence-based. It uses deterministic service-laye
 | Item | Status |
 |---|---|
 | Current stable branch | `main` |
-| Latest completed sprint tag | `sprint-6-complete` |
-| Current verified tests | 133 passing |
+| Latest completed sprint | Sprint 14 — Weekly Trend Analytics + Documentation Integrity |
+| Latest completed sprint tag | `sprint-14-complete` |
+| Current verified tests | 176 passing |
 | Main analytics documentation | `docs/analytics/` |
 | Evidence documentation | `docs/evidence/` |
 | Screenshot evidence folder | `docs/evidence/screenshots/` |
 
-Note: Sprint 5 consolidated several export-route tests into broader `subTest` coverage, so the raw test count reduced from 134 to 133 while export route coverage improved.
+Note: Sprint 5 consolidated several export-route tests into broader `subTest` coverage, so the raw test count reduced from 134 to 133 while export route coverage improved. Sprint 14 adds weekly trend service, UI, and DailyLog aggregation tests (176 total at Sprint 14 completion).
 
 ---
 
@@ -53,6 +54,7 @@ Note: Sprint 5 consolidated several export-route tests into broader `subTest` co
 ### Analytics and Decision Support
 
 - Funnel Metrics
+- Weekly Trend (Monday-starting weekly buckets on Funnel Metrics)
 - Source ROI
 - CV Version Performance
 - Rejection Pattern Analysis
@@ -94,6 +96,7 @@ Shows the core job-search funnel:
 - Offer Rate
 - Stage-by-stage funnel breakdown
 - Daily target vs actual activity
+- Weekly Trend table (applications, responses, and response rate by Monday-starting week)
 
 ### Source ROI
 
@@ -199,6 +202,7 @@ Exports are generated from authenticated user records. No fake export data is us
 | Sprint 6 | `docs/evidence/screenshots/sprint-6-dashboard-final-polish.png` | Dashboard final polish |
 | Sprint 6 | `docs/evidence/screenshots/sprint-6-metrics-final-polish.png` | Metrics final polish |
 | Sprint 6 | `docs/evidence/screenshots/sprint-6-export-centre-final-polish.png` | Export Centre final polish |
+| Sprint 14 | `docs/evidence/screenshots/sprint-14-weekly-trend-analytics.png` | Weekly Trend on Funnel Metrics |
 
 ### Documentation Files
 
@@ -221,6 +225,16 @@ Exports are generated from authenticated user records. No fake export data is us
 | Sprint 4 | Completed | `sprint-4-complete` | Data Quality and Analytics Governance |
 | Sprint 5 | Completed | `sprint-5-complete` | Export Centre and evidence handoff |
 | Sprint 6 | Completed | `sprint-6-complete` | UI polish and portfolio presentation |
+| Sprint 7 | Completed | `sprint-7-complete` | Documentation alignment and optional deployment preparation |
+| Sprint 8 | Completed | `sprint-8-complete` | Ruff code-quality cleanup across modules |
+| Sprint 9 | Completed | `sprint-9-complete` | Today action panel on dashboard |
+| Sprint 10 | Completed | `sprint-10-complete` | Manual follow-up email draft service and UI |
+| Sprint 11 | Completed | `sprint-11-complete` | Manual mark follow-up sent workflow |
+| Sprint 12 | Completed | `sprint-12-complete` | Status-aware follow-up action |
+| Sprint 13 | Completed | `sprint-13-complete` | Application evidence readiness |
+| Sprint 14 | Completed | `sprint-14-complete` | Weekly Trend analytics, Funnel Metrics weekly trend table, DailyLog ORM aggregation optimization, documentation updates, and screenshot evidence |
+
+**Sprint 14 detail:** `build_weekly_trend()` groups applications into Monday-starting weeks; the Funnel Metrics page shows a weekly trend table (no chart); `build_funnel_metrics()` uses one ORM `aggregate()` call for DailyLog totals; metric definitions and evidence index were updated; screenshot evidence is stored at `docs/evidence/screenshots/sprint-14-weekly-trend-analytics.png`.
 
 ---
 
@@ -343,7 +357,7 @@ Current stable verification:
 ```text
 python manage.py check - passing
 python manage.py makemigrations --check --dry-run - no changes detected
-python manage.py test - 133 tests passing
+python manage.py test - 176 tests passing
 ```
 
 ---
@@ -408,6 +422,7 @@ Known limitations:
 - Seniority-risk detection is keyword-based.
 - CV Version Performance is directional, not scientific A/B testing.
 - Source ROI means channel outcome performance, not financial ROI.
+- Weekly Trend uses application date (`date_applied`), not response date.
 - Export files are workbook exports, not automated BI pipelines.
 - No live LLM integration is active.
 - No Gmail / Smart Inbox integration is active.
@@ -423,7 +438,7 @@ Recommended review order:
 1. Read this README.
 2. Open the dashboard.
 3. Open the Metrics page.
-4. Review Source ROI, CV Version Performance, Rejection Pattern Analysis, Application Quality, and Data Quality.
+4. Review Weekly Trend, Source ROI, CV Version Performance, Rejection Pattern Analysis, Application Quality, and Data Quality.
 5. Open the Export Centre.
 6. Review `docs/analytics/metric_definitions.md`.
 7. Review `docs/analytics/analytics_lineage.md`.

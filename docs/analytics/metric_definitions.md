@@ -261,9 +261,87 @@ If Daily Target Total = 0, Daily Target Hit Rate = 0.0
 
 ---
 
+# Weekly Trend Metrics
+
+## 12. Weekly Trend (per week)
+
+**Business question:** How are application volume and response rate changing across recent weeks?
+
+**Calculation:**
+
+Applications are grouped by Monday-starting week of `date_applied`.
+
+Per week:
+
+```text
+Applications = count(JobApplication where date_applied falls in that week)
+Responses = count(JobApplication in that week where status is in response statuses)
+Response Rate = safe_percentage(Responses, Applications)
+```
+
+**Response statuses used:**
+
+```text
+acknowledged
+screening_call
+technical_screen
+interview
+offer
+rejected
+auto_rejected
+```
+
+These match the existing `_RESPONSE_STATUSES` set used elsewhere in funnel metrics.
+
+**Week boundary rule:**
+
+```text
+week_start = date_applied - timedelta(days=date_applied.weekday())
+```
+
+Python `weekday()` treats Monday as `0`, so each week bucket starts on Monday.
+
+**Lookback window:**
+
+```text
+Default = 10 Monday-starting weeks
+Includes the current week
+Includes weeks with zero applications
+Applications outside the window are excluded
+```
+
+**Timezone note:**
+
+Week boundaries use `timezone.localdate()` for “today” and the current-week end date when building the lookback window.
+
+**Source fields:**
+
+```text
+JobApplication.date_applied
+JobApplication.status
+```
+
+**Service function:**
+
+```text
+build_weekly_trend(user, weeks=10)
+```
+
+**UI behaviour:**
+
+- Funnel Metrics shows a table only (Week Starting, Applications, Responses, Response Rate).
+- No chart is included in Sprint 14.
+- A not-enough-data message appears when fewer than two weeks contain applications.
+
+**Why it matters:** This gives a simple week-over-week view of whether application activity and employer responses are improving, flat, or declining.
+
+**Known limitation:** The trend is based on application date (`date_applied`), not response date. A response received in a later week still counts in the week the application was submitted.
+
+---
+
 # Source ROI Metrics
 
-## 12. Source ROI
+## 13. Source ROI
 
 **Business question:** Which application sources are producing better outcomes?
 
@@ -297,7 +375,7 @@ Blank or missing source values are treated as Other
 
 # CV Version Performance Metrics
 
-## 13. CV Version Performance
+## 14. CV Version Performance
 
 **Business question:** Which CV versions are producing stronger job-search outcomes?
 
@@ -333,7 +411,7 @@ Blank or missing CV versions are treated as Unspecified
 
 # Rejection Pattern Metrics
 
-## 14. Total Rejections
+## 15. Total Rejections
 
 **Business question:** How many applications ended in rejection?
 
@@ -356,7 +434,7 @@ Total Rejections = count(JobApplication where status is rejected or auto_rejecte
 
 ---
 
-## 15. Auto-Rejections
+## 16. Auto-Rejections
 
 **Business question:** How many applications were rejected before meaningful human engagement?
 
@@ -372,7 +450,7 @@ Auto-Rejections = count(JobApplication where status = auto_rejected)
 
 ---
 
-## 16. Rejection Rate
+## 17. Rejection Rate
 
 **Business question:** What percentage of applications ended in rejection?
 
@@ -394,7 +472,7 @@ If Total Applications = 0, Rejection Rate = 0.0
 
 ---
 
-## 17. Auto-Rejection Rate
+## 18. Auto-Rejection Rate
 
 **Business question:** What percentage of applications were auto-rejected?
 
@@ -416,7 +494,7 @@ If Total Applications = 0, Auto-Rejection Rate = 0.0
 
 ---
 
-## 18. Rejections by Source
+## 19. Rejections by Source
 
 **Business question:** Which sources are producing the most rejections?
 
@@ -434,7 +512,7 @@ Rejection Rate = Rejection Count / Total Applications * 100
 
 ---
 
-## 19. Rejections by CV Version
+## 20. Rejections by CV Version
 
 **Business question:** Which CV versions are linked to more rejections?
 
@@ -452,7 +530,7 @@ Rejection Rate = Rejection Count / Total Applications * 100
 
 ---
 
-## 20. Seniority Risk Count
+## 21. Seniority Risk Count
 
 **Business question:** How many applications may be too senior or stretch-level?
 
@@ -484,7 +562,7 @@ Seniority Risk Count = count(applications where job_title, required_skills, or j
 
 # Application Quality Metrics
 
-## 21. Applications With Issues
+## 22. Applications With Issues
 
 **Business question:** How many applications have incomplete or weak evidence?
 
@@ -505,7 +583,7 @@ seniority or stretch-role risk
 
 ---
 
-## 22. Quality Issue Rate
+## 23. Quality Issue Rate
 
 **Business question:** What percentage of applications have at least one quality issue?
 
@@ -527,7 +605,7 @@ If Total Applications = 0, Quality Issue Rate = 0.0
 
 ---
 
-## 23. Missing CV Version Count
+## 24. Missing CV Version Count
 
 **Business question:** How many applications do not identify which CV version was used?
 
@@ -541,7 +619,7 @@ Missing CV Version Count = count(applications where cv_version is blank, null, o
 
 ---
 
-## 24. Missing Source Count
+## 25. Missing Source Count
 
 **Business question:** How many applications do not have a precise source?
 
@@ -555,7 +633,7 @@ Missing Source Count = count(applications where source is blank, null, whitespac
 
 ---
 
-## 25. Missing Job Description Count
+## 26. Missing Job Description Count
 
 **Business question:** How many applications lack enough job-description evidence?
 
@@ -569,7 +647,7 @@ Missing Job Description Count = count(applications where job_description is blan
 
 ---
 
-## 26. Missing Required Skills Count
+## 27. Missing Required Skills Count
 
 **Business question:** How many applications lack enough required-skills evidence?
 
@@ -583,7 +661,7 @@ Missing Required Skills Count = count(applications where required_skills is blan
 
 ---
 
-## 27. Missing Follow-Up Date Count
+## 28. Missing Follow-Up Date Count
 
 **Business question:** How many active applications need a follow-up date?
 
@@ -611,7 +689,7 @@ Missing Follow-Up Date Count = count(active applications where follow_up_date is
 
 # Data Quality Metrics
 
-## 28. Analytics-Ready Applications
+## 29. Analytics-Ready Applications
 
 **Business question:** How many application records are complete enough for reliable analytics?
 
@@ -636,7 +714,7 @@ Analytics-Ready Applications = count(applications meeting all analytics-ready cr
 
 ---
 
-## 29. Analytics-Ready Rate
+## 30. Analytics-Ready Rate
 
 **Business question:** What percentage of application records are complete enough for reliable analytics?
 
@@ -656,7 +734,7 @@ If Total Applications = 0, Analytics-Ready Rate = 0.0
 
 ---
 
-## 30. Data Quality Score
+## 31. Data Quality Score
 
 **Business question:** What is the overall data-quality score for analytics readiness?
 
@@ -672,7 +750,7 @@ Data Quality Score = Analytics-Ready Rate
 
 ---
 
-## 31. Data Quality Check Completion Rate
+## 32. Data Quality Check Completion Rate
 
 **Business question:** How complete is each individual data-quality check?
 
@@ -733,6 +811,7 @@ CV Version Performance
 Rejection Pattern Analysis
 Source ROI
 Offer Rate
+Weekly Trend
 ```
 
 ---
@@ -752,6 +831,7 @@ Known limitations:
 - No live AI or LLM features are used.
 - No Gmail or inbox integration is active.
 - Analytics outputs depend on the completeness of user-entered records.
+- Weekly Trend uses application date, not response date.
 
 ---
 

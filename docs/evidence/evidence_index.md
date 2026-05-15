@@ -15,8 +15,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 | Item | Current State |
 |---|---|
 | Current stable branch | `main` |
-| Latest completed sprint tag | `sprint-6-complete` |
-| Current verified test count | 133 tests passing |
+| Latest completed sprint | Sprint 14 — Weekly Trend Analytics + Documentation Integrity |
+| Latest completed sprint tag | `sprint-14-complete` |
+| Current verified test count | 176 tests passing |
 | Main evidence folder | `docs/evidence/screenshots/` |
 | Analytics documentation folder | `docs/analytics/` |
 
@@ -414,6 +415,237 @@ This sprint proves the project can be polished for portfolio presentation while 
 
 ---
 
+## Sprint 7 - Documentation Alignment + Deployment Preparation
+
+### Status
+
+Completed and tagged.
+
+### Git Tag
+
+```text
+sprint-7-complete
+```
+
+### Main Evidence
+
+```text
+README.md
+```
+
+### What This Sprint Proves
+
+- Project status documentation was aligned with the repository state.
+- Optional deployment preparation notes were added without claiming live production hosting.
+
+### Reviewer Value
+
+This sprint proves documentation stays current as the project matures beyond early analytics sprints.
+
+---
+
+## Sprint 8 - Ruff Code Quality Cleanup
+
+### Status
+
+Completed and tagged.
+
+### Git Tag
+
+```text
+sprint-8-complete
+```
+
+### Main Evidence
+
+- Ruff-clean modules across applications, metrics, exports, AI agents, dashboard, and related apps.
+- CI-style local verification remains passing.
+
+### What This Sprint Proves
+
+- Code quality tooling was applied repository-wide.
+- Lint issues were resolved without changing analytics behaviour.
+
+### Reviewer Value
+
+This sprint proves the codebase is maintainable and review-ready for recruiters and technical interviewers.
+
+---
+
+## Sprint 9 - Today Action Panel
+
+### Status
+
+Completed and tagged.
+
+### Git Tag
+
+```text
+sprint-9-complete
+```
+
+### What This Sprint Proves
+
+- Dashboard includes a Today Action panel driven by stored records.
+- Action logic is service-based and tested.
+
+### Reviewer Value
+
+This sprint proves the platform supports daily execution, not only retrospective reporting.
+
+---
+
+## Sprint 10 - Manual Follow-Up Email Draft
+
+### Status
+
+Completed and tagged.
+
+### Git Tag
+
+```text
+sprint-10-complete
+```
+
+### What This Sprint Proves
+
+- Manual follow-up email draft service and UI were added.
+- Workflow remains user-controlled; no inbox automation is claimed.
+
+### Reviewer Value
+
+This sprint proves operational follow-up support without fake AI or email integration claims.
+
+---
+
+## Sprint 11 - Mark Follow-Up Sent Workflow
+
+### Status
+
+Completed and tagged.
+
+### Git Tag
+
+```text
+sprint-11-complete
+```
+
+### What This Sprint Proves
+
+- Users can mark follow-ups as sent through a manual workflow.
+- UI copy clarifies the manual nature of the process.
+
+### Reviewer Value
+
+This sprint proves follow-up tracking stays honest and auditable.
+
+---
+
+## Sprint 12 - Status-Aware Follow-Up Action
+
+### Status
+
+Completed and tagged.
+
+### Git Tag
+
+```text
+sprint-12-complete
+```
+
+### What This Sprint Proves
+
+- Follow-up actions respect application pipeline status.
+- Recommendations and actions avoid inappropriate stages.
+
+### Reviewer Value
+
+This sprint proves workflow logic is context-aware, not generic messaging only.
+
+---
+
+## Sprint 13 - Application Evidence Readiness
+
+### Status
+
+Completed and tagged.
+
+### Git Tag
+
+```text
+sprint-13-complete
+```
+
+### What This Sprint Proves
+
+- Application evidence readiness logic identifies whether records are strong enough for review.
+- UI surfaces readiness on the application detail flow.
+
+### Reviewer Value
+
+This sprint proves the platform helps users improve record quality before analytics and exports rely on it.
+
+---
+
+## Sprint 14 - Weekly Trend Analytics + Documentation Integrity
+
+### Status
+
+Completed and tagged.
+
+### Git Tag
+
+```text
+sprint-14-complete
+```
+
+### Commits
+
+```text
+6a9bb6d Sprint 14A: add weekly trend analytics service
+3bd891c Sprint 14B: display weekly trend on funnel metrics
+af2d9e7 Sprint 14C: optimize daily log aggregation
+```
+
+### Main Evidence Screenshot
+
+```text
+docs/evidence/screenshots/sprint-14-weekly-trend-analytics.png
+```
+
+Capture this screenshot manually from the Funnel Metrics Weekly Trend section before final Sprint 14 acceptance if the file is not yet in the repository.
+
+### Documentation Evidence
+
+```text
+README.md
+docs/analytics/metric_definitions.md
+docs/evidence/evidence_index.md
+```
+
+### What This Sprint Proves
+
+- `build_weekly_trend(user)` groups `JobApplication` records into Monday-starting weekly buckets (default 10 weeks).
+- Zero-application weeks are included so the table shows a full lookback window.
+- Response counts use existing `_RESPONSE_STATUSES`; response rate uses `safe_percentage()`.
+- Funnel Metrics displays a Weekly Trend table (no chart in Sprint 14).
+- `build_funnel_metrics()` aggregates `DailyLog` fields in one ORM `aggregate()` call instead of Python iteration.
+- Metric definitions and evidence index reflect Sprints 7–14.
+
+### Key Features Proven
+
+- `WeeklyTrendRow` and `build_weekly_trend(user, weeks=10)`
+- Funnel Metrics context: `weekly_trend_rows`, `weekly_trend_has_data`
+- Weekly Trend section `id="weekly-trend"` with not-enough-data message when fewer than two active weeks exist
+- DailyLog ORM aggregation with safe empty defaults
+- Service and view tests for weekly trend and funnel metrics
+
+### Reviewer Value
+
+This sprint proves the project can add time-based funnel analytics with governed metrics, efficient aggregation, and reviewer-ready documentation—without charts, fake AI, or undeployed production claims.
+
+---
+
 # Screenshot Evidence Register
 
 | Sprint | Screenshot File | Main Proof |
@@ -427,6 +659,7 @@ This sprint proves the project can be polished for portfolio presentation while 
 | Sprint 6 | `docs/evidence/screenshots/sprint-6-dashboard-final-polish.png` | Dashboard final polish |
 | Sprint 6 | `docs/evidence/screenshots/sprint-6-metrics-final-polish.png` | Metrics page final polish |
 | Sprint 6 | `docs/evidence/screenshots/sprint-6-export-centre-final-polish.png` | Export Centre final polish |
+| Sprint 14 | `docs/evidence/screenshots/sprint-14-weekly-trend-analytics.png` | Weekly Trend table on Funnel Metrics |
 
 ---
 
@@ -441,6 +674,14 @@ This sprint proves the project can be polished for portfolio presentation while 
 | `sprint-4-complete` | Data Quality and Analytics Governance checkpoint |
 | `sprint-5-complete` | Export and Evidence Centre checkpoint |
 | `sprint-6-complete` | UI polish and portfolio presentation checkpoint |
+| `sprint-7-complete` | Documentation alignment and deployment preparation checkpoint |
+| `sprint-8-complete` | Ruff code-quality cleanup checkpoint |
+| `sprint-9-complete` | Today action panel checkpoint |
+| `sprint-10-complete` | Manual follow-up email draft checkpoint |
+| `sprint-11-complete` | Mark follow-up sent workflow checkpoint |
+| `sprint-12-complete` | Status-aware follow-up action checkpoint |
+| `sprint-13-complete` | Application evidence readiness checkpoint |
+| `sprint-14-complete` | Weekly Trend analytics, Funnel Metrics table, DailyLog aggregation, and documentation checkpoint |
 
 ---
 
@@ -455,6 +696,8 @@ This sprint proves the project can be polished for portfolio presentation while 
 | Sprint 4 complete | 134 | Data Quality Report tests added |
 | Sprint 5 complete | 133 | Export tests consolidated into broader route coverage using subtests |
 | Sprint 6 complete | 133 | UI polish and documentation work preserved existing test coverage |
+| Sprint 13 complete | 161 | Application evidence readiness and follow-up workflow tests |
+| Sprint 14 complete | 176 | Weekly trend service, funnel metrics UI, and DailyLog aggregation tests |
 
 ## Test Count Note
 
@@ -501,12 +744,13 @@ docs/evidence/screenshots/sprint-2b-rejection-pattern-analysis.png
 docs/evidence/screenshots/sprint-3-application-quality-report.png
 docs/evidence/screenshots/sprint-4-data-quality-analytics-governance.png
 docs/evidence/screenshots/sprint-6-metrics-final-polish.png
+docs/evidence/screenshots/sprint-14-weekly-trend-analytics.png
 ```
 
 Purpose:
 
 - Follow the analytics depth progression.
-- Confirm metrics, decision support, and data quality logic.
+- Confirm metrics, decision support, data quality logic, and weekly trend table.
 
 ## 4. Review Analytics Documentation
 
@@ -558,6 +802,7 @@ Purpose:
 | Rejection Pattern Analysis | Screenshot + tests | Sprint 2B screenshot, `apps/metrics/tests.py` |
 | Application Quality Report | Screenshot + tests | Sprint 3 screenshot, `apps/metrics/tests.py` |
 | Data Quality Report | Screenshot + tests + docs | Sprint 4 screenshot, `apps/metrics/tests.py`, `docs/analytics/` |
+| Weekly Trend | Screenshot + tests + docs | Sprint 14 screenshot, `apps/metrics/services.py`, `apps/metrics/tests.py`, `docs/analytics/metric_definitions.md` |
 | Metric governance | Documentation | `docs/analytics/metric_definitions.md` |
 | Analytics lineage | Documentation | `docs/analytics/analytics_lineage.md` |
 | Export Centre | UI + tests | `/export/`, `apps/exports/tests.py` |
@@ -607,6 +852,7 @@ These limitations are intentional and documented to keep the portfolio honest.
 - Seniority-risk detection is keyword-based.
 - CV Version Performance is directional, not scientific A/B testing.
 - Source ROI means channel outcome performance, not financial ROI.
+- Weekly Trend uses `date_applied`, not response date.
 - Export files are workbook exports, not automated BI pipelines.
 - No live LLM or AI integration is active.
 - No Gmail / Smart Inbox integration is active.
@@ -655,6 +901,12 @@ Exports, Evidence Centre, and reviewer handoff
 
 Sprint 6:
 UI polish, final screenshot evidence, and portfolio presentation notes
+
+Sprint 7–13:
+Documentation alignment, code quality, dashboard actions, manual follow-up workflows, and application evidence readiness
+
+Sprint 14:
+Weekly trend analytics, Funnel Metrics table display, DailyLog aggregation optimization, and documentation integrity
 ```
 
 The strongest portfolio signal is that the project does not only display data. It explains where the data comes from, how it is transformed, what each metric means, what limitations exist, and what action the user should take next.
