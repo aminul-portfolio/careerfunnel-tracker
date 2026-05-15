@@ -28,14 +28,14 @@ The platform is intentionally evidence-based. It uses deterministic service-laye
 | Item | Status |
 |---|---|
 | Current stable branch | `main` |
-| Latest completed sprint | Sprint 15 — Intake-to-Application Conversion + Evaluation Queue |
-| Latest completed sprint tag | `sprint-15-complete` |
-| Current verified tests | 204 passing |
+| Latest completed sprint | Sprint 16 — Analytics-Critical Field Warnings + Data Quality Impact Reporting |
+| Latest completed sprint tag | `sprint-16-complete` |
+| Current verified tests | 233 passing |
 | Main analytics documentation | `docs/analytics/` |
 | Evidence documentation | `docs/evidence/` |
 | Screenshot evidence folder | `docs/evidence/screenshots/` |
 
-Note: Sprint 5 consolidated several export-route tests into broader `subTest` coverage, so the raw test count reduced from 134 to 133 while export route coverage improved. Sprint 14 adds weekly trend service, UI, and DailyLog aggregation tests (176 total at Sprint 14 completion). Sprint 15 adds shared role-fit constants, intake-to-application prefill, Evaluation Queue, and Application Detail Fit Review tests (204 total at Sprint 15 completion).
+Note: Sprint 5 consolidated several export-route tests into broader `subTest` coverage, so the raw test count reduced from 134 to 133 while export route coverage improved. Sprint 14 adds weekly trend service, UI, and DailyLog aggregation tests (176 total at Sprint 14 completion). Sprint 15 adds shared role-fit constants, intake-to-application prefill, Evaluation Queue, and Application Detail Fit Review tests (204 total at Sprint 15 completion). Sprint 16 adds save-quality warning service, post-save advisory warnings, and Data Quality Report analytics impact notes (233 total at Sprint 16 completion).
 
 ---
 
@@ -205,6 +205,8 @@ Exports are generated from authenticated user records. No fake export data is us
 | Sprint 14 | `docs/evidence/screenshots/sprint-14-weekly-trend-analytics.png` | Weekly Trend on Funnel Metrics |
 | Sprint 15 | `docs/evidence/screenshots/sprint-15-conversion-bridge.png` | Job Posting Analyzer Save as Application prefill bridge |
 | Sprint 15 | `docs/evidence/screenshots/sprint-15-evaluation-queue.png` | Evaluation Queue for Job Found / Fit Checked roles |
+| Sprint 16 | `docs/evidence/screenshots/sprint-16-quality-warnings.png` | Post-save advisory quality warnings on application create/update |
+| Sprint 16 | `docs/evidence/screenshots/sprint-16-data-quality-impact-report.png` | Data Quality Report Analytics Impact notes |
 
 ### Documentation Files
 
@@ -236,10 +238,13 @@ Exports are generated from authenticated user records. No fake export data is us
 | Sprint 13 | Completed | `sprint-13-complete` | Application evidence readiness |
 | Sprint 14 | Completed | `sprint-14-complete` | Weekly Trend analytics, Funnel Metrics weekly trend table, DailyLog ORM aggregation optimization, documentation updates, and screenshot evidence |
 | Sprint 15 | Completed | `sprint-15-complete` | Shared role-fit constants, Job Posting Analyzer to Add Application prefill bridge, Evaluation Queue, Application Detail Fit Review, and screenshot evidence |
+| Sprint 16 | Completed | `sprint-16-complete` | Save-quality warnings service, post-save advisory warnings, accurate Source ROI wording, Data Quality Report Analytics Impact notes, and screenshot evidence |
 
 **Sprint 14 detail:** `build_weekly_trend()` groups applications into Monday-starting weeks; the Funnel Metrics page shows a weekly trend table (no chart); `build_funnel_metrics()` uses one ORM `aggregate()` call for DailyLog totals; metric definitions and evidence index were updated; screenshot evidence is stored at `docs/evidence/screenshots/sprint-14-weekly-trend-analytics.png`.
 
 **Sprint 15 detail:** Role-fit scoring lists are unified in `apps/job_intelligence/constants.py` for Job Posting Analyzer and Smart Review; the analyzer can open a pre-filled Add Application form via GET parameters (the user must review and submit before anything is saved); Evaluation Queue lists opportunities at Job Found or Fit Checked; Application Detail shows a compact rule-based Fit Review summary; screenshot evidence paths are documented in `docs/evidence/evidence_index.md`.
+
+**Sprint 16 detail:** `SaveQualityWarning` and `build_save_quality_warnings()` flag analytics-critical gaps on saved applications; create and update views show advisory Django warning messages after a successful save (non-blocking, no `form.add_error()`); Source warnings use accurate “cannot attribute / grouped under Other” wording; the Data Quality Report adds quantified Analytics Impact notes explaining which reports are affected by current gaps; screenshot evidence paths are documented in `docs/evidence/evidence_index.md`.
 
 ---
 
@@ -363,7 +368,7 @@ Current stable verification:
 ```text
 python manage.py check - passing
 python manage.py makemigrations --check --dry-run - no changes detected
-python manage.py test - 204 tests passing
+python manage.py test - 233 tests passing
 ```
 
 ---

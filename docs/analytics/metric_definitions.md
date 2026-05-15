@@ -792,6 +792,37 @@ danger = completion_rate < 70
 
 ---
 
+# Data Quality Governance at Point of Entry
+
+Sprint 16 adds post-save advisory warnings for analytics-critical application fields. After a successful application create or update, the platform shows Django warning messages built from `build_save_quality_warnings()`. Warnings are advisory and non-blocking; they do not prevent saving and do not use `form.add_error()`.
+
+## Warning Conditions
+
+| Field gap | Trigger |
+|---|---|
+| Source | `source` is generic `Other` |
+| CV version | `cv_version` blank after strip |
+| Location | `location` blank after strip |
+| Required skills | fewer than 10 characters after strip |
+| Job description | fewer than 40 characters after strip |
+
+`role_fit` and `follow_up_date` are intentionally excluded from this warning layer to avoid warning fatigue.
+
+## Analytics Impact of Each Warning
+
+| Gap | Impact |
+|---|---|
+| Generic `Other` source | Source ROI cannot attribute the application to a specific channel; it is grouped under Other. |
+| Missing CV version | CV Version Performance cannot group or track the application in the CV comparison. |
+| Missing location | Smart Review location component scores 0. |
+| Thin required skills or job description | Smart Review skills matching and Rejection Pattern analysis become less reliable; fit scoring and deal-breaker detection depend on this evidence. |
+
+## Data Quality Report Analytics Impact Notes
+
+The Data Quality Report on Funnel Metrics also includes an **Analytics Impact** section. Quantified notes explain which reports are affected by the user’s current data gaps (for example, how many applications cannot be attributed in Source ROI or lack a CV version for CV Version Performance). This complements the point-of-entry warnings with portfolio-level impact context.
+
+---
+
 # Recommendation Logic
 
 ## Principle

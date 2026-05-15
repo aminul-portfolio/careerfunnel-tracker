@@ -15,9 +15,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 | Item | Current State |
 |---|---|
 | Current stable branch | `main` |
-| Latest completed sprint | Sprint 15 — Intake-to-Application Conversion + Evaluation Queue |
-| Latest completed sprint tag | `sprint-15-complete` |
-| Current verified test count | 204 tests passing |
+| Latest completed sprint | Sprint 16 — Analytics-Critical Field Warnings + Data Quality Impact Reporting |
+| Latest completed sprint tag | `sprint-16-complete` |
+| Current verified test count | 233 tests passing |
 | Main evidence folder | `docs/evidence/screenshots/` |
 | Analytics documentation folder | `docs/analytics/` |
 
@@ -711,6 +711,72 @@ This sprint proves the project connects pre-application analysis to saved applic
 
 ---
 
+## Sprint 16 - Analytics-Critical Field Warnings + Data Quality Impact Reporting
+
+### Status
+
+Completed and tagged.
+
+### Git Tag
+
+```text
+sprint-16-complete
+```
+
+### Commits
+
+```text
+dc4e62b Sprint 16B: add save quality warning service
+13123fe Sprint 16C: show save quality warnings after application save
+3e35542 Sprint 16D: add analytics impact notes to data quality report
+```
+
+### Screenshot Evidence
+
+```text
+docs/evidence/screenshots/sprint-16-quality-warnings.png
+docs/evidence/screenshots/sprint-16-data-quality-impact-report.png
+```
+
+Capture these screenshots manually from the application create/update flow (post-save warning messages) and the Funnel Metrics Data Quality / Analytics Impact section before final Sprint 16 acceptance if the files are not yet in the repository.
+
+### Documentation Evidence
+
+```text
+README.md
+docs/analytics/metric_definitions.md
+docs/evidence/evidence_index.md
+```
+
+### What This Sprint Proves
+
+- `SaveQualityWarning` and `build_save_quality_warnings()` detect analytics-critical gaps on saved `JobApplication` records.
+- Application create and update show advisory Django warning messages after a successful save; saves are not blocked and forms are not rejected with `form.add_error()`.
+- Source warnings use accurate “cannot attribute / grouped under Other” wording for Source ROI impact.
+- The Data Quality Report includes quantified Analytics Impact notes explaining which analytics reports are affected by current data gaps.
+- Warnings are local and rule-based, not live AI/API integration.
+
+### Key Features Proven
+
+- Save-quality warning service with five analytics-critical conditions.
+- Post-save warning messages on application create and update.
+- Data Quality Report `analytics_impact_notes` with count-based impact wording.
+- Analytics Impact partial on Funnel Metrics.
+- Regression tests for warning service, views, and data quality impact notes.
+
+### Known Limitations (Sprint 16)
+
+- Warnings are advisory and do not block saving.
+- Warnings are local/rule-based, not live AI/API.
+- No scraping, auto-apply, email integration, OAuth, or background automation was added.
+- `role_fit` and `follow_up_date` are intentionally excluded from this warning layer to reduce warning fatigue.
+
+### Reviewer Value
+
+This sprint proves the project guides users toward analytics-ready records at the point of entry and explains downstream report impact honestly—without blocking saves, fake AI claims, or undeployed automation.
+
+---
+
 # Screenshot Evidence Register
 
 | Sprint | Screenshot File | Main Proof |
@@ -727,6 +793,8 @@ This sprint proves the project connects pre-application analysis to saved applic
 | Sprint 14 | `docs/evidence/screenshots/sprint-14-weekly-trend-analytics.png` | Weekly Trend table on Funnel Metrics |
 | Sprint 15 | `docs/evidence/screenshots/sprint-15-conversion-bridge.png` | Job Posting Analyzer Save as Application prefill bridge |
 | Sprint 15 | `docs/evidence/screenshots/sprint-15-evaluation-queue.png` | Evaluation Queue for Job Found / Fit Checked opportunities |
+| Sprint 16 | `docs/evidence/screenshots/sprint-16-quality-warnings.png` | Post-save advisory quality warnings on application create/update |
+| Sprint 16 | `docs/evidence/screenshots/sprint-16-data-quality-impact-report.png` | Data Quality Report Analytics Impact notes |
 
 ---
 
@@ -750,6 +818,7 @@ This sprint proves the project connects pre-application analysis to saved applic
 | `sprint-13-complete` | Application evidence readiness checkpoint |
 | `sprint-14-complete` | Weekly Trend analytics, Funnel Metrics table, DailyLog aggregation, and documentation checkpoint |
 | `sprint-15-complete` | Shared role-fit constants, intake prefill bridge, Evaluation Queue, Application Detail Fit Review, and documentation checkpoint |
+| `sprint-16-complete` | Save-quality warnings, post-save advisory messages, Data Quality Analytics Impact notes, and documentation checkpoint |
 
 ---
 
@@ -767,6 +836,7 @@ This sprint proves the project connects pre-application analysis to saved applic
 | Sprint 13 complete | 161 | Application evidence readiness and follow-up workflow tests |
 | Sprint 14 complete | 176 | Weekly trend service, funnel metrics UI, and DailyLog aggregation tests |
 | Sprint 15 complete | 204 | Role-fit constants, intake prefill bridge, Evaluation Queue, and Fit Review tests |
+| Sprint 16 complete | 233 | Save-quality warning service, post-save warnings, and Data Quality Analytics Impact tests |
 
 ## Test Count Note
 
@@ -816,12 +886,14 @@ docs/evidence/screenshots/sprint-6-metrics-final-polish.png
 docs/evidence/screenshots/sprint-14-weekly-trend-analytics.png
 docs/evidence/screenshots/sprint-15-conversion-bridge.png
 docs/evidence/screenshots/sprint-15-evaluation-queue.png
+docs/evidence/screenshots/sprint-16-quality-warnings.png
+docs/evidence/screenshots/sprint-16-data-quality-impact-report.png
 ```
 
 Purpose:
 
 - Follow the analytics depth progression.
-- Confirm metrics, decision support, data quality logic, weekly trend table, intake prefill bridge, and Evaluation Queue.
+- Confirm metrics, decision support, data quality logic, weekly trend table, intake prefill bridge, Evaluation Queue, save-quality warnings, and Analytics Impact notes.
 
 ## 4. Review Analytics Documentation
 
@@ -983,6 +1055,9 @@ Weekly trend analytics, Funnel Metrics table display, DailyLog aggregation optim
 
 Sprint 15:
 Shared role-fit constants, Job Posting Analyzer to Add Application prefill bridge, Evaluation Queue, and Application Detail Fit Review
+
+Sprint 16:
+Analytics-critical save-quality warnings, post-save advisory messages, and Data Quality Report Analytics Impact notes
 ```
 
 The strongest portfolio signal is that the project does not only display data. It explains where the data comes from, how it is transformed, what each metric means, what limitations exist, and what action the user should take next.
