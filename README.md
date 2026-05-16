@@ -1,467 +1,190 @@
 # CareerFunnel Tracker
 
-CareerFunnel Tracker is a Django-based job-search intelligence and analytics platform.
+CareerFunnel Tracker is a Django portfolio analytics product that turns job-search activity into explainable funnel metrics, data-quality signals, and reviewer-ready evidence for Data Analyst, BI Analyst, Reporting Analyst, Analytics Engineer, Junior Data Engineer, and FinTech analytics roles.
 
-It helps track job applications, daily activity, weekly reviews, follow-ups, interview preparation, notes, metrics, data quality, and exportable evidence. The project is designed as a realistic portfolio data product for Data Analyst, BI Analyst, Reporting Analyst, Analytics Engineer, Junior Data Engineer, and FinTech analytics roles.
+## Live Demo Status
 
-It is more than a basic job tracker. It turns job-search records into explainable analytics, quality checks, recommendations, and reviewer-ready evidence.
+Deployment is conditional and not yet verified. This Sprint 17A README does not claim a live hosted demo, demo login, production configuration, or public customer usage. If a deployment is added later, it should be verified separately and documented with the exact URL and environment assumptions.
 
----
+## Current Sprint Position
 
-## Project Purpose
+Sprint 17A is focused only on the recruiter-facing README case study, preservation of the previous internal README in `DEVELOPMENT.md`, and curated screenshot evidence in `docs/screenshots/curated/`. Sprint 17B deployment work has not been started.
 
-CareerFunnel Tracker answers practical job-search questions such as:
+## Business Problem
 
-- Which application sources are producing better outcomes?
-- Which CV versions are linked to stronger or weaker results?
-- Where are applications being rejected?
-- Which records are incomplete or weak for analysis?
-- Is the dataset complete enough for reliable reporting?
-- What actions should happen next?
+Job-search activity quickly becomes fragmented across job boards, spreadsheets, CV versions, follow-up reminders, and interview notes. That makes it hard to answer basic reporting questions:
 
-The platform is intentionally evidence-based. It uses deterministic service-layer logic and stored records. It does not rely on external AI APIs, fake users, fake customers, or hardcoded analytics numbers.
+- Which sources produce stronger responses?
+- Which CV versions are associated with better outcomes?
+- Where are applications stalling or being rejected?
+- Which records are too incomplete for reliable analysis?
+- What should be reviewed next?
 
----
+CareerFunnel Tracker treats the job search as a small analytics domain. It shows how operational records can be converted into governed metrics, quality warnings, and evidence that a reviewer can inspect.
 
-## Current Status
+## What The Platform Does
 
-| Item | Status |
-|---|---|
-| Current stable branch | `main` |
-| Latest completed sprint | Sprint 16 — Analytics-Critical Field Warnings + Data Quality Impact Reporting |
-| Latest completed sprint tag | `sprint-16-complete` |
-| Current verified tests | 233 passing |
-| Main analytics documentation | `docs/analytics/` |
-| Evidence documentation | `docs/evidence/` |
-| Screenshot evidence folder | `docs/evidence/screenshots/` |
+- Tracks applications, sources, statuses, CV versions, follow-up dates, job descriptions, required skills, interviews, notes, daily activity, and weekly reviews.
+- Calculates funnel metrics, source performance, CV version performance, rejection patterns, weekly trends, application quality, and data quality readiness.
+- Provides rule-based decision support for job-posting fit review, next actions, follow-up drafting, interview prep, and quality warnings.
+- Exports workbook evidence for review, backup, and BI-style analysis.
+- Documents metric definitions, analytics lineage, sprint evidence, and limitations.
 
-Note: Sprint 5 consolidated several export-route tests into broader `subTest` coverage, so the raw test count reduced from 134 to 133 while export route coverage improved. Sprint 14 adds weekly trend service, UI, and DailyLog aggregation tests (176 total at Sprint 14 completion). Sprint 15 adds shared role-fit constants, intake-to-application prefill, Evaluation Queue, and Application Detail Fit Review tests (204 total at Sprint 15 completion). Sprint 16 adds save-quality warning service, post-save advisory warnings, and Data Quality Report analytics impact notes (233 total at Sprint 16 completion).
+## Five-Minute Reviewer Path
 
----
+1. Open the dashboard and scan the headline job-search status.
+2. Review the Evaluation Queue for opportunities that need fit checks or conversion into applications.
+3. Open Funnel Metrics and inspect weekly trend, source performance, CV version performance, and rejection patterns.
+4. Create or edit an application and observe the save-quality warnings for analytics-critical gaps.
+5. Open the Data Quality Report and connect the warnings back to reporting impact.
+6. Review `docs/analytics/metric_definitions.md`, `docs/analytics/analytics_lineage.md`, and `docs/evidence/evidence_index.md` for the supporting evidence trail.
 
-## Key Features
+## Curated Screenshot Gallery
 
-### Core Tracking
+![Dashboard overview](docs/screenshots/curated/01-dashboard-overview.png)
 
-- Application tracker with company, role, source, status, CV version, job description, required skills, role fit, and follow-up date
-- Daily target vs actual activity logging
-- Weekly review and diagnostic reflection workflow
-- Follow-up tracking
-- Interview preparation records
-- Notes and decision log
-- User-specific authenticated records
+Dashboard overview showing the project as a reviewer-friendly tracker rather than a raw admin tool.
 
-### Analytics and Decision Support
+![Evaluation Queue](docs/screenshots/curated/02-evaluation-queue.png)
 
-- Funnel Metrics
-- Weekly Trend (Monday-starting weekly buckets on Funnel Metrics)
-- Source ROI
-- CV Version Performance
-- Rejection Pattern Analysis
-- Application Quality Report
-- Data Quality Report
-- Evidence-based recommended actions
-- Low-sample-size warnings where appropriate
+Evaluation Queue for roles that have been found or fit-checked and need a deliberate next step.
 
-### Export and Evidence
+![Job Posting Analyzer conversion](docs/screenshots/curated/03-job-posting-analyzer-conversion.png)
 
-- Export Centre for workbook downloads
-- Applications export
-- Daily Logs export
-- Weekly Reviews export
-- Interview Prep export
-- Notes export
-- Full Tracker workbook export
-- Evidence index documentation
-- Screenshot evidence by sprint
+Job Posting Analyzer conversion bridge that pre-fills an Add Application form for user review before saving.
 
-### Documentation
+![Funnel Metrics weekly trend](docs/screenshots/curated/04-funnel-metrics-weekly-trend.png)
 
-- Metric definitions
-- Analytics lineage
-- Evidence index
-- Sprint-based project operating record
+Funnel Metrics weekly trend using Monday-starting weekly buckets for applications, responses, and response rate.
 
----
+![Save quality warnings](docs/screenshots/curated/05-save-quality-warnings.png)
 
-## Analytics Modules
+Post-save advisory warnings for analytics-critical gaps such as missing source detail, CV version, job description, or required skills.
 
-### Funnel Metrics
+![Data Quality Impact Report](docs/screenshots/curated/06-data-quality-impact-report.png)
 
-Shows the core job-search funnel:
+Data Quality Report showing how missing fields affect downstream analytics trust.
 
-- Total Applications
-- Response Rate
-- Interview Rate
-- Offer Rate
-- Stage-by-stage funnel breakdown
-- Daily target vs actual activity
-- Weekly Trend table (applications, responses, and response rate by Monday-starting week)
+## Key Analytics Modules
 
-### Source ROI
+- **Funnel Metrics:** total applications, response rate, interview rate, offer rate, stage breakdown, daily target progress, and weekly trend.
+- **Source ROI:** source-level outcome performance for applications, responses, interviews, and offers. The term ROI is used as channel performance, not financial return.
+- **CV Version Performance:** directional comparison of CV versions by responses, interviews, offers, and rejections.
+- **Rejection Pattern Analysis:** rejection counts, auto-rejection rates, source patterns, CV-version patterns, seniority risk, and recommended actions.
+- **Application Quality Report:** record-level completeness checks for fields needed by later reporting.
+- **Data Quality Report:** analytics-ready rate, quality score, missing-field counts, checks, cleanup actions, and analytics impact notes.
+- **Export Centre:** workbook exports for applications, daily logs, weekly reviews, interview prep, notes, and the full tracker.
 
-Groups applications by source and calculates:
+## Technical Decisions
 
-- Applications
-- Responses
-- Response Rate
-- Interviews
-- Interview Rate
-- Offers
-- Offer Rate
+### 1. Rule-Based Logic Instead Of Fake AI/LLM Claims
 
-This helps compare channels such as LinkedIn, Reed.co.uk, Indeed, company websites, recruiters, and referrals.
+The project uses deterministic service-layer logic for fit review, recommendations, warnings, and generated helper text. This keeps the behavior explainable, testable, and honest. The repository does not claim external AI, LLM integration, scraping, auto-apply workflows, Gmail integration, or Calendar automation.
 
-### CV Version Performance
+### 2. Data-Quality Rule Propagation
 
-Groups applications by CV version and calculates:
+Sprint 16 made analytics readiness visible in multiple places without creating separate definitions. The same readiness rule informs metric eligibility, entry-time warnings, and impact reporting, which mirrors an analytics-engineering pattern: define the rule once, then expose it where decisions are made.
 
-- Applications
-- Responses
-- Response Rate
-- Interviews
-- Interview Rate
-- Offers
-- Offer Rate
-- Rejections
-- Rejection Rate
+### 3. SQLite For Portfolio-Scale Local Analytics
 
-This is performance tracking, not scientific A/B testing.
+SQLite for portfolio-scale local analytics is a deliberate choice for the current scope. It keeps setup simple, supports local review, and is enough for the project's single-user demonstration scale. A production deployment with real users would need separate environment design, hosting decisions, and database planning.
 
-### Rejection Pattern Analysis
+## Data-Quality Governance Callout
 
-Analyses rejection outcomes using:
+The core governance pattern is `_application_is_analytics_ready` -> `build_save_quality_warnings` -> `analytics_impact_notes`.
 
-- Total Rejections
-- Auto-Rejections
-- Rejection Rate
-- Auto-Rejection Rate
-- Rejections by Source
-- Rejections by CV Version
-- Seniority or stretch-role risk count
-- Evidence-based recommended actions
+- `_application_is_analytics_ready` defines whether an application has the fields needed for reliable analytics.
+- `build_save_quality_warnings` surfaces the same readiness concerns at the point of entry after a successful save.
+- `analytics_impact_notes` explains how current gaps affect reports such as Source ROI, CV Version Performance, Funnel Metrics, and Data Quality.
 
-### Application Quality Report
+This is one analytics-readiness definition propagated across operational entry, metrics, and impact reporting, not three unrelated checks.
 
-Flags incomplete or weak application records, including:
+## Evidence And Verification
 
-- Missing CV version
-- Missing precise source
-- Missing or thin job description
-- Missing required skills
-- Missing follow-up date
-- Seniority or stretch-role risk
+Current verified test count: **233 passing**.
 
-### Data Quality Report
+Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/`. The main supporting documentation is:
 
-Summarises analytics readiness and data trust:
+- `docs/analytics/metric_definitions.md`
+- `docs/analytics/analytics_lineage.md`
+- `docs/evidence/evidence_index.md`
+- `DEVELOPMENT.md` for the previous internal/development README preserved during Sprint 17A
 
-- Analytics-ready applications
-- Analytics-ready rate
-- Data Quality Score
-- Missing source count
-- Generic source count
-- Missing CV version count
-- Missing job description count
-- Missing required skills count
-- Missing follow-up date count
-- Data quality checks
-- Recommended cleanup actions
+Recommended verification commands:
 
----
-
-## Export Centre
-
-The Export Centre provides workbook downloads for review, backup, and BI-style analysis.
-
-Available exports:
-
-- Full Tracker Workbook
-- Applications Export
-- Daily Logs Export
-- Weekly Reviews Export
-- Interview Prep Export
-- Notes and Decisions Export
-
-Exports are generated from authenticated user records. No fake export data is used.
-
----
-
-## Evidence and Documentation
-
-### Screenshot Evidence
-
-| Sprint | Evidence File | Proof |
-|---|---|---|
-| Sprint 1B | `docs/evidence/screenshots/sprint-1b-dashboard-trust-surfaces.png` | Dashboard trust surfaces |
-| Sprint 2A | `docs/evidence/screenshots/sprint-2a-metrics-source-roi-cv-performance.png` | Source ROI and CV Version Performance |
-| Sprint 2B | `docs/evidence/screenshots/sprint-2b-rejection-pattern-analysis.png` | Rejection Pattern Analysis |
-| Sprint 3 | `docs/evidence/screenshots/sprint-3-application-quality-report.png` | Application Quality Report |
-| Sprint 4 | `docs/evidence/screenshots/sprint-4-data-quality-analytics-governance.png` | Data Quality and Analytics Governance |
-| Sprint 5 | `docs/evidence/screenshots/sprint-5-export-evidence-centre.png` | Export and Evidence Centre |
-| Sprint 6 | `docs/evidence/screenshots/sprint-6-dashboard-final-polish.png` | Dashboard final polish |
-| Sprint 6 | `docs/evidence/screenshots/sprint-6-metrics-final-polish.png` | Metrics final polish |
-| Sprint 6 | `docs/evidence/screenshots/sprint-6-export-centre-final-polish.png` | Export Centre final polish |
-| Sprint 14 | `docs/evidence/screenshots/sprint-14-weekly-trend-analytics.png` | Weekly Trend on Funnel Metrics |
-| Sprint 15 | `docs/evidence/screenshots/sprint-15-conversion-bridge.png` | Job Posting Analyzer Save as Application prefill bridge |
-| Sprint 15 | `docs/evidence/screenshots/sprint-15-evaluation-queue.png` | Evaluation Queue for Job Found / Fit Checked roles |
-| Sprint 16 | `docs/evidence/screenshots/sprint-16-quality-warnings.png` | Post-save advisory quality warnings on application create/update |
-| Sprint 16 | `docs/evidence/screenshots/sprint-16-data-quality-impact-report.png` | Data Quality Report Analytics Impact notes |
-
-### Documentation Files
-
-| File | Purpose |
-|---|---|
-| `docs/analytics/metric_definitions.md` | Defines metrics, calculations, source fields, business questions, and limitations |
-| `docs/analytics/analytics_lineage.md` | Explains Bronze -> Silver -> Gold analytics lineage |
-| `docs/evidence/evidence_index.md` | Lists screenshot proof, sprint tags, test progression, and reviewer walkthrough path |
-
----
-
-## Sprint History
-
-| Sprint | Status | Tag / Branch | Main Outcome |
-|---|---|---|---|
-| Sprint 1 | Completed | `sprint-1-complete` | Foundation safety and dashboard trust surfaces |
-| Sprint 2A | Completed | `sprint-2a-complete` | Source ROI and CV Version Performance |
-| Sprint 2B | Completed | `sprint-2b-complete` | Rejection Pattern Analysis |
-| Sprint 3 | Completed | `sprint-3-complete` | Application Quality Intelligence |
-| Sprint 4 | Completed | `sprint-4-complete` | Data Quality and Analytics Governance |
-| Sprint 5 | Completed | `sprint-5-complete` | Export Centre and evidence handoff |
-| Sprint 6 | Completed | `sprint-6-complete` | UI polish and portfolio presentation |
-| Sprint 7 | Completed | `sprint-7-complete` | Documentation alignment and optional deployment preparation |
-| Sprint 8 | Completed | `sprint-8-complete` | Ruff code-quality cleanup across modules |
-| Sprint 9 | Completed | `sprint-9-complete` | Today action panel on dashboard |
-| Sprint 10 | Completed | `sprint-10-complete` | Manual follow-up email draft service and UI |
-| Sprint 11 | Completed | `sprint-11-complete` | Manual mark follow-up sent workflow |
-| Sprint 12 | Completed | `sprint-12-complete` | Status-aware follow-up action |
-| Sprint 13 | Completed | `sprint-13-complete` | Application evidence readiness |
-| Sprint 14 | Completed | `sprint-14-complete` | Weekly Trend analytics, Funnel Metrics weekly trend table, DailyLog ORM aggregation optimization, documentation updates, and screenshot evidence |
-| Sprint 15 | Completed | `sprint-15-complete` | Shared role-fit constants, Job Posting Analyzer to Add Application prefill bridge, Evaluation Queue, Application Detail Fit Review, and screenshot evidence |
-| Sprint 16 | Completed | `sprint-16-complete` | Save-quality warnings service, post-save advisory warnings, accurate Source ROI wording, Data Quality Report Analytics Impact notes, and screenshot evidence |
-
-**Sprint 14 detail:** `build_weekly_trend()` groups applications into Monday-starting weeks; the Funnel Metrics page shows a weekly trend table (no chart); `build_funnel_metrics()` uses one ORM `aggregate()` call for DailyLog totals; metric definitions and evidence index were updated; screenshot evidence is stored at `docs/evidence/screenshots/sprint-14-weekly-trend-analytics.png`.
-
-**Sprint 15 detail:** Role-fit scoring lists are unified in `apps/job_intelligence/constants.py` for Job Posting Analyzer and Smart Review; the analyzer can open a pre-filled Add Application form via GET parameters (the user must review and submit before anything is saved); Evaluation Queue lists opportunities at Job Found or Fit Checked; Application Detail shows a compact rule-based Fit Review summary; screenshot evidence paths are documented in `docs/evidence/evidence_index.md`.
-
-**Sprint 16 detail:** `SaveQualityWarning` and `build_save_quality_warnings()` flag analytics-critical gaps on saved applications; create and update views show advisory Django warning messages after a successful save (non-blocking, no `form.add_error()`); Source warnings use accurate “cannot attribute / grouped under Other” wording; the Data Quality Report adds quantified Analytics Impact notes explaining which reports are affected by current gaps; screenshot evidence paths are documented in `docs/evidence/evidence_index.md`.
-
----
+```bash
+python manage.py test
+ruff check .
+python manage.py check
+python manage.py makemigrations --dry-run
+```
 
 ## Tech Stack
 
 - Python
 - Django
-- SQLite for local development
+- SQLite
 - Django Templates
-- HTML / CSS / JavaScript
+- HTML, CSS, and JavaScript
 - OpenPyXL
-- WhiteNoise
+- Ruff
 - Git
-- GitHub Actions CI, if enabled in repository
-
----
-
-## Project Structure
-
-```text
-apps/
-  accounts/
-  dashboard/
-  applications/
-  ai_agents/
-  followups/
-  interviews/
-  daily_log/
-  weekly_review/
-  metrics/
-  job_intelligence/
-  notes/
-  exports/
-
-docs/
-  analytics/
-    metric_definitions.md
-    analytics_lineage.md
-  evidence/
-    evidence_index.md
-    screenshots/
-```
-
----
 
 ## Local Setup
-
-Create and activate a virtual environment:
 
 ```bash
 python -m venv .venv
 ```
 
-Windows PowerShell:
-
 ```powershell
 .venv\Scripts\activate
 ```
 
-Install dependencies:
-
 ```bash
 pip install -r requirements.txt
-```
-
-Run migrations:
-
-```bash
 python manage.py migrate
-```
-
-Seed demo data, if the command is available:
-
-```bash
 python manage.py seed_demo_data
-```
-
-Start the server:
-
-```bash
 python manage.py runserver
 ```
 
-Open:
+Open the local development server at:
 
 ```text
 http://127.0.0.1:8000/
 ```
 
----
+## Repository Guide
 
-## Optional Deployment Preparation
+- `apps/applications/` contains application tracking workflows and save-quality warning integration.
+- `apps/metrics/` contains funnel, source, CV, rejection, quality, weekly trend, and data-quality reporting logic.
+- `apps/job_intelligence/` contains rule-based role-fit and job-posting review workflows.
+- `apps/exports/` contains workbook export flows.
+- `docs/analytics/` contains metric definitions and analytics lineage.
+- `docs/evidence/` contains sprint evidence and historical screenshots.
+- `docs/screenshots/curated/` contains the recruiter-facing screenshot set used by this README.
+- `DEVELOPMENT.md` preserves the previous internal/development README.
 
-Deployment is optional and would require environment-specific setup. The project already includes `gunicorn` and `whitenoise` in `requirements.txt`, and WhiteNoise static-file settings are configured.
+## What This Project Demonstrates
 
-Before any hosted deployment, set `SECRET_KEY`, `DEBUG=False`, and `ALLOWED_HOSTS` for the target environment. SQLite is used for local development, so a real hosted deployment would also need a production database configuration. Run `python manage.py collectstatic` during deployment preparation.
+- Django application structure with authenticated, user-specific records.
+- Service-layer analytics that turn operational records into BI-style reporting.
+- Metric governance, analytics lineage, and data-quality propagation.
+- Evidence-based delivery with sprint screenshots, documentation, and tests.
+- Practical trade-off communication for analytics and reporting roles.
+- Recruiter-readable positioning without overstating product maturity.
 
----
+## What Is Not Claimed
 
-## Demo Login
+- No verified live deployment is claimed in Sprint 17A.
+- No real customers, SaaS business, billing system, or production user base is claimed.
+- No external AI, LLM, scraping, auto-apply, Gmail, or Calendar integration is claimed.
+- No scientific CV A/B testing is claimed; CV Version Performance is directional reporting.
+- No financial return calculation is claimed; Source ROI means source outcome performance.
+- No production database architecture is claimed; SQLite is used for portfolio-scale local review.
 
-```text
-Username: demo
-Password: DemoPass12345
-```
+## What's Next
 
-If demo credentials are changed later, update this section before sharing the project publicly.
-
----
-
-## Run Tests
-
-```bash
-python manage.py check
-python manage.py makemigrations --check --dry-run
-python manage.py test
-```
-
-Current stable verification:
-
-```text
-python manage.py check - passing
-python manage.py makemigrations --check --dry-run - no changes detected
-python manage.py test - 233 tests passing
-```
-
----
-
-## Deterministic Assistance Layer
-
-The project includes a local deterministic assistance layer under `apps/ai_agents/`.
-
-These features use rule-based logic and run without external API keys. They demonstrate decision-support workflows without making live AI or LLM claims.
-
-Examples include:
-
-- Job Posting Analyzer
-- Next Best Action logic
-- Follow-Up Message Writer
-- Interview Prep Generator
-- Weekly Coach
-- CV Gap-style checks
-- Cover Letter Quality checks
-- Smart Notifications Centre
-
-These should be understood as local rule-based assistants, not external AI agents.
-
----
-
-## Portfolio Value
-
-CareerFunnel Tracker demonstrates:
-
-- Django application architecture
-- Authenticated user-specific data
-- Service-layer analytics design
-- BI-style KPI reporting
-- Data quality checks
-- Metric governance
-- Analytics lineage
-- Export workflows
-- Evidence-first sprint delivery
-- Automated testing
-- Reviewer-friendly documentation
-
-The project is relevant to:
-
-- Data Analyst roles
-- BI Analyst roles
-- Reporting Analyst roles
-- Analytics Engineer roles
-- Junior Data Engineer roles
-- FinTech analytics roles
-
----
-
-## Known Limitations
-
-The current version is intentionally realistic and scoped.
-
-Known limitations:
-
-- Status history is not tracked yet.
-- Stage transition events are not modelled yet.
-- Rejection reasons are not independently verified.
-- Seniority-risk detection is keyword-based.
-- CV Version Performance is directional, not scientific A/B testing.
-- Source ROI means channel outcome performance, not financial ROI.
-- Weekly Trend uses application date (`date_applied`), not response date.
-- Export files are workbook exports, not automated BI pipelines.
-- No live LLM integration is active.
-- Fit Review and Job Posting Analyzer scoring are rule-based and local, not live AI/API integrations.
-- Job Posting Analyzer pre-fills the Add Application form only; it does not save or submit applications automatically.
-- No Gmail / Smart Inbox integration is active.
-- No Celery / Redis background processing is active.
-- No production SaaS billing or multi-tenant commercial layer is active.
-
----
-
-## Reviewer Walkthrough
-
-Recommended review order:
-
-1. Read this README.
-2. Open the dashboard.
-3. Open the Metrics page.
-4. Review Weekly Trend, Source ROI, CV Version Performance, Rejection Pattern Analysis, Application Quality, and Data Quality.
-5. Open the Export Centre.
-6. Review `docs/analytics/metric_definitions.md`.
-7. Review `docs/analytics/analytics_lineage.md`.
-8. Review `docs/evidence/evidence_index.md`.
-9. Run the test suite.
-
----
-
-## Recruiter-Friendly Summary
-
-CareerFunnel Tracker is a Django-based job-search intelligence platform that turns application activity into analytics, evidence, and decision support. It tracks applications, daily targets, weekly reviews, follow-ups, interview preparation, notes, and exports. It also provides funnel metrics, source performance, CV version performance, rejection patterns, application quality checks, data quality governance, and reviewer-ready documentation.
-
-The project demonstrates Django development, analytics engineering thinking, BI-style reporting, data quality logic, export workflows, and evidence-based portfolio delivery.
+- Verify any future deployment separately before adding a live demo URL.
+- Continue improving reviewer evidence with current screenshots and concise walkthrough notes.
+- Consider status-history and stage-transition modeling for stronger funnel analysis.
+- Expand analytics documentation when new reporting surfaces are added.
