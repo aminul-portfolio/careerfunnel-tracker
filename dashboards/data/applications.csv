@@ -1,0 +1,12 @@
+application_id,date_applied,company_name,job_title,status,source,cv_version,role_fit,location,work_type,pipeline_stage,response_date,follow_up_status,experience_level
+14,2026-04-28,BrightData Analytics,Junior Data Analyst,acknowledged,linkedin,DA_CV_v2,strong,London / Remote UK,hybrid,submitted,2026-05-02,not_due,junior / 0-2 years
+15,2026-04-30,FinSight Group,Reporting Analyst,screening_call,linkedin,Finance_DA_CV_v1,strong,London / Remote UK,hybrid,submitted,2026-05-04,not_due,entry to mid-level
+16,2026-05-01,Northbank Finance,Data Analyst,rejected,linkedin,DA_CV_v2,medium,London / Remote UK,hybrid,submitted,2026-05-06,not_due,entry to mid-level
+17,2026-05-03,Metro Insight Ltd,BI Analyst,no_response,linkedin,DA_CV_v2,medium,London / Remote UK,hybrid,submitted,,due,entry to mid-level
+18,2026-05-05,LedgerFlow,Graduate Data Analyst,interview,linkedin,DA_CV_v2,strong,London / Remote UK,hybrid,interview,2026-05-09,not_due,junior / 0-2 years
+19,2026-05-07,RetailOps Intelligence,Operations Data Analyst,acknowledged,linkedin,DA_CV_v2,strong,London / Remote UK,hybrid,submitted,2026-05-10,not_due,entry to mid-level
+20,2026-05-09,ClearPath BI,Junior BI Reporting Analyst,technical_screen,linkedin,Finance_DA_CV_v1,strong,London / Remote UK,hybrid,submitted,2026-05-12,not_due,junior / 0-2 years
+21,2026-05-11,DataBridge Solutions,Data Analyst Intern,submitted,linkedin,DA_CV_v2,strong,London / Remote UK,hybrid,submitted,,due,junior / 0-2 years
+22,2026-05-12,QuantOps Labs,Junior Analytics Engineer,auto_rejected,linkedin,DA_CV_v2,medium,London / Remote UK,hybrid,submitted,2026-05-13,not_due,junior / 0-2 years
+23,2026-05-14,InsightWorks UK,Junior Insights Analyst,submitted,linkedin,DA_CV_v2,strong,London / Remote UK,hybrid,submitted,,due,junior / 0-2 years
+24,2026-05-15,CoreLedger Analytics,Finance Data Analyst,submitted,linkedin,Finance_DA_CV_v1,strong,London / Remote UK,hybrid,submitted,,due,entry to mid-level

@@ -1,10 +1,22 @@
+import csv
 from datetime import date
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from django.contrib.auth.models import User
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.applications.choices import ApplicationStatus
+from apps.applications.choices import (
+    ApplicationSource,
+    ApplicationStatus,
+    FollowUpStatus,
+    PipelineStage,
+    RoleFit,
+    WorkType,
+)
 from apps.applications.models import JobApplication
 from apps.daily_log.models import DailyLog
 from apps.notes.models import Note
@@ -31,6 +43,30 @@ WORKBOOK_EXPORT_ROUTE_NAMES = [
     "exports:export_interviews",
     "exports:export_notes",
     "exports:export_full_tracker",
+]
+
+APPLICATION_CSV_HEADERS = [
+    "application_id",
+    "date_applied",
+    "company_name",
+    "job_title",
+    "status",
+    "source",
+    "cv_version",
+    "role_fit",
+    "location",
+    "work_type",
+    "pipeline_stage",
+    "response_date",
+    "follow_up_status",
+    "experience_level",
+]
+
+DAILY_LOG_CSV_HEADERS = [
+    "log_date",
+    "target_applications",
+    "actual_applications",
+    "hours_spent",
 ]
 
 
@@ -101,3 +137,121 @@ class ExportServiceTests(TestCase):
         file_bytes = build_full_tracker_workbook(self.user)
         self.assertIsInstance(file_bytes, bytes)
         self.assertGreater(len(file_bytes), 1000)
+
+
+class DashboardCsvExportCommandTests(TestCase):
+    def setUp(self):
+        self.demo_user = User.objects.create_user(
+            username="demo",
+            password="DemoPass12345",
+        )
+        self.other_user = User.objects.create_user(
+            username="private_user",
+            password="StrongPass12345",
+        )
+
+    def _create_application(self, user, **kwargs):
+        defaults = {
+            "user": user,
+            "company_name": "Demo Analytics Ltd",
+            "job_title": "Data Analyst",
+            "date_applied": date(2026, 5, 16),
+            "status": ApplicationStatus.SUBMITTED,
+            "source": ApplicationSource.LINKEDIN,
+            "cv_version": "DA_CV_v2",
+            "role_fit": RoleFit.STRONG,
+            "location": "London / Remote UK",
+            "work_type": WorkType.HYBRID,
+            "pipeline_stage": PipelineStage.SUBMITTED,
+            "response_date": None,
+            "follow_up_status": FollowUpStatus.DUE,
+            "experience_level": "junior / 0-2 years",
+        }
+        defaults.update(kwargs)
+        return JobApplication.objects.create(**defaults)
+
+    def _create_daily_log(self, user, **kwargs):
+        defaults = {
+            "user": user,
+            "log_date": date(2026, 5, 16),
+            "target_applications": 3,
+            "actual_applications": 2,
+            "hours_spent": "2.50",
+        }
+        defaults.update(kwargs)
+        return DailyLog.objects.create(**defaults)
+
+    def _run_command(self, output_dir):
+        call_command("export_for_dashboards", output_dir=str(output_dir))
+
+    def _read_csv(self, path):
+        with Path(path).open(encoding="utf-8", newline="") as csv_file:
+            return list(csv.reader(csv_file))
+
+    def test_export_for_dashboards_creates_expected_csv_files(self):
+        with TemporaryDirectory() as temp_dir:
+            self._run_command(temp_dir)
+
+            self.assertTrue((Path(temp_dir) / "applications.csv").exists())
+            self.assertTrue((Path(temp_dir) / "daily_logs.csv").exists())
+
+    def test_applications_csv_headers_are_exactly_correct(self):
+        with TemporaryDirectory() as temp_dir:
+            self._run_command(temp_dir)
+
+            rows = self._read_csv(Path(temp_dir) / "applications.csv")
+            self.assertEqual(rows[0], APPLICATION_CSV_HEADERS)
+
+    def test_daily_logs_csv_headers_are_exactly_correct(self):
+        with TemporaryDirectory() as temp_dir:
+            self._run_command(temp_dir)
+
+            rows = self._read_csv(Path(temp_dir) / "daily_logs.csv")
+            self.assertEqual(rows[0], DAILY_LOG_CSV_HEADERS)
+
+    def test_exported_row_counts_match_known_demo_data(self):
+        self._create_application(self.demo_user, company_name="Demo A")
+        self._create_application(
+            self.demo_user,
+            company_name="Demo B",
+            date_applied=date(2026, 5, 17),
+        )
+        self._create_daily_log(self.demo_user, log_date=date(2026, 5, 16))
+        self._create_daily_log(self.demo_user, log_date=date(2026, 5, 17))
+
+        with TemporaryDirectory() as temp_dir:
+            self._run_command(temp_dir)
+
+            application_rows = self._read_csv(Path(temp_dir) / "applications.csv")
+            daily_log_rows = self._read_csv(Path(temp_dir) / "daily_logs.csv")
+            self.assertEqual(len(application_rows) - 1, 2)
+            self.assertEqual(len(daily_log_rows) - 1, 2)
+
+    def test_command_exports_only_demo_user_records(self):
+        self._create_application(self.demo_user, company_name="Demo Only")
+        self._create_application(self.other_user, company_name="Private Company")
+        self._create_daily_log(self.demo_user, log_date=date(2026, 5, 16))
+        self._create_daily_log(self.other_user, log_date=date(2026, 5, 17))
+
+        with TemporaryDirectory() as temp_dir:
+            self._run_command(temp_dir)
+
+            application_rows = self._read_csv(Path(temp_dir) / "applications.csv")
+            daily_log_rows = self._read_csv(Path(temp_dir) / "daily_logs.csv")
+            application_content = "\n".join(",".join(row) for row in application_rows)
+            self.assertIn("Demo Only", application_content)
+            self.assertNotIn("Private Company", application_content)
+            self.assertEqual(len(application_rows) - 1, 1)
+            self.assertEqual(len(daily_log_rows) - 1, 1)
+
+    def test_command_refuses_non_demo_usernames(self):
+        with TemporaryDirectory() as temp_dir:
+            with self.assertRaisesMessage(
+                CommandError,
+                "Dashboard CSV export is demo-only and refuses non-demo users.",
+            ):
+                call_command(
+                    "export_for_dashboards",
+                    username="private_user",
+                    output_dir=temp_dir,
+                )
