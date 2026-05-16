@@ -24,6 +24,12 @@ APPLICATION_HEADERS = [
     "response_date",
     "follow_up_status",
     "experience_level",
+    "has_cv_version",
+    "has_precise_source",
+    "has_job_description",
+    "has_required_skills",
+    "has_follow_up_date",
+    "is_analytics_ready",
 ]
 
 DAILY_LOG_HEADERS = [
@@ -40,6 +46,39 @@ def csv_value(value):
     if hasattr(value, "isoformat"):
         return value.isoformat()
     return str(value)
+
+
+def yes_no(condition: bool) -> str:
+    return "yes" if condition else "no"
+
+
+def has_text(value: str) -> bool:
+    return bool(value.strip())
+
+
+def build_application_quality_flags(application) -> dict[str, str]:
+    has_cv_version = has_text(application.cv_version)
+    has_precise_source = has_text(application.source) and application.source != "other"
+    has_job_description = has_text(application.job_description)
+    has_required_skills = has_text(application.required_skills)
+    has_follow_up_date = application.follow_up_date is not None
+    is_analytics_ready = all(
+        [
+            has_cv_version,
+            has_precise_source,
+            has_job_description,
+            has_required_skills,
+            has_follow_up_date,
+        ]
+    )
+    return {
+        "has_cv_version": yes_no(has_cv_version),
+        "has_precise_source": yes_no(has_precise_source),
+        "has_job_description": yes_no(has_job_description),
+        "has_required_skills": yes_no(has_required_skills),
+        "has_follow_up_date": yes_no(has_follow_up_date),
+        "is_analytics_ready": yes_no(is_analytics_ready),
+    }
 
 
 class Command(BaseCommand):
@@ -92,6 +131,7 @@ class Command(BaseCommand):
             writer = csv.writer(csv_file)
             writer.writerow(APPLICATION_HEADERS)
             for application in applications:
+                quality_flags = build_application_quality_flags(application)
                 writer.writerow(
                     [
                         application.id,
@@ -108,6 +148,12 @@ class Command(BaseCommand):
                         csv_value(application.response_date),
                         application.follow_up_status,
                         application.experience_level,
+                        quality_flags["has_cv_version"],
+                        quality_flags["has_precise_source"],
+                        quality_flags["has_job_description"],
+                        quality_flags["has_required_skills"],
+                        quality_flags["has_follow_up_date"],
+                        quality_flags["is_analytics_ready"],
                     ]
                 )
 

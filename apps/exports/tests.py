@@ -60,6 +60,12 @@ APPLICATION_CSV_HEADERS = [
     "response_date",
     "follow_up_status",
     "experience_level",
+    "has_cv_version",
+    "has_precise_source",
+    "has_job_description",
+    "has_required_skills",
+    "has_follow_up_date",
+    "is_analytics_ready",
 ]
 
 DAILY_LOG_CSV_HEADERS = [
@@ -67,6 +73,15 @@ DAILY_LOG_CSV_HEADERS = [
     "target_applications",
     "actual_applications",
     "hours_spent",
+]
+
+PRIVATE_APPLICATION_FIELDS = [
+    "job_description",
+    "required_skills",
+    "job_url",
+    "contact_name",
+    "contact_email",
+    "notes",
 ]
 
 
@@ -166,6 +181,9 @@ class DashboardCsvExportCommandTests(TestCase):
             "response_date": None,
             "follow_up_status": FollowUpStatus.DUE,
             "experience_level": "junior / 0-2 years",
+            "job_description": "Demo role summary for analytics completeness.",
+            "required_skills": "SQL, Excel, dashboards",
+            "follow_up_date": date(2026, 5, 20),
         }
         defaults.update(kwargs)
         return JobApplication.objects.create(**defaults)
@@ -188,6 +206,10 @@ class DashboardCsvExportCommandTests(TestCase):
         with Path(path).open(encoding="utf-8", newline="") as csv_file:
             return list(csv.reader(csv_file))
 
+    def _read_csv_dicts(self, path):
+        with Path(path).open(encoding="utf-8", newline="") as csv_file:
+            return list(csv.DictReader(csv_file))
+
     def test_export_for_dashboards_creates_expected_csv_files(self):
         with TemporaryDirectory() as temp_dir:
             self._run_command(temp_dir)
@@ -201,6 +223,14 @@ class DashboardCsvExportCommandTests(TestCase):
 
             rows = self._read_csv(Path(temp_dir) / "applications.csv")
             self.assertEqual(rows[0], APPLICATION_CSV_HEADERS)
+
+    def test_applications_csv_headers_exclude_private_fields(self):
+        with TemporaryDirectory() as temp_dir:
+            self._run_command(temp_dir)
+
+            rows = self._read_csv(Path(temp_dir) / "applications.csv")
+            for field in PRIVATE_APPLICATION_FIELDS:
+                self.assertNotIn(field, rows[0])
 
     def test_daily_logs_csv_headers_are_exactly_correct(self):
         with TemporaryDirectory() as temp_dir:
@@ -243,6 +273,44 @@ class DashboardCsvExportCommandTests(TestCase):
             self.assertNotIn("Private Company", application_content)
             self.assertEqual(len(application_rows) - 1, 1)
             self.assertEqual(len(daily_log_rows) - 1, 1)
+
+    def test_complete_application_exports_yes_quality_flags(self):
+        self._create_application(self.demo_user, company_name="Complete Demo")
+
+        with TemporaryDirectory() as temp_dir:
+            self._run_command(temp_dir)
+
+            rows = self._read_csv_dicts(Path(temp_dir) / "applications.csv")
+            row = rows[0]
+            self.assertEqual(row["has_cv_version"], "yes")
+            self.assertEqual(row["has_precise_source"], "yes")
+            self.assertEqual(row["has_job_description"], "yes")
+            self.assertEqual(row["has_required_skills"], "yes")
+            self.assertEqual(row["has_follow_up_date"], "yes")
+            self.assertEqual(row["is_analytics_ready"], "yes")
+
+    def test_incomplete_application_exports_no_quality_flags(self):
+        self._create_application(
+            self.demo_user,
+            company_name="Incomplete Demo",
+            cv_version="",
+            source=ApplicationSource.OTHER,
+            job_description="",
+            required_skills="",
+            follow_up_date=None,
+        )
+
+        with TemporaryDirectory() as temp_dir:
+            self._run_command(temp_dir)
+
+            rows = self._read_csv_dicts(Path(temp_dir) / "applications.csv")
+            row = rows[0]
+            self.assertEqual(row["has_cv_version"], "no")
+            self.assertEqual(row["has_precise_source"], "no")
+            self.assertEqual(row["has_job_description"], "no")
+            self.assertEqual(row["has_required_skills"], "no")
+            self.assertEqual(row["has_follow_up_date"], "no")
+            self.assertEqual(row["is_analytics_ready"], "no")
 
     def test_command_refuses_non_demo_usernames(self):
         with TemporaryDirectory() as temp_dir:
