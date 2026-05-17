@@ -8,7 +8,7 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 ## Current Sprint Position
 
-Sprint 18 is complete and tagged as `sprint-18-complete`. Sprint 19 work on `sprint-19-interview-evidence-workspace` adds an Interview Evidence Workspace that connects Interview Prep with application evidence readiness, Smart Review positioning, recommended CV, recommended projects, role context, and a manual preparation checklist while keeping deployment and public-hosting claims unverified.
+Sprint 19 is complete and tagged as `sprint-19-complete`. Sprint 20 work on `sprint-20-portfolio-release-candidate` focuses on portfolio release-candidate polish, recruiter handoff, documentation alignment, and curated evidence while keeping deployment and public-hosting claims unverified.
 
 ## Business Problem
 
