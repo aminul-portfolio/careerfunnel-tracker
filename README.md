@@ -65,6 +65,14 @@ Post-save advisory warnings for analytics-critical gaps such as missing source d
 
 Data Quality Report showing how missing fields affect downstream analytics trust.
 
+![Visual Analytics Dashboard](docs/screenshots/curated/07-visual-analytics-dashboard.png)
+
+Visual analytics dashboard evidence showing Sprint 18 BI-style reporting from dashboard-ready synthetic exports.
+
+![Interview Evidence Workspace](docs/screenshots/curated/08-interview-evidence-workspace.png)
+
+Interview Evidence Workspace showing Sprint 19 interview preparation evidence linked to application readiness and Smart Review positioning.
+
 ## Key Analytics Modules
 
 - **Funnel Metrics:** total applications, response rate, interview rate, offer rate, stage breakdown, daily target progress, and weekly trend.
