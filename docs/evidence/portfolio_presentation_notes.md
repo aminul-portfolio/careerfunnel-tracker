@@ -20,7 +20,9 @@ CareerFunnel Tracker is a Django-based job-search intelligence and analytics pla
 
 The strongest part of the project is the analytics layer. It turns application records into funnel metrics, source performance, CV version performance, rejection patterns, application quality checks, and data quality governance.
 
-It also includes metric definitions, analytics lineage, exportable evidence, screenshots, and tests, so the project is built like a realistic portfolio data product rather than a simple tracker.
+It also includes metric definitions, analytics lineage, exportable evidence, screenshots, visual analytics evidence, an interview evidence workspace, and tests, so the project is built like a realistic portfolio data product rather than a simple tracker.
+
+The current release-candidate state is ready for recruiter review as an evidence-based portfolio handoff. It does not claim live deployment, production SaaS usage, real users, external AI/API automation, Tableau Public hosting, Power BI implementation, Gmail, Calendar, scraping, auto-apply, or background automation.
 
 ---
 
@@ -240,6 +242,62 @@ The project includes governance, lineage, and evidence, not only UI screens.
 
 ---
 
+### 10. Show Visual Analytics Evidence
+
+Explain:
+
+```text
+Sprint 18 adds dashboard-ready synthetic CSV exports, local Tableau workbook evidence, and a Chart.js weekly trend visualization inside Funnel Metrics.
+```
+
+Evidence files:
+
+```text
+dashboards/data/applications.csv
+dashboards/data/daily_logs.csv
+dashboards/tableau/careerfunnel_sprint18_tableau_workbook.twbx
+docs/evidence/screenshots/sprint-18-performance-dashboard.png
+docs/evidence/screenshots/sprint-18-quality-dashboard.png
+docs/evidence/screenshots/sprint-18-chartjs-weekly-trend.png
+```
+
+Key message:
+
+```text
+This proves BI-style reporting and visual analytics evidence without claiming a Tableau Public URL or Power BI implementation.
+```
+
+---
+
+### 11. Show the Interview Evidence Workspace
+
+Explain:
+
+```text
+Sprint 19 upgrades the Interview Prep detail page into an Interview Evidence Workspace.
+```
+
+Mention:
+
+- It connects `InterviewPrep`, `JobApplication`, evidence readiness, and Smart Review.
+- It shows ready evidence, missing evidence, and recommended next improvement.
+- It shows recommended CV, recommended projects, required skills, and job description.
+- It keeps interview preparation local, rule-based, and manual.
+
+Evidence file:
+
+```text
+docs/evidence/screenshots/sprint-19-interview-evidence-workspace.png
+```
+
+Key message:
+
+```text
+This extends the project from analytics reporting into reviewer-ready interview preparation evidence without external AI/API automation.
+```
+
+---
+
 ## Top 5 Features to Mention
 
 ## 1. Funnel Metrics and Diagnosis
@@ -331,6 +389,10 @@ Mention these technical strengths:
 - Service-layer business logic
 - Template-based dashboard and metrics UI
 - OpenPyXL workbook export generation
+- Dashboard-ready CSV export evidence
+- Local Tableau workbook and screenshot evidence
+- Chart.js weekly trend visualization
+- Interview Evidence Workspace
 - Regression tests for analytics and exports
 - Clean sprint-based Git history
 - Screenshot evidence
@@ -376,6 +438,8 @@ Relevant proof:
 - source performance analysis
 - rejection pattern analysis
 - weekly review and trend interpretation
+- Chart.js weekly trend visualization
+- visual analytics evidence through local Tableau screenshots
 - evidence-based recommendations
 
 Suggested wording:
@@ -392,6 +456,10 @@ Relevant proof:
 
 - dashboard-ready metrics
 - structured tables
+- dashboard-ready synthetic CSV exports
+- local Tableau workbook evidence
+- Performance Dashboard screenshot
+- Quality Dashboard screenshot
 - Excel workbook exports
 - metric definitions
 - evidence index
@@ -452,17 +520,18 @@ Use this flow in a live walkthrough:
 
 ```text
 1. Dashboard
-2. Metrics page
-3. Source ROI
-4. CV Version Performance
-5. Rejection Pattern Analysis
-6. Application Quality
-7. Data Quality
-8. Export Centre
-9. Metric definitions document
-10. Analytics lineage document
-11. Evidence index
-12. Test command
+2. Evaluation Queue
+3. Job Posting Analyzer conversion
+4. Funnel Metrics weekly trend + Chart.js chart
+5. Visual Analytics / Tableau evidence screenshots
+6. Save Quality Warnings
+7. Data Quality Impact Report
+8. Interview Evidence Workspace
+9. Export Centre
+10. Metric Definitions
+11. Analytics Lineage
+12. Evidence Index
+13. Test command
 ```
 
 ---
@@ -482,7 +551,7 @@ Expected current result:
 ```text
 System check identified no issues
 No changes detected
-133 tests passing
+249 tests passing
 ```
 
 Use this to prove repository stability.
@@ -497,6 +566,10 @@ For portfolio, GitHub, or LinkedIn, use:
 docs/evidence/screenshots/sprint-6-dashboard-final-polish.png
 docs/evidence/screenshots/sprint-6-metrics-final-polish.png
 docs/evidence/screenshots/sprint-6-export-centre-final-polish.png
+docs/evidence/screenshots/sprint-18-performance-dashboard.png
+docs/evidence/screenshots/sprint-18-quality-dashboard.png
+docs/evidence/screenshots/sprint-18-chartjs-weekly-trend.png
+docs/evidence/screenshots/sprint-19-interview-evidence-workspace.png
 ```
 
 Older sprint evidence screenshots remain useful for showing project progression.
@@ -512,6 +585,11 @@ Do not claim:
 - live AI automation
 - external LLM integration
 - Gmail inbox automation
+- Calendar automation
+- scraping or auto-apply workflows
+- background automation
+- Tableau Public hosting
+- Power BI implementation
 - scientific CV A/B testing
 - financial ROI
 - enterprise data warehouse architecture
@@ -556,7 +634,11 @@ Current limitations:
 - Export files are workbook exports, not automated BI pipelines.
 - No live LLM integration is active.
 - No Gmail / Smart Inbox integration is active.
+- No Calendar integration is active.
+- No scraping or auto-apply workflow is active.
 - No Celery / Redis background processing is active.
+- No Tableau Public URL is claimed.
+- No Power BI implementation is claimed.
 - No production SaaS billing or commercial layer is active.
 
 Strong answer:
@@ -578,7 +660,7 @@ Technically, this is a Django project with user-authenticated records, service-l
 ## 30-Second Analytics Summary
 
 ```text
-Analytically, the platform turns job applications into funnel metrics, source performance, CV version performance, rejection patterns, application quality checks, and data quality scores. It also documents each metric and shows how raw records become business-ready outputs through a Bronze -> Silver -> Gold style lineage.
+Analytically, the platform turns job applications into funnel metrics, source performance, CV version performance, rejection patterns, application quality checks, and data quality scores. It also includes dashboard-ready CSV evidence, local Tableau screenshots, a Chart.js weekly trend visualization, and documents how raw records become business-ready outputs through a Bronze -> Silver -> Gold style lineage.
 ```
 
 ---
@@ -586,22 +668,22 @@ Analytically, the platform turns job applications into funnel metrics, source pe
 ## 30-Second Portfolio Summary
 
 ```text
-As a portfolio project, CareerFunnel Tracker shows that I can build more than web pages. It demonstrates product thinking, analytics logic, data quality awareness, export workflows, documentation, testing, and reviewer-ready evidence.
+As a portfolio project, CareerFunnel Tracker shows that I can build more than web pages. It demonstrates product thinking, analytics logic, visual analytics evidence, interview evidence preparation, data quality awareness, export workflows, documentation, testing, and release-candidate reviewer handoff.
 ```
 
 ---
 
 ## Suggested LinkedIn Project Description
 
-CareerFunnel Tracker is a Django-based job-search intelligence and analytics platform that converts application records into funnel metrics, source performance, CV-version performance, rejection patterns, application quality checks, data quality scores, workbook exports, and reviewer-ready evidence.
+CareerFunnel Tracker is a Django-based job-search intelligence and analytics platform that converts application records into funnel metrics, source performance, CV-version performance, rejection patterns, application quality checks, data quality scores, visual analytics evidence, interview evidence workspace outputs, workbook exports, and reviewer-ready evidence.
 
-The project demonstrates Django development, service-layer analytics, BI-style reporting, data quality thinking, metric governance, analytics lineage, and evidence-based portfolio delivery.
+The project demonstrates Django development, service-layer analytics, BI-style reporting, visual analytics evidence, data quality thinking, metric governance, analytics lineage, and evidence-based portfolio delivery.
 
 ---
 
 ## Suggested GitHub Featured Project Description
 
-Django-based job-search analytics platform with funnel metrics, Source ROI, CV Version Performance, Rejection Pattern Analysis, Application Quality, Data Quality scoring, Excel workbook exports, metric definitions, analytics lineage, evidence screenshots, and automated tests.
+Django-based job-search analytics platform with funnel metrics, Source ROI, CV Version Performance, Rejection Pattern Analysis, Application Quality, Data Quality scoring, visual analytics evidence, Interview Evidence Workspace, Excel workbook exports, metric definitions, analytics lineage, evidence screenshots, and automated tests.
 
 ---
 
@@ -617,6 +699,8 @@ Then support it with:
 
 - Dashboard
 - Metrics page
+- Visual analytics evidence
+- Interview Evidence Workspace
 - Export Centre
 - Metric definitions
 - Analytics lineage
