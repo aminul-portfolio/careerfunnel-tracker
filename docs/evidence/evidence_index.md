@@ -15,9 +15,10 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 | Item | Current State |
 |---|---|
 | Current stable branch | `main` |
-| Latest completed sprint | Sprint 16 — Analytics-Critical Field Warnings + Data Quality Impact Reporting |
-| Latest completed sprint tag | `sprint-16-complete` |
-| Current verified test count | 233 tests passing |
+| Latest completed sprint | Sprint 17 — README case study and curated evidence |
+| Latest completed sprint tag | `sprint-17-complete` |
+| Current verified test count | 244 tests passing |
+| Sprint 18 evidence status | Exists on branch `sprint-18-visualization`; not merged/tagged yet |
 | Main evidence folder | `docs/evidence/screenshots/` |
 | Analytics documentation folder | `docs/analytics/` |
 
@@ -1019,6 +1020,56 @@ Before considering a sprint complete, confirm:
 - [ ] sprint tag is created after merge
 - [ ] Notion is updated
 - [ ] evidence index is updated if needed
+
+---
+
+## Sprint 18 - Tableau Dashboard Evidence + Chart.js Inline Chart
+
+### Status
+
+Evidence exists on branch `sprint-18-visualization`. The latest completed sprint tag remains `sprint-17-complete` until Sprint 18 is merged and tagged.
+
+### Commits
+
+```text
+5754243 Sprint 18A: add dashboard CSV export pipeline
+578f621 Sprint 18A: add dashboard quality indicators
+a563e45 Sprint 18B: add Tableau dashboard evidence
+1a83f32 Sprint 18C: add weekly trend Chart.js visualization
+f46b162 Sprint 18C: add Chart.js screenshot evidence
+```
+
+### Evidence Files
+
+```text
+dashboards/data/applications.csv
+dashboards/data/daily_logs.csv
+dashboards/tableau/careerfunnel_sprint18_tableau_workbook.twbx
+docs/evidence/screenshots/sprint-18-performance-dashboard.png
+docs/evidence/screenshots/sprint-18-quality-dashboard.png
+docs/evidence/screenshots/sprint-18-chartjs-weekly-trend.png
+```
+
+### What This Sprint Proves
+
+- Dashboard-ready synthetic CSV export for Tableau-style analysis.
+- Safe yes/no quality indicators for analytics-readiness reporting.
+- Local Tableau performance dashboard evidence.
+- Local Tableau quality dashboard evidence.
+- Chart.js weekly trend visualization inside Funnel Metrics.
+- Existing Weekly Trend table remains available alongside the chart.
+- Chart data is rendered safely with Django `json_script`.
+- Private fields are not exported in dashboard CSVs.
+
+### Known Limitations
+
+- No verified Tableau Public URL is claimed.
+- No Power BI dashboard was implemented in Sprint 18.
+- No verified live deployment URL is claimed.
+
+### Reviewer Value
+
+Sprint 18 proves the project can move from Django-native analytics into dashboard-ready BI evidence while preserving privacy boundaries and honest portfolio claims.
 
 ---
 

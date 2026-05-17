@@ -150,6 +150,42 @@ class Command(BaseCommand):
             ),
         ]
         for company, title, days_ago, status, response_days_ago, fit in rows:
+            cv_version = (
+                "Finance_DA_CV_v1"
+                if "Finance" in title or "Reporting" in title
+                else "DA_CV_v2"
+            )
+            source = ApplicationSource.LINKEDIN
+            required_skills = (
+                "Python, SQL, Excel, reporting, dashboards, KPI analysis, "
+                "stakeholder communication"
+            )
+            job_description = (
+                f"Demo job description for {title}. The role involves "
+                "reporting, analysis, data quality, dashboards, and "
+                "business-facing insight."
+            )
+            follow_up_date = (
+                today - timedelta(days=1)
+                if response_days_ago is None
+                else today + timedelta(days=3)
+            )
+            follow_up_status = (
+                FollowUpStatus.DUE
+                if response_days_ago is None
+                else FollowUpStatus.NOT_DUE
+            )
+
+            if company == "Metro Insight Ltd":
+                source = ApplicationSource.OTHER
+            if company == "QuantOps Labs":
+                cv_version = ""
+            if company == "DataBridge Solutions":
+                required_skills = ""
+            if company == "InsightWorks UK":
+                follow_up_date = None
+                follow_up_status = FollowUpStatus.NOT_SET
+
             JobApplication.objects.create(
                 user=user,
                 company_name=company,
@@ -158,7 +194,7 @@ class Command(BaseCommand):
                 location="London / Remote UK",
                 work_type=WorkType.HYBRID,
                 salary_range="£28,000 - £38,000",
-                source=ApplicationSource.LINKEDIN,
+                source=source,
                 role_fit=fit,
                 date_applied=today - timedelta(days=days_ago),
                 status=status,
@@ -167,40 +203,21 @@ class Command(BaseCommand):
                     if response_days_ago is not None
                     else None
                 ),
-                cv_version=(
-                    "Finance_DA_CV_v1"
-                    if "Finance" in title or "Reporting" in title
-                    else "DA_CV_v2"
-                ),
+                cv_version=cv_version,
                 cover_letter_version="Tailored_CL_v1",
                 experience_level=(
                     "junior / 0-2 years"
                     if "Junior" in title or "Graduate" in title or "Intern" in title
                     else "entry to mid-level"
                 ),
-                required_skills=(
-                    "Python, SQL, Excel, reporting, dashboards, KPI analysis, "
-                    "stakeholder communication"
-                ),
-                job_description=(
-                    f"Demo job description for {title}. The role involves "
-                    "reporting, analysis, data quality, dashboards, and "
-                    "business-facing insight."
-                ),
+                required_skills=required_skills,
+                job_description=job_description,
                 is_cv_tailored=fit == RoleFit.STRONG,
                 is_cover_letter_tailored=fit == RoleFit.STRONG,
                 portfolio_project_included=fit == RoleFit.STRONG,
                 company_researched=response_days_ago is not None,
-                follow_up_date=(
-                    today - timedelta(days=1)
-                    if response_days_ago is None
-                    else today + timedelta(days=3)
-                ),
-                follow_up_status=(
-                    FollowUpStatus.DUE
-                    if response_days_ago is None
-                    else FollowUpStatus.NOT_DUE
-                ),
+                follow_up_date=follow_up_date,
+                follow_up_status=follow_up_status,
                 pipeline_stage=(
                     PipelineStage.INTERVIEW
                     if status == ApplicationStatus.INTERVIEW

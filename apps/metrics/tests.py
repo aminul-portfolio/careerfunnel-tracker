@@ -1213,11 +1213,30 @@ class MetricsViewTests(TestCase):
         self.assertIn("weekly_trend_has_data", response.context)
         self.assertFalse(response.context["weekly_trend_has_data"])
 
+    def test_funnel_metrics_context_includes_weekly_trend_chart_data(self):
+        response = self._get_funnel_metrics()
+        self.assertIn("weekly_trend_chart_data", response.context)
+        chart_data = response.context["weekly_trend_chart_data"]
+        self.assertEqual(
+            set(chart_data),
+            {"labels", "applications", "responses"},
+        )
+        self.assertEqual(len(chart_data["labels"]), 10)
+        self.assertEqual(len(chart_data["applications"]), 10)
+        self.assertEqual(len(chart_data["responses"]), 10)
+
     def test_weekly_trend_section_appears_on_funnel_metrics_page(self):
         response = self._get_funnel_metrics()
         content = response.content.decode()
         self.assertIn('id="weekly-trend"', content)
         self.assertIn("Weekly Trend", content)
+
+    def test_weekly_trend_chart_markup_appears_on_funnel_metrics_page(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        self.assertIn('id="weekly-trend-chart"', content)
+        self.assertIn('id="weekly-trend-data"', content)
+        self.assertIn("https://cdn.jsdelivr.net/npm/chart.js", content)
 
     def test_weekly_trend_table_displays_rows(self):
         today = timezone.localdate()
@@ -1228,6 +1247,7 @@ class MetricsViewTests(TestCase):
         response = self._get_funnel_metrics()
         content = response.content.decode()
         self.assertIn("Week Starting", content)
+        self.assertIn("<table", content)
         self.assertIn(format_date(current_monday, "j M Y"), content)
         self.assertIn(format_date(previous_monday, "j M Y"), content)
         self.assertTrue(response.context["weekly_trend_has_data"])

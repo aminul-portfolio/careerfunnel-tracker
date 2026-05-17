@@ -23,6 +23,11 @@ def funnel_metrics(request):
     weekly_trend_has_data = sum(
         1 for row in weekly_trend_rows if row.applications > 0
     ) >= 2
+    weekly_trend_chart_data = {
+        "labels": [row.week_start.isoformat() for row in weekly_trend_rows],
+        "applications": [row.applications for row in weekly_trend_rows],
+        "responses": [row.responses for row in weekly_trend_rows],
+    }
     return render(
         request,
         "metrics/funnel_metrics.html",
@@ -40,5 +45,6 @@ def funnel_metrics(request):
             "data_quality_report": build_data_quality_report(request.user),
             "weekly_trend_rows": weekly_trend_rows,
             "weekly_trend_has_data": weekly_trend_has_data,
+            "weekly_trend_chart_data": weekly_trend_chart_data,
         },
     )
