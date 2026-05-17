@@ -15,10 +15,10 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 | Item | Current State |
 |---|---|
 | Current stable branch | `main` |
-| Latest completed sprint | Sprint 17 — README case study and curated evidence |
-| Latest completed sprint tag | `sprint-17-complete` |
-| Current verified test count | 244 tests passing |
-| Sprint 18 evidence status | Exists on branch `sprint-18-visualization`; not merged/tagged yet |
+| Latest completed sprint | Sprint 18 — Visual Analytics Evidence |
+| Latest completed sprint tag | `sprint-18-complete` |
+| Current verified test count | 249 tests passing |
+| Sprint 19 evidence status | Exists on branch `sprint-19-interview-evidence-workspace`; not merged/tagged yet |
 | Main evidence folder | `docs/evidence/screenshots/` |
 | Analytics documentation folder | `docs/analytics/` |
 
@@ -1027,7 +1027,7 @@ Before considering a sprint complete, confirm:
 
 ### Status
 
-Evidence exists on branch `sprint-18-visualization`. The latest completed sprint tag remains `sprint-17-complete` until Sprint 18 is merged and tagged.
+Completed and tagged as `sprint-18-complete`.
 
 ### Commits
 
@@ -1070,6 +1070,44 @@ docs/evidence/screenshots/sprint-18-chartjs-weekly-trend.png
 ### Reviewer Value
 
 Sprint 18 proves the project can move from Django-native analytics into dashboard-ready BI evidence while preserving privacy boundaries and honest portfolio claims.
+
+---
+
+## Sprint 19 - Interview Evidence Workspace
+
+### Status
+
+In progress on branch:
+
+```text
+sprint-19-interview-evidence-workspace
+```
+
+Not merged or tagged yet.
+
+### Commits
+
+- e1597f3 Sprint 19A: add interview evidence workspace
+- 87a8633 Sprint 19B: add interview workspace screenshot evidence
+
+### Screenshot Evidence
+
+- `docs/evidence/screenshots/sprint-19-interview-evidence-workspace.png`
+
+### What This Sprint Proves
+
+- InterviewPrep detail page was upgraded into an Interview Evidence Workspace.
+- The workspace uses existing application evidence readiness logic.
+- The workspace uses existing Smart Review positioning.
+- It shows readiness label, ready evidence, missing evidence, and recommended next improvement.
+- It shows recommended CV and recommended projects.
+- It shows application context such as company, role, CV version, cover letter version, portfolio indicator, required skills, and job description.
+- It keeps preparation manual and local.
+- It does not add email/calendar automation, scraping, auto-apply, external AI/API integration, or background tasks.
+
+### Reviewer Value
+
+This sprint proves CareerFunnel Tracker supports downstream interview preparation by connecting application evidence, role-fit reasoning, portfolio positioning, and manual preparation evidence in one reviewer-readable workspace.
 
 ---
 
