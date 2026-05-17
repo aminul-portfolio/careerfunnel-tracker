@@ -15,10 +15,10 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 | Item | Current State |
 |---|---|
 | Current stable branch | `main` |
-| Latest completed sprint | Sprint 18 — Visual Analytics Evidence |
-| Latest completed sprint tag | `sprint-18-complete` |
+| Latest completed sprint | Sprint 19 — Interview Evidence Workspace |
+| Latest completed sprint tag | `sprint-19-complete` |
 | Current verified test count | 249 tests passing |
-| Sprint 19 evidence status | Exists on branch `sprint-19-interview-evidence-workspace`; not merged/tagged yet |
+| Sprint 20 evidence status | In progress on branch `sprint-20-portfolio-release-candidate`; not merged/tagged yet |
 | Main evidence folder | `docs/evidence/screenshots/` |
 | Analytics documentation folder | `docs/analytics/` |
 
@@ -820,6 +820,9 @@ This sprint proves the project guides users toward analytics-ready records at th
 | `sprint-14-complete` | Weekly Trend analytics, Funnel Metrics table, DailyLog aggregation, and documentation checkpoint |
 | `sprint-15-complete` | Shared role-fit constants, intake prefill bridge, Evaluation Queue, Application Detail Fit Review, and documentation checkpoint |
 | `sprint-16-complete` | Save-quality warnings, post-save advisory messages, Data Quality Analytics Impact notes, and documentation checkpoint |
+| `sprint-17-complete` | Recruiter-facing case study README and deployment preparation checkpoint |
+| `sprint-18-complete` | Visual analytics evidence, Tableau workbook/screenshots, Chart.js weekly trend checkpoint |
+| `sprint-19-complete` | Interview Evidence Workspace checkpoint |
 
 ---
 
@@ -838,6 +841,8 @@ This sprint proves the project guides users toward analytics-ready records at th
 | Sprint 14 complete | 176 | Weekly trend service, funnel metrics UI, and DailyLog aggregation tests |
 | Sprint 15 complete | 204 | Role-fit constants, intake prefill bridge, Evaluation Queue, and Fit Review tests |
 | Sprint 16 complete | 233 | Save-quality warning service, post-save warnings, and Data Quality Analytics Impact tests |
+| Sprint 18 complete | 244 | Dashboard CSV exports, quality indicators, Tableau evidence, and Chart.js weekly trend visualization |
+| Sprint 19 complete | 249 | Interview Evidence Workspace tests and release-candidate documentation baseline |
 
 ## Test Count Note
 
@@ -1077,13 +1082,7 @@ Sprint 18 proves the project can move from Django-native analytics into dashboar
 
 ### Status
 
-In progress on branch:
-
-```text
-sprint-19-interview-evidence-workspace
-```
-
-Not merged or tagged yet.
+Completed and tagged as `sprint-19-complete`.
 
 ### Commits
 
