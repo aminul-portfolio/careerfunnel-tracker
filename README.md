@@ -4,11 +4,11 @@ CareerFunnel Tracker is a Django portfolio analytics product that turns job-sear
 
 ## Live Demo Status
 
-Deployment is conditional and not yet verified. This Sprint 17A README does not claim a live hosted demo, demo login, production configuration, or public customer usage. If a deployment is added later, it should be verified separately and documented with the exact URL and environment assumptions.
+Deployment is conditional and not yet verified. This README does not claim a live hosted demo, demo login, production configuration, or public customer usage. If a deployment is added later, it should be verified separately and documented with the exact URL and environment assumptions.
 
 ## Current Sprint Position
 
-Sprint 17A is focused only on the recruiter-facing README case study, preservation of the previous internal README in `DEVELOPMENT.md`, and curated screenshot evidence in `docs/screenshots/curated/`. Sprint 17B deployment work has not been started.
+Sprint 17 is complete and tagged. Sprint 18 work on `sprint-18-visualization` adds dashboard-ready synthetic CSV exports, local Tableau evidence, and one Chart.js weekly trend visualization while keeping deployment and public-hosting claims unverified.
 
 ## Business Problem
 
@@ -75,6 +75,12 @@ Data Quality Report showing how missing fields affect downstream analytics trust
 - **Data Quality Report:** analytics-ready rate, quality score, missing-field counts, checks, cleanup actions, and analytics impact notes.
 - **Export Centre:** workbook exports for applications, daily logs, weekly reviews, interview prep, notes, and the full tracker.
 
+## BI / Visual Analytics Evidence
+
+Sprint 18 adds dashboard CSV exports at `dashboards/data/applications.csv` and `dashboards/data/daily_logs.csv` for synthetic demo data only. Local Tableau evidence is stored in `dashboards/tableau/careerfunnel_sprint18_tableau_workbook.twbx`, with screenshots at `docs/evidence/screenshots/sprint-18-performance-dashboard.png` and `docs/evidence/screenshots/sprint-18-quality-dashboard.png`.
+
+Funnel Metrics now includes one Chart.js weekly trend chart, with screenshot evidence at `docs/evidence/screenshots/sprint-18-chartjs-weekly-trend.png`. Chart data is rendered safely with Django `json_script`, and the existing Weekly Trend table remains available. Tableau evidence is local workbook plus screenshots only unless a Tableau Public URL is later verified.
+
 ## Technical Decisions
 
 ### 1. Rule-Based Logic Instead Of Fake AI/LLM Claims
@@ -101,7 +107,7 @@ This is one analytics-readiness definition propagated across operational entry, 
 
 ## Evidence And Verification
 
-Current verified test count: **233 passing**.
+Current verified test count: **244 passing**.
 
 Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/`. The main supporting documentation is:
 
@@ -175,7 +181,10 @@ http://127.0.0.1:8000/
 
 ## What Is Not Claimed
 
-- No verified live deployment is claimed in Sprint 17A.
+- No verified live deployment URL is claimed.
+- No verified Tableau Public URL is claimed.
+- No Power BI implementation is claimed yet.
+- No real/private data is exported through the dashboard CSV pipeline.
 - No real customers, SaaS business, billing system, or production user base is claimed.
 - No external AI, LLM, scraping, auto-apply, Gmail, or Calendar integration is claimed.
 - No scientific CV A/B testing is claimed; CV Version Performance is directional reporting.

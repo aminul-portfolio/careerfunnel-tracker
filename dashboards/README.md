@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This folder contains dashboard-ready CSV extracts for portfolio BI tools. The export pipeline is designed to make CareerFunnel Tracker metrics easy to inspect in tools such as Tableau Public or Power BI without exposing private job-search records.
+This folder contains dashboard-ready CSV extracts for portfolio BI tools. The export pipeline is designed to make CareerFunnel Tracker metrics easy to inspect in local Tableau evidence and future BI-tool imports without exposing private job-search records.
 
 ## Demo Data Only
 
@@ -55,9 +55,19 @@ The six quality indicator fields are safe yes/no flags. They expose whether impo
 - `actual_applications`
 - `hours_spent`
 
-## Tableau / Power BI Usage
+## Tableau Usage / Future BI Imports
 
-Use these CSVs as local dashboard inputs. Tableau Public evidence can be added after the dashboards are created and verified. Power BI is not part of Sprint 18 implementation, but the CSV format is intentionally simple enough for future BI-tool import.
+Use these CSVs as local dashboard inputs. Tableau evidence is stored as a local workbook and screenshot proof. A Tableau Public URL is not added unless it is verified. Power BI is not part of Sprint 18 implementation; the CSV format remains simple enough for a future Sprint 20 or later BI-tool import.
+
+## Sprint 18 Dashboard Evidence
+
+Sprint 18 dashboard evidence includes:
+
+- Local Tableau workbook: `dashboards/tableau/careerfunnel_sprint18_tableau_workbook.twbx`
+- Performance dashboard screenshot: `docs/evidence/screenshots/sprint-18-performance-dashboard.png`
+- Quality dashboard screenshot: `docs/evidence/screenshots/sprint-18-quality-dashboard.png`
+
+These artefacts prove local Tableau dashboard construction from synthetic dashboard CSVs. They do not claim Tableau Public hosting, a live deployment URL, a Power BI dashboard, or use of real/private job-search data.
 
 ## Quality Dashboard Usage
 
