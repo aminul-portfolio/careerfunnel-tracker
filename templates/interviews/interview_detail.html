@@ -1,7 +1,150 @@
-{% extends "base.html" %}{% block title %}Interview Prep | {{ interview.application.company_name }}{% endblock %}{% block page_heading %}Interview Prep Detail{% endblock %}{% block content %}
-<div class="dashboard-grid"><section class="hero-panel"><p class="eyebrow">{{ interview.get_stage_display }}</p><h1>{{ interview.application.company_name }}</h1><p>{{ interview.application.job_title }} — {{ interview.interview_date }}</p><div class="hero-actions"><a href="{% url 'interviews:interview_update' interview.pk %}" class="btn btn-primary">Edit Prep</a><a href="{% url 'interviews:interview_list' %}" class="btn btn-secondary">Back</a></div></section>
-<section class="kpi-grid"><div class="kpi-card"><p>Readiness Score</p><h2>{{ interview.readiness_score }}%</h2></div><div class="kpi-card"><p>Stage</p><h2 class="small-kpi-text">{{ interview.get_stage_display }}</h2></div><div class="kpi-card"><p>Outcome</p><h2 class="small-kpi-text">{{ interview.get_outcome_display }}</h2></div></section>
-<section class="content-card"><div class="card-header"><p class="eyebrow">Preparation Checklist</p><h2>Interview Evidence</h2></div><div class="detail-grid"><div class="detail-item"><span>60-sec profile answer</span><strong>{{ interview.profile_answer_prepared|yesno:"Done,Missing" }}</strong></div><div class="detail-item"><span>Why company/role</span><strong>{{ interview.company_answer_prepared|yesno:"Done,Missing" }}</strong></div><div class="detail-item"><span>Project walkthrough</span><strong>{{ interview.project_walkthrough_prepared|yesno:"Done,Missing" }}</strong></div><div class="detail-item"><span>SQL practice</span><strong>{{ interview.sql_practice_done|yesno:"Done,Missing" }}</strong></div><div class="detail-item"><span>Python practice</span><strong>{{ interview.python_practice_done|yesno:"Done,Missing" }}</strong></div><div class="detail-item"><span>STAR examples</span><strong>{{ interview.star_examples_prepared|yesno:"Done,Missing" }}</strong></div></div></section>
-<section class="dashboard-two-column"><div class="content-card"><div class="card-header"><p class="eyebrow">Topics</p><h2>Expected Topics</h2></div><p class="note-text">{{ interview.expected_topics|default:"No topics added."|linebreaks }}</p></div><div class="content-card"><div class="card-header"><p class="eyebrow">Projects</p><h2>Projects to Mention</h2></div><p class="note-text">{{ interview.projects_to_mention|default:"No projects added."|linebreaks }}</p></div></section>
-<section class="content-card"><div class="card-header"><p class="eyebrow">Reflection</p><h2>Learning / Result</h2></div><p class="note-text">{{ interview.reflection|default:"No reflection yet."|linebreaks }}</p></section>
-<section class="danger-zone"><div><p class="eyebrow">Danger Zone</p><h2>Delete interview prep</h2><p>Delete only if created by mistake.</p></div><a href="{% url 'interviews:interview_delete' interview.pk %}" class="btn btn-danger">Delete</a></section></div>{% endblock %}
+{% extends "base.html" %}
+{% block title %}Interview Prep | {{ interview.application.company_name }}{% endblock %}
+{% block page_heading %}Interview Prep Detail{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel">
+        <p class="eyebrow">{{ interview.get_stage_display }}</p>
+        <h1>{{ interview.application.company_name }}</h1>
+        <p>{{ interview.application.job_title }} — {{ interview.interview_date }}</p>
+        <div class="hero-actions">
+            <a href="{% url 'interviews:interview_update' interview.pk %}" class="btn btn-primary">Edit Prep</a>
+            <a href="{% url 'interviews:interview_list' %}" class="btn btn-secondary">Back</a>
+        </div>
+    </section>
+
+    <section class="kpi-grid">
+        <div class="kpi-card"><p>Readiness Score</p><h2>{{ interview.readiness_score }}%</h2></div>
+        <div class="kpi-card"><p>Stage</p><h2 class="small-kpi-text">{{ interview.get_stage_display }}</h2></div>
+        <div class="kpi-card"><p>Outcome</p><h2 class="small-kpi-text">{{ interview.get_outcome_display }}</h2></div>
+    </section>
+
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Manual Preparation</p>
+            <h2>Interview Evidence Workspace</h2>
+        </div>
+        <p class="muted-text">
+            Local, rule-based workspace for turning saved application evidence into recruiter-friendly interview preparation.
+            No email, calendar, scraping, or API automation is performed here.
+        </p>
+    </section>
+
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Application Evidence</p>
+            <h2>{{ evidence_readiness.readiness_label }}</h2>
+        </div>
+        <h3>Ready evidence</h3>
+        {% if evidence_readiness.ready_items %}
+            <ul class="workflow-list">
+                {% for item in evidence_readiness.ready_items %}
+                    <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="muted-text">No application evidence items are complete yet.</p>
+        {% endif %}
+        <h3>Missing evidence</h3>
+        {% if evidence_readiness.missing_items %}
+            <ul class="workflow-list">
+                {% for item in evidence_readiness.missing_items %}
+                    <li><strong>{{ item }}</strong></li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="diagnosis-box">
+                <strong>Application evidence is complete</strong>
+                <p>Keep this record updated as the interview progresses.</p>
+            </div>
+        {% endif %}
+        <h3>Recommended next improvement</h3>
+        <p class="note-text">{{ evidence_readiness.recommended_next_improvement }}</p>
+    </section>
+
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Smart Review / Interview Positioning</p>
+            <h2>Rule-Based Positioning</h2>
+        </div>
+        <p class="muted-text">Local Smart Review signals to help position this interview manually.</p>
+        <div class="detail-grid">
+            <div class="detail-item"><span>Fit label</span><strong>{{ smart_review.job_fit_label }}</strong></div>
+            <div class="detail-item"><span>Fit score</span><strong>{{ smart_review.job_fit_score }}/100</strong></div>
+            <div class="detail-item"><span>Recommended CV</span><strong>{{ smart_review.recommended_cv }}</strong></div>
+            <div class="detail-item"><span>Next action</span><strong>{{ smart_review.next_action }}</strong></div>
+        </div>
+        <h3>Recommended projects</h3>
+        <ul class="workflow-list">
+            {% for project in smart_review.recommended_projects %}
+                <li>{{ project }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Application Context</p>
+            <h2>Role and Assets</h2>
+        </div>
+        <div class="detail-grid">
+            <div class="detail-item"><span>Company</span><strong>{{ interview.application.company_name }}</strong></div>
+            <div class="detail-item"><span>Job title</span><strong>{{ interview.application.job_title }}</strong></div>
+            <div class="detail-item"><span>CV version</span><strong>{{ interview.application.cv_version|default:"Not specified" }}</strong></div>
+            <div class="detail-item"><span>Cover letter version</span><strong>{{ interview.application.cover_letter_version|default:"Not specified" }}</strong></div>
+            <div class="detail-item"><span>Portfolio included?</span><strong>{{ interview.application.portfolio_project_included|yesno:"Yes,No" }}</strong></div>
+        </div>
+        <section class="dashboard-two-column">
+            <div>
+                <h3>Required skills</h3>
+                <p class="note-text">{{ interview.application.required_skills|default:"No skills captured."|linebreaks }}</p>
+            </div>
+            <div>
+                <h3>Job description</h3>
+                <p class="note-text">{{ interview.application.job_description|default:"No description captured."|linebreaks }}</p>
+            </div>
+        </section>
+    </section>
+
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Preparation Checklist</p>
+            <h2>Interview Evidence</h2>
+        </div>
+        <div class="detail-grid">
+            <div class="detail-item"><span>60-sec profile answer</span><strong>{{ interview.profile_answer_prepared|yesno:"Done,Missing" }}</strong></div>
+            <div class="detail-item"><span>Why company/role</span><strong>{{ interview.company_answer_prepared|yesno:"Done,Missing" }}</strong></div>
+            <div class="detail-item"><span>Project walkthrough</span><strong>{{ interview.project_walkthrough_prepared|yesno:"Done,Missing" }}</strong></div>
+            <div class="detail-item"><span>SQL practice</span><strong>{{ interview.sql_practice_done|yesno:"Done,Missing" }}</strong></div>
+            <div class="detail-item"><span>Python practice</span><strong>{{ interview.python_practice_done|yesno:"Done,Missing" }}</strong></div>
+            <div class="detail-item"><span>STAR examples</span><strong>{{ interview.star_examples_prepared|yesno:"Done,Missing" }}</strong></div>
+            <div class="detail-item"><span>Questions for employer</span><strong>{{ interview.questions_for_employer_prepared|yesno:"Done,Missing" }}</strong></div>
+        </div>
+    </section>
+
+    <section class="dashboard-two-column">
+        <div class="content-card">
+            <div class="card-header"><p class="eyebrow">Topics</p><h2>Expected Topics</h2></div>
+            <p class="note-text">{{ interview.expected_topics|default:"No topics added."|linebreaks }}</p>
+        </div>
+        <div class="content-card">
+            <div class="card-header"><p class="eyebrow">Projects</p><h2>Projects to Mention</h2></div>
+            <p class="note-text">{{ interview.projects_to_mention|default:"No projects added."|linebreaks }}</p>
+        </div>
+    </section>
+
+    <section class="content-card">
+        <div class="card-header"><p class="eyebrow">Reflection</p><h2>Learning / Result</h2></div>
+        <p class="note-text">{{ interview.reflection|default:"No reflection yet."|linebreaks }}</p>
+    </section>
+
+    <section class="danger-zone">
+        <div>
+            <p class="eyebrow">Danger Zone</p>
+            <h2>Delete interview prep</h2>
+            <p>Delete only if created by mistake.</p>
+        </div>
+        <a href="{% url 'interviews:interview_delete' interview.pk %}" class="btn btn-danger">Delete</a>
+    </section>
+</div>
+{% endblock %}

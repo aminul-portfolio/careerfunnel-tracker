@@ -2,6 +2,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
+from apps.applications.services import build_application_evidence_readiness
+from apps.job_intelligence.services import build_smart_review
+
 from .forms import InterviewPrepForm
 from .models import InterviewPrep
 
@@ -15,7 +18,15 @@ def interview_list(request):
 @login_required
 def interview_detail(request, pk):
     interview = get_object_or_404(InterviewPrep, pk=pk, user=request.user)
-    return render(request, "interviews/interview_detail.html", {"interview": interview})
+    return render(
+        request,
+        "interviews/interview_detail.html",
+        {
+            "interview": interview,
+            "evidence_readiness": build_application_evidence_readiness(interview.application),
+            "smart_review": build_smart_review(interview.application),
+        },
+    )
 
 
 @login_required
