@@ -8,7 +8,7 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 ## Current Sprint Position
 
-Sprint 17 is complete and tagged. Sprint 18 work on `sprint-18-visualization` adds dashboard-ready synthetic CSV exports, local Tableau evidence, and one Chart.js weekly trend visualization while keeping deployment and public-hosting claims unverified.
+Sprint 18 is complete and tagged as `sprint-18-complete`. Sprint 19 work on `sprint-19-interview-evidence-workspace` adds an Interview Evidence Workspace that connects Interview Prep with application evidence readiness, Smart Review positioning, recommended CV, recommended projects, role context, and a manual preparation checklist while keeping deployment and public-hosting claims unverified.
 
 ## Business Problem
 
@@ -81,6 +81,12 @@ Sprint 18 adds dashboard CSV exports at `dashboards/data/applications.csv` and `
 
 Funnel Metrics now includes one Chart.js weekly trend chart, with screenshot evidence at `docs/evidence/screenshots/sprint-18-chartjs-weekly-trend.png`. Chart data is rendered safely with Django `json_script`, and the existing Weekly Trend table remains available. Tableau evidence is local workbook plus screenshots only unless a Tableau Public URL is later verified.
 
+## Interview Evidence Workspace
+
+Sprint 19 upgrades the Interview Prep detail page into a rule-based Interview Evidence Workspace. It uses existing `InterviewPrep`, `JobApplication`, application evidence readiness, and Smart Review logic to surface ready evidence, missing evidence, recommended next improvement, recommended CV, recommended projects, required skills, job description, and the manual preparation checklist.
+
+Screenshot evidence is stored at `docs/evidence/screenshots/sprint-19-interview-evidence-workspace.png`. This workspace is local, rule-based, and manually used by the user; it does not perform interview automation or external AI/API actions.
+
 ## Technical Decisions
 
 ### 1. Rule-Based Logic Instead Of Fake AI/LLM Claims
@@ -107,7 +113,7 @@ This is one analytics-readiness definition propagated across operational entry, 
 
 ## Evidence And Verification
 
-Current verified test count: **244 passing**.
+Current verified test count: **249 passing**.
 
 Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/`. The main supporting documentation is:
 
@@ -187,6 +193,8 @@ http://127.0.0.1:8000/
 - No real/private data is exported through the dashboard CSV pipeline.
 - No real customers, SaaS business, billing system, or production user base is claimed.
 - No external AI, LLM, scraping, auto-apply, Gmail, or Calendar integration is claimed.
+- No interview automation or external AI/API interview assistant is claimed.
+- No email, calendar, scraping, auto-apply, or background automation is claimed.
 - No scientific CV A/B testing is claimed; CV Version Performance is directional reporting.
 - No financial return calculation is claimed; Source ROI means source outcome performance.
 - No production database architecture is claimed; SQLite is used for portfolio-scale local review.
