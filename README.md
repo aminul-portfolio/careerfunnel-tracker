@@ -8,7 +8,7 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 ## Current Sprint Position
 
-Sprint 20 is complete and tagged as `sprint-20-complete`. Sprint 21 work on branch `sprint-21-css-completeness-navigation-polish` is release-candidate UI polish only: CSS completeness fixes, clearer navigation, and refreshed curated screenshot evidence. Sprint 21 is pending PR, merge, and tag closeout.
+Sprint 20 is complete and tagged as `sprint-20-complete`. Sprint 21 is complete and tagged as `sprint-21-complete`: release-candidate UI polish only, including CSS completeness fixes, clearer navigation, and refreshed curated screenshot evidence.
 
 ## Business Problem
 

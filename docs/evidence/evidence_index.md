@@ -18,7 +18,7 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 | Latest completed sprint | Sprint 20 — Portfolio Release Candidate Documentation Alignment |
 | Latest completed sprint tag | `sprint-20-complete` |
 | Current verified test count | 249 tests passing |
-| Sprint 21 evidence status | In progress on branch `sprint-21-css-completeness-navigation-polish`; pending PR, merge, and tag closeout |
+| Sprint 21 evidence status | Complete and tagged as `sprint-21-complete` |
 | Main evidence folder | `docs/evidence/screenshots/` |
 | Analytics documentation folder | `docs/analytics/` |
 
@@ -1134,9 +1134,9 @@ This sprint proves the repository can be handed to reviewers with clear evidence
 
 ### Status
 
-In progress on branch `sprint-21-css-completeness-navigation-polish`; pending PR, merge, and tag closeout. No `sprint-21-complete` tag is claimed yet.
+Completed and tagged as `sprint-21-complete`.
 
-### Commits Currently On Branch
+### Included Sprint 21 Commits
 
 - 86a78c1 Sprint 21A.1: fix CSS completeness gaps
 - ded7279 Sprint 21A.2: add sidebar active state
