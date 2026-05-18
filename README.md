@@ -8,7 +8,7 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 ## Current Sprint Position
 
-Sprint 19 is complete and tagged as `sprint-19-complete`. Sprint 20 work on `sprint-20-portfolio-release-candidate` focuses on portfolio release-candidate polish, recruiter handoff, documentation alignment, and curated evidence while keeping deployment and public-hosting claims unverified.
+Sprint 20 is complete and tagged as `sprint-20-complete`. Sprint 21 work on branch `sprint-21-css-completeness-navigation-polish` is release-candidate UI polish only: CSS completeness fixes, clearer navigation, and refreshed curated screenshot evidence. Sprint 21 is pending PR, merge, and tag closeout.
 
 ## Business Problem
 
@@ -40,6 +40,8 @@ CareerFunnel Tracker treats the job search as a small analytics domain. It shows
 6. Review `docs/analytics/metric_definitions.md`, `docs/analytics/analytics_lineage.md`, and `docs/evidence/evidence_index.md` for the supporting evidence trail.
 
 ## Curated Screenshot Gallery
+
+The curated screenshot set was refreshed after Sprint 21 UI polish using real local browser captures. It remains reviewer-facing evidence, not a live deployment claim.
 
 ![Dashboard overview](docs/screenshots/curated/01-dashboard-overview.png)
 

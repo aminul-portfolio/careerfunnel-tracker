@@ -26,6 +26,26 @@ The current release-candidate state is ready for recruiter review as an evidence
 
 ---
 
+## Sprint 21 UI Polish Positioning
+
+Sprint 21 should be presented as UI-only release-candidate polish, not a new analytics or automation release.
+
+Mention these improvements when demoing the interface:
+
+- Premium UI polish improved completeness and consistency for workflow lists, diagnosis boxes, small empty states, and warning messages.
+- Sidebar navigation is grouped into Overview, Workflow, and Analytics.
+- Sidebar active state helps reviewers understand where they are in the product.
+- Application Detail includes section navigation for Status, Evidence, Fit Review, Follow-Up, Role Info, Assets, and Notes.
+- The curated screenshot set was refreshed after real local browser capture following the UI polish.
+
+Key message:
+
+```text
+Sprint 21 improves presentation quality and navigation clarity while preserving the existing rule-based analytics, manual workflows, and evidence-first scope.
+```
+
+---
+
 ## 2-Minute Walkthrough
 
 Use this order when presenting the project.
@@ -298,6 +318,23 @@ This extends the project from analytics reporting into reviewer-ready interview 
 
 ---
 
+### 12. Mention the Sprint 21 UI Polish Pass
+
+Explain:
+
+```text
+The latest Sprint 21 branch is a release-candidate UI polish pass. It improves navigation grouping, active navigation state, Application Detail section navigation, and screenshot freshness without changing analytics logic or adding automation.
+```
+
+Point out:
+
+- Overview, Workflow, and Analytics sidebar groups
+- active sidebar link styling
+- Application Detail section navigation
+- refreshed curated screenshots in `docs/screenshots/curated/`
+
+---
+
 ## Top 5 Features to Mention
 
 ## 1. Funnel Metrics and Diagnosis
@@ -388,6 +425,8 @@ Mention these technical strengths:
 - Authenticated user-specific records
 - Service-layer business logic
 - Template-based dashboard and metrics UI
+- Premium UI polish with grouped sidebar navigation and active state
+- Application Detail section navigation
 - OpenPyXL workbook export generation
 - Dashboard-ready CSV export evidence
 - Local Tableau workbook and screenshot evidence
@@ -527,11 +566,12 @@ Use this flow in a live walkthrough:
 6. Save Quality Warnings
 7. Data Quality Impact Report
 8. Interview Evidence Workspace
-9. Export Centre
-10. Metric Definitions
-11. Analytics Lineage
-12. Evidence Index
-13. Test command
+9. Application Detail section navigation
+10. Export Centre
+11. Metric Definitions
+12. Analytics Lineage
+13. Evidence Index
+14. Test command
 ```
 
 ---
@@ -563,16 +603,17 @@ Use this to prove repository stability.
 For portfolio, GitHub, or LinkedIn, use:
 
 ```text
-docs/evidence/screenshots/sprint-6-dashboard-final-polish.png
-docs/evidence/screenshots/sprint-6-metrics-final-polish.png
-docs/evidence/screenshots/sprint-6-export-centre-final-polish.png
-docs/evidence/screenshots/sprint-18-performance-dashboard.png
-docs/evidence/screenshots/sprint-18-quality-dashboard.png
-docs/evidence/screenshots/sprint-18-chartjs-weekly-trend.png
-docs/evidence/screenshots/sprint-19-interview-evidence-workspace.png
+docs/screenshots/curated/01-dashboard-overview.png
+docs/screenshots/curated/02-evaluation-queue.png
+docs/screenshots/curated/03-job-posting-analyzer-conversion.png
+docs/screenshots/curated/04-funnel-metrics-weekly-trend.png
+docs/screenshots/curated/05-save-quality-warnings.png
+docs/screenshots/curated/06-data-quality-impact-report.png
+docs/screenshots/curated/07-visual-analytics-dashboard.png
+docs/screenshots/curated/08-interview-evidence-workspace.png
 ```
 
-Older sprint evidence screenshots remain useful for showing project progression.
+These curated screenshots were refreshed after the Sprint 21 UI polish pass using real local browser captures. Older sprint evidence screenshots remain useful for showing project progression.
 
 ---
 

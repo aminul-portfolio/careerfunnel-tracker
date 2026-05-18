@@ -15,10 +15,10 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 | Item | Current State |
 |---|---|
 | Current stable branch | `main` |
-| Latest completed sprint | Sprint 19 — Interview Evidence Workspace |
-| Latest completed sprint tag | `sprint-19-complete` |
+| Latest completed sprint | Sprint 20 — Portfolio Release Candidate Documentation Alignment |
+| Latest completed sprint tag | `sprint-20-complete` |
 | Current verified test count | 249 tests passing |
-| Sprint 20 evidence status | In progress on branch `sprint-20-portfolio-release-candidate`; not merged/tagged yet |
+| Sprint 21 evidence status | In progress on branch `sprint-21-css-completeness-navigation-polish`; pending PR, merge, and tag closeout |
 | Main evidence folder | `docs/evidence/screenshots/` |
 | Analytics documentation folder | `docs/analytics/` |
 
@@ -823,6 +823,7 @@ This sprint proves the project guides users toward analytics-ready records at th
 | `sprint-17-complete` | Recruiter-facing case study README and deployment preparation checkpoint |
 | `sprint-18-complete` | Visual analytics evidence, Tableau workbook/screenshots, Chart.js weekly trend checkpoint |
 | `sprint-19-complete` | Interview Evidence Workspace checkpoint |
+| `sprint-20-complete` | Portfolio release-candidate documentation alignment and recruiter handoff checkpoint |
 
 ---
 
@@ -843,6 +844,7 @@ This sprint proves the project guides users toward analytics-ready records at th
 | Sprint 16 complete | 233 | Save-quality warning service, post-save warnings, and Data Quality Analytics Impact tests |
 | Sprint 18 complete | 244 | Dashboard CSV exports, quality indicators, Tableau evidence, and Chart.js weekly trend visualization |
 | Sprint 19 complete | 249 | Interview Evidence Workspace tests and release-candidate documentation baseline |
+| Sprint 21C validation | 249 | UI-only polish branch still pending closeout; tests passed after curated screenshot refresh |
 
 ## Test Count Note
 
@@ -1107,6 +1109,70 @@ Completed and tagged as `sprint-19-complete`.
 ### Reviewer Value
 
 This sprint proves CareerFunnel Tracker supports downstream interview preparation by connecting application evidence, role-fit reasoning, portfolio positioning, and manual preparation evidence in one reviewer-readable workspace.
+
+---
+
+## Sprint 20 - Portfolio Release Candidate Documentation Alignment
+
+### Status
+
+Completed and tagged as `sprint-20-complete`.
+
+### What This Sprint Proves
+
+- Portfolio-facing documentation was aligned for recruiter review.
+- Evidence and presentation notes were kept honest about deployment, automation, BI, and commercial limitations.
+- The project entered a release-candidate documentation baseline before Sprint 21 UI polish.
+
+### Reviewer Value
+
+This sprint proves the repository can be handed to reviewers with clear evidence, limitations, and presentation guidance.
+
+---
+
+## Sprint 21 - CSS Completeness + Navigation Polish
+
+### Status
+
+In progress on branch `sprint-21-css-completeness-navigation-polish`; pending PR, merge, and tag closeout. No `sprint-21-complete` tag is claimed yet.
+
+### Commits Currently On Branch
+
+- 86a78c1 Sprint 21A.1: fix CSS completeness gaps
+- ded7279 Sprint 21A.2: add sidebar active state
+- 1660096 Sprint 21B: add navigation grouping and application section nav
+- 82c6754 Sprint 21C: refresh curated screenshots after UI polish
+
+### Evidence Files
+
+```text
+README.md
+docs/evidence/evidence_index.md
+docs/evidence/portfolio_presentation_notes.md
+docs/screenshots/curated/01-dashboard-overview.png
+docs/screenshots/curated/02-evaluation-queue.png
+docs/screenshots/curated/03-job-posting-analyzer-conversion.png
+docs/screenshots/curated/04-funnel-metrics-weekly-trend.png
+docs/screenshots/curated/05-save-quality-warnings.png
+docs/screenshots/curated/06-data-quality-impact-report.png
+docs/screenshots/curated/07-visual-analytics-dashboard.png
+docs/screenshots/curated/08-interview-evidence-workspace.png
+```
+
+### What This Sprint Proves
+
+- Sprint 21 is UI-only polish; it does not add analytics logic, automation, deployment, or commercial product claims.
+- CSS completeness gaps were fixed for `workflow-list`, `diagnosis-box`, `small-empty-state`, and `message-warning`.
+- Undefined CSS variable references were replaced with existing safe styling.
+- Sidebar active state was added.
+- Sidebar navigation was grouped into Overview, Workflow, and Analytics.
+- Application Detail received section navigation for Status, Evidence, Fit Review, Follow-Up, Role Info, Assets, and Notes.
+- The curated screenshot set was refreshed after real local browser capture.
+- 249 tests passed after Sprint 21C validation.
+
+### Reviewer Value
+
+This sprint improves portfolio presentation quality and navigation clarity while preserving the project's existing rule-based, local, evidence-first scope.
 
 ---
 
