@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Career Evidence | CareerFunnel Tracker{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/career_evidence.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-page career-evidence-page">
+    <section class="hero-panel dashboard-hero">
+        <div>
+            <p class="eyebrow">Career Evidence OS</p>
+            <h1>Evidence viewer dashboard</h1>
+            <p>
+                Read-only browser view of generated V1-V3 Markdown evidence. This UI does not
+                regenerate reports or change repository files.
+            </p>
+            <div class="evidence-strip">
+                <span class="evidence-strip-item">{{ available_count }} / {{ total_count }} reports available</span>
+                <span class="evidence-strip-item">Portfolio evidence only</span>
+                <span class="evidence-strip-item">Authenticated access</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="career-evidence-card-grid">
+        {% for card in cards %}
+        <article class="content-card career-evidence-card">
+            <div class="card-header card-header-row">
+                <div>
+                    <p class="eyebrow">Career Evidence</p>
+                    <h2>{{ card.title }}</h2>
+                    <p>{{ card.description }}</p>
+                </div>
+                <span class="badge {{ card.status_class }}">{{ card.status_label }}</span>
+            </div>
+
+            <dl class="career-evidence-meta">
+                <div>
+                    <dt>Source file</dt>
+                    <dd><code>{{ card.source_path }}</code></dd>
+                </div>
+                <div>
+                    <dt>Last modified</dt>
+                    <dd>{% if card.modified_at %}{{ card.modified_at }}{% else %}<em>Not available</em>{% endif %}</dd>
+                </div>
+            </dl>
+
+            {% if card.stats %}
+            <ul class="career-evidence-stats">
+                {% for label, value in card.stats.items %}
+                <li><strong>{{ label|title }}:</strong> {{ value }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            <div class="form-actions">
+                {% if card.exists %}
+                <a href="{% url card.url_name %}" class="btn btn-primary">Open report</a>
+                {% else %}
+                <span class="btn btn-secondary" aria-disabled="true">Report file missing</span>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </section>
+</div>
+{% endblock %}

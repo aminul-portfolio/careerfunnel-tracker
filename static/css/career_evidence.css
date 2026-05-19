@@ -1,0 +1,139 @@
+.career-evidence-page {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.career-evidence-card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.career-evidence-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-height: 100%;
+}
+
+.career-evidence-meta {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+}
+
+.career-evidence-meta div {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.career-evidence-meta dt {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-muted);
+}
+
+.career-evidence-meta dd {
+    margin: 0;
+    color: var(--color-text);
+    line-height: 1.5;
+}
+
+.career-evidence-stats {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--color-muted);
+    line-height: 1.6;
+}
+
+.career-evidence-detail .detail-meta {
+    margin-bottom: 0.5rem;
+}
+
+.career-evidence-missing {
+    margin-top: 1.25rem;
+    text-align: left;
+}
+
+.evidence-markdown {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-soft);
+    line-height: 1.7;
+    color: var(--color-text);
+}
+
+.evidence-markdown h1,
+.evidence-markdown h2,
+.evidence-markdown h3 {
+    margin: 1.5rem 0 0.75rem;
+    line-height: 1.25;
+}
+
+.evidence-markdown h1 {
+    font-size: 1.75rem;
+}
+
+.evidence-markdown h2 {
+    font-size: 1.35rem;
+}
+
+.evidence-markdown h3 {
+    font-size: 1.1rem;
+}
+
+.evidence-markdown p,
+.evidence-markdown ul,
+.evidence-markdown pre,
+.evidence-markdown blockquote,
+.evidence-markdown .table-wrap {
+    margin: 0 0 1rem;
+}
+
+.evidence-markdown ul {
+    padding-left: 1.25rem;
+}
+
+.evidence-markdown code {
+    background: #f1f5f9;
+    border-radius: 6px;
+    padding: 0.1rem 0.35rem;
+    font-size: 0.92em;
+}
+
+.evidence-markdown pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.evidence-markdown pre code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+}
+
+.evidence-markdown blockquote {
+    border-left: 4px solid var(--color-primary);
+    padding: 0.5rem 0 0.5rem 1rem;
+    color: var(--color-muted);
+    background: #f8fafc;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.evidence-table th,
+.evidence-table td {
+    vertical-align: top;
+}
+
+@media (max-width: 1100px) {
+    .career-evidence-card-grid {
+        grid-template-columns: 1fr;
+    }
+}
