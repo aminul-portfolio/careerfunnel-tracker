@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} | Career Evidence{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/career_evidence.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-page career-evidence-page">
+    <section class="content-card career-evidence-detail">
+        <div class="card-header card-header-row">
+            <div>
+                <p class="eyebrow">Career Evidence</p>
+                <h1>{{ page_title }}</h1>
+                <p>{{ page_description }}</p>
+            </div>
+            <span class="badge {{ status_class }}">{{ status_label }}</span>
+        </div>
+
+        <dl class="career-evidence-meta detail-meta">
+            <div>
+                <dt>Source file</dt>
+                <dd><code>{{ source_path }}</code></dd>
+            </div>
+            <div>
+                <dt>Last modified</dt>
+                <dd>{% if modified_at %}{{ modified_at }}{% else %}<em>Not available</em>{% endif %}</dd>
+            </div>
+        </dl>
+
+        <div class="form-actions">
+            <a href="{% url 'dashboard:career_evidence_index' %}" class="btn btn-secondary">Back to Career Evidence</a>
+        </div>
+
+        {% if exists %}
+        <article class="evidence-markdown">
+            {{ html_content|safe }}
+        </article>
+        {% else %}
+        <div class="empty-state career-evidence-missing">
+            <h2>Evidence file not found</h2>
+            <p>
+                Expected Markdown at <code>{{ source_path }}</code>. Generate the report with
+                <code>python tools/career_job_fit_matrix.py</code> and refresh this page.
+            </p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
