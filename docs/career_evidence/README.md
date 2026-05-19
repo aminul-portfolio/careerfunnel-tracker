@@ -78,6 +78,13 @@ Or:
 python manage.py test tests.test_career_evidence_audit tests.test_career_job_fit_matrix tests.test_career_recruiter_pack
 ```
 
+## Portfolio project evidence
+
+Portfolio-level reviews for the user's major GitHub projects live separately from the generated CareerFunnel V1-V3 reports above. They document implemented vs planned features, safe claims, and validation status per project without mixing other repositories into CareerFunnel's generated evidence.
+
+- [portfolio_project_index.md](portfolio_project_index.md) -- priority table and claim-safety rules
+- [portfolio_projects/](portfolio_projects/) -- one evidence review file per portfolio project
+
 ## Principles
 
 - Count and cite only what exists in the repository.
