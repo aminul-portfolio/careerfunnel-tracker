@@ -8,7 +8,7 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 ## Current Sprint Position
 
-Sprint 20 is complete and tagged as `sprint-20-complete`. Sprint 21 is complete and tagged as `sprint-21-complete`: release-candidate UI polish only, including CSS completeness fixes, clearer navigation, and refreshed curated screenshot evidence.
+Sprint 20 is complete and tagged as `sprint-20-complete`. Sprint 21 is complete and tagged as `sprint-21-complete`: release-candidate UI polish only, including CSS completeness fixes, clearer navigation, and refreshed curated screenshot evidence. Sprint 22 is complete and tagged as `sprint-22-complete`: portfolio handoff documentation only, including recruiter conversion, interview explanation, feature-to-skill hiring value mapping, and the portfolio handoff checklist under `docs/evidence/`.
 
 ## Business Problem
 
