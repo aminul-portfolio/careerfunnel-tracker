@@ -1,4 +1,4 @@
-# Career Evidence (Sprint 23 - Phase 1A / Sprint 23B)
+# Career Evidence (Sprint 23 - V1 / V2 / V3)
 
 This folder holds **local, repository-derived evidence** for CareerFunnel Tracker. Tools use the Python standard library only and do not call external APIs, LLMs, or integrations.
 
@@ -7,8 +7,9 @@ This folder holds **local, repository-derived evidence** for CareerFunnel Tracke
 | File | Purpose |
 | --- | --- |
 | `01_project_evidence_report.md` | V1 inventory: docs, tests, templates, static assets, screenshots, Git status |
-| `02_job_fit_matrix.md` | V2 job-fit matrix: maps a pasted job description to repository evidence |
-| `sample_job_description.txt` | Input job description for the matrix generator |
+| `02_job_fit_matrix.md` | V2 job-fit matrix: maps a job description to repository evidence |
+| `03_recruiter_evidence_pack.md` | V3 recruiter pack: CV bullets, LinkedIn summary, interview points |
+| `sample_job_description.txt` | Input job description for the V2 matrix generator |
 
 ## Regenerate the evidence report (V1)
 
@@ -35,27 +36,50 @@ python tools/career_job_fit_matrix.py
 - Builds a requirement table with **Evidence Strength** (`Strong`, `Partial`, `Missing`) and **Confidence** (`High`, `Medium`, `Low`).
 - Summarizes strongest matches, partial matches, gaps, and an overall fit assessment without inventing deployments, APIs, users, or integrations.
 
-### Evidence-only rules
+## Regenerate the recruiter evidence pack (V3)
 
-- Every **Repository Evidence** cell must point to files or Git metadata that exist in this repo.
+Prerequisites: V1 and V2 outputs should exist (`01_project_evidence_report.md`, `02_job_fit_matrix.md`) plus `README.md`.
+
+```bash
+python tools/career_recruiter_pack.py
+```
+
+Review `docs/career_evidence/03_recruiter_evidence_pack.md`.
+
+### What V3 does
+
+- Reads existing evidence from README, V1 inventory report, and V2 job-fit matrix.
+- Produces recruiter-facing sections: positioning, CV bullets, LinkedIn summary, interview talking points, and limitations.
+- Uses cautious, evidence-based wording (demonstrates, shows evidence of, supports, portfolio evidence).
+- Does not invent deployment, SaaS status, production users, external AI, or Gmail/Calendar automation.
+
+### Evidence-only rules for recruiter wording
+
+- Every claim must trace to README, V1, or V2 content; do not add new product claims.
+- Avoid exaggerated phrases (e.g. enterprise-grade, production-scale, fully automated, commercial SaaS, real users, deployed platform).
+- Keep deployment, API, and integration limitations visible in **Evidence Limitations**.
+- Re-run V1 and V2 before V3 when repository evidence changes materially.
+
+### General evidence rules
+
+- Every **Repository Evidence** cell (V2) must point to files that exist in this repo.
 - Use `Missing` when no supporting path is found; do not guess.
 - Do not claim production usage, live demos, external AI, Gmail/Calendar automation, or public REST APIs unless verified in the repository.
-- Re-run the generator after evidence or job-description changes.
 
 ## Run tool tests
 
 ```bash
-python -m unittest tests.test_career_evidence_audit tests.test_career_job_fit_matrix -v
+python -m unittest tests.test_career_evidence_audit tests.test_career_job_fit_matrix tests.test_career_recruiter_pack -v
 ```
 
 Or:
 
 ```bash
-python manage.py test tests.test_career_evidence_audit tests.test_career_job_fit_matrix
+python manage.py test tests.test_career_evidence_audit tests.test_career_job_fit_matrix tests.test_career_recruiter_pack
 ```
 
 ## Principles
 
 - Count and cite only what exists in the repository.
-- Project summaries come from README or the sample job file, not invented marketing copy.
-- Phase 1A/23B are audit-only: no dashboard UI, API, or integration changes.
+- Summaries come from README or generated evidence files, not invented marketing copy.
+- V1/V2/V3 are documentation tooling only: no dashboard UI, API, or integration changes.
