@@ -1,0 +1,31 @@
+# Junior Data Analyst / BI Analyst / Reporting Analyst
+
+## Role summary
+
+We are hiring a junior analytics professional to support reporting, dashboard delivery, and data quality checks for operational teams. The role focuses on SQL-based analysis, clear KPI reporting, and reliable documentation rather than production ML or unverified automation claims.
+
+## Responsibilities
+
+- Build and maintain Python and Django-backed internal reporting tools.
+- Write SQL queries and work with relational databases to support funnel and performance metrics.
+- Produce dashboards and recurring reports for stakeholders (response rates, pipeline stages, weekly trends).
+- Monitor data quality, missing fields, and downstream impact on reporting trust.
+- Export datasets to CSV/Excel for review and BI handoff.
+- Document metric definitions, lineage, and evidence for audit-ready review.
+- Use Git and GitHub for version control and CI-backed test discipline.
+- Communicate findings clearly to non-technical stakeholders.
+- Follow disciplined workflows; external email/calendar automation is not required for this role.
+
+## Requirements
+
+- Python fundamentals and willingness to work in a Django codebase.
+- Understanding of SQL, relational models, and data validation concepts.
+- Experience or coursework in data analysis, reporting, and KPI tracking.
+- Attention to documentation and test-backed changes.
+- Comfort explaining trade-offs (e.g. local SQLite vs production warehouse) honestly.
+
+## Nice to have (not required)
+
+- Tableau or Power BI familiarity for dashboard exports.
+- Exposure to analytics engineering patterns (governed metrics, quality warnings).
+- Portfolio evidence packs for recruiter and interview review.
