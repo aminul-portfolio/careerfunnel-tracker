@@ -85,6 +85,14 @@ Portfolio-level reviews for the user's major GitHub projects live separately fro
 - [portfolio_project_index.md](portfolio_project_index.md) -- priority table and claim-safety rules
 - [portfolio_projects/](portfolio_projects/) -- one evidence review file per portfolio project
 
+Sprint 24C presentation materials (derived from portfolio evidence; separate from V1-V3 generated reports):
+
+- [portfolio_presentation_pack.md](portfolio_presentation_pack.md) -- master recruiter-facing portfolio pack
+- [github_pinned_repo_strategy.md](github_pinned_repo_strategy.md) -- GitHub pin order and repo descriptions
+- [cv_project_bullet_bank.md](cv_project_bullet_bank.md) -- CV-ready bullets by project and role
+- [linkedin_featured_project_order.md](linkedin_featured_project_order.md) -- LinkedIn Featured order and wording
+- [interview_project_talking_points.md](interview_project_talking_points.md) -- interview scripts and STAR examples
+
 ## Principles
 
 - Count and cite only what exists in the repository.

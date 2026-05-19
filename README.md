@@ -164,6 +164,8 @@ This is one analytics-readiness definition propagated across operational entry, 
 
 For a portfolio-level evidence map across the user's major GitHub projects, see `docs/career_evidence/portfolio_project_index.md`.
 
+For recruiter-facing portfolio presentation materials, see `docs/career_evidence/portfolio_presentation_pack.md`.
+
 Current verified test count: **249 passing**.
 
 Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/`. The main supporting documentation is:
