@@ -10,6 +10,17 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 Sprint 20 is complete and tagged as `sprint-20-complete`. Sprint 21 is complete and tagged as `sprint-21-complete`: release-candidate UI polish only, including CSS completeness fixes, clearer navigation, and refreshed curated screenshot evidence. Sprint 22 is complete and tagged as `sprint-22-complete`: portfolio handoff documentation only, including recruiter conversion, interview explanation, feature-to-skill hiring value mapping, and the portfolio handoff checklist under `docs/evidence/`.
 
+Sprint 23 delivered the **Career Evidence OS** (repository-derived evidence tooling and reviewer surfaces):
+
+- **Sprint 23A -- Career Evidence Report** (`sprint-23a-career-evidence-v1`): V1 project evidence inventory via `tools/career_evidence_audit.py`.
+- **Sprint 23B -- Job-Fit Matrix** (`sprint-23b-job-fit-matrix`): V2 requirement-to-repository mapping via `tools/career_job_fit_matrix.py`.
+- **Sprint 23C -- Recruiter Evidence Pack** (`sprint-23c-recruiter-evidence-pack`): V3 recruiter-facing pack via `tools/career_recruiter_pack.py`.
+- **Sprint 23D -- Career Evidence Dashboard UI** (`sprint-23d-complete`): authenticated dashboard pages under `/dashboard/career-evidence/`.
+- **Sprint 23E -- Playwright Screenshot Automation** (`sprint-23e-complete`): local PNG captures in `docs/screenshots/career_evidence/`.
+- **Sprint 23F -- Optional Notion Metadata Sync** (`sprint-23f-complete`): optional metadata/status upsert to Notion; see `docs/notion/README.md`.
+
+Sprint 24A (**Portfolio Front Door Evidence Alignment**, branch `sprint-24a-portfolio-front-door`) aligns public README and evidence-index documentation with the Sprint 23 deliverables above.
+
 ## Business Problem
 
 Job-search activity quickly becomes fragmented across job boards, spreadsheets, CV versions, follow-up reminders, and interview notes. That makes it hard to answer basic reporting questions:
@@ -38,6 +49,34 @@ CareerFunnel Tracker treats the job search as a small analytics domain. It shows
 4. Create or edit an application and observe the save-quality warnings for analytics-critical gaps.
 5. Open the Data Quality Report and connect the warnings back to reporting impact.
 6. Review `docs/analytics/metric_definitions.md`, `docs/analytics/analytics_lineage.md`, and `docs/evidence/evidence_index.md` for the supporting evidence trail.
+
+### Career Evidence reviewer path (Sprint 23)
+
+After the core tracker walkthrough above, use this path for the Career Evidence OS:
+
+1. Read `docs/evidence/career_evidence_walkthrough.md` for purpose, V1-V6 flow, and claims boundaries.
+2. Open **Career Evidence** at `/dashboard/career-evidence/` (local dev server; login required).
+3. Inspect the four dashboard surfaces: overview, Project Evidence (V1), Job-Fit Matrix (V2), and Recruiter Pack (V3).
+4. Compare UI content to markdown under `docs/career_evidence/` (`01_project_evidence_report.md`, `02_job_fit_matrix.md`, `03_recruiter_evidence_pack.md`).
+5. Review Playwright screenshot evidence in `docs/screenshots/career_evidence/` (V5).
+6. Optional: read `docs/notion/README.md` for V6 metadata-only Notion sync (no runtime dependency on Notion).
+
+Regenerate V1-V3 markdown from the repository root when evidence changes materially; see `docs/career_evidence/README.md`.
+
+## Career Evidence OS
+
+The **Career Evidence OS** is a local, repository-derived evidence layer for portfolio and recruiter review. It does not add external AI, live deployment claims, or job-search automation. Tools use the Python standard library and existing repo paths only.
+
+| Version | Deliverable | What reviewers see |
+| --- | --- | --- |
+| **V1** | Project Evidence Report | Inventory of docs, tests, templates, screenshots, and Git context (`docs/career_evidence/01_project_evidence_report.md`) |
+| **V2** | Job-Fit Matrix | Requirement-to-repository mapping with evidence strength (`docs/career_evidence/02_job_fit_matrix.md`) |
+| **V3** | Recruiter Evidence Pack | CV bullets, LinkedIn summary, and interview points traced to V1/V2 (`docs/career_evidence/03_recruiter_evidence_pack.md`) |
+| **V4** | Dashboard UI | Authenticated pages that render the markdown evidence for browser review (`/dashboard/career-evidence/`) |
+| **V5** | Playwright screenshots | Curated PNGs in `docs/screenshots/career_evidence/` (local capture; not production monitoring) |
+| **V6** | Notion sync (optional) | Metadata/status upsert only; see `docs/notion/README.md` |
+
+Evidence flow: generate **V1 -> V2 -> V3** markdown with `tools/`, review in **V4**, refresh **V5** screenshots when UI or content changes, optionally run **V6** to mirror status in Notion. Full walkthrough: `docs/evidence/career_evidence_walkthrough.md`. Index: `docs/evidence/evidence_index.md` (Sprint 23 section).
 
 ## Curated Screenshot Gallery
 
@@ -130,6 +169,8 @@ Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing scr
 - `docs/analytics/metric_definitions.md`
 - `docs/analytics/analytics_lineage.md`
 - `docs/evidence/evidence_index.md`
+- `docs/evidence/career_evidence_walkthrough.md`
+- `docs/career_evidence/README.md`
 - `DEVELOPMENT.md` for the previous internal/development README preserved during Sprint 17A
 
 Recommended verification commands:
@@ -139,6 +180,7 @@ python manage.py test
 ruff check .
 python manage.py check
 python manage.py makemigrations --dry-run
+python manage.py test tests.test_career_evidence_audit tests.test_career_job_fit_matrix tests.test_career_recruiter_pack tests.test_career_evidence_views tests.test_career_evidence_screenshot_config tests.test_notion_sync_config
 ```
 
 ## Tech Stack
@@ -183,7 +225,10 @@ http://127.0.0.1:8000/
 - `apps/exports/` contains workbook export flows.
 - `docs/analytics/` contains metric definitions and analytics lineage.
 - `docs/evidence/` contains sprint evidence and historical screenshots.
+- `docs/career_evidence/` contains V1-V3 Career Evidence markdown generated from the repository.
+- `docs/screenshots/career_evidence/` contains Career Evidence dashboard screenshot evidence (Sprint 23E).
 - `docs/screenshots/curated/` contains the recruiter-facing screenshot set used by this README.
+- `docs/notion/README.md` documents optional V6 Notion metadata sync (Sprint 23F).
 - `DEVELOPMENT.md` preserves the previous internal/development README.
 
 ## What This Project Demonstrates

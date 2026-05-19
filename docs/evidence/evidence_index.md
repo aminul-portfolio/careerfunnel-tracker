@@ -15,11 +15,14 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 | Item | Current State |
 |---|---|
 | Current stable branch | `main` |
-| Latest completed sprint | Sprint 20 — Portfolio Release Candidate Documentation Alignment |
-| Latest completed sprint tag | `sprint-20-complete` |
+| Latest completed sprint family | Sprint 23 -- Career Evidence OS (23A-23F) |
+| Latest sprint tags (23) | `sprint-23a-career-evidence-v1` through `sprint-23f-complete` |
+| Current documentation sprint | Sprint 24A -- Portfolio Front Door Evidence Alignment (`sprint-24a-portfolio-front-door`) |
 | Current verified test count | 249 tests passing |
-| Sprint 21 evidence status | Complete and tagged as `sprint-21-complete` |
+| Sprint 21-22 evidence status | Complete (`sprint-21-complete`, `sprint-22-complete`) |
 | Main evidence folder | `docs/evidence/screenshots/` |
+| Career Evidence markdown | `docs/career_evidence/` |
+| Career Evidence screenshots | `docs/screenshots/career_evidence/` |
 | Analytics documentation folder | `docs/analytics/` |
 
 ---
@@ -631,7 +634,7 @@ docs/evidence/evidence_index.md
 - Response counts use existing `_RESPONSE_STATUSES`; response rate uses `safe_percentage()`.
 - Funnel Metrics displays a Weekly Trend table (no chart in Sprint 14).
 - `build_funnel_metrics()` aggregates `DailyLog` fields in one ORM `aggregate()` call instead of Python iteration.
-- Metric definitions and evidence index reflect Sprints 7–14.
+- Metric definitions and evidence index reflect Sprints 7-14.
 
 ### Key Features Proven
 
@@ -643,7 +646,7 @@ docs/evidence/evidence_index.md
 
 ### Reviewer Value
 
-This sprint proves the project can add time-based funnel analytics with governed metrics, efficient aggregation, and reviewer-ready documentation—without charts, fake AI, or undeployed production claims.
+This sprint proves the project can add time-based funnel analytics with governed metrics, efficient aggregation, and reviewer-ready documentation--without charts, fake AI, or undeployed production claims.
 
 ---
 
@@ -708,7 +711,7 @@ docs/evidence/evidence_index.md
 
 ### Reviewer Value
 
-This sprint proves the project connects pre-application analysis to saved application records with consistent scoring, a clear evaluation queue, and honest manual submission—without fake automation or external AI dependencies.
+This sprint proves the project connects pre-application analysis to saved application records with consistent scoring, a clear evaluation queue, and honest manual submission--without fake automation or external AI dependencies.
 
 ---
 
@@ -753,7 +756,7 @@ docs/evidence/evidence_index.md
 
 - `SaveQualityWarning` and `build_save_quality_warnings()` detect analytics-critical gaps on saved `JobApplication` records.
 - Application create and update show advisory Django warning messages after a successful save; saves are not blocked and forms are not rejected with `form.add_error()`.
-- Source warnings use accurate “cannot attribute / grouped under Other” wording for Source ROI impact.
+- Source warnings use accurate "cannot attribute / grouped under Other" wording for Source ROI impact.
 - The Data Quality Report includes quantified Analytics Impact notes explaining which analytics reports are affected by current data gaps.
 - Warnings are local and rule-based, not live AI/API integration.
 
@@ -774,7 +777,7 @@ docs/evidence/evidence_index.md
 
 ### Reviewer Value
 
-This sprint proves the project guides users toward analytics-ready records at the point of entry and explains downstream report impact honestly—without blocking saves, fake AI claims, or undeployed automation.
+This sprint proves the project guides users toward analytics-ready records at the point of entry and explains downstream report impact honestly--without blocking saves, fake AI claims, or undeployed automation.
 
 ---
 
@@ -824,6 +827,14 @@ This sprint proves the project guides users toward analytics-ready records at th
 | `sprint-18-complete` | Visual analytics evidence, Tableau workbook/screenshots, Chart.js weekly trend checkpoint |
 | `sprint-19-complete` | Interview Evidence Workspace checkpoint |
 | `sprint-20-complete` | Portfolio release-candidate documentation alignment and recruiter handoff checkpoint |
+| `sprint-21-complete` | UI polish and curated screenshot refresh checkpoint |
+| `sprint-22-complete` | Portfolio handoff documentation checkpoint |
+| `sprint-23a-career-evidence-v1` | V1 project evidence report checkpoint |
+| `sprint-23b-job-fit-matrix` | V2 job-fit matrix checkpoint |
+| `sprint-23c-recruiter-evidence-pack` | V3 recruiter evidence pack checkpoint |
+| `sprint-23d-complete` | V4 Career Evidence dashboard UI checkpoint |
+| `sprint-23e-complete` | V5 Playwright screenshot automation checkpoint |
+| `sprint-23f-complete` | V6 optional Notion metadata sync checkpoint |
 
 ---
 
@@ -929,16 +940,36 @@ Purpose:
 - Confirm tracker data can be reviewed or backed up.
 - Confirm no fake export data is used.
 
-## 6. Review Tests
+## 6. Review Career Evidence OS (Sprint 23)
+
+```text
+docs/evidence/career_evidence_walkthrough.md
+docs/career_evidence/README.md
+docs/career_evidence/01_project_evidence_report.md
+docs/career_evidence/02_job_fit_matrix.md
+docs/career_evidence/03_recruiter_evidence_pack.md
+docs/screenshots/career_evidence/
+/dashboard/career-evidence/   (local dev, authenticated)
+docs/notion/README.md         (optional V6)
+```
+
+Purpose:
+
+- Follow V1-V6 evidence flow from generated markdown through dashboard UI and screenshots.
+- Confirm claims stay repository-derived and portfolio-safe.
+
+## 7. Review Tests
 
 ```powershell
 python manage.py test
+python manage.py test tests.test_career_evidence_audit tests.test_career_job_fit_matrix tests.test_career_recruiter_pack tests.test_career_evidence_views tests.test_career_evidence_screenshot_config tests.test_notion_sync_config
 ```
 
 Purpose:
 
 - Confirm service-layer analytics logic is tested.
 - Confirm export routes are protected and functional.
+- Confirm Career Evidence tools, views, screenshot config, and Notion sync config behave as documented.
 - Confirm the repository is stable.
 
 ---
@@ -1176,6 +1207,104 @@ This sprint improves portfolio presentation quality and navigation clarity while
 
 ---
 
+## Sprint 22 - Portfolio Handoff Documentation
+
+### Status
+
+Completed and tagged as `sprint-22-complete`.
+
+### Evidence Files
+
+```text
+docs/evidence/recruiter_conversion_pack.md
+docs/evidence/interview_explanation_pack.md
+docs/evidence/feature_skill_hiring_value_map.md
+docs/evidence/portfolio_handoff_checklist.md
+```
+
+### What This Sprint Proves
+
+- Recruiter conversion, interview explanation, feature-to-skill mapping, and handoff checklist live under `docs/evidence/`.
+- Documentation supports portfolio review without changing analytics behaviour.
+
+### Reviewer Value
+
+This sprint gives reviewers structured talking points and handoff checklists separate from the core tracker UI.
+
+---
+
+# Sprint 23 -- Career Evidence OS
+
+Sprint 23 adds a **repository-derived evidence layer** for portfolio and recruiter review: markdown reports (V1-V3), dashboard surfaces (V4), Playwright screenshots (V5), and optional Notion metadata sync (V6). No external AI, live deployment, or job-search automation is introduced.
+
+| Sprint | Tag | Version | Primary evidence |
+| --- | --- | --- | --- |
+| 23A -- Career Evidence Report | `sprint-23a-career-evidence-v1` | V1 | `docs/career_evidence/01_project_evidence_report.md` |
+| 23B -- Job-Fit Matrix | `sprint-23b-job-fit-matrix` | V2 | `docs/career_evidence/02_job_fit_matrix.md` |
+| 23C -- Recruiter Evidence Pack | `sprint-23c-recruiter-evidence-pack` | V3 | `docs/career_evidence/03_recruiter_evidence_pack.md` |
+| 23D -- Career Evidence Dashboard UI | `sprint-23d-complete` | V4 | `/dashboard/career-evidence/` (local) |
+| 23E -- Playwright Screenshot Automation | `sprint-23e-complete` | V5 | `docs/screenshots/career_evidence/` |
+| 23F -- Optional Notion Metadata Sync | `sprint-23f-complete` | V6 | `docs/notion/README.md` |
+
+### Reviewer entry points
+
+```text
+docs/career_evidence/README.md
+docs/evidence/career_evidence_walkthrough.md
+README.md (Career Evidence OS + reviewer path)
+```
+
+### V1 -- Project Evidence Report (23A)
+
+- Tool: `tools/career_evidence_audit.py`
+- Output: `docs/career_evidence/01_project_evidence_report.md`
+- Proves: inventory of docs, tests, templates, static assets, screenshots, and Git context from the repo only.
+
+### V2 -- Job-Fit Matrix (23B)
+
+- Tool: `tools/career_job_fit_matrix.py`
+- Input: `docs/career_evidence/sample_job_description.txt`
+- Output: `docs/career_evidence/02_job_fit_matrix.md`
+- Proves: requirement rows with evidence strength (`Strong` / `Partial` / `Missing`) mapped to real repository paths.
+
+### V3 -- Recruiter Evidence Pack (23C)
+
+- Tool: `tools/career_recruiter_pack.py`
+- Output: `docs/career_evidence/03_recruiter_evidence_pack.md`
+- Proves: recruiter-facing bullets and summaries traced to README, V1, and V2 without inventing deployment or product claims.
+
+### V4 -- Career Evidence Dashboard UI (23D)
+
+- Routes: `/dashboard/career-evidence/`, `/dashboard/career-evidence/project-evidence/`, `/dashboard/career-evidence/job-fit-matrix/`, `/dashboard/career-evidence/recruiter-pack/`
+- Proves: authenticated, read-only rendering of V1-V3 markdown for browser review (local dev).
+
+### V5 -- Playwright screenshots (23E)
+
+- Script: `scripts/capture_career_evidence_screenshots.py`
+- Folder: `docs/screenshots/career_evidence/` (`career_evidence_overview.png`, `project_evidence_report.png`, `job_fit_matrix.png`, `recruiter_pack.png`)
+- Guide: `docs/screenshots/career_evidence/README.md`
+- Proves: reviewer-ready PNG evidence of the V4 pages; local capture only, not production browser automation.
+
+### V6 -- Optional Notion metadata sync (23F)
+
+- Script: `scripts/notion_sync_career_evidence.py`
+- Guide: `docs/notion/README.md`
+- Proves: optional metadata/status upsert (paths, dates, sprint, screenshot-ready flag); does not upload markdown binaries or change Django runtime.
+
+### Known limitations (Sprint 23)
+
+- V1-V3 are generated documentation; re-run tools after material repo changes.
+- V4 requires local `runserver` and login; not a live deployment claim.
+- V5 requires a running dev server and local credentials via environment variables.
+- V6 is optional, requires Notion API credentials locally, and syncs metadata only.
+- No external AI, Gmail, Calendar, scraping, auto-apply, or background workers are added.
+
+### Reviewer value
+
+Sprint 23 shows how operational Django/analytics work can be packaged into **auditable, recruiter-readable evidence** with explicit fit mapping and honest limitations--relevant to Data Analyst, BI Analyst, Reporting Analyst, and Analytics Engineer portfolios.
+
+---
+
 # Final Reviewer Summary
 
 CareerFunnel Tracker is a job-search analytics platform built with Django.
@@ -1201,7 +1330,7 @@ Exports, Evidence Centre, and reviewer handoff
 Sprint 6:
 UI polish, final screenshot evidence, and portfolio presentation notes
 
-Sprint 7–13:
+Sprint 7-13:
 Documentation alignment, code quality, dashboard actions, manual follow-up workflows, and application evidence readiness
 
 Sprint 14:
@@ -1212,6 +1341,12 @@ Shared role-fit constants, Job Posting Analyzer to Add Application prefill bridg
 
 Sprint 16:
 Analytics-critical save-quality warnings, post-save advisory messages, and Data Quality Report Analytics Impact notes
+
+Sprint 17-22:
+Recruiter-facing README, visual/interview evidence, UI polish, and portfolio handoff packs
+
+Sprint 23:
+Career Evidence OS -- V1-V3 markdown tools, V4 dashboard UI, V5 Playwright screenshots, V6 optional Notion metadata sync
 ```
 
-The strongest portfolio signal is that the project does not only display data. It explains where the data comes from, how it is transformed, what each metric means, what limitations exist, and what action the user should take next.
+The strongest portfolio signal is that the project does not only display data. It explains where the data comes from, how it is transformed, what each metric means, what limitations exist, and what action the user should take next. Sprint 23 extends that discipline to **job-fit and recruiter evidence** with explicit repository paths and honest scope boundaries.
