@@ -177,6 +177,15 @@ Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing scr
 - `docs/career_evidence/README.md`
 - `DEVELOPMENT.md` for the previous internal/development README preserved during Sprint 17A
 
+### Assisted Intake Evidence
+
+The assisted intake workflow is documented as a manual, approval-based, rule-based path from job-posting review to tracker-ready application evidence. It does not claim scraping, auto-apply, external AI/API integration, Gmail, Calendar automation, or live SaaS usage.
+
+- Workflow evidence: `docs/evidence/assisted_job_intake_workflow.md`
+- Field audit: `docs/evidence/assisted_job_intake_field_audit.md`
+- Field decision plan: `docs/evidence/assisted_intake_field_decision_plan.md`
+- Reviewer path: `docs/evidence/assisted_intake_reviewer_path.md`
+
 Recommended verification commands:
 
 ```bash
