@@ -8,18 +8,11 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 ## Current Sprint Position
 
-Sprint 20 is complete and tagged as `sprint-20-complete`. Sprint 21 is complete and tagged as `sprint-21-complete`: release-candidate UI polish only, including CSS completeness fixes, clearer navigation, and refreshed curated screenshot evidence. Sprint 22 is complete and tagged as `sprint-22-complete`: portfolio handoff documentation only, including recruiter conversion, interview explanation, feature-to-skill hiring value mapping, and the portfolio handoff checklist under `docs/evidence/`.
+Sprints 25, 26A–26D, and 27A–27C are complete. The latest completed tag is `sprint-27c-complete`. **Sprint 28** is the active next sprint.
 
-Sprint 23 delivered the **Career Evidence OS** (repository-derived evidence tooling and reviewer surfaces):
+**Sprint 28A** (email import) is not yet implemented.
 
-- **Sprint 23A -- Career Evidence Report** (`sprint-23a-career-evidence-v1`): V1 project evidence inventory via `tools/career_evidence_audit.py`.
-- **Sprint 23B -- Job-Fit Matrix** (`sprint-23b-job-fit-matrix`): V2 requirement-to-repository mapping via `tools/career_job_fit_matrix.py`.
-- **Sprint 23C -- Recruiter Evidence Pack** (`sprint-23c-recruiter-evidence-pack`): V3 recruiter-facing pack via `tools/career_recruiter_pack.py`.
-- **Sprint 23D -- Career Evidence Dashboard UI** (`sprint-23d-complete`): authenticated dashboard pages under `/dashboard/career-evidence/`.
-- **Sprint 23E -- Playwright Screenshot Automation** (`sprint-23e-complete`): local PNG captures in `docs/screenshots/career_evidence/`.
-- **Sprint 23F -- Optional Notion Metadata Sync** (`sprint-23f-complete`): optional metadata/status upsert to Notion; see `docs/notion/README.md`.
-
-Sprint 24A (**Portfolio Front Door Evidence Alignment**, branch `sprint-24a-portfolio-front-door`) aligns public README and evidence-index documentation with the Sprint 23 deliverables above.
+This README does not claim Gmail API integration, external AI or LLM services, calendar integration, web scraping, auto-apply workflows, a live SaaS deployment, production users, or automatic email sending.
 
 ## Business Problem
 
@@ -206,6 +199,16 @@ python manage.py test tests.test_career_evidence_audit tests.test_career_job_fit
 - OpenPyXL
 - Ruff
 - Git
+
+## Public ZIP Export
+
+To share a clean copy of the repository without local or private files, prefer Git archive from the repository root:
+
+```bash
+git archive --format=zip HEAD -o careerfunnel-tracker-public.zip
+```
+
+This is safer than manually zipping the project folder. Manual ZIPs often include `.git/`, `.env`, `db.sqlite3`, `.idea/`, `.venv/`, `.ruff_cache/`, `__pycache__/`, `staticfiles/`, and other local or private files.
 
 ## Local Setup
 

@@ -1,5 +1,7 @@
 # CareerFunnel Tracker
 
+Note: This file is a preserved historical snapshot as of Sprint 16. Current sprint position, test count, and status are in README.md.
+
 CareerFunnel Tracker is a Django-based job-search intelligence and analytics platform.
 
 It helps track job applications, daily activity, weekly reviews, follow-ups, interview preparation, notes, metrics, data quality, and exportable evidence. The project is designed as a realistic portfolio data product for Data Analyst, BI Analyst, Reporting Analyst, Analytics Engineer, Junior Data Engineer, and FinTech analytics roles.
