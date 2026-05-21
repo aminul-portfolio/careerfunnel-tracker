@@ -7,9 +7,12 @@ from django.utils import timezone
 
 from apps.applications.choices import ApplicationStatus
 from apps.applications.models import JobApplication
-from apps.recruiter_emails.choices import EmailType
+from apps.recruiter_emails.choices import EmailType, ImportSource, ReplyStatus
+from apps.recruiter_emails.forms import RecruiterEmailImportForm
+from apps.recruiter_emails.models import RecruiterEmail
 from apps.recruiter_emails.services import (
     classify_recruiter_email,
+    create_recruiter_email_from_form_data,
     generate_reply_draft,
     requires_reply_for_email_type,
     serialise_matched_signals,
@@ -252,4 +255,200 @@ class SuggestedStatusTests(TestCase):
         self.application.refresh_from_db()
         self.assertEqual(suggestion, "rejected")
         self.assertEqual(self.application.status, original_status)
+
+
+class RecruiterEmailImportFormTests(TestCase):
+    EXPOSED_FIELDS = {
+        "subject",
+        "sender_name",
+        "sender_email",
+        "body",
+        "date_received",
+        "notes",
+    }
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="importuser", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Import Co",
+            job_title="Data Analyst",
+            date_applied=timezone.localdate(),
+        )
+        self.received = timezone.now()
+
+    def _valid_data(self, **overrides):
+        data = {
+            "subject": "Interview invite",
+            "sender_name": "Recruiter",
+            "sender_email": "recruiter@example.com",
+            "body": (
+                "We would like to invite you to interview and share "
+                "interview availability."
+            ),
+            "date_received": self.received.strftime("%Y-%m-%dT%H:%M"),
+            "notes": "",
+        }
+        data.update(overrides)
+        return data
+
+    def test_form_valid_when_application_body_and_date_received_provided(self):
+        form = RecruiterEmailImportForm(
+            data=self._valid_data(),
+            application=self.application,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_form_invalid_when_application_missing(self):
+        form = RecruiterEmailImportForm(data=self._valid_data(), application=None)
+        self.assertFalse(form.is_valid())
+        self.assertIn("__all__", form.errors)
+
+    def test_form_invalid_when_body_blank(self):
+        form = RecruiterEmailImportForm(
+            data=self._valid_data(body=""),
+            application=self.application,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("body", form.errors)
+
+    def test_form_invalid_when_date_received_blank(self):
+        form = RecruiterEmailImportForm(
+            data=self._valid_data(date_received=""),
+            application=self.application,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("date_received", form.errors)
+
+    def test_form_fields_do_not_expose_classification_or_system_fields(self):
+        form = RecruiterEmailImportForm(application=self.application)
+        self.assertEqual(set(form.fields.keys()), self.EXPOSED_FIELDS)
+
+
+class CreateRecruiterEmailFromFormTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="saveuser", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Save Co",
+            job_title="Junior Data Analyst",
+            status=ApplicationStatus.SUBMITTED,
+            date_applied=timezone.localdate(),
+        )
+        self.received = timezone.make_aware(datetime(2026, 5, 21, 10, 0, 0))
+
+    def test_interview_invite_save_populates_classification_fields(self):
+        form = RecruiterEmailImportForm(
+            data={
+                "subject": "Interview invitation",
+                "sender_name": "",
+                "sender_email": "",
+                "body": (
+                    "We would like to invite you to interview and share "
+                    "interview availability."
+                ),
+                "date_received": self.received.strftime("%Y-%m-%dT%H:%M"),
+                "notes": "",
+            },
+            application=self.application,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        recruiter_email = form.save()
+
+        self.assertEqual(recruiter_email.application, self.application)
+        self.assertEqual(recruiter_email.email_type, EmailType.INTERVIEW_INVITE)
+        matched = json.loads(recruiter_email.matched_signals)
+        self.assertIn("interview", matched)
+        self.assertGreater(len(matched), 0)
+        self.assertTrue(recruiter_email.reply_draft.strip())
+        self.assertEqual(recruiter_email.reply_status, ReplyStatus.DRAFTED)
+        self.assertTrue(recruiter_email.requires_reply)
+        self.assertIsNotNone(recruiter_email.action_due_at)
+        self.assertEqual(recruiter_email.suggested_application_status, "interview")
+        self.assertEqual(recruiter_email.import_source, ImportSource.MANUAL)
+
+    def test_acknowledgement_save_sets_not_required_and_no_action_due(self):
+        form = RecruiterEmailImportForm(
+            data={
+                "subject": "Application received",
+                "sender_name": "",
+                "sender_email": "",
+                "body": "Thank you for applying. We have received your application.",
+                "date_received": self.received.strftime("%Y-%m-%dT%H:%M"),
+                "notes": "",
+            },
+            application=self.application,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        recruiter_email = form.save()
+
+        self.assertEqual(recruiter_email.email_type, EmailType.ACKNOWLEDGEMENT)
+        self.assertEqual(recruiter_email.reply_status, ReplyStatus.NOT_REQUIRED)
+        self.assertFalse(recruiter_email.requires_reply)
+        self.assertIsNone(recruiter_email.action_due_at)
+
+    def test_save_does_not_mutate_job_application_status(self):
+        original_status = self.application.status
+        form = RecruiterEmailImportForm(
+            data={
+                "subject": "Rejection",
+                "sender_name": "",
+                "sender_email": "",
+                "body": "Unfortunately we will not be taking your application further.",
+                "date_received": self.received.strftime("%Y-%m-%dT%H:%M"),
+                "notes": "",
+            },
+            application=self.application,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, original_status)
+
+    def test_save_with_commit_false_raises_value_error(self):
+        form = RecruiterEmailImportForm(
+            data={
+                "subject": "Interview",
+                "sender_name": "",
+                "sender_email": "",
+                "body": (
+                    "We would like to invite you to interview and share "
+                    "interview availability."
+                ),
+                "date_received": self.received.strftime("%Y-%m-%dT%H:%M"),
+                "notes": "",
+            },
+            application=self.application,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        with self.assertRaises(ValueError):
+            form.save(commit=False)
+
+    def test_create_service_requires_application(self):
+        with self.assertRaises(ValueError):
+            create_recruiter_email_from_form_data(
+                application=None,
+                cleaned_data={
+                    "subject": "",
+                    "body": "Thank you for applying.",
+                    "date_received": self.received,
+                },
+            )
+
+    def test_create_service_persists_recruiter_email(self):
+        recruiter_email = create_recruiter_email_from_form_data(
+            application=self.application,
+            cleaned_data={
+                "subject": "Interview",
+                "sender_name": "",
+                "sender_email": "",
+                "body": (
+                    "We would like to invite you to interview and share "
+                    "interview availability."
+                ),
+                "date_received": self.received,
+                "notes": "Imported manually",
+            },
+        )
+        self.assertTrue(RecruiterEmail.objects.filter(pk=recruiter_email.pk).exists())
 

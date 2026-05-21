@@ -6,7 +6,8 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from .choices import EmailType
+from .choices import EmailType, ImportSource, ReplyStatus
+from .models import RecruiterEmail
 
 REJECTION_SIGNALS = [
     "unfortunately",
@@ -452,3 +453,46 @@ def generate_reply_draft(email_type: str, application=None) -> str:
         "Kind regards,\n"
         "Aminul Islam"
     )
+
+
+def _resolve_reply_status(*, requires_reply: bool, reply_draft: str) -> str:
+    if not requires_reply:
+        return ReplyStatus.NOT_REQUIRED
+    if reply_draft.strip():
+        return ReplyStatus.DRAFTED
+    return ReplyStatus.NEEDS_REVIEW
+
+
+def create_recruiter_email_from_form_data(*, application, cleaned_data) -> RecruiterEmail:
+    if application is None:
+        raise ValueError("application is required for Sprint 28A recruiter email import.")
+
+    subject = cleaned_data.get("subject", "")
+    body = cleaned_data["body"]
+    date_received = cleaned_data["date_received"]
+
+    classification = classify_recruiter_email(subject=subject, body=body)
+    reply_draft = generate_reply_draft(classification.email_type, application)
+
+    recruiter_email = RecruiterEmail.objects.create(
+        application=application,
+        subject=subject,
+        sender_name=cleaned_data.get("sender_name", ""),
+        sender_email=cleaned_data.get("sender_email", ""),
+        body=body,
+        date_received=date_received,
+        email_type=classification.email_type,
+        matched_signals=serialise_matched_signals(classification.matched_signals),
+        classification_rationale=classification.classification_rationale,
+        reply_draft=reply_draft,
+        reply_status=_resolve_reply_status(
+            requires_reply=classification.requires_reply,
+            reply_draft=reply_draft,
+        ),
+        requires_reply=classification.requires_reply,
+        action_due_at=suggest_action_due_at(classification.email_type, date_received),
+        suggested_application_status=classification.suggested_application_status,
+        import_source=ImportSource.MANUAL,
+        notes=cleaned_data.get("notes", ""),
+    )
+    return recruiter_email
