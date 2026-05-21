@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Import Recruiter Email | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Import Recruiter Email{% endblock %}
+{% block content %}
+<div class="content-card form-card">
+    <div class="card-header">
+        <p class="eyebrow">Manual Import</p>
+        <h1>Import Recruiter Email</h1>
+        <p>
+            Linked application:
+            <strong>{{ application.company_name }}</strong> -
+            {{ application.job_title }}
+        </p>
+        <p class="muted-text">
+            Manual paste only. No Gmail API, OAuth, background polling, or automatic email sending is used.
+        </p>
+    </div>
+    <form method="post" class="form-stack">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="form-section">
+            <h2>Email Details</h2>
+            <div class="form-grid">
+                <div class="form-group form-wide">
+                    <label for="{{ form.subject.id_for_label }}">Email subject</label>
+                    {{ form.subject }}
+                    {{ form.subject.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.sender_name.id_for_label }}">Sender name</label>
+                    {{ form.sender_name }}
+                    {{ form.sender_name.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.sender_email.id_for_label }}">Sender email</label>
+                    {{ form.sender_email }}
+                    {{ form.sender_email.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.date_received.id_for_label }}">Date received</label>
+                    {{ form.date_received }}
+                    {{ form.date_received.errors }}
+                </div>
+                <div class="form-group form-wide">
+                    <label for="{{ form.body.id_for_label }}">Email body</label>
+                    {{ form.body }}
+                    {{ form.body.errors }}
+                </div>
+                <div class="form-group form-wide">
+                    <label for="{{ form.notes.id_for_label }}">Internal notes</label>
+                    {{ form.notes }}
+                    {{ form.notes.errors }}
+                </div>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Import Email</button>
+            <a href="{% url 'applications:application_detail' application.pk %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
