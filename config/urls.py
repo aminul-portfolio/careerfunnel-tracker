@@ -17,6 +17,7 @@ urlpatterns = [
     path("exports/", include("apps.exports.urls")),
     path("interviews/", include("apps.interviews.urls")),
     path("follow-ups/", include("apps.followups.urls")),
+    path("recruiter-emails/", include("apps.recruiter_emails.urls")),
     path("smart-review/", include("apps.job_intelligence.urls")),
     path("ai-agents/", include("apps.ai_agents.urls")),
 ]

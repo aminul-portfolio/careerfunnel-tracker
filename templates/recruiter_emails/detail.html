@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Recruiter Email | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Recruiter Email Detail{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel">
+        <p class="eyebrow">Recruiter Email</p>
+        <h1>{{ recruiter_email.subject|default:recruiter_email }}</h1>
+        {% if recruiter_email.application %}
+            <p>
+                {{ recruiter_email.application.company_name }} -
+                {{ recruiter_email.application.job_title }}
+            </p>
+        {% endif %}
+        <div class="hero-actions">
+            {% if recruiter_email.application %}
+                <a href="{% url 'applications:application_detail' recruiter_email.application.pk %}" class="btn btn-secondary">Back to application</a>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Classification</p>
+            <h2>Email Summary</h2>
+        </div>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span>Sender</span>
+                <strong>
+                    {% if recruiter_email.sender_name or recruiter_email.sender_email %}
+                        {{ recruiter_email.sender_name }}
+                        {% if recruiter_email.sender_email %}({{ recruiter_email.sender_email }}){% endif %}
+                    {% else %}
+                        Not specified
+                    {% endif %}
+                </strong>
+            </div>
+            <div class="detail-item">
+                <span>Date received</span>
+                <strong>{{ recruiter_email.date_received }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Email type</span>
+                <strong>{{ recruiter_email.get_email_type_display }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Reply status</span>
+                <strong>{{ recruiter_email.get_reply_status_display }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Requires reply</span>
+                <strong>{{ recruiter_email.requires_reply|yesno:"Yes,No" }}</strong>
+            </div>
+            {% if recruiter_email.action_due_at %}
+                <div class="detail-item">
+                    <span>Action due</span>
+                    <strong>{{ recruiter_email.action_due_at }}</strong>
+                </div>
+            {% endif %}
+            <div class="detail-item">
+                <span>Suggested application status</span>
+                <strong>
+                    {% if recruiter_email.suggested_application_status %}
+                        {{ recruiter_email.suggested_application_status }} (suggestion only)
+                    {% else %}
+                        No suggestion
+                    {% endif %}
+                </strong>
+            </div>
+        </div>
+        <p class="muted-text">
+            Suggested application status is advisory only. CareerFunnel Tracker does not update the application record automatically.
+        </p>
+        <h3>Matched signals</h3>
+        {% if matched_signals_list %}
+            <ul class="workflow-list">
+                {% for signal in matched_signals_list %}
+                    <li>{{ signal }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="muted-text">No matched signals recorded.</p>
+        {% endif %}
+        <h3>Classification rationale</h3>
+        <p class="note-text">{{ recruiter_email.classification_rationale|default:"Not recorded." }}</p>
+    </section>
+
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Reply Draft</p>
+            <h2>Suggested Reply</h2>
+        </div>
+        {% if recruiter_email.reply_draft %}
+            <pre class="agent-draft">{{ recruiter_email.reply_draft }}</pre>
+        {% else %}
+            <p class="muted-text">No reply draft was generated for this email type.</p>
+        {% endif %}
+    </section>
+
+    {% if recruiter_email.notes %}
+        <section class="content-card">
+            <div class="card-header">
+                <p class="eyebrow">Notes</p>
+                <h2>Internal Notes</h2>
+            </div>
+            <p class="note-text">{{ recruiter_email.notes|linebreaks }}</p>
+        </section>
+    {% endif %}
+
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Manual Only</p>
+            <h2>Mark Reply Sent</h2>
+        </div>
+        <p class="muted-text">
+            This marks the reply as sent manually. It does not send an email.
+        </p>
+        {% if recruiter_email.reply_status == "sent_manually" %}
+            <p class="muted-text">Reply already marked as sent manually.</p>
+        {% else %}
+            <form method="post" action="{% url 'recruiter_emails:mark_sent' recruiter_email.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary">Mark reply as sent manually</button>
+            </form>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

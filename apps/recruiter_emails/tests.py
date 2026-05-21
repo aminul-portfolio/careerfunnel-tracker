@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.applications.choices import ApplicationStatus
@@ -451,4 +452,263 @@ class CreateRecruiterEmailFromFormTests(TestCase):
             },
         )
         self.assertTrue(RecruiterEmail.objects.filter(pk=recruiter_email.pk).exists())
+
+
+class RecruiterEmailViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="viewuser", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="View Co",
+            job_title="Data Analyst",
+            status=ApplicationStatus.SUBMITTED,
+            date_applied=timezone.localdate(),
+        )
+        self.received = timezone.now()
+        self.client.login(username="viewuser", password="StrongPass12345")
+
+    def _import_post_data(self, **overrides):
+        data = {
+            "subject": "Interview invitation",
+            "sender_name": "Recruiter",
+            "sender_email": "recruiter@example.com",
+            "body": (
+                "We would like to invite you to interview and share "
+                "interview availability."
+            ),
+            "date_received": self.received.strftime("%Y-%m-%dT%H:%M"),
+            "notes": "",
+        }
+        data.update(overrides)
+        return data
+
+    def test_import_form_get_returns_200_for_logged_in_owner(self):
+        response = self.client.get(
+            reverse("recruiter_emails:import", kwargs={"application_id": self.application.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Import Recruiter Email")
+
+    def test_import_form_post_creates_recruiter_email_and_redirects(self):
+        original_status = self.application.status
+        response = self.client.post(
+            reverse("recruiter_emails:import", kwargs={"application_id": self.application.pk}),
+            self._import_post_data(),
+        )
+        recruiter_email = RecruiterEmail.objects.get(application=self.application)
+        self.assertRedirects(
+            response,
+            reverse("recruiter_emails:detail", kwargs={"pk": recruiter_email.pk}),
+        )
+        self.assertEqual(recruiter_email.application, self.application)
+        self.assertEqual(recruiter_email.email_type, EmailType.INTERVIEW_INVITE)
+        self.assertTrue(recruiter_email.matched_signals)
+        self.assertTrue(recruiter_email.reply_draft.strip())
+        self.assertEqual(recruiter_email.reply_status, ReplyStatus.DRAFTED)
+        self.assertTrue(recruiter_email.requires_reply)
+        self.assertIsNotNone(recruiter_email.action_due_at)
+        self.assertEqual(recruiter_email.suggested_application_status, "interview")
+        self.assertEqual(recruiter_email.import_source, ImportSource.MANUAL)
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, original_status)
+
+    def test_acknowledgement_import_sets_not_required_via_view(self):
+        response = self.client.post(
+            reverse("recruiter_emails:import", kwargs={"application_id": self.application.pk}),
+            self._import_post_data(
+                subject="Application received",
+                body="Thank you for applying. We have received your application.",
+            ),
+        )
+        recruiter_email = RecruiterEmail.objects.get(application=self.application)
+        self.assertRedirects(
+            response,
+            reverse("recruiter_emails:detail", kwargs={"pk": recruiter_email.pk}),
+        )
+        self.assertEqual(recruiter_email.email_type, EmailType.ACKNOWLEDGEMENT)
+        self.assertEqual(recruiter_email.reply_status, ReplyStatus.NOT_REQUIRED)
+        self.assertFalse(recruiter_email.requires_reply)
+        self.assertIsNone(recruiter_email.action_due_at)
+
+    def test_detail_page_returns_200_and_shows_suggestion_label(self):
+        recruiter_email = create_recruiter_email_from_form_data(
+            application=self.application,
+            cleaned_data={
+                "subject": "Interview",
+                "sender_name": "",
+                "sender_email": "",
+                "body": (
+                    "We would like to invite you to interview and share "
+                    "interview availability."
+                ),
+                "date_received": self.received,
+                "notes": "",
+            },
+        )
+        response = self.client.get(
+            reverse("recruiter_emails:detail", kwargs={"pk": recruiter_email.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, recruiter_email.reply_draft)
+        self.assertContains(response, "interview (suggestion only)")
+        self.assertContains(response, "advisory only")
+
+    def test_mark_sent_post_updates_reply_status(self):
+        recruiter_email = create_recruiter_email_from_form_data(
+            application=self.application,
+            cleaned_data={
+                "subject": "Interview",
+                "sender_name": "",
+                "sender_email": "",
+                "body": (
+                    "We would like to invite you to interview and share "
+                    "interview availability."
+                ),
+                "date_received": self.received,
+                "notes": "",
+            },
+        )
+        original_status = self.application.status
+        response = self.client.post(
+            reverse("recruiter_emails:mark_sent", kwargs={"pk": recruiter_email.pk})
+        )
+        recruiter_email.refresh_from_db()
+        self.assertRedirects(
+            response,
+            reverse("recruiter_emails:detail", kwargs={"pk": recruiter_email.pk}),
+        )
+        self.assertEqual(recruiter_email.reply_status, ReplyStatus.SENT_MANUALLY)
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, original_status)
+
+    def test_mark_sent_get_returns_405_without_mutation(self):
+        recruiter_email = create_recruiter_email_from_form_data(
+            application=self.application,
+            cleaned_data={
+                "subject": "Interview",
+                "sender_name": "",
+                "sender_email": "",
+                "body": (
+                    "We would like to invite you to interview and share "
+                    "interview availability."
+                ),
+                "date_received": self.received,
+                "notes": "",
+            },
+        )
+        response = self.client.get(
+            reverse("recruiter_emails:mark_sent", kwargs={"pk": recruiter_email.pk})
+        )
+        self.assertEqual(response.status_code, 405)
+        recruiter_email.refresh_from_db()
+        self.assertEqual(recruiter_email.reply_status, ReplyStatus.DRAFTED)
+
+
+class RecruiterEmailSecurityTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner", password="StrongPass12345")
+        self.other = User.objects.create_user(username="other", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.owner,
+            company_name="Owner Co",
+            job_title="Analyst",
+            date_applied=timezone.localdate(),
+        )
+        self.recruiter_email = create_recruiter_email_from_form_data(
+            application=self.application,
+            cleaned_data={
+                "subject": "Interview",
+                "sender_name": "",
+                "sender_email": "",
+                "body": (
+                    "We would like to invite you to interview and share "
+                    "interview availability."
+                ),
+                "date_received": timezone.now(),
+                "notes": "",
+            },
+        )
+        self.client.login(username="other", password="StrongPass12345")
+
+    def test_other_user_cannot_access_import_form(self):
+        response = self.client.get(
+            reverse("recruiter_emails:import", kwargs={"application_id": self.application.pk})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_other_user_cannot_post_import(self):
+        response = self.client.post(
+            reverse("recruiter_emails:import", kwargs={"application_id": self.application.pk}),
+            {
+                "subject": "Interview",
+                "sender_name": "",
+                "sender_email": "",
+                "body": (
+                    "We would like to invite you to interview and share "
+                    "interview availability."
+                ),
+                "date_received": timezone.now().strftime("%Y-%m-%dT%H:%M"),
+                "notes": "",
+            },
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(RecruiterEmail.objects.filter(application=self.application).count(), 1)
+
+    def test_other_user_cannot_view_detail(self):
+        response = self.client.get(
+            reverse("recruiter_emails:detail", kwargs={"pk": self.recruiter_email.pk})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_other_user_cannot_mark_sent(self):
+        response = self.client.post(
+            reverse("recruiter_emails:mark_sent", kwargs={"pk": self.recruiter_email.pk})
+        )
+        self.assertEqual(response.status_code, 404)
+        self.recruiter_email.refresh_from_db()
+        self.assertEqual(self.recruiter_email.reply_status, ReplyStatus.DRAFTED)
+
+
+class ApplicationDetailIntegrationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="detailuser", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Detail Co",
+            job_title="Reporting Analyst",
+            date_applied=timezone.localdate(),
+        )
+        self.client.login(username="detailuser", password="StrongPass12345")
+
+    def test_application_detail_includes_import_link(self):
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": self.application.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Import Recruiter Email")
+        self.assertContains(
+            response,
+            reverse("recruiter_emails:import", kwargs={"application_id": self.application.pk}),
+        )
+
+    def test_application_detail_lists_linked_recruiter_email(self):
+        recruiter_email = create_recruiter_email_from_form_data(
+            application=self.application,
+            cleaned_data={
+                "subject": "Screening call invite",
+                "sender_name": "",
+                "sender_email": "",
+                "body": "We would like to arrange a screening call.",
+                "date_received": timezone.now(),
+                "notes": "",
+            },
+        )
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": self.application.pk})
+        )
+        self.assertContains(response, recruiter_email.subject)
+        self.assertContains(
+            response,
+            reverse("recruiter_emails:detail", kwargs={"pk": recruiter_email.pk}),
+        )
 
