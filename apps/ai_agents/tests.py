@@ -62,7 +62,7 @@ class AiAgentServiceTests(TestCase):
             job_posting="Python SQL Excel reporting dashboards junior 0-2 years",
         )
         self.assertGreaterEqual(analysis.fit_score, 70)
-        self.assertIn("Finance", analysis.recommended_cv)
+        self.assertEqual(analysis.recommended_cv, "Aminul_Islam_Data_Analyst_CV")
 
     def test_analytics_engineer_with_learning_targets_is_not_auto_rejected(self):
         analysis = analyze_job_posting(

@@ -22,6 +22,8 @@ from apps.job_intelligence.constants import (
 from apps.metrics.services import build_funnel_metrics, diagnose_funnel, safe_percentage
 from apps.weekly_review.models import WeeklyReview
 
+LOCKED_CV = "Aminul_Islam_Data_Analyst_CV"
+
 
 @dataclass(frozen=True)
 class JobPostingAnalysis:
@@ -199,30 +201,13 @@ def analyze_job_posting(
 
 
 def recommend_cv_from_text(text: str) -> str:
-    if any(
-        word in text
-        for word in [
-            "finance",
-            "risk",
-            "reconciliation",
-            "ledger",
-            "fx",
-            "payment",
-            "banking",
-        ]
-    ):
-        return "Finance_DA_CV_v1"
-    if any(
-        word in text
-        for word in ["bi", "dashboard", "power bi", "reporting", "insights", "kpi"]
-    ):
-        return "BI_Reporting_CV_v1"
-    if any(
-        word in text
-        for word in ["etl", "api", "pipeline", "analytics engineer", "data product"]
-    ):
-        return "AE_Data_Product_CV_v1"
-    return "DA_CV_v2"
+    """Return the locked CV filename for job-posting and interview-prep analysis."""
+    # recommend_cv_from_text() returns the locked CV filename now.
+    # A future recommend_cv_angle() helper can recommend Data Analyst / BI /
+    # FinTech / AE positioning later.
+    # TODO (Sprint 31): restore role-angle logic, e.g. finance/risk -> FinTech,
+    # bi/dashboard -> BI, etl/api -> AE, default -> Data Analyst.
+    return LOCKED_CV
 
 
 def recommend_projects_from_text(text: str) -> list[str]:
