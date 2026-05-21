@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "apps.exports",
     "apps.interviews",
     "apps.followups",
+    "apps.recruiter_emails",
     "apps.job_intelligence",
     "apps.ai_agents",
 ]
