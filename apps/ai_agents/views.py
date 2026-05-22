@@ -14,6 +14,7 @@ from .services import (
     analyze_job_posting,
     analyze_rejection_patterns,
     build_cv_ab_testing_rows,
+    build_cv_tailoring_advisor,
     build_next_best_actions,
     build_smart_notifications,
     build_weekly_coach_report,
@@ -32,6 +33,7 @@ def agent_dashboard(request):
 @login_required
 def job_posting_analyzer(request):
     analysis = None
+    tailoring_advisor = None
     if request.method == "POST":
         form = JobPostingAnalyzerForm(request.POST)
         if form.is_valid():
@@ -41,12 +43,23 @@ def job_posting_analyzer(request):
                 location=form.cleaned_data.get("location", ""),
                 job_posting=form.cleaned_data["job_posting"],
             )
+            tailoring_advisor = build_cv_tailoring_advisor(
+                company_name=form.cleaned_data.get("company_name", ""),
+                job_title=form.cleaned_data.get("job_title", ""),
+                location=form.cleaned_data.get("location", ""),
+                job_description=form.cleaned_data["job_posting"],
+                cv_evidence="",
+            )
     else:
         form = JobPostingAnalyzerForm()
     return render(
         request,
         "ai_agents/job_posting_analyzer.html",
-        {"form": form, "analysis": analysis},
+        {
+            "form": form,
+            "analysis": analysis,
+            "tailoring_advisor": tailoring_advisor,
+        },
     )
 
 
@@ -111,10 +124,25 @@ def application_agent_pack(request, pk):
             [application.required_skills, application.job_description, application.notes]
         ),
     )
+    tailoring_advisor = build_cv_tailoring_advisor(
+        company_name=application.company_name,
+        job_title=application.job_title,
+        location=application.location,
+        job_description=" ".join(
+            [application.required_skills, application.job_description, application.notes]
+        ),
+        cv_evidence=" ".join([application.cv_version, application.cover_letter_version]),
+    )
     return render(
         request,
         "ai_agents/application_agent_pack.html",
-        {"application": application, "prep": prep, "followup": followup, "analysis": analysis},
+        {
+            "application": application,
+            "prep": prep,
+            "followup": followup,
+            "analysis": analysis,
+            "tailoring_advisor": tailoring_advisor,
+        },
     )
 
 
