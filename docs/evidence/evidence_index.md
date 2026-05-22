@@ -1416,6 +1416,31 @@ Separates prepared LinkedIn language from actual publication so portfolio promot
 
 ---
 
+## Sprint 30D - Evidence / Final Closure
+
+### Status
+
+- **30D:** Complete - Sprint 30 final closure document (`sprint-30d-evidence-final-closure` branch; main before merge `3772477`; tag `sprint-30c-linkedin-readiness-gate-complete`; 320 tests)
+
+### Documentation Evidence
+
+```text
+docs/evidence/sprint_30_final_closure.md
+```
+
+### What This Document Proves
+
+- Sprint 30A-30C summary: portfolio README alignment (30A), recruiter-facing summary (30B), LinkedIn readiness gate (30C); all documentation only.
+- Final evidence package paths and recruiter-facing outcomes without new product features.
+- LinkedIn **not published** in Sprint 30; manual publish gate remains in 30C doc.
+- Validation through 30C: 320 tests, ruff, check, makemigrations --check, CI green; 30D merge/tag/push validation still required for full closure.
+
+### Reviewer Value
+
+Single closure entry for Sprint 30 portfolio readiness work with explicit boundaries and evidence links.
+
+---
+
 # Final Reviewer Summary
 
 CareerFunnel Tracker is a job-search analytics platform built with Django.
