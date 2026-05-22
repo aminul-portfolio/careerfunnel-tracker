@@ -1339,6 +1339,34 @@ Shows the tracker was exercised on real roles with explicit manual gates - not d
 
 ---
 
+## Sprint 29 - Recruiter Email Workflow Enhancements (29A-29C)
+
+### Status
+
+- **29A:** Complete - Recruiter Email Actions on Application Detail (`sprint-29a-recruiter-email-action-alerts-complete`, merge `fb4c0b9`, 310 tests)
+- **29B:** Complete - Recruiter Communication Context and manual follow-up guidance (`sprint-29b-recruiter-email-followup-history-complete`, merge `9409cba`, 315 tests)
+- **29C:** Complete - Interview Prep Recommended prompt from interview/screening signals (`sprint-29c-interview-prep-trigger-complete`, merge `4cbc147`, 320 tests)
+
+### Documentation Evidence
+
+```text
+docs/evidence/sprint_29_recruiter_email_workflow_enhancements.md
+```
+
+### What This Document Proves
+
+- Manual import -> rule-based summary -> user decision -> manual follow-up or interview prep action.
+- Application Detail surfaces needs reply, reply status, action due, suggested status (advisory), and interview/screening signals.
+- Latest recruiter email context and manual follow-up guidance before using the follow-up draft workflow.
+- Contextual **Create Interview Prep** prompt when `matched_signals` contains interview or screening; no automatic interview prep creation.
+- Honest boundaries: no Gmail API, OAuth, inbox sync, scraping, automatic sending, automatic status mutation, background jobs, scheduler, Celery, or external AI / LLM integration.
+
+### Reviewer Value
+
+Shows recruiter emails move from stored imports to portfolio-safe, manual action intelligence on Application Detail without claiming inbox automation or AI integrations.
+
+---
+
 # Final Reviewer Summary
 
 CareerFunnel Tracker is a job-search analytics platform built with Django.
