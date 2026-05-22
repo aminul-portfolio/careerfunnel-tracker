@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -1194,6 +1195,147 @@ def compare_rule_based_and_ai_scores(
         manual_review_required=True,
         claim_safety_notes=list(AI_SCORING_CLAIM_SAFETY_NOTES),
     )
+
+
+# --- Sprint 32C: OpenAI-shaped wrapper + safe fallback (mocked-first; no network) ---
+
+OPENAI_WRAPPER_PROVIDER_NAME = "OpenAI"
+OPENAI_WRAPPER_TIMEOUT_SECONDS = 20
+
+OPENAI_WRAPPER_CLAIM_SAFETY_NOTES = [
+    "Sprint 32C wrapper is mocked-first.",
+    "No real OpenAI call is made by default.",
+    "No API key is required for tests.",
+    "Rule-based scoring remains the fallback.",
+    "Manual review is always required.",
+    "No application is submitted.",
+    "No CV or cover letter is finalized.",
+    (
+        "No Gmail, Calendar, scraping, recruiter automation, or auto-apply "
+        "is used."
+    ),
+]
+
+
+@dataclass(frozen=True)
+class OpenAIFitScoringWrapperResult:
+    ai_result: AIFitScoringResult | None
+    used_fallback: bool
+    fallback_reason: str
+    provider_name: str
+    manual_review_required: bool
+    claim_safety_notes: list[str]
+
+
+def _build_openai_wrapper_fallback(fallback_reason: str) -> OpenAIFitScoringWrapperResult:
+    return OpenAIFitScoringWrapperResult(
+        ai_result=None,
+        used_fallback=True,
+        fallback_reason=fallback_reason,
+        provider_name=OPENAI_WRAPPER_PROVIDER_NAME,
+        manual_review_required=True,
+        claim_safety_notes=list(OPENAI_WRAPPER_CLAIM_SAFETY_NOTES),
+    )
+
+
+def build_openai_fit_scoring_prompt(
+    company_name: str,
+    job_title: str,
+    location: str,
+    job_description: str,
+    rule_based_analysis: JobPostingAnalysis,
+) -> dict:
+    """Build a structured prompt dict for a future provider call. No secrets or network."""
+    return {
+        "company_name": company_name,
+        "job_title": job_title,
+        "location": location,
+        "job_description": job_description,
+        "rule_based_fit_score": rule_based_analysis.fit_score,
+        "rule_based_recommendation": rule_based_analysis.recommendation,
+        "matched_skills": list(rule_based_analysis.matched_skills),
+        "risks": list(rule_based_analysis.risks),
+        "deal_breakers": list(rule_based_analysis.deal_breakers),
+        "required_output_schema": {
+            "fields": list(AI_SCORING_REQUIRED_PAYLOAD_FIELDS),
+            "score_range": {"min": 0, "max": 100},
+            "confidence_values": sorted(AI_CONFIDENCE_LEVELS),
+        },
+        "safety_rules": [
+            "Output is advisory only.",
+            "Manual review is required before saving or using recommendations externally.",
+            "Do not claim auto-save, auto-apply, or application submission.",
+            "Do not generate a final CV or finalize a cover letter.",
+            "Do not invent skills, employers, dates, metrics, or experience.",
+            "Do not include Gmail, Calendar, inbox, or contact data.",
+        ],
+        "provider_name": OPENAI_WRAPPER_PROVIDER_NAME,
+        "timeout_seconds": OPENAI_WRAPPER_TIMEOUT_SECONDS,
+    }
+
+
+def build_openai_fit_scoring_with_fallback(
+    company_name: str,
+    job_title: str,
+    location: str,
+    job_description: str,
+    provider_callable: Callable[[dict], dict] | None = None,
+) -> OpenAIFitScoringWrapperResult:
+    """
+    Rule-based analysis first, then optional injected provider callable.
+    Never calls OpenAI directly or writes to the database.
+    """
+    rule_based_analysis = analyze_job_posting(
+        company_name=company_name,
+        job_title=job_title,
+        location=location,
+        job_posting=job_description,
+    )
+
+    if provider_callable is None:
+        return _build_openai_wrapper_fallback(
+            "Provider callable is missing; using rule-based scoring only."
+        )
+
+    try:
+        prompt = build_openai_fit_scoring_prompt(
+            company_name=company_name,
+            job_title=job_title,
+            location=location,
+            job_description=job_description,
+            rule_based_analysis=rule_based_analysis,
+        )
+        provider_response = provider_callable(prompt)
+        if not isinstance(provider_response, dict):
+            return _build_openai_wrapper_fallback(
+                "Provider callable must return a dictionary payload."
+            )
+        ai_result = parse_ai_fit_scoring_payload(provider_response)
+    except ValueError as exc:
+        return _build_openai_wrapper_fallback(
+            f"Provider payload validation failed: {exc}"
+        )
+    except Exception as exc:
+        return _build_openai_wrapper_fallback(f"Provider callable failed: {exc}")
+
+    return OpenAIFitScoringWrapperResult(
+        ai_result=ai_result,
+        used_fallback=False,
+        fallback_reason="",
+        provider_name=OPENAI_WRAPPER_PROVIDER_NAME,
+        manual_review_required=True,
+        claim_safety_notes=list(OPENAI_WRAPPER_CLAIM_SAFETY_NOTES),
+    )
+
+
+def compare_openai_wrapper_result_with_rule_based(
+    rule_based_score: int,
+    wrapper_result: OpenAIFitScoringWrapperResult,
+) -> AIFitScoreComparison | None:
+    """Compare wrapper AI result to rule-based score; None when fallback has no AI result."""
+    if wrapper_result.ai_result is None:
+        return None
+    return compare_rule_based_and_ai_scores(rule_based_score, wrapper_result.ai_result)
 
 
 def check_cover_letter_quality(
