@@ -442,6 +442,149 @@ class JobApplicationViewTests(TestCase):
         self.assertContains(response, "Import Recruiter Email")
         self.assertContains(response, f'href="{import_url}"')
 
+    def test_application_detail_shows_recruiter_communication_context_when_emails_exist(
+        self,
+    ):
+        application = self.create_application()
+        RecruiterEmail.objects.create(
+            application=application,
+            subject="Recruiter follow-up",
+            body="Following up on your application.",
+            date_received=timezone.now(),
+            email_type=EmailType.INTEREST,
+            reply_status=ReplyStatus.NEEDS_REVIEW,
+            requires_reply=True,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Recruiter Communication Context")
+        self.assertContains(response, "Latest recruiter email")
+        self.assertContains(response, "Recruiter follow-up")
+        self.assertContains(response, "Requires reply")
+        self.assertContains(response, "Manual follow-up guidance")
+
+    def test_application_detail_communication_context_uses_latest_recruiter_email(
+        self,
+    ):
+        application = self.create_application()
+        older_received = timezone.now() - timedelta(days=3)
+        latest_received = timezone.now() - timedelta(hours=2)
+        RecruiterEmail.objects.create(
+            application=application,
+            subject="Older acknowledgement",
+            body="Thank you for applying.",
+            date_received=older_received,
+            email_type=EmailType.ACKNOWLEDGEMENT,
+            reply_status=ReplyStatus.NOT_REQUIRED,
+            requires_reply=False,
+        )
+        RecruiterEmail.objects.create(
+            application=application,
+            subject="Latest interview invite",
+            body="We would like to invite you to interview.",
+            date_received=latest_received,
+            email_type=EmailType.INTERVIEW_INVITE,
+            reply_status=ReplyStatus.DRAFTED,
+            requires_reply=True,
+            suggested_application_status="interview",
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Latest recruiter email")
+        self.assertContains(response, "Latest interview invite")
+        self.assertNotContains(
+            response,
+            '<span>Latest recruiter email</span><strong>Older acknowledgement</strong>',
+        )
+        self.assertContains(
+            response,
+            date_format(timezone.localtime(latest_received), "DATETIME_FORMAT"),
+        )
+        self.assertContains(response, "Draft ready")
+        self.assertContains(response, "interview (suggestion only)")
+
+    def test_application_detail_communication_context_manual_followup_guidance(self):
+        application = self.create_application()
+        RecruiterEmail.objects.create(
+            application=application,
+            subject="Availability request",
+            body="Please share your availability.",
+            date_received=timezone.now(),
+            email_type=EmailType.AVAILABILITY_REQUEST,
+            reply_status=ReplyStatus.DRAFTED,
+            requires_reply=True,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Review recruiter history before sending a manual follow-up",
+        )
+        self.assertContains(
+            response,
+            "Review imported recruiter emails and reply status before sending a manual follow-up",
+        )
+        self.assertContains(
+            response,
+            "Update application status and follow-up fields yourself",
+        )
+
+    def test_application_detail_communication_context_advisory_wording_only(self):
+        application = self.create_application()
+        RecruiterEmail.objects.create(
+            application=application,
+            subject="Screening invite",
+            body="We would like to arrange a screening call.",
+            date_received=timezone.now(),
+            email_type=EmailType.SCREENING_INVITE,
+            suggested_application_status="screening",
+            reply_status=ReplyStatus.DRAFTED,
+            requires_reply=True,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Suggested statuses are advisory only")
+        self.assertContains(response, "suggestion only")
+        self.assertContains(
+            response,
+            "does not send email or update statuses automatically",
+        )
+
+    def test_application_detail_hides_recruiter_communication_context_without_emails(
+        self,
+    ):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Recruiter Communication Context")
+        self.assertNotContains(response, "Latest recruiter email")
+        self.assertNotContains(response, "Manual follow-up guidance")
+
     def test_mark_followup_sent_requires_login(self):
         application = self.create_application()
 
