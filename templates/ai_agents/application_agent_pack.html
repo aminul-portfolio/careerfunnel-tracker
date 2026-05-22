@@ -11,8 +11,65 @@
         <div class="kpi-card"><p>Top Project</p><h2 class="small-kpi-text">{{ analysis.recommended_projects.0 }}</h2></div>
     </section>
     <section class="dashboard-two-column">
-        <div class="content-card"><div class="card-header"><p class="eyebrow">Follow-Up Draft</p><h2>{{ followup.subject }}</h2></div><pre class="agent-draft">{{ followup.body }}</pre></div>
+        <div class="content-card"><div class="card-header"><p class="eyebrow">Follow-Up Draft</p><h2>{{ followup.subject }}</h2></div><pre class="agent-draft">{{ followup.body }}</pre><p class="muted-text">Manual copy only — CareerFunnel Tracker does not send email.</p></div>
         <div class="content-card"><div class="card-header"><p class="eyebrow">Interview Prep</p><h2>Profile angle</h2></div><p>{{ prep.profile_angle }}</p><ul class="agent-list">{% for item in prep.preparation_tasks %}<li>{{ item }}</li>{% endfor %}</ul></div>
     </section>
+    {% if tailoring_advisor %}
+    <section class="content-card" id="cv-tailoring-advisor">
+        <div class="card-header">
+            <p class="eyebrow">Rule-Based · Advisory Only</p>
+            <h2>CV Tailoring Advisor</h2>
+        </div>
+        <p class="muted-text">
+            Use these suggestions while reviewing this saved application before you manually
+            tailor your CV or cover letter. Nothing is generated, submitted, or sent
+            automatically.
+        </p>
+        <p class="note-text"><strong>{{ tailoring_advisor.approval_reminder }}</strong></p>
+        <div class="detail-grid">
+            <div class="detail-item"><span>Recommended CV</span><strong>{{ tailoring_advisor.recommended_cv }}</strong></div>
+            <div class="detail-item"><span>CV angle</span><strong>{{ tailoring_advisor.cv_angle }}</strong></div>
+            <div class="detail-item"><span>Role family</span><strong>{{ tailoring_advisor.role_family }}</strong></div>
+        </div>
+        <div class="dashboard-two-column">
+            <div>
+                <h3>Strongest experience angles</h3>
+                <ul class="agent-list">{% for item in tailoring_advisor.strongest_experience %}<li>{{ item }}</li>{% endfor %}</ul>
+            </div>
+            <div>
+                <h3>Strongest projects</h3>
+                <ol class="agent-list">{% for project in tailoring_advisor.strongest_projects %}<li>{{ project }}</li>{% endfor %}</ol>
+            </div>
+        </div>
+        <div class="dashboard-two-column">
+            <div>
+                <h3>Matched skills</h3>
+                <div class="tag-row">{% for skill in tailoring_advisor.matched_skills %}<span>{{ skill }}</span>{% empty %}<span class="muted-text">None detected</span>{% endfor %}</div>
+            </div>
+            <div>
+                <h3>Partial matches</h3>
+                <div class="tag-row">{% for skill in tailoring_advisor.partial_matches %}<span>{{ skill }}</span>{% empty %}<span class="muted-text">None detected</span>{% endfor %}</div>
+            </div>
+        </div>
+        <h3>Missing skills / gaps</h3>
+        <ul class="agent-list">{% for skill in tailoring_advisor.missing_skills %}<li>{{ skill }}</li>{% empty %}<li>No major gaps flagged.</li>{% endfor %}</ul>
+        <div class="dashboard-two-column">
+            <div>
+                <h3>Risks</h3>
+                <ul class="agent-list">{% for risk in tailoring_advisor.risks %}<li>{{ risk }}</li>{% empty %}<li>No major risks flagged.</li>{% endfor %}</ul>
+            </div>
+            <div>
+                <h3>Deal-breakers</h3>
+                <ul class="agent-list">{% for breaker in tailoring_advisor.deal_breakers %}<li>{{ breaker }}</li>{% empty %}<li>No deal-breaker signals detected.</li>{% endfor %}</ul>
+            </div>
+        </div>
+        <h3>Cover letter angle (themes only)</h3>
+        <ul class="agent-list">{% for angle in tailoring_advisor.cover_letter_angle %}<li>{{ angle }}</li>{% endfor %}</ul>
+        <h3>Interview evidence points</h3>
+        <ul class="agent-list">{% for point in tailoring_advisor.interview_evidence_points %}<li>{{ point }}</li>{% endfor %}</ul>
+        <h3>Claim-safety notes</h3>
+        <ul class="agent-list">{% for note in tailoring_advisor.claim_safety_notes %}<li>{{ note }}</li>{% endfor %}</ul>
+    </section>
+    {% endif %}
 </div>
 {% endblock %}

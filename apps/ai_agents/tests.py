@@ -151,6 +151,10 @@ class AiAgentViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Fit Score")
+        self.assertContains(response, "CV Tailoring Advisor")
+        self.assertContains(response, LOCKED_CV)
+        self.assertContains(response, "advisory only")
+        self.assertContains(response, "Review and approve")
 
     def test_followup_writer_post_loads_draft(self):
         self.client.login(username="aminul", password="StrongPass12345")
@@ -176,6 +180,30 @@ class AiAgentViewTests(TestCase):
             reverse("ai_agents:application_agent_pack", kwargs={"pk": self.application.pk})
         )
         self.assertEqual(response.status_code, 200)
+
+    def test_application_agent_pack_shows_cv_tailoring_advisor(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(
+            reverse("ai_agents:application_agent_pack", kwargs={"pk": self.application.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "CV Tailoring Advisor")
+        self.assertContains(response, LOCKED_CV)
+        self.assertContains(response, "Advisory Only")
+        self.assertContains(response, "Review and approve")
+        self.assertContains(response, "No final CV is generated")
+
+    def test_application_detail_links_to_agent_pack(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": self.application.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Open AI Pack / CV Tailoring Advisor")
+        self.assertContains(
+            response,
+            reverse("ai_agents:application_agent_pack", kwargs={"pk": self.application.pk}),
+        )
 
 
 class AdvancedAiAgentFeatureTests(TestCase):
