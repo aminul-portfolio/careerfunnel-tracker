@@ -1305,34 +1305,37 @@ Sprint 23 shows how operational Django/analytics work can be packaged into **aud
 
 ---
 
-## Sprint 28 - Live Application Pilot + Intake Refinement (28A-28C)
+## Sprint 28 - Live Application Pilot + Intake Refinement (28A-28D)
 
 ### Status
 
 - **28A:** Complete - manual recruiter email import (`sprint-28a-email-import-complete`)
 - **28B:** Live pilot - real job intake tested (apply and skip paths)
-- **28C:** Active - intake workflow refinement (CTA, locked CV, README, evidence)
+- **28C:** Complete - intake workflow refinement (CTA, locked CV, README, evidence, CI fix)
+- **28D:** Complete - live pilot closure after 28C refinements (three-role validation)
 
 ### Documentation Evidence
 
 ```text
 docs/evidence/sprint_28_live_application_pilot.md
+docs/evidence/sprint_28d_live_pilot_closure.md
 ```
 
-### What This Document Proves
+### What These Documents Prove
 
 - Live workflow: Analyze -> Review -> Approve -> Pre-fill Add Application -> Manual Save.
-- Successful apply path (Sphere) and disciplined skip path (Legal & General) without false `Submitted` records.
+- 28B: Successful apply path (Sphere) and disciplined skip path (Legal & General) without false `Submitted` records.
+- 28C refinements: **Review & Pre-fill Application** CTA, locked CV `Aminul_Islam_Data_Analyst_CV` in Smart Review, README sprint alignment, GitHub Actions passed after CI assertion fix.
+- 28D closure (`sprint_28d_live_pilot_closure.md`): Strong apply (LiveMore Mortgages), BI/analytics apply (Dow Jones), and stretch/test-only (Starcom) without polluting Applications when not applied.
 - Honest boundaries: no Gmail API, OAuth, scraping, auto-apply, automatic saving, external AI/LLM, or automatic email sending.
-- 28C refinements: **Review & Pre-fill Application** CTA, locked CV `Aminul_Islam_Data_Analyst_CV` in Smart Review, README sprint alignment.
 
 ### Screenshot Evidence (pending)
 
-Capture per checklist in `sprint_28_live_application_pilot.md` before final 28C acceptance.
+Capture per checklist in `sprint_28_live_application_pilot.md` before final Sprint 28 acceptance.
 
 ### Reviewer Value
 
-Shows the tracker was exercised on real roles with explicit manual gates - not demo-only UI - and documents gaps (pre-application statuses, richer pre-fill, demo CSV cleanup) without overstating automation.
+Shows the tracker was exercised on real roles with explicit manual gates - not demo-only UI - and documents gaps (seniority false positives, pre-application statuses, richer pre-fill, demo CSV cleanup) without overstating automation. Sprint 28D confirms the refined intake workflow is ready for sprint closure after repository validation and CI verification.
 
 ---
 
