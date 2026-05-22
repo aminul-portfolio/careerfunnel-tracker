@@ -1416,6 +1416,30 @@ Separates prepared LinkedIn language from actual publication so portfolio promot
 
 ---
 
+## Sprint 31A - CV Evidence Source Audit
+
+### Status
+
+- **31A:** In progress - documentation/audit only (`sprint-31a-cv-evidence-source-audit` branch); no CV Tailoring Advisor implementation
+
+### Documentation Evidence
+
+```text
+docs/evidence/sprint_31a_cv_evidence_source_audit.md
+```
+
+### What This Document Proves
+
+- Inventories claim-safe evidence sources (README, Sprint 29-30 docs, Career Evidence, assisted intake, portfolio wording) before Sprint 31B CV Tailoring Advisor work.
+- Defines manual approval rules and unsafe/future-only claims (no AI, Gmail, Calendar, scraping, auto-apply, recruiter automation, or final CV generation).
+- Records Sprint 31B readiness gate: review, validation, and explicit user approval required before implementation.
+
+### Reviewer Value
+
+Separates evidence audit from product delivery so CV tailoring suggestions in Sprint 31B can trace to documented sources without overstating automation or outcomes.
+
+---
+
 ## Sprint 30D - Evidence / Final Closure
 
 ### Status
