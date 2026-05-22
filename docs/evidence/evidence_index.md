@@ -1392,6 +1392,30 @@ Gives recruiters and hiring managers consistent language for the project without
 
 ---
 
+## Sprint 30C - LinkedIn Update Draft / Readiness Gate
+
+### Status
+
+- **30C:** Complete - LinkedIn project description, post drafts (not published), pinned-repo wording, and publish gate (`sprint-30c` branch; main baseline `ddddd23` when merged; 320 tests)
+
+### Documentation Evidence
+
+```text
+docs/evidence/sprint_30c_linkedin_readiness_gate.md
+```
+
+### What This Document Proves
+
+- LinkedIn-ready title options, project description, full and short post drafts labeled **draft only - not published yet**.
+- Screenshot/media and publish readiness checklists with do-not-publish conditions.
+- Same claim boundaries as Sprint 30A-30B: no live SaaS, production users, Gmail, OAuth, inbox sync, scraping, auto-apply, automatic sending/status changes, automatic interview prep, or external AI / LLM integration.
+
+### Reviewer Value
+
+Separates prepared LinkedIn language from actual publication so portfolio promotion stays evidence-based and manually controlled.
+
+---
+
 # Final Reviewer Summary
 
 CareerFunnel Tracker is a job-search analytics platform built with Django.
