@@ -6,10 +6,10 @@
 |---|---|
 | Project name | CareerFunnel Tracker |
 | GitHub URL | https://github.com/aminul-portfolio/careerfunnel-tracker |
-| Latest visible tag/release | sprint-24a-complete |
-| Latest visible commit | 79e4116 -- Merge sprint 24A portfolio front door |
+| Latest visible tag/release | sprint-29d-evidence-documentation-complete |
+| Latest visible commit | 1189a2c -- Merge sprint-29d evidence documentation |
 | Current branch | main |
-| Evidence checked date | 19 May 2026 |
+| Evidence checked date | 22 May 2026 |
 | Evidence source | Current repository + terminal validation proof |
 | Local validation | Complete |
 
@@ -44,11 +44,13 @@ Django-based job-search intelligence and analytics platform that turns applicati
 - Evaluation queue
 - Rule-based job-posting fit review
 - Manual follow-up support
+- Manual recruiter email import (Sprint 28A foundation)
+- Recruiter Email Actions, Recruiter Communication Context, and Interview Prep Recommended prompt (Sprint 29A-29C; rule-based, advisory only)
 - Interview Evidence Workspace
 - Career Evidence OS V1-V6
 - Playwright screenshot automation
 - Optional Notion metadata/status sync
-- 249 documented passing tests
+- 320 documented passing tests
 - GitHub Actions Django CI
 
 ## Planned / Not Implemented / Not Proven
@@ -66,19 +68,20 @@ Django-based job-search intelligence and analytics platform that turns applicati
 | Evidence Area | Path / Location | What It Proves |
 |---|---|---|
 | Product overview | `README.md` | Scope, reviewer path, verification commands |
-| Application workflows | `apps/applications/` | Tracking, quality warnings, follow-up support |
+| Application workflows | `apps/applications/` | Tracking, quality warnings, follow-up support, Application Detail recruiter-email context |
+| Sprint 29 recruiter email evidence | `docs/evidence/sprint_29_recruiter_email_workflow_enhancements.md` | Manual recruiter-email workflow enhancements (29A-29C) with claim-safe boundaries |
 | Metrics and reporting | `apps/metrics/` | Funnel, source, CV, rejection, data-quality logic |
 | Career Evidence V1-V3 | `docs/career_evidence/01_project_evidence_report.md`, `02_job_fit_matrix.md`, `03_recruiter_evidence_pack.md` | Repository-derived evidence packs |
 | Career Evidence tools | `tools/career_evidence_audit.py`, `tools/career_job_fit_matrix.py`, `tools/career_recruiter_pack.py` | Evidence generation from repo paths |
 | Dashboard UI | `/dashboard/career-evidence/` | V4 browser review surfaces |
 | Screenshot evidence | `docs/screenshots/career_evidence/` | V5 Playwright captures |
 | Notion sync (optional) | `docs/notion/README.md` | V6 metadata-only sync boundary |
-| Automated tests | `tests/` | 249 passing tests (verified locally) |
+| Automated tests | `tests/` | 320 passing tests (verified locally) |
 | CI | `.github/workflows/` | Django CI workflow configuration |
 
 ## Signature Evidence
 
-Career Evidence OS V1-V6: repository-derived project evidence, job-fit mapping, recruiter pack, dashboard review, screenshot evidence, and optional metadata-only Notion sync -- all traceable to local files and tests without external AI or live deployment claims.
+Career Evidence OS V1-V6 plus Sprint 29 recruiter-email workflow evidence on Application Detail: repository-derived project evidence, job-fit mapping, recruiter pack, manual rule-based recruiter action context, dashboard review, screenshot evidence, and optional metadata-only Notion sync -- all traceable to local files and tests without external AI, inbox automation, or live deployment claims.
 
 ## Validation Proof Needed
 
@@ -111,11 +114,11 @@ python manage.py test
 
 - Built a Django job-search analytics platform converting application activity into funnel metrics, source/CV performance reporting, and data-quality signals.
 - Delivered governed reporting, workbook exports, and a Career Evidence OS (V1-V6) with repository-derived recruiter documentation and optional Notion metadata sync.
-- Verified 249 automated tests and GitHub Actions CI for a portfolio-grade data-product codebase.
+- Verified 320 automated tests and GitHub Actions CI for a portfolio-grade data-product codebase.
 
 ## LinkedIn Wording
 
-Portfolio project: Django job-search intelligence platform with explainable funnel metrics, source and CV performance reporting, data-quality checks, workbook exports, and a Career Evidence OS for recruiter-ready proof -- validated locally with 249 passing tests. Not a live SaaS product; no external AI or email/calendar automation.
+Portfolio project: Django job-search intelligence platform with explainable funnel metrics, source and CV performance reporting, data-quality checks, workbook exports, manual recruiter-email workflow context (rule-based), and a Career Evidence OS for recruiter-ready proof -- validated locally with 320 passing tests. Not a live SaaS product; no external AI or email/calendar automation.
 
 ## Interview Talking Points
 
@@ -137,8 +140,8 @@ It is a portfolio analytics product, not a deployed SaaS with real users. Extern
 
 ## Next Recommended Sprint
 
-Sprint name: Portfolio project evidence maintenance
-Goal: Keep portfolio index and project review aligned with repository changes; do not mix other projects into CareerFunnel V1 report generation.
-Allowed scope: `docs/career_evidence/portfolio_*`, portfolio project review files, README cross-links
-Do not add: Changes to generated V1/V2/V3 CareerFunnel evidence content unless regenerating from tools; no fake deployment or integration claims
-Validation plan: Re-run full `python manage.py test` and evidence tool tests after material repo changes
+Sprint name: Portfolio readiness alignment (Sprint 30)
+Goal: Keep README, portfolio project review, and pinned-repo strategy aligned with the Sprint 29 baseline without overstating product maturity.
+Allowed scope: `README.md`, `docs/career_evidence/portfolio_*`, `docs/evidence/` cross-links
+Do not add: Fake deployment, Gmail/OAuth/inbox sync, automatic sending, automatic status mutation, automatic interview prep creation, or external AI claims
+Validation plan: Re-run full `python manage.py test` (320 tests) and `ruff check .` after material repo changes
