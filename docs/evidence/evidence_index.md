@@ -1416,27 +1416,43 @@ Separates prepared LinkedIn language from actual publication so portfolio promot
 
 ---
 
-## Sprint 31A - CV Evidence Source Audit
+## Sprint 31 — CV Tailoring Advisor (31A-31D)
 
 ### Status
 
-- **31A:** In progress - documentation/audit only (`sprint-31a-cv-evidence-source-audit` branch); no CV Tailoring Advisor implementation
+- **31A:** Complete - CV evidence source audit (`sprint-31a-cv-evidence-source-audit-complete`)
+- **31B:** Complete - rule-based `build_cv_tailoring_advisor` service and tests (`sprint-31b-cv-tailoring-advisor-logic-complete`)
+- **31C:** Complete - Job Posting Analyzer, Application AI Pack, Application Detail integration (`sprint-31c-cv-tailoring-advisor-integration-complete`; main `2132095`; **330 tests**)
+- **31D:** In progress - Sprint 31 final closure documentation (`sprint-31d-evidence-and-closure` branch)
 
 ### Documentation Evidence
 
 ```text
 docs/evidence/sprint_31a_cv_evidence_source_audit.md
+docs/evidence/sprint_31_final_closure.md
 ```
 
-### What This Document Proves
+### Code / Template Evidence (31B-31C)
 
-- Inventories claim-safe evidence sources (README, Sprint 29-30 docs, Career Evidence, assisted intake, portfolio wording) before Sprint 31B CV Tailoring Advisor work.
-- Defines manual approval rules and unsafe/future-only claims (no AI, Gmail, Calendar, scraping, auto-apply, recruiter automation, or final CV generation).
-- Records Sprint 31B readiness gate: review, validation, and explicit user approval required before implementation.
+```text
+apps/ai_agents/services.py
+apps/ai_agents/views.py
+apps/ai_agents/tests.py
+templates/ai_agents/job_posting_analyzer.html
+templates/ai_agents/application_agent_pack.html
+templates/applications/application_detail.html
+```
+
+### What Sprint 31 Proves
+
+- Rule-based CV Tailoring Advisor suggests job-specific CV angle, projects, skills, risks, cover-letter themes, and interview points with locked CV `Aminul_Islam_Data_Analyst_CV`.
+- Manual approval and claim-safety boundaries on every advisory output; no final CV generation, cover-letter finalization, auto-apply, Gmail, Calendar, scraping, external AI, or recruiter automation.
+- Integration in Job Posting Analyzer POST flow, Application AI Pack for saved records, and Application Detail link to AI Pack.
+- Validation after 31C: ruff, check, makemigrations --check, **330 tests**, CI green on main.
 
 ### Reviewer Value
 
-Separates evidence audit from product delivery so CV tailoring suggestions in Sprint 31B can trace to documented sources without overstating automation or outcomes.
+Single sprint family showing evidence-first audit → service logic → UI integration → closure, with explicit limitations suitable for portfolio and interview review.
 
 ---
 
