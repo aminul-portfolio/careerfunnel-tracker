@@ -948,7 +948,7 @@ class JobPostingAnalyzerPrefillBridgeTests(TestCase):
     def test_save_as_application_not_shown_before_analysis(self):
         response = self.client.get(self.analyzer_url)
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "Save as Application")
+        self.assertNotContains(response, "Review & Pre-fill Application")
 
     def test_save_as_application_shown_after_analysis(self):
         response = self.client.post(
@@ -961,9 +961,12 @@ class JobPostingAnalyzerPrefillBridgeTests(TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Save as Application")
+        self.assertContains(response, "Review & Pre-fill Application")
         self.assertContains(response, "pre-filled Add Application form")
-        self.assertContains(response, "Nothing is saved until you review and submit")
+        self.assertContains(
+            response,
+            "Nothing is saved until you review and submit the form.",
+        )
 
     def test_save_as_application_link_contains_encoded_get_params(self):
         job_title = "Junior Finance Data Analyst"
