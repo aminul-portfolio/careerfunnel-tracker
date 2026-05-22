@@ -1456,30 +1456,44 @@ Single sprint family showing evidence-first audit → service logic → UI integ
 
 ---
 
-## Sprint 32A — Calibrated AI Fit Scoring Audit + Scope Lock
+## Sprint 32 - Calibrated AI-Assisted Fit Scoring, Mocked-First (32A-32E)
 
 ### Status
 
-- **32A:** In progress — documentation/audit only (`sprint-32a-calibrated-ai-fit-scoring-audit` branch)
-- **OpenAI / external AI:** Not implemented; not active
-- **Rule-based scoring:** Remains the only implemented fit-scoring system
+- **32A:** Complete - audit + scope lock (`sprint-32a-calibrated-ai-fit-scoring-audit-complete`)
+- **32B:** Complete - AI scoring contract + mocked tests (`sprint-32b-ai-scoring-service-contract-mocked-tests-complete`)
+- **32C:** Complete - OpenAI-shaped wrapper + safe fallback (`sprint-32c-openai-wrapper-safe-fallback-mocked-first-complete`)
+- **32D:** Complete - Job Posting Analyzer rule-based vs AI score UI (`sprint-32d-rule-based-vs-ai-score-ui-complete`)
+- **32E:** Complete - Sprint 32 final closure documentation (`sprint-32e-evidence-and-final-closure`)
+- **External AI:** Not active - no real OpenAI call; UI shows fallback when no provider callable
+- **Rule-based scoring:** Remains primary and visible
 
 ### Documentation Evidence
 
 ```text
 docs/evidence/sprint_32a_calibrated_ai_fit_scoring_audit.md
+docs/evidence/sprint_32_final_closure.md
 ```
 
-### What This Document Proves
+### Code / Template Evidence (32B-32D)
 
-- Audits current rule-based baseline (`job_intelligence`, `ai_agents`, related templates) before any calibrated AI scoring work.
-- Locks JSON advisory contract, calibration rules (side-by-side scores, manual approval), and OpenAI/security boundaries for later sub-sprints.
-- Proposes Sprint 32B–32E breakdown without claiming 32B+ is implemented.
-- Explicit boundaries: no OpenAI, Claude, API keys in repo, Gmail, Calendar, OAuth, scraping, auto-apply, recruiter automation, or final CV generation in Sprint 32A.
+```text
+apps/ai_agents/services.py
+apps/ai_agents/tests.py
+apps/ai_agents/views.py
+templates/ai_agents/job_posting_analyzer.html
+```
+
+### What Sprint 32 Proves
+
+- Mocked-first AI scoring contract (`AIFitScoringResult`, `AIFitScoreComparison`) and OpenAI-shaped wrapper with dependency-injected callable and safe fallback.
+- Job Posting Analyzer **Rule-Based vs AI Score Check** card with fallback status, manual review, and claim-safety copy (ASCII UI separators in 32D).
+- No OpenAI SDK, API keys, settings changes, database persistence of AI output, auto-apply, Gmail, Calendar, scraping, or recruiter automation.
+- Validation after 32D: **56** targeted `apps.ai_agents` tests, **351** full suite, ruff, check, makemigrations --check, CI green.
 
 ### Reviewer Value
 
-Separates planning and scope-lock from implementation so portfolio claims stay accurate until a future sub-sprint is merged, tagged, and evidenced.
+Shows a disciplined path from audit -> contract -> wrapper -> UI with honest fallback-only behavior until a future provider sprint is approved.
 
 ---
 
