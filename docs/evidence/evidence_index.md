@@ -1456,6 +1456,33 @@ Single sprint family showing evidence-first audit → service logic → UI integ
 
 ---
 
+## Sprint 32A — Calibrated AI Fit Scoring Audit + Scope Lock
+
+### Status
+
+- **32A:** In progress — documentation/audit only (`sprint-32a-calibrated-ai-fit-scoring-audit` branch)
+- **OpenAI / external AI:** Not implemented; not active
+- **Rule-based scoring:** Remains the only implemented fit-scoring system
+
+### Documentation Evidence
+
+```text
+docs/evidence/sprint_32a_calibrated_ai_fit_scoring_audit.md
+```
+
+### What This Document Proves
+
+- Audits current rule-based baseline (`job_intelligence`, `ai_agents`, related templates) before any calibrated AI scoring work.
+- Locks JSON advisory contract, calibration rules (side-by-side scores, manual approval), and OpenAI/security boundaries for later sub-sprints.
+- Proposes Sprint 32B–32E breakdown without claiming 32B+ is implemented.
+- Explicit boundaries: no OpenAI, Claude, API keys in repo, Gmail, Calendar, OAuth, scraping, auto-apply, recruiter automation, or final CV generation in Sprint 32A.
+
+### Reviewer Value
+
+Separates planning and scope-lock from implementation so portfolio claims stay accurate until a future sub-sprint is merged, tagged, and evidenced.
+
+---
+
 ## Sprint 30D - Evidence / Final Closure
 
 ### Status
