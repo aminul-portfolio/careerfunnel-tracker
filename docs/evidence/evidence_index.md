@@ -1367,6 +1367,31 @@ Shows recruiter emails move from stored imports to portfolio-safe, manual action
 
 ---
 
+## Sprint 30 - Portfolio Readiness and Recruiter-Facing Summary (30A-30B)
+
+### Status
+
+- **30A:** Complete - README and portfolio doc alignment to Sprint 29 baseline (`sprint-30a-portfolio-readiness-alignment-complete`, main `284e040`, 320 tests)
+- **30B:** Complete - Recruiter-facing project summary for GitHub, LinkedIn drafts, CV notes, messages, and interviews
+
+### Documentation Evidence
+
+```text
+docs/evidence/sprint_30_recruiter_facing_project_summary.md
+```
+
+### What This Document Proves
+
+- Reusable, claim-safe one-liner, paragraph, CV bullets, LinkedIn draft (not published), recruiter message, and interview explanation.
+- Aligns positioning with 320 tests, rule-based manual workflows, and Sprint 29 recruiter-email enhancements.
+- Explicit boundaries: no live SaaS, production users, Gmail, OAuth, inbox sync, scraping, auto-apply, automatic sending/status changes, automatic interview prep, or external AI / LLM integration.
+
+### Reviewer Value
+
+Gives recruiters and hiring managers consistent language for the project without overstating deployment, customers, or automation.
+
+---
+
 # Final Reviewer Summary
 
 CareerFunnel Tracker is a job-search analytics platform built with Django.
