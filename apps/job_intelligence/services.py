@@ -13,6 +13,9 @@ from .constants import (
     TARGET_TITLES,
 )
 
+# Role-specific CV angle advice belongs in Sprint 31; saved CV filename is locked.
+LOCKED_CV = "Aminul_Islam_Data_Analyst_CV"
+
 
 @dataclass(frozen=True)
 class SmartApplicationReview:
@@ -108,13 +111,13 @@ def recommend_cv(application: JobApplication) -> tuple[str, str]:
         ]
     ):
         return (
-            "Finance_DA_CV_v1",
+            LOCKED_CV,
             "Finance/reporting language appears in the role. "
             "Use finance operations and KPI evidence.",
         )
     if any(word in text for word in ["bi", "dashboard", "power bi", "reporting", "insights"]):
         return (
-            "BI_Reporting_CV_v1",
+            LOCKED_CV,
             "The role appears dashboard/reporting focused. "
             "Emphasise metrics, dashboards, and reporting outputs.",
         )
@@ -123,12 +126,12 @@ def recommend_cv(application: JobApplication) -> tuple[str, str]:
         for word in ["analytics engineer", "etl", "data product", "pipeline", "api"]
     ):
         return (
-            "AE_Data_Product_CV_v1",
+            LOCKED_CV,
             "The role mentions engineering/data-product signals. "
             "Emphasise ETL, API, and data-product projects.",
         )
     return (
-        "DA_CV_v2",
+        LOCKED_CV,
         "Default to the Data Analyst CV because the role does not clearly require "
         "a specialist CV.",
     )

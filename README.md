@@ -8,11 +8,9 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 ## Current Sprint Position
 
-Sprints 25, 26A–26D, and 27A–27C are complete. The latest completed tag is `sprint-27c-complete`. **Sprint 28** is the active next sprint.
+Sprints 25, 26A–26D, and 27A–27C are complete. **Sprint 28A** manual recruiter email import is complete; the latest completed tag is `sprint-28a-email-import-complete`. **Sprint 28B** live application pilot surfaced intake workflow refinements. **Sprint 28C** is active and focused on intake workflow refinement.
 
-**Sprint 28A** (email import) is not yet implemented.
-
-This README does not claim Gmail API integration, external AI or LLM services, calendar integration, web scraping, auto-apply workflows, a live SaaS deployment, production users, or automatic email sending.
+This README does not claim Gmail API integration, OAuth, web scraping, auto-apply workflows, automatic saving, external AI or LLM services, calendar integration, a live SaaS deployment, production users, or automatic email sending.
 
 ## Business Problem
 
