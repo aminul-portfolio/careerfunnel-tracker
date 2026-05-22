@@ -585,6 +585,165 @@ class JobApplicationViewTests(TestCase):
         self.assertNotContains(response, "Latest recruiter email")
         self.assertNotContains(response, "Manual follow-up guidance")
 
+    def test_application_detail_shows_interview_prep_prompt_for_interview_signal(self):
+        application = self.create_application()
+        RecruiterEmail.objects.create(
+            application=application,
+            subject="Interview invite",
+            body="We would like to invite you to interview.",
+            date_received=timezone.now(),
+            email_type=EmailType.INTERVIEW_INVITE,
+            matched_signals=json.dumps(["interview", "interview availability"]),
+            reply_status=ReplyStatus.DRAFTED,
+            requires_reply=True,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+        interview_create_url = reverse("interviews:interview_create")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Interview Prep Recommended")
+        self.assertContains(
+            response,
+            "Recruiter email history includes interview/screening signals",
+        )
+        self.assertContains(response, "recruiter-interview-prep-prompt")
+        self.assertContains(
+            response,
+            (
+                f'<div class="hero-actions"><a href="{interview_create_url}" '
+                f'class="btn btn-primary">Create Interview Prep</a></div>'
+            ),
+        )
+
+    def test_application_detail_shows_interview_prep_prompt_for_screening_signal(self):
+        application = self.create_application()
+        RecruiterEmail.objects.create(
+            application=application,
+            subject="Screening call",
+            body="We would like to arrange a screening call.",
+            date_received=timezone.now(),
+            email_type=EmailType.SCREENING_INVITE,
+            matched_signals=json.dumps(["screening call"]),
+            reply_status=ReplyStatus.NEEDS_REVIEW,
+            requires_reply=True,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Interview Prep Recommended")
+        self.assertContains(
+            response,
+            "Create interview prep manually after reviewing the recruiter email",
+        )
+
+    def test_application_detail_interview_prep_prompt_includes_create_link(self):
+        application = self.create_application()
+        RecruiterEmail.objects.create(
+            application=application,
+            subject="Interview availability",
+            body="Please share interview availability.",
+            date_received=timezone.now(),
+            matched_signals=json.dumps(["interview availability"]),
+            reply_status=ReplyStatus.DRAFTED,
+            requires_reply=True,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+        interview_create_url = reverse("interviews:interview_create")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            (
+                '<div class="diagnosis-box recruiter-interview-prep-prompt">'
+                '<h3>Interview Prep Recommended</h3>'
+            ),
+        )
+        self.assertContains(
+            response,
+            (
+                'recruiter-interview-prep-prompt">'
+                '<h3>Interview Prep Recommended</h3>'
+                '<p class="muted-text">Recruiter email history includes '
+                'interview/screening signals.'
+                ' Create interview prep manually after reviewing the recruiter email.'
+            ),
+        )
+        contextual_link = (
+            f'<div class="hero-actions"><a href="{interview_create_url}" '
+            f'class="btn btn-primary">Create Interview Prep</a></div>'
+        )
+        self.assertEqual(response.content.decode().count(contextual_link), 1)
+
+    def test_application_detail_hides_interview_prep_prompt_without_relevant_signals(
+        self,
+    ):
+        application = self.create_application()
+        RecruiterEmail.objects.create(
+            application=application,
+            subject="Application acknowledgement",
+            body="Thank you for applying.",
+            date_received=timezone.now(),
+            email_type=EmailType.ACKNOWLEDGEMENT,
+            matched_signals=json.dumps(["thank you for applying"]),
+            reply_status=ReplyStatus.NOT_REQUIRED,
+            requires_reply=False,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Recruiter Email Actions")
+        self.assertNotContains(response, "Interview Prep Recommended")
+        self.assertNotContains(response, "recruiter-interview-prep-prompt")
+
+    def test_application_detail_interview_prep_prompt_manual_advisory_wording(self):
+        application = self.create_application()
+        RecruiterEmail.objects.create(
+            application=application,
+            subject="Interview invite",
+            body="We would like to invite you to interview.",
+            date_received=timezone.now(),
+            matched_signals=json.dumps(["interview"]),
+            reply_status=ReplyStatus.DRAFTED,
+            requires_reply=True,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "This is a manual prompt only")
+        self.assertContains(response, "Review the recruiter email first")
+        self.assertContains(
+            response,
+            "Create interview prep only after you decide it is needed",
+        )
+        self.assertContains(
+            response,
+            "does not create interview prep automatically",
+        )
+        self.assertContains(
+            response,
+            "does not create interview prep, send emails, or update statuses automatically",
+        )
+
     def test_mark_followup_sent_requires_login(self):
         application = self.create_application()
 
