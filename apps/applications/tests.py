@@ -1,4 +1,5 @@
-from datetime import date
+import json
+from datetime import date, timedelta
 from unittest.mock import patch
 from urllib.parse import quote
 
@@ -10,6 +11,8 @@ from django.utils import timezone
 from django.utils.formats import date_format
 
 from apps.job_intelligence.services import build_smart_review
+from apps.recruiter_emails.choices import EmailType, ReplyStatus
+from apps.recruiter_emails.models import RecruiterEmail
 
 from .choices import (
     ApplicationSource,
@@ -350,6 +353,94 @@ class JobApplicationViewTests(TestCase):
         )
         self.assertNotContains(response, f'action="{mark_followup_url}"')
         self.assertContains(response, "CareerFunnel Tracker does not send email.")
+
+    def test_application_detail_shows_recruiter_email_action_summary_needs_reply(self):
+        application = self.create_application()
+        RecruiterEmail.objects.create(
+            application=application,
+            subject="Interview availability",
+            body="We would like to invite you to interview.",
+            date_received=timezone.now(),
+            email_type=EmailType.INTERVIEW_INVITE,
+            matched_signals=json.dumps(["interview", "interview availability"]),
+            reply_status=ReplyStatus.DRAFTED,
+            requires_reply=True,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Recruiter Email Actions")
+        self.assertContains(response, "Needs reply")
+        self.assertContains(response, "Action needed")
+        self.assertContains(response, "Reply status")
+        self.assertContains(response, "Interview/screening signal")
+
+    def test_application_detail_shows_recruiter_email_action_due_and_suggested_status(self):
+        application = self.create_application()
+        action_due_at = timezone.now() + timedelta(hours=24)
+        RecruiterEmail.objects.create(
+            application=application,
+            subject="Screening call",
+            body="We would like to arrange a screening call.",
+            date_received=timezone.now(),
+            email_type=EmailType.SCREENING_INVITE,
+            matched_signals=json.dumps(["screening call"]),
+            reply_status=ReplyStatus.NEEDS_REVIEW,
+            requires_reply=True,
+            action_due_at=action_due_at,
+            suggested_application_status="screening",
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Action due")
+        self.assertContains(
+            response,
+            date_format(timezone.localtime(action_due_at), "DATETIME_FORMAT"),
+        )
+        self.assertContains(response, "Suggested status")
+        self.assertContains(response, "screening (suggestion only)")
+
+    def test_application_detail_recruiter_emails_remain_manual_and_rule_based(self):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Paste recruiter emails manually")
+        self.assertContains(response, "rule-based only")
+        self.assertContains(response, "Suggested statuses are suggestions only")
+        self.assertContains(
+            response,
+            "does not send email or update application status automatically",
+        )
+
+    def test_application_detail_still_shows_import_recruiter_email_link(self):
+        application = self.create_application()
+        import_url = reverse(
+            "recruiter_emails:import",
+            kwargs={"application_id": application.pk},
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Import Recruiter Email")
+        self.assertContains(response, f'href="{import_url}"')
 
     def test_mark_followup_sent_requires_login(self):
         application = self.create_application()
