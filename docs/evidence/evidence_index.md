@@ -1305,6 +1305,37 @@ Sprint 23 shows how operational Django/analytics work can be packaged into **aud
 
 ---
 
+## Sprint 28 - Live Application Pilot + Intake Refinement (28A-28C)
+
+### Status
+
+- **28A:** Complete - manual recruiter email import (`sprint-28a-email-import-complete`)
+- **28B:** Live pilot - real job intake tested (apply and skip paths)
+- **28C:** Active - intake workflow refinement (CTA, locked CV, README, evidence)
+
+### Documentation Evidence
+
+```text
+docs/evidence/sprint_28_live_application_pilot.md
+```
+
+### What This Document Proves
+
+- Live workflow: Analyze -> Review -> Approve -> Pre-fill Add Application -> Manual Save.
+- Successful apply path (Sphere) and disciplined skip path (Legal & General) without false `Submitted` records.
+- Honest boundaries: no Gmail API, OAuth, scraping, auto-apply, automatic saving, external AI/LLM, or automatic email sending.
+- 28C refinements: **Review & Pre-fill Application** CTA, locked CV `Aminul_Islam_Data_Analyst_CV` in Smart Review, README sprint alignment.
+
+### Screenshot Evidence (pending)
+
+Capture per checklist in `sprint_28_live_application_pilot.md` before final 28C acceptance.
+
+### Reviewer Value
+
+Shows the tracker was exercised on real roles with explicit manual gates - not demo-only UI - and documents gaps (pre-application statuses, richer pre-fill, demo CSV cleanup) without overstating automation.
+
+---
+
 # Final Reviewer Summary
 
 CareerFunnel Tracker is a job-search analytics platform built with Django.
