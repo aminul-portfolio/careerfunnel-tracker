@@ -476,3 +476,140 @@ class CVTailoringAdvisorLogicTests(TestCase):
         self.assertIn("external ai", safety_text)
         self.assertIn("recruiter automation", safety_text)
         self.assertNotIn("gmail integration is active", safety_text)
+
+
+class AIFitScoringContractTests(TestCase):
+    def _valid_payload(self, **overrides):
+        payload = {
+            "ai_fit_score": 72,
+            "ai_fit_label": "Good selective fit",
+            "confidence": "medium",
+            "evidence_matches": ["Python", "SQL"],
+            "gaps": ["dbt"],
+            "deal_breakers": [],
+            "reasoning_summary": "Strong overlap with portfolio evidence.",
+            "recommended_cv_angle": "BI reporting and dashboard angle.",
+            "recommended_projects": ["BakeOps Intelligence"],
+            "manual_review_required": False,
+            "claim_safety_notes": ["Treat as advisory."],
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_valid_mocked_payload_parses_into_ai_fit_scoring_result(self):
+        from .services import build_ai_fit_scoring_result_from_mock
+
+        result = build_ai_fit_scoring_result_from_mock(self._valid_payload())
+        self.assertEqual(result.ai_fit_score, 72)
+        self.assertEqual(result.ai_fit_label, "Good selective fit")
+        self.assertEqual(result.confidence, "medium")
+
+    def test_ai_fit_score_must_be_between_zero_and_hundred(self):
+        from .services import parse_ai_fit_scoring_payload
+
+        with self.assertRaises(ValueError):
+            parse_ai_fit_scoring_payload(self._valid_payload(ai_fit_score=150))
+
+    def test_confidence_must_be_low_medium_or_high(self):
+        from .services import parse_ai_fit_scoring_payload
+
+        with self.assertRaises(ValueError):
+            parse_ai_fit_scoring_payload(self._valid_payload(confidence="very-high"))
+
+    def test_list_fields_must_be_lists_of_strings(self):
+        from .services import parse_ai_fit_scoring_payload
+
+        with self.assertRaises(ValueError):
+            parse_ai_fit_scoring_payload(
+                self._valid_payload(evidence_matches=["Python", 99])
+            )
+
+    def test_manual_review_required_remains_true_when_payload_false(self):
+        from .services import parse_ai_fit_scoring_payload
+
+        result = parse_ai_fit_scoring_payload(
+            self._valid_payload(manual_review_required=False)
+        )
+        self.assertTrue(result.manual_review_required)
+
+    def test_claim_safety_notes_include_advisory_and_boundary_language(self):
+        from .services import parse_ai_fit_scoring_payload
+
+        result = parse_ai_fit_scoring_payload(self._valid_payload())
+        notes = " ".join(result.claim_safety_notes).lower()
+        self.assertIn("advisory only", notes)
+        self.assertIn("manual review", notes)
+        self.assertIn("no application is submitted", notes)
+        self.assertIn("openai", notes)
+        self.assertIn("auto-apply", notes)
+
+    def test_score_comparison_flags_disagreement_above_threshold(self):
+        from .services import (
+            AI_SCORE_DISAGREEMENT_THRESHOLD,
+            build_ai_fit_scoring_result_from_mock,
+            compare_rule_based_and_ai_scores,
+        )
+
+        ai_result = build_ai_fit_scoring_result_from_mock(
+            self._valid_payload(
+                ai_fit_score=50 + AI_SCORE_DISAGREEMENT_THRESHOLD + 1
+            )
+        )
+        comparison = compare_rule_based_and_ai_scores(50, ai_result)
+        self.assertTrue(comparison.disagreement_flag)
+        self.assertEqual(
+            comparison.score_delta,
+            AI_SCORE_DISAGREEMENT_THRESHOLD + 1,
+        )
+        self.assertIn("differ materially", comparison.disagreement_summary.lower())
+
+    def test_score_comparison_no_disagreement_within_threshold(self):
+        from .services import (
+            build_ai_fit_scoring_result_from_mock,
+            compare_rule_based_and_ai_scores,
+        )
+
+        ai_result = build_ai_fit_scoring_result_from_mock(
+            self._valid_payload(ai_fit_score=60)
+        )
+        comparison = compare_rule_based_and_ai_scores(50, ai_result)
+        self.assertFalse(comparison.disagreement_flag)
+        self.assertEqual(comparison.score_delta, 10)
+        self.assertIn("broadly aligned", comparison.disagreement_summary.lower())
+
+    def test_invalid_rule_based_score_raises_value_error(self):
+        from .services import (
+            build_ai_fit_scoring_result_from_mock,
+            compare_rule_based_and_ai_scores,
+        )
+
+        ai_result = build_ai_fit_scoring_result_from_mock(self._valid_payload())
+        with self.assertRaises(ValueError):
+            compare_rule_based_and_ai_scores(150, ai_result)
+
+    def test_comparison_always_requires_manual_review(self):
+        from .services import (
+            build_ai_fit_scoring_result_from_mock,
+            compare_rule_based_and_ai_scores,
+        )
+
+        ai_result = build_ai_fit_scoring_result_from_mock(self._valid_payload())
+        comparison = compare_rule_based_and_ai_scores(70, ai_result)
+        self.assertTrue(comparison.manual_review_required)
+
+    def test_services_module_has_no_provider_client_imports(self):
+        from pathlib import Path
+
+        source = Path(__file__).resolve().parent.joinpath("services.py").read_text(
+            encoding="utf-8"
+        ).lower()
+        forbidden = (
+            "import openai",
+            "from openai",
+            "import anthropic",
+            "import httpx",
+            "import requests",
+            "from urllib",
+        )
+        for pattern in forbidden:
+            self.assertNotIn(pattern, source)

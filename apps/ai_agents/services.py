@@ -994,6 +994,208 @@ def build_cv_tailoring_advisor(
     )
 
 
+# --- Sprint 32B: AI fit scoring contract (local/mocked only; no external API) ---
+
+AI_CONFIDENCE_LEVELS = {"low", "medium", "high"}
+AI_SCORE_DISAGREEMENT_THRESHOLD = 15
+
+AI_SCORING_CLAIM_SAFETY_NOTES = [
+    "AI scoring is advisory only.",
+    "Rule-based score remains visible.",
+    (
+        "Manual review is required before saving or using recommendations "
+        "externally."
+    ),
+    "No application is submitted.",
+    "No CV or cover letter is finalized.",
+    (
+        "No Gmail, Calendar, scraping, recruiter automation, or auto-apply "
+        "is used."
+    ),
+    "Sprint 32B does not call OpenAI or any external AI service.",
+]
+
+AI_SCORING_REQUIRED_PAYLOAD_FIELDS = [
+    "ai_fit_score",
+    "ai_fit_label",
+    "confidence",
+    "evidence_matches",
+    "gaps",
+    "deal_breakers",
+    "reasoning_summary",
+    "recommended_cv_angle",
+    "recommended_projects",
+    "claim_safety_notes",
+]
+
+
+@dataclass(frozen=True)
+class AIFitScoringResult:
+    ai_fit_score: int
+    ai_fit_label: str
+    confidence: str
+    evidence_matches: list[str]
+    gaps: list[str]
+    deal_breakers: list[str]
+    reasoning_summary: str
+    recommended_cv_angle: str
+    recommended_projects: list[str]
+    manual_review_required: bool
+    claim_safety_notes: list[str]
+
+
+@dataclass(frozen=True)
+class AIFitScoreComparison:
+    rule_based_score: int
+    ai_fit_score: int
+    score_delta: int
+    disagreement_flag: bool
+    disagreement_summary: str
+    manual_review_required: bool
+    claim_safety_notes: list[str]
+
+
+def _merge_ai_scoring_claim_notes(extra: list[str]) -> list[str]:
+    merged = list(AI_SCORING_CLAIM_SAFETY_NOTES)
+    for note in extra:
+        if note and note not in merged:
+            merged.append(note)
+    return merged
+
+
+def _validate_fit_score_value(score: object, field_name: str) -> int:
+    if isinstance(score, bool) or not isinstance(score, int):
+        raise ValueError(f"{field_name} must be an integer between 0 and 100.")
+    if score < 0 or score > 100:
+        raise ValueError(f"{field_name} must be an integer between 0 and 100.")
+    return score
+
+
+def _parse_string_list_field(value: object, field_name: str) -> list[str]:
+    if not isinstance(value, list):
+        raise ValueError(f"{field_name} must be a list of strings.")
+    cleaned: list[str] = []
+    for item in value:
+        if not isinstance(item, str):
+            raise ValueError(f"{field_name} must be a list of strings.")
+        text = item.strip()
+        if text:
+            cleaned.append(text)
+    return cleaned
+
+
+def parse_ai_fit_scoring_payload(payload: dict) -> AIFitScoringResult:
+    """Validate a local dict payload. No network calls or database writes."""
+    if not isinstance(payload, dict):
+        raise ValueError("Payload must be a dictionary.")
+
+    errors: list[str] = []
+    for field in AI_SCORING_REQUIRED_PAYLOAD_FIELDS:
+        if field not in payload:
+            errors.append(f"Missing required field: {field}.")
+
+    ai_score: int | None = None
+    confidence = ""
+    raw_score = payload.get("ai_fit_score")
+    try:
+        if "ai_fit_score" in payload:
+            ai_score = _validate_fit_score_value(raw_score, "ai_fit_score")
+    except ValueError as exc:
+        errors.append(str(exc))
+
+    raw_confidence = payload.get("confidence")
+    if not isinstance(raw_confidence, str):
+        errors.append("confidence must be a string: low, medium, or high.")
+    else:
+        confidence = raw_confidence.strip().lower()
+        if confidence not in AI_CONFIDENCE_LEVELS:
+            errors.append("confidence must be one of: low, medium, high.")
+
+    raw_label = payload.get("ai_fit_label")
+    if not isinstance(raw_label, str) or not raw_label.strip():
+        errors.append("ai_fit_label must be a non-empty string.")
+
+    raw_summary = payload.get("reasoning_summary")
+    if not isinstance(raw_summary, str):
+        errors.append("reasoning_summary must be a string.")
+    elif not raw_summary.strip():
+        errors.append("reasoning_summary must be a non-empty string.")
+
+    raw_angle = payload.get("recommended_cv_angle")
+    if not isinstance(raw_angle, str):
+        errors.append("recommended_cv_angle must be a string.")
+    elif not raw_angle.strip():
+        errors.append("recommended_cv_angle must be a non-empty string.")
+
+    list_fields: dict[str, list[str]] = {}
+    for field in (
+        "evidence_matches",
+        "gaps",
+        "deal_breakers",
+        "recommended_projects",
+        "claim_safety_notes",
+    ):
+        try:
+            list_fields[field] = _parse_string_list_field(payload.get(field), field)
+        except ValueError as exc:
+            errors.append(str(exc))
+
+    if errors:
+        raise ValueError("; ".join(errors))
+
+    assert ai_score is not None
+    return AIFitScoringResult(
+        ai_fit_score=ai_score,
+        ai_fit_label=str(payload["ai_fit_label"]).strip(),
+        confidence=confidence,
+        evidence_matches=list_fields["evidence_matches"],
+        gaps=list_fields["gaps"],
+        deal_breakers=list_fields["deal_breakers"],
+        reasoning_summary=str(payload["reasoning_summary"]).strip(),
+        recommended_cv_angle=str(payload["recommended_cv_angle"]).strip(),
+        recommended_projects=list_fields["recommended_projects"],
+        manual_review_required=True,
+        claim_safety_notes=_merge_ai_scoring_claim_notes(
+            list_fields["claim_safety_notes"]
+        ),
+    )
+
+
+def build_ai_fit_scoring_result_from_mock(payload: dict) -> AIFitScoringResult:
+    """Parse a mocked/static dict payload. Not an OpenAI or external API client."""
+    return parse_ai_fit_scoring_payload(payload)
+
+
+def compare_rule_based_and_ai_scores(
+    rule_based_score: int,
+    ai_result: AIFitScoringResult,
+    threshold: int = AI_SCORE_DISAGREEMENT_THRESHOLD,
+) -> AIFitScoreComparison:
+    """Side-by-side score comparison. Does not persist data or call external services."""
+    validated_rule_score = _validate_fit_score_value(rule_based_score, "rule_based_score")
+    score_delta = abs(ai_result.ai_fit_score - validated_rule_score)
+    disagreement_flag = score_delta > threshold
+    if disagreement_flag:
+        disagreement_summary = (
+            "Manual review is required because rule-based and AI scores "
+            "differ materially."
+        )
+    else:
+        disagreement_summary = (
+            "Scores are broadly aligned, but recommendations remain advisory."
+        )
+
+    return AIFitScoreComparison(
+        rule_based_score=validated_rule_score,
+        ai_fit_score=ai_result.ai_fit_score,
+        score_delta=score_delta,
+        disagreement_flag=disagreement_flag,
+        disagreement_summary=disagreement_summary,
+        manual_review_required=True,
+        claim_safety_notes=list(AI_SCORING_CLAIM_SAFETY_NOTES),
+    )
+
+
 def check_cover_letter_quality(
     company_name: str,
     job_title: str,
