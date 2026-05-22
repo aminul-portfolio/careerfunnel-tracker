@@ -10,7 +10,9 @@ from apps.applications.models import JobApplication
 from apps.job_intelligence import constants as role_fit_constants
 
 from .services import (
+    LOCKED_CV,
     analyze_job_posting,
+    build_cv_tailoring_advisor,
     build_next_best_actions,
     build_weekly_coach_report,
     generate_followup_message,
@@ -296,3 +298,153 @@ class AdvancedAiAgentViewTests(TestCase):
         response = self.client.get(reverse("ai_agents:smart_notifications"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Current Notifications")
+
+
+class CVTailoringAdvisorLogicTests(TestCase):
+    def _result_text(self, result) -> str:
+        return " ".join(
+            [
+                result.recommended_cv,
+                result.cv_angle,
+                result.role_family,
+                " ".join(result.strongest_experience),
+                " ".join(result.strongest_projects),
+                " ".join(result.risks),
+                " ".join(result.deal_breakers),
+                " ".join(result.claim_safety_notes),
+                result.approval_reminder,
+            ]
+        ).lower()
+
+    def test_finance_fintech_role_returns_locked_cv_finance_angle_and_projects(self):
+        result = build_cv_tailoring_advisor(
+            company_name="FinSight",
+            job_title="Junior Finance Data Analyst",
+            location="Hybrid London",
+            job_description=(
+                "Python SQL Excel finance reporting banking risk reconciliation KPI "
+                "junior 0-2 years"
+            ),
+            cv_evidence="Python Excel finance reporting reconciliation Django",
+        )
+        self.assertEqual(result.recommended_cv, LOCKED_CV)
+        self.assertIn("Finance", result.cv_angle)
+        self.assertEqual(result.role_family, "Finance / FinTech Analytics")
+        self.assertTrue(
+            any(
+                project in result.strongest_projects
+                for project in ("TradeIntel 360", "RiskWise Planner", "MarketVista Dashboard")
+            )
+        )
+        self.assertTrue(
+            any(
+                "reconciliation" in item.lower()
+                for item in result.strongest_experience
+            )
+        )
+
+    def test_bi_reporting_role_returns_locked_cv_reporting_angle_and_projects(self):
+        result = build_cv_tailoring_advisor(
+            job_title="BI Analyst",
+            location="London",
+            job_description=(
+                "Power BI Tableau dashboard reporting KPI stakeholder insights "
+                "business intelligence junior"
+            ),
+            cv_evidence="Python Excel dashboard reporting stakeholder",
+        )
+        self.assertEqual(result.recommended_cv, LOCKED_CV)
+        self.assertIn("BI", result.cv_angle)
+        self.assertEqual(result.role_family, "BI / Reporting Analytics")
+        self.assertIn("BakeOps Intelligence", result.strongest_projects)
+        self.assertIn("MarketVista Dashboard", result.strongest_projects)
+
+    def test_etl_api_pipeline_role_returns_ae_stretch_angle_and_projects(self):
+        result = build_cv_tailoring_advisor(
+            job_title="Junior Analytics Engineer",
+            location="Remote UK",
+            job_description=(
+                "ETL API pipeline integration SQL Python dashboards stakeholder "
+                "reporting 1-2 years"
+            ),
+            cv_evidence="Python SQL API Django reporting",
+        )
+        self.assertEqual(result.recommended_cv, LOCKED_CV)
+        self.assertIn("Analytics Engineering", result.cv_angle)
+        self.assertEqual(result.role_family, "Analytics Engineering / Data Product Stretch")
+        self.assertIn("DataBridge Market API", result.strongest_projects)
+
+    def test_senior_clearance_role_surfaces_deal_breakers_and_review_risk(self):
+        result = build_cv_tailoring_advisor(
+            job_title="Senior Data Analyst",
+            location="London",
+            job_description=(
+                "SC clearance required ACCA SQL Python 10+ years senior data analyst "
+                "reporting"
+            ),
+        )
+        self.assertEqual(result.recommended_cv, LOCKED_CV)
+        self.assertIn("sc clearance", result.deal_breakers)
+        self.assertTrue(result.deal_breakers)
+        self.assertEqual(result.role_family, "Review Carefully")
+        self.assertIn("Review-first", result.cv_angle)
+        self.assertTrue(
+            any(
+                "seniority" in risk.lower() or "deal-breaker" in risk.lower()
+                for risk in result.risks
+            )
+        )
+
+    def test_missing_dbt_snowflake_airflow_treated_as_gaps_not_invented_experience(self):
+        result = build_cv_tailoring_advisor(
+            job_title="Data Analyst",
+            job_description="Python SQL dbt Snowflake Airflow required for reporting",
+            cv_evidence="Python Excel dashboard reporting Django",
+        )
+        gap_text = " ".join(
+            result.missing_skills + result.partial_matches + result.risks
+        ).lower()
+        self.assertTrue(
+            any(tool in gap_text for tool in ("dbt", "snowflake", "airflow"))
+        )
+        experience_text = " ".join(result.strongest_experience).lower()
+        self.assertNotIn("dbt production expert", experience_text)
+        self.assertNotIn("snowflake architect", experience_text)
+
+    def test_advisor_output_contains_manual_approval_safety_language(self):
+        result = build_cv_tailoring_advisor(
+            job_title="Junior Data Analyst",
+            job_description="Python SQL Excel reporting junior London",
+        )
+        self.assertIn("advisory only", " ".join(result.claim_safety_notes).lower())
+        self.assertIn("manually approve", " ".join(result.claim_safety_notes).lower())
+        self.assertIn("review and approve", result.approval_reminder.lower())
+
+    def test_advisor_does_not_invent_alternative_cv_filenames(self):
+        result = build_cv_tailoring_advisor(
+            job_title="Finance Data Analyst",
+            job_description="finance risk banking reporting bi etl api",
+        )
+        blob = self._result_text(result)
+        for forbidden in (
+            "finance_da_cv_v1",
+            "bi_reporting_cv_v1",
+            "ae_data_product_cv_v1",
+            "da_cv_v2",
+        ):
+            self.assertNotIn(forbidden, blob)
+        self.assertEqual(result.recommended_cv, LOCKED_CV)
+
+    def test_advisor_does_not_claim_forbidden_automation_features(self):
+        result = build_cv_tailoring_advisor(
+            job_title="Reporting Analyst",
+            job_description="reporting dashboard KPI",
+        )
+        safety_text = " ".join(result.claim_safety_notes).lower()
+        self.assertIn("no final cv is generated", safety_text)
+        self.assertIn("no gmail", safety_text)
+        self.assertIn("no cover letter is finalized", safety_text)
+        self.assertIn("no application is submitted", safety_text)
+        self.assertIn("external ai", safety_text)
+        self.assertIn("recruiter automation", safety_text)
+        self.assertNotIn("gmail integration is active", safety_text)
