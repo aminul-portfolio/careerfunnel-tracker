@@ -613,3 +613,196 @@ class AIFitScoringContractTests(TestCase):
         )
         for pattern in forbidden:
             self.assertNotIn(pattern, source)
+
+
+class OpenAIFitScoringWrapperTests(TestCase):
+    def _valid_provider_payload(self, **overrides):
+        payload = {
+            "ai_fit_score": 68,
+            "ai_fit_label": "Mocked provider fit",
+            "confidence": "medium",
+            "evidence_matches": ["Python"],
+            "gaps": [],
+            "deal_breakers": [],
+            "reasoning_summary": "Mocked provider reasoning.",
+            "recommended_cv_angle": "General analytics angle.",
+            "recommended_projects": ["CareerFunnel Tracker"],
+            "claim_safety_notes": ["Provider mock only."],
+        }
+        payload.update(overrides)
+        return payload
+
+    def _job_fields(self):
+        return {
+            "company_name": "Test Co",
+            "job_title": "Junior Data Analyst",
+            "location": "London",
+            "job_description": "Python SQL Excel reporting junior dashboard London",
+        }
+
+    def test_prompt_builder_returns_structured_dict(self):
+        from .services import analyze_job_posting, build_openai_fit_scoring_prompt
+
+        fields = self._job_fields()
+        rule_based = analyze_job_posting(
+            company_name=fields["company_name"],
+            job_title=fields["job_title"],
+            location=fields["location"],
+            job_posting=fields["job_description"],
+        )
+        prompt = build_openai_fit_scoring_prompt(
+            rule_based_analysis=rule_based,
+            **fields,
+        )
+        self.assertEqual(prompt["company_name"], "Test Co")
+        self.assertEqual(prompt["rule_based_fit_score"], rule_based.fit_score)
+        self.assertEqual(prompt["rule_based_recommendation"], rule_based.recommendation)
+        self.assertIn("required_output_schema", prompt)
+        self.assertIn("fields", prompt["required_output_schema"])
+        self.assertTrue(prompt["safety_rules"])
+
+    def test_wrapper_returns_fallback_when_provider_missing(self):
+        from .services import build_openai_fit_scoring_with_fallback
+
+        result = build_openai_fit_scoring_with_fallback(**self._job_fields())
+        self.assertTrue(result.used_fallback)
+        self.assertIsNone(result.ai_result)
+        self.assertIn("Provider callable is missing", result.fallback_reason)
+
+    def test_wrapper_returns_parsed_result_for_valid_mock_provider(self):
+        from .services import build_openai_fit_scoring_with_fallback
+
+        def mock_provider(prompt):
+            self.assertIn("rule_based_fit_score", prompt)
+            return self._valid_provider_payload()
+
+        result = build_openai_fit_scoring_with_fallback(
+            **self._job_fields(),
+            provider_callable=mock_provider,
+        )
+        self.assertFalse(result.used_fallback)
+        self.assertIsNotNone(result.ai_result)
+        self.assertEqual(result.ai_result.ai_fit_score, 68)
+
+    def test_wrapper_catches_provider_exception(self):
+        from .services import build_openai_fit_scoring_with_fallback
+
+        def failing_provider(prompt):
+            raise RuntimeError("mock provider failure")
+
+        result = build_openai_fit_scoring_with_fallback(
+            **self._job_fields(),
+            provider_callable=failing_provider,
+        )
+        self.assertTrue(result.used_fallback)
+        self.assertIn("Provider callable failed", result.fallback_reason)
+
+    def test_wrapper_catches_invalid_provider_payload(self):
+        from .services import build_openai_fit_scoring_with_fallback
+
+        def bad_provider(prompt):
+            return self._valid_provider_payload(ai_fit_score=200)
+
+        result = build_openai_fit_scoring_with_fallback(
+            **self._job_fields(),
+            provider_callable=bad_provider,
+        )
+        self.assertTrue(result.used_fallback)
+        self.assertIn("validation failed", result.fallback_reason.lower())
+
+    def test_wrapper_always_preserves_manual_review_required(self):
+        from .services import build_openai_fit_scoring_with_fallback
+
+        missing = build_openai_fit_scoring_with_fallback(**self._job_fields())
+        self.assertTrue(missing.manual_review_required)
+
+        def mock_provider(prompt):
+            return self._valid_provider_payload()
+
+        parsed = build_openai_fit_scoring_with_fallback(
+            **self._job_fields(),
+            provider_callable=mock_provider,
+        )
+        self.assertTrue(parsed.manual_review_required)
+
+    def test_wrapper_claim_safety_notes_include_mocked_first_boundaries(self):
+        from .services import build_openai_fit_scoring_with_fallback
+
+        result = build_openai_fit_scoring_with_fallback(**self._job_fields())
+        notes = " ".join(result.claim_safety_notes).lower()
+        self.assertIn("mocked-first", notes)
+        self.assertIn("no real openai call", notes)
+        self.assertIn("no api key", notes)
+        self.assertIn("manual review", notes)
+        self.assertIn("auto-apply", notes)
+
+    def test_comparison_returns_none_when_fallback_has_no_ai_result(self):
+        from .services import (
+            analyze_job_posting,
+            build_openai_fit_scoring_with_fallback,
+            compare_openai_wrapper_result_with_rule_based,
+        )
+
+        fields = self._job_fields()
+        wrapper = build_openai_fit_scoring_with_fallback(**fields)
+        rule_based = analyze_job_posting(
+            company_name=fields["company_name"],
+            job_title=fields["job_title"],
+            location=fields["location"],
+            job_posting=fields["job_description"],
+        )
+        comparison = compare_openai_wrapper_result_with_rule_based(
+            rule_based.fit_score,
+            wrapper,
+        )
+        self.assertIsNone(comparison)
+
+    def test_comparison_returns_fit_comparison_when_ai_result_exists(self):
+        from .services import (
+            analyze_job_posting,
+            build_openai_fit_scoring_with_fallback,
+            compare_openai_wrapper_result_with_rule_based,
+        )
+
+        fields = self._job_fields()
+
+        def mock_provider(prompt):
+            return self._valid_provider_payload(ai_fit_score=80)
+
+        wrapper = build_openai_fit_scoring_with_fallback(
+            **fields,
+            provider_callable=mock_provider,
+        )
+        rule_based = analyze_job_posting(
+            company_name=fields["company_name"],
+            job_title=fields["job_title"],
+            location=fields["location"],
+            job_posting=fields["job_description"],
+        )
+        comparison = compare_openai_wrapper_result_with_rule_based(
+            rule_based.fit_score,
+            wrapper,
+        )
+        self.assertIsNotNone(comparison)
+        self.assertEqual(comparison.ai_fit_score, 80)
+        self.assertEqual(comparison.rule_based_score, rule_based.fit_score)
+
+    def test_services_module_has_no_provider_network_imports(self):
+        from pathlib import Path
+
+        source = Path(__file__).resolve().parent.joinpath("services.py").read_text(
+            encoding="utf-8"
+        ).lower()
+        forbidden = (
+            "import openai",
+            "from openai",
+            "import anthropic",
+            "import httpx",
+            "import requests",
+            "from urllib",
+            "os.environ",
+            "django.conf.settings",
+            "from django.conf import settings",
+        )
+        for pattern in forbidden:
+            self.assertNotIn(pattern, source)
