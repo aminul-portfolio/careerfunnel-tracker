@@ -16,9 +16,11 @@ from .services import (
     build_cv_ab_testing_rows,
     build_cv_tailoring_advisor,
     build_next_best_actions,
+    build_openai_fit_scoring_with_fallback,
     build_smart_notifications,
     build_weekly_coach_report,
     check_cover_letter_quality,
+    compare_openai_wrapper_result_with_rule_based,
     generate_followup_message,
     generate_interview_prep,
 )
@@ -34,20 +36,37 @@ def agent_dashboard(request):
 def job_posting_analyzer(request):
     analysis = None
     tailoring_advisor = None
+    ai_wrapper_result = None
+    ai_score_comparison = None
     if request.method == "POST":
         form = JobPostingAnalyzerForm(request.POST)
         if form.is_valid():
+            company_name = form.cleaned_data.get("company_name", "")
+            job_title = form.cleaned_data.get("job_title", "")
+            location = form.cleaned_data.get("location", "")
+            job_posting = form.cleaned_data["job_posting"]
             analysis = analyze_job_posting(
-                company_name=form.cleaned_data.get("company_name", ""),
-                job_title=form.cleaned_data.get("job_title", ""),
-                location=form.cleaned_data.get("location", ""),
-                job_posting=form.cleaned_data["job_posting"],
+                company_name=company_name,
+                job_title=job_title,
+                location=location,
+                job_posting=job_posting,
             )
+            ai_wrapper_result = build_openai_fit_scoring_with_fallback(
+                company_name=company_name,
+                job_title=job_title,
+                location=location,
+                job_description=job_posting,
+            )
+            if ai_wrapper_result.ai_result is not None:
+                ai_score_comparison = compare_openai_wrapper_result_with_rule_based(
+                    analysis.fit_score,
+                    ai_wrapper_result,
+                )
             tailoring_advisor = build_cv_tailoring_advisor(
-                company_name=form.cleaned_data.get("company_name", ""),
-                job_title=form.cleaned_data.get("job_title", ""),
-                location=form.cleaned_data.get("location", ""),
-                job_description=form.cleaned_data["job_posting"],
+                company_name=company_name,
+                job_title=job_title,
+                location=location,
+                job_description=job_posting,
                 cv_evidence="",
             )
     else:
@@ -59,6 +78,8 @@ def job_posting_analyzer(request):
             "form": form,
             "analysis": analysis,
             "tailoring_advisor": tailoring_advisor,
+            "ai_wrapper_result": ai_wrapper_result,
+            "ai_score_comparison": ai_score_comparison,
         },
     )
 
