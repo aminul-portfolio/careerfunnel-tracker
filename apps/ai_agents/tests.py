@@ -151,6 +151,36 @@ class AiAgentViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Fit Score")
+        self.assertContains(response, "Rule-Based vs AI Score Check")
+        self.assertContains(response, "Fallback active")
+        self.assertContains(response, "Manual review is required")
+        self.assertContains(response, "Advisory Only | Mocked-First")
+        self.assertContains(response, "Yes - advisory only")
+        self.assertNotContains(response, "┬À")
+        self.assertNotContains(response, "ÔÇö")
+        from pathlib import Path
+
+        template_path = (
+            Path(__file__).resolve().parents[2]
+            / "templates"
+            / "ai_agents"
+            / "job_posting_analyzer.html"
+        )
+        template_source = template_path.read_text(encoding="utf-8")
+        score_check_start = template_source.index('id="rule-based-vs-ai-score-check"')
+        score_check_end = template_source.index('id="cv-tailoring-advisor"')
+        score_check_section = template_source[score_check_start:score_check_end]
+        self.assertIn(
+            "Score delta: {{ ai_score_comparison.score_delta }} -",
+            score_check_section,
+        )
+        self.assertNotIn("\u2014", score_check_section)
+        self.assertNotIn("\u00b7", score_check_section)
+        self.assertContains(response, "AI scoring is advisory only")
+        self.assertContains(response, "No application is submitted automatically")
+        page_text = response.content.decode()
+        self.assertIn("No Gmail, Calendar, scraping, recruiter automation", page_text)
+        self.assertIn("auto-apply is used", page_text)
         self.assertContains(response, "CV Tailoring Advisor")
         self.assertContains(response, LOCKED_CV)
         self.assertContains(response, "advisory only")
