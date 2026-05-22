@@ -682,6 +682,318 @@ def analyze_cv_gap(job_description: str, cv_evidence: str = "") -> CVGapAnalysis
     )
 
 
+@dataclass(frozen=True)
+class CVTailoringAdvisorResult:
+    recommended_cv: str
+    cv_angle: str
+    role_family: str
+    strongest_experience: list[str]
+    strongest_projects: list[str]
+    matched_skills: list[str]
+    partial_matches: list[str]
+    missing_skills: list[str]
+    risks: list[str]
+    deal_breakers: list[str]
+    cover_letter_angle: list[str]
+    interview_evidence_points: list[str]
+    claim_safety_notes: list[str]
+    approval_reminder: str
+
+
+APPROVAL_REMINDER = (
+    "Review and approve all suggested wording before adding it to a CV, cover letter, "
+    "recruiter message, or application."
+)
+
+CLAIM_SAFETY_NOTES = [
+    "Suggestions are advisory only.",
+    "No final CV is generated.",
+    "No cover letter is finalized.",
+    "No application is submitted.",
+    "No Gmail, Calendar, scraping, external AI, or recruiter automation is used.",
+    "User must manually approve wording before using it externally.",
+]
+
+FINANCE_EXPERIENCE_ANGLES = [
+    "FX, remittance, finance operations, and reconciliation discipline",
+    "Operational reporting and KPI tracking",
+    "Stakeholder-facing reporting and training",
+]
+
+BI_EXPERIENCE_ANGLES = [
+    "Operational reporting and KPI tracking",
+    "Dashboard-ready data modelling",
+    "Python/Django analytics project delivery",
+    "Stakeholder-facing reporting and training",
+]
+
+AE_EXPERIENCE_ANGLES = [
+    "Python/Django analytics project delivery",
+    "Dashboard-ready data modelling",
+    "Pipeline/API-style portfolio evidence with honest tool-gap boundaries",
+]
+
+GENERAL_DA_EXPERIENCE_ANGLES = [
+    "Python/Django analytics project delivery",
+    "Operational reporting and KPI tracking",
+    "Dashboard-ready data modelling",
+    "Stakeholder-facing reporting and training",
+]
+
+REVIEW_EXPERIENCE_ANGLES = [
+    "Verify seniority, location, and hard requirements before emphasizing any angle",
+    "Keep claims tied to documented portfolio and operations background only",
+]
+
+
+def _detect_cv_angle_and_role_family(
+    text: str,
+    job_analysis: JobPostingAnalysis,
+) -> tuple[str, str]:
+    if (
+        job_analysis.deal_breakers
+        or job_analysis.fit_score < 40
+        or "Skip" in job_analysis.recommendation
+    ):
+        return (
+            "Review-first — verify seniority, deal-breakers, and tool gaps before tailoring",
+            "Review Carefully",
+        )
+
+    finance_signals = [
+        "finance",
+        "fintech",
+        "risk",
+        "banking",
+        "trading",
+        "remittance",
+        "reconciliation",
+        "fx",
+    ]
+    bi_signals = [
+        "bi analyst",
+        "business intelligence",
+        "power bi",
+        "tableau",
+        "dashboard",
+        "reporting analyst",
+        "insights analyst",
+    ]
+    ae_signals = [
+        "etl",
+        "api",
+        "pipeline",
+        "integration",
+        "analytics engineer",
+        "data engineer",
+        "data product",
+    ]
+
+    if any(title in text for title in TARGET_TITLES_AE_STRETCH) or any(
+        signal in text for signal in ae_signals
+    ):
+        return (
+            "Analytics Engineering / Data Product stretch — emphasize pipeline/API "
+            "evidence and honest tool-gap boundaries",
+            "Analytics Engineering / Data Product Stretch",
+        )
+    if any(signal in text for signal in finance_signals):
+        return (
+            "Finance / FinTech / Risk — emphasize reconciliation discipline, "
+            "operational reporting, and governed analytics",
+            "Finance / FinTech Analytics",
+        )
+    if any(signal in text for signal in bi_signals):
+        return (
+            "BI / Reporting / Dashboard — emphasize KPI reporting, dashboards, "
+            "and stakeholder-ready outputs",
+            "BI / Reporting Analytics",
+        )
+    if any(title in text for title in TARGET_TITLES):
+        return (
+            "General Data Analyst — emphasize Python/Django analytics delivery "
+            "and evidence-based reporting",
+            "Data Analyst",
+        )
+
+    return (
+        "Review-first — role signals are unclear; confirm fit before tailoring",
+        "Review Carefully",
+    )
+
+
+def _experience_angles_for_role_family(role_family: str) -> list[str]:
+    if role_family == "Finance / FinTech Analytics":
+        return list(FINANCE_EXPERIENCE_ANGLES)
+    if role_family == "BI / Reporting Analytics":
+        return list(BI_EXPERIENCE_ANGLES)
+    if role_family == "Analytics Engineering / Data Product Stretch":
+        return list(AE_EXPERIENCE_ANGLES)
+    if role_family == "Data Analyst":
+        return list(GENERAL_DA_EXPERIENCE_ANGLES)
+    return list(REVIEW_EXPERIENCE_ANGLES)
+
+
+def _build_tailoring_risks(
+    text: str,
+    location: str,
+    job_analysis: JobPostingAnalysis,
+    cv_gap: CVGapAnalysis,
+) -> list[str]:
+    risks: list[str] = list(job_analysis.risks)
+
+    if any(signal in text for signal in SENIOR_SIGNALS):
+        if "Seniority" not in " ".join(risks):
+            risks.append("Seniority risk — role may be above current target market.")
+
+    location_text = normalise_text(location)
+    if location_text and not any(
+        loc in location_text for loc in GOOD_LOCATION_WORDS
+    ) and "remote" not in location_text:
+        risks.append(
+            "Location risk — location is not clearly London, Croydon, South London, "
+            "or Remote UK."
+        )
+
+    hard_gaps = [term for term in HARD_GAP_TERMS if term in text]
+    if hard_gaps:
+        risks.append(
+            "Hard-tool gap risk — "
+            + ", ".join(sorted(set(hard_gaps)))
+            + "; treat as learning gaps unless clearly optional."
+        )
+
+    learning_hits = [target for target in LEARNING_TARGETS if target in text]
+    if learning_hits and not hard_gaps:
+        risks.append(
+            "Learning-target tools detected: "
+            + ", ".join(sorted(set(learning_hits)))
+            + "; do not claim production depth without evidence."
+        )
+
+    if not any(title in text for title in TARGET_TITLES) and not any(
+        title in text for title in TARGET_TITLES_AE_STRETCH
+    ):
+        risks.append("Unclear role-fit risk — title is not a clear junior analytics target.")
+
+    if cv_gap.claims_to_avoid:
+        for claim in cv_gap.claims_to_avoid[:2]:
+            if claim not in risks:
+                risks.append(f"Overclaim risk — {claim}")
+
+    return list(dict.fromkeys(risks))
+
+
+def _build_cover_letter_angles(
+    role_family: str,
+    cv_gap: CVGapAnalysis,
+    job_analysis: JobPostingAnalysis,
+) -> list[str]:
+    angles = [
+        "Connect finance/operations background to the role's reporting needs where truthful.",
+        "Cite one relevant portfolio project with problem → approach → business output.",
+        "Keep unsupported tools as learning gaps or partial exposure, not proven expertise.",
+        "Avoid exaggerated claims; align wording with repository evidence only.",
+    ]
+    if role_family == "Finance / FinTech Analytics":
+        angles.append(
+            "Highlight reconciliation discipline and operational KPI accuracy from "
+            "finance/operations work."
+        )
+    elif role_family == "BI / Reporting Analytics":
+        angles.append(
+            "Lead with dashboard/KPI storytelling and stakeholder-ready reporting examples."
+        )
+    elif role_family == "Analytics Engineering / Data Product Stretch":
+        angles.append(
+            "Frame pipeline/API projects honestly and acknowledge optional cloud/dbt "
+            "requirements as stretch goals."
+        )
+    if cv_gap.partial_matches:
+        angles.append(
+            "Mention partial tool exposure only where portfolio evidence supports it: "
+            + ", ".join(cv_gap.partial_matches[:4])
+            + "."
+        )
+    angles.extend(job_analysis.cover_letter_focus[:2])
+    return list(dict.fromkeys(angles))[:8]
+
+
+def _build_interview_evidence_points(role_family: str, strongest_projects: list[str]) -> list[str]:
+    points = [
+        "Explain one portfolio project from problem to business output.",
+        "Explain how KPI/reporting logic was designed and validated.",
+        "Explain data quality checks and manual approval boundaries in CareerFunnel Tracker.",
+    ]
+    if role_family == "Finance / FinTech Analytics":
+        points.append(
+            "Explain finance/reconciliation discipline and how it supports accurate reporting."
+        )
+    if strongest_projects:
+        points.append(
+            f"Prepare a concise walkthrough of {strongest_projects[0]} aligned to the role."
+        )
+    return list(dict.fromkeys(points))[:6]
+
+
+def build_cv_tailoring_advisor(
+    company_name: str = "",
+    job_title: str = "",
+    location: str = "",
+    job_description: str = "",
+    cv_evidence: str = "",
+) -> CVTailoringAdvisorResult:
+    """Rule-based CV tailoring suggestions; advisory only — no document generation."""
+    combined_description = " ".join(
+        part for part in (job_title, job_description) if part
+    ).strip()
+    text = normalise_text(company_name, job_title, location, job_description, cv_evidence)
+
+    job_analysis = analyze_job_posting(
+        company_name=company_name,
+        job_title=job_title,
+        location=location,
+        job_posting=job_description,
+    )
+    cv_gap = analyze_cv_gap(combined_description, cv_evidence)
+
+    cv_angle, role_family = _detect_cv_angle_and_role_family(text, job_analysis)
+    strongest_projects = recommend_projects_from_text(text)
+    strongest_experience = _experience_angles_for_role_family(role_family)
+    risks = _build_tailoring_risks(text, location, job_analysis, cv_gap)
+
+    deal_breakers = sorted(set(job_analysis.deal_breakers))
+    if any(signal in text for signal in SENIOR_SIGNALS) and not any(
+        level in text for level in ["junior", "graduate", "entry", "trainee", "0-2", "1-2"]
+    ):
+        if "seniority mismatch" not in " ".join(deal_breakers).lower():
+            risks.append(
+                "Seniority signal detected — treat as a blocker unless requirements are flexible."
+            )
+
+    cover_letter_angle = _build_cover_letter_angles(role_family, cv_gap, job_analysis)
+    interview_evidence_points = _build_interview_evidence_points(
+        role_family, strongest_projects
+    )
+
+    return CVTailoringAdvisorResult(
+        recommended_cv=LOCKED_CV,
+        cv_angle=cv_angle,
+        role_family=role_family,
+        strongest_experience=strongest_experience,
+        strongest_projects=strongest_projects,
+        matched_skills=cv_gap.matched_skills,
+        partial_matches=cv_gap.partial_matches,
+        missing_skills=cv_gap.missing_skills,
+        risks=risks,
+        deal_breakers=deal_breakers,
+        cover_letter_angle=cover_letter_angle,
+        interview_evidence_points=interview_evidence_points,
+        claim_safety_notes=list(CLAIM_SAFETY_NOTES),
+        approval_reminder=APPROVAL_REMINDER,
+    )
+
+
 def check_cover_letter_quality(
     company_name: str,
     job_title: str,
