@@ -8,7 +8,7 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 ## Current Sprint Position
 
-Sprints 25, 26A–26D, and 27A–27C are complete. **Sprint 28A** manual recruiter email import is complete; the latest completed tag is `sprint-28a-email-import-complete`. **Sprint 28B** live application pilot surfaced intake workflow refinements. **Sprint 28C** is active and focused on intake workflow refinement.
+Sprints 25 through 28 (28A-28D) and **Sprint 29** (29A-29D) are complete. Latest completed Sprint 29 tag: `sprint-29d-evidence-documentation-complete`. Latest main baseline: `1189a2c` (merge: sprint-29d evidence documentation). Current validation baseline: **320 tests passing**.
 
 This README does not claim Gmail API integration, OAuth, web scraping, auto-apply workflows, automatic saving, external AI or LLM services, calendar integration, a live SaaS deployment, production users, or automatic email sending.
 
@@ -31,6 +31,22 @@ CareerFunnel Tracker treats the job search as a small analytics domain. It shows
 - Provides rule-based decision support for job-posting fit review, next actions, follow-up drafting, interview prep, and quality warnings.
 - Exports workbook evidence for review, backup, and BI-style analysis.
 - Documents metric definitions, analytics lineage, sprint evidence, and limitations.
+
+### Recruiter email workflow (Sprint 29)
+
+On Application Detail, manually imported recruiter emails support a rule-based, advisory-only workflow:
+
+```text
+Manual recruiter email import -> rule-based action summary -> recruiter communication context -> interview-prep recommendation -> user-controlled manual action
+```
+
+Implemented surfaces:
+
+- **Recruiter Email Actions** -- needs reply, reply status, action due, suggested status (suggestion only), interview/screening signal
+- **Recruiter Communication Context** -- latest recruiter email, date received, requires reply, manual follow-up guidance
+- **Interview Prep Recommended** -- contextual prompt and **Create Interview Prep** link when `matched_signals` contains interview or screening language
+
+This remains manual, rule-based, and advisory only. The repository does not implement or claim Gmail, OAuth, inbox sync, automatic email sending, automatic application status mutation, automatic interview prep creation, or external AI integration. Evidence: `docs/evidence/sprint_29_recruiter_email_workflow_enhancements.md`.
 
 ## Five-Minute Reviewer Path
 
@@ -157,13 +173,14 @@ For a portfolio-level evidence map across the user's major GitHub projects, see 
 
 For recruiter-facing portfolio presentation materials, see `docs/career_evidence/portfolio_presentation_pack.md`.
 
-Current verified test count: **249 passing**.
+Current verified test count: **320 passing**.
 
 Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/`. The main supporting documentation is:
 
 - `docs/analytics/metric_definitions.md`
 - `docs/analytics/analytics_lineage.md`
 - `docs/evidence/evidence_index.md`
+- `docs/evidence/sprint_29_recruiter_email_workflow_enhancements.md`
 - `docs/evidence/career_evidence_walkthrough.md`
 - `docs/career_evidence/README.md`
 - `DEVELOPMENT.md` for the previous internal/development README preserved during Sprint 17A
