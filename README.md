@@ -8,12 +8,21 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 ## Current Sprint Position
 
-Sprints 25 through 32 (32A-32E) are complete.
-Latest completed Sprint 32E tag: `sprint-32e-evidence-and-final-closure-complete`.
-Latest main baseline: `eae81b2` (merge: sprint-32e evidence and final closure).
-Current validation baseline: **351 tests passing**.
+Sprints 25 through 32 (32A-32E) are complete on `main`.
+Sprint **34** (34A-34D) — CV Tailoring Claude Enhancement — is complete on feature branch `sprint-34-cv-tailoring-claude-enhancement` (latest implementation commit: `84aa5f3` Sprint 34C: integrate Claude CV tailoring fallback).
+Current validation baseline: **391 tests passing**.
 
-This README does not claim Gmail API integration, OAuth, web scraping, auto-apply workflows, automatic saving, external AI or LLM services, calendar integration, a live SaaS deployment, production users, or automatic email sending.
+Sprint 34 adds:
+
+- **Evidence bank foundation** (`apps/ai_agents/evidence_bank.py`) — tiered, claim-safe skill and project catalog
+- **Claude CV tailoring semantic provider** — JSON-only semantic contract and parser (Sprint 34B)
+- **Optional semantic enhancement** for the CV Tailoring Advisor when `ANTHROPIC_API_KEY` is configured
+- **Rule-based fallback** — rule-based output remains authoritative when the provider is missing or fails
+- **Claim-safe advisory-only output** — themes and talking points only; no final CV or cover letter body generation
+
+Claude usage is accurate: semantic enhancement runs **only when configured**; **rule-based fallback remains active**; **manual review is required**; the test suite uses **mocks only** (no real Claude/API calls in tests).
+
+This README does not claim Gmail API integration, OAuth, web scraping, auto-apply workflows, automatic saving, calendar integration, a live SaaS deployment, production users, automatic email sending, final CV generation, or cover letter body generation.
 
 ## Business Problem
 
@@ -148,9 +157,9 @@ Screenshot evidence is stored at `docs/evidence/screenshots/sprint-19-interview-
 
 ## Technical Decisions
 
-### 1. Rule-Based Logic Instead Of Fake AI/LLM Claims
+### 1. Rule-Based Logic With Optional, Claim-Safe Claude Enhancement
 
-The project uses deterministic service-layer logic for fit review, recommendations, warnings, and generated helper text. This keeps the behavior explainable, testable, and honest. The repository does not claim external AI, LLM integration, scraping, auto-apply workflows, Gmail integration, or Calendar automation.
+The project uses deterministic service-layer logic for fit review, recommendations, warnings, and CV tailoring guidance. Sprint 34 adds an **optional** Claude semantic path for the CV Tailoring Advisor when configured; it does not replace rule-based analysis and falls back cleanly when the provider is absent or fails. Fit scoring uses a separate mocked-first Claude provider pattern from Sprint 33. The repository does not claim scraping, auto-apply workflows, Gmail integration, Calendar automation, final CV generation, or cover letter body generation. Tests mock external API calls.
 
 ### 2. Data-Quality Rule Propagation
 
@@ -176,13 +185,14 @@ For a portfolio-level evidence map across the user's major GitHub projects, see 
 
 For recruiter-facing portfolio presentation materials, see `docs/career_evidence/portfolio_presentation_pack.md`.
 
-Current verified test count: **320 passing**.
+Current verified test count: **391 passing**.
 
 Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/`. The main supporting documentation is:
 
 - `docs/analytics/metric_definitions.md`
 - `docs/analytics/analytics_lineage.md`
 - `docs/evidence/evidence_index.md`
+- `docs/evidence/sprint_34_cv_tailoring_claude_enhancement.md`
 - `docs/evidence/sprint_29_recruiter_email_workflow_enhancements.md`
 - `docs/evidence/career_evidence_walkthrough.md`
 - `docs/career_evidence/README.md`
@@ -281,7 +291,12 @@ http://127.0.0.1:8000/
 - No Power BI implementation is claimed yet.
 - No real/private data is exported through the dashboard CSV pipeline.
 - No real customers, SaaS business, billing system, or production user base is claimed.
-- No external AI, LLM, scraping, auto-apply, Gmail, or Calendar integration is claimed.
+- No final CV generation is claimed; the CV Tailoring Advisor suggests angles and evidence pointers only.
+- No cover letter body generation is claimed; only cover-letter **themes** are suggested.
+- No automatic application submission is claimed.
+- No Gmail integration, Calendar integration, or OAuth integration is claimed.
+- No auto-apply workflow is claimed.
+- Claude semantic enhancement is not claimed to run on every request — it is optional when configured, with rule-based fallback otherwise.
 - No interview automation or external AI/API interview assistant is claimed.
 - No email, calendar, scraping, auto-apply, or background automation is claimed.
 - No scientific CV A/B testing is claimed; CV Version Performance is directional reporting.

@@ -1497,6 +1497,48 @@ Shows a disciplined path from audit -> contract -> wrapper -> UI with honest fal
 
 ---
 
+## Sprint 34 — CV Tailoring Claude Enhancement (34A-34D)
+
+### Status
+
+- **34A:** Complete — evidence bank foundation (`0d84538`)
+- **34B:** Complete — Claude CV tailoring provider and semantic parser (`e84da6a`)
+- **34C:** Complete — CV Tailoring Advisor semantic fallback integration (`84aa5f3`)
+- **34D:** Complete — documentation and evidence (README, evidence index, this sprint doc)
+
+### Documentation Evidence
+
+```text
+docs/evidence/sprint_34_cv_tailoring_claude_enhancement.md
+README.md (Sprint 34 position and claim boundaries)
+```
+
+### Code Evidence (34A-34C)
+
+```text
+apps/ai_agents/evidence_bank.py
+apps/ai_agents/claude_provider.py
+apps/ai_agents/services.py
+apps/ai_agents/views.py
+apps/ai_agents/tests.py
+templates/ai_agents/job_posting_analyzer.html
+templates/ai_agents/application_agent_pack.html
+```
+
+### What Sprint 34 Proves
+
+- Structured evidence bank with strong / partial / gap-learning tiers and claim-safe helpers.
+- Claude CV tailoring semantic provider returns JSON only; parser rejects forbidden CV/body fields.
+- `build_cv_tailoring_advisor` keeps rule-based output authoritative with optional semantic merge and fallback.
+- Locked CV `Aminul_Islam_Data_Analyst_CV`; manual approval wording preserved.
+- Validation: **96** `apps.ai_agents` tests; **391** full project tests; ruff and Django check pass; no new migrations.
+
+### Reviewer Value
+
+Shows how optional LLM semantic matching can be added without abandoning rule-based safety, manual review, or honest portfolio claims.
+
+---
+
 ## Sprint 30D - Evidence / Final Closure
 
 ### Status
