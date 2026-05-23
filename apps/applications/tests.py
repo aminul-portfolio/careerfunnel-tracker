@@ -598,7 +598,9 @@ class JobApplicationViewTests(TestCase):
             requires_reply=True,
         )
         self.client.login(username="aminul", password="StrongPass12345")
-        interview_create_url = reverse("interviews:interview_create")
+        interview_create_url = (
+            reverse("interviews:interview_create") + f"?application={application.pk}"
+        )
 
         response = self.client.get(
             reverse("applications:application_detail", kwargs={"pk": application.pk}),
@@ -611,13 +613,7 @@ class JobApplicationViewTests(TestCase):
             "Recruiter email history includes interview/screening signals",
         )
         self.assertContains(response, "recruiter-interview-prep-prompt")
-        self.assertContains(
-            response,
-            (
-                f'<div class="hero-actions"><a href="{interview_create_url}" '
-                f'class="btn btn-primary">Create Interview Prep</a></div>'
-            ),
-        )
+        self.assertContains(response, interview_create_url)
 
     def test_application_detail_shows_interview_prep_prompt_for_screening_signal(self):
         application = self.create_application()
@@ -656,7 +652,9 @@ class JobApplicationViewTests(TestCase):
             requires_reply=True,
         )
         self.client.login(username="aminul", password="StrongPass12345")
-        interview_create_url = reverse("interviews:interview_create")
+        interview_create_url = (
+            reverse("interviews:interview_create") + f"?application={application.pk}"
+        )
 
         response = self.client.get(
             reverse("applications:application_detail", kwargs={"pk": application.pk}),
@@ -680,11 +678,7 @@ class JobApplicationViewTests(TestCase):
                 ' Create interview prep manually after reviewing the recruiter email.'
             ),
         )
-        contextual_link = (
-            f'<div class="hero-actions"><a href="{interview_create_url}" '
-            f'class="btn btn-primary">Create Interview Prep</a></div>'
-        )
-        self.assertEqual(response.content.decode().count(contextual_link), 1)
+        self.assertContains(response, interview_create_url)
 
     def test_application_detail_hides_interview_prep_prompt_without_relevant_signals(
         self,
@@ -798,6 +792,79 @@ class JobApplicationViewTests(TestCase):
         send_mail.assert_not_called()
         email_message_send.assert_not_called()
         self.assertEqual(mail.outbox, [])
+
+
+class ApplicationWorkflowCrossLinkTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="crosslink", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Crosslink Co",
+            job_title="Data Analyst",
+            date_applied=date(2026, 5, 1),
+            status=ApplicationStatus.SUBMITTED,
+        )
+        self.client.login(username="crosslink", password="StrongPass12345")
+
+    def test_application_detail_interview_prep_link_includes_application_query(self):
+        interview_create_url = (
+            reverse("interviews:interview_create") + f"?application={self.application.pk}"
+        )
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": self.application.pk}),
+        )
+
+        self.assertContains(response, interview_create_url)
+        self.assertGreaterEqual(
+            response.content.decode().count(interview_create_url),
+            2,
+        )
+
+    def test_application_detail_workflow_map_is_claim_safe(self):
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": self.application.pk}),
+        )
+
+        self.assertContains(response, "Manual workflow map")
+        self.assertContains(response, "Import recruiter email manually")
+        self.assertContains(response, "Open AI Pack for advisory prep")
+        self.assertContains(response, "Manually update status or send replies outside CareerFunnel")
+        self.assertContains(response, "No Gmail, Calendar, OAuth")
+
+    def test_application_detail_interview_prep_prompt_still_manual(self):
+        RecruiterEmail.objects.create(
+            application=self.application,
+            subject="Interview invite",
+            body="We would like to invite you to interview.",
+            date_received=timezone.now(),
+            matched_signals=json.dumps(["interview"]),
+            reply_status=ReplyStatus.DRAFTED,
+            requires_reply=True,
+        )
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": self.application.pk}),
+        )
+
+        self.assertContains(response, "This is a manual prompt only")
+        self.assertContains(response, "does not create interview prep automatically")
+
+    def test_application_detail_does_not_create_interview_prep_on_get(self):
+        from apps.interviews.models import InterviewPrep
+
+        RecruiterEmail.objects.create(
+            application=self.application,
+            subject="Interview invite",
+            body="We would like to invite you to interview.",
+            date_received=timezone.now(),
+            matched_signals=json.dumps(["interview"]),
+        )
+        count_before = InterviewPrep.objects.count()
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": self.application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(InterviewPrep.objects.count(), count_before)
 
 
 class ApplicationServiceTests(TestCase):

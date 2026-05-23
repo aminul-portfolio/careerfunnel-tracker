@@ -9,8 +9,26 @@
         <p>{{ interview.application.job_title }} — {{ interview.interview_date }}</p>
         <div class="hero-actions">
             <a href="{% url 'interviews:interview_update' interview.pk %}" class="btn btn-primary">Edit Prep</a>
+            <a href="{% url 'applications:application_detail' interview.application.pk %}" class="btn btn-secondary">Application Detail</a>
+            <a href="{% url 'ai_agents:application_agent_pack' interview.application.pk %}" class="btn btn-secondary">Application AI Pack</a>
+            {% if interview.application.recruiter_emails.exists %}
+                <a href="{% url 'applications:application_detail' interview.application.pk %}#recruiter-emails" class="btn btn-secondary">Recruiter emails on application</a>
+            {% endif %}
             <a href="{% url 'interviews:interview_list' %}" class="btn btn-secondary">Back</a>
         </div>
+    </section>
+
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Manual Workflow</p>
+            <h2>Preparation Checklist</h2>
+        </div>
+        <ol class="workflow-list">
+            <li>Review application evidence on the linked application record.</li>
+            <li>Use AI Pack talking points if useful — advisory only; nothing is sent automatically.</li>
+            <li>Update the interview checklist below before the interview date.</li>
+            <li>Keep all preparation manually reviewed before you rely on it in an interview.</li>
+        </ol>
     </section>
 
     <section class="kpi-grid">

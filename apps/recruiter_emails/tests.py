@@ -604,6 +604,174 @@ class RecruiterEmailViewTests(TestCase):
         self.assertEqual(recruiter_email.reply_status, ReplyStatus.DRAFTED)
 
 
+class RecruiterEmailWorkflowPolishTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="polish", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Polish Co",
+            job_title="Data Analyst",
+            status=ApplicationStatus.SUBMITTED,
+            date_applied=timezone.localdate(),
+        )
+        self.received = timezone.now()
+        self.client.login(username="polish", password="StrongPass12345")
+
+    def _import_post_data(self, **overrides):
+        data = {
+            "subject": "Interview invitation",
+            "sender_name": "Recruiter",
+            "sender_email": "recruiter@example.com",
+            "body": (
+                "We would like to invite you to interview and share "
+                "interview availability."
+            ),
+            "date_received": self.received.strftime("%Y-%m-%dT%H:%M"),
+            "notes": "",
+        }
+        data.update(overrides)
+        return data
+
+    def _create_email(self, *, subject="Interview", body=None):
+        if body is None:
+            body = (
+                "We would like to invite you to interview and share "
+                "interview availability."
+            )
+        return create_recruiter_email_from_form_data(
+            application=self.application,
+            cleaned_data={
+                "subject": subject,
+                "sender_name": "",
+                "sender_email": "",
+                "body": body,
+                "date_received": self.received,
+                "notes": "",
+            },
+        )
+
+    def test_import_form_shows_manual_workflow_steps(self):
+        response = self.client.get(
+            reverse("recruiter_emails:import", kwargs={"application_id": self.application.pk})
+        )
+
+        self.assertContains(response, "Paste the recruiter email manually")
+        self.assertContains(response, "classifies the email locally")
+        self.assertContains(response, "Mark the reply as sent manually only after you send it")
+        self.assertContains(response, "No Gmail, Calendar, OAuth")
+
+    def test_detail_shows_manual_reply_workflow_steps(self):
+        recruiter_email = self._create_email()
+        response = self.client.get(
+            reverse("recruiter_emails:detail", kwargs={"pk": recruiter_email.pk})
+        )
+
+        self.assertContains(response, "Review classification and suggested action")
+        self.assertContains(response, "Copy the draft into your email client")
+        self.assertContains(response, "Mark reply as sent manually after you send it")
+        self.assertContains(response, "Update application status yourself if needed")
+
+    def test_detail_mark_sent_does_not_send_email(self):
+        from apps.interviews.models import InterviewPrep
+
+        recruiter_email = self._create_email()
+        original_status = self.application.status
+        prep_count_before = InterviewPrep.objects.count()
+
+        response = self.client.post(
+            reverse("recruiter_emails:mark_sent", kwargs={"pk": recruiter_email.pk}),
+            follow=True,
+        )
+
+        recruiter_email.refresh_from_db()
+        self.application.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(recruiter_email.reply_status, ReplyStatus.SENT_MANUALLY)
+        self.assertEqual(self.application.status, original_status)
+        self.assertEqual(InterviewPrep.objects.count(), prep_count_before)
+        self.assertContains(response, "It does not send an email")
+
+    def test_detail_no_gmail_oauth_calendar_claims(self):
+        recruiter_email = self._create_email()
+        response = self.client.get(
+            reverse("recruiter_emails:detail", kwargs={"pk": recruiter_email.pk})
+        )
+
+        self.assertContains(response, "No Gmail, Calendar, OAuth")
+        self.assertContains(response, "This page does not send email")
+
+    def test_detail_shows_interview_prep_link_for_interview_signal(self):
+        recruiter_email = self._create_email()
+        interview_create_url = (
+            reverse("interviews:interview_create")
+            + f"?application={self.application.pk}"
+        )
+
+        response = self.client.get(
+            reverse("recruiter_emails:detail", kwargs={"pk": recruiter_email.pk})
+        )
+
+        self.assertTrue(response.context["show_interview_prep_prompt"])
+        self.assertContains(response, "Interview Prep Recommended")
+        self.assertContains(response, interview_create_url)
+        self.assertContains(response, "create interview prep automatically")
+
+    def test_detail_hides_interview_prep_link_without_signal(self):
+        recruiter_email = create_recruiter_email_from_form_data(
+            application=self.application,
+            cleaned_data={
+                "subject": "Application received",
+                "sender_name": "",
+                "sender_email": "",
+                "body": "Thank you for applying. We have received your application.",
+                "date_received": self.received,
+                "notes": "",
+            },
+        )
+
+        response = self.client.get(
+            reverse("recruiter_emails:detail", kwargs={"pk": recruiter_email.pk})
+        )
+
+        self.assertFalse(response.context["show_interview_prep_prompt"])
+        self.assertNotContains(response, "Interview Prep Recommended")
+
+    def test_import_save_still_does_not_mutate_application_status(self):
+        original_status = self.application.status
+        self.client.post(
+            reverse("recruiter_emails:import", kwargs={"application_id": self.application.pk}),
+            self._import_post_data(),
+        )
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, original_status)
+
+    def test_detail_links_to_application_detail_and_ai_pack(self):
+        recruiter_email = self._create_email()
+        application_url = reverse(
+            "applications:application_detail",
+            kwargs={"pk": self.application.pk},
+        )
+        import_url = reverse(
+            "recruiter_emails:import",
+            kwargs={"application_id": self.application.pk},
+        )
+        pack_url = reverse(
+            "ai_agents:application_agent_pack",
+            kwargs={"pk": self.application.pk},
+        )
+
+        response = self.client.get(
+            reverse("recruiter_emails:detail", kwargs={"pk": recruiter_email.pk})
+        )
+
+        self.assertContains(response, application_url)
+        self.assertContains(response, import_url)
+        self.assertContains(response, pack_url)
+        self.assertContains(response, "Application Detail")
+        self.assertContains(response, "Import another email")
+        self.assertContains(response, "Application AI Pack")
+
+
 class RecruiterEmailSecurityTests(TestCase):
     def setUp(self):
         self.owner = User.objects.create_user(username="owner", password="StrongPass12345")

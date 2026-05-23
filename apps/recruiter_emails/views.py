@@ -30,6 +30,13 @@ def _parse_matched_signals(recruiter_email: RecruiterEmail) -> list[str]:
     return parsed if isinstance(parsed, list) else []
 
 
+def _has_interview_screening_signal(recruiter_email: RecruiterEmail) -> bool:
+    if not recruiter_email.matched_signals:
+        return False
+    signals_text = recruiter_email.matched_signals.lower()
+    return "interview" in signals_text or "screening" in signals_text
+
+
 @login_required
 def import_recruiter_email(request, application_id):
     application = get_object_or_404(
@@ -62,12 +69,17 @@ def import_recruiter_email(request, application_id):
 @login_required
 def recruiter_email_detail(request, pk):
     recruiter_email = _get_user_recruiter_email(request, pk)
+    show_interview_prep_prompt = (
+        recruiter_email.application is not None
+        and _has_interview_screening_signal(recruiter_email)
+    )
     return render(
         request,
         "recruiter_emails/detail.html",
         {
             "recruiter_email": recruiter_email,
             "matched_signals_list": _parse_matched_signals(recruiter_email),
+            "show_interview_prep_prompt": show_interview_prep_prompt,
         },
     )
 

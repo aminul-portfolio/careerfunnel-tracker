@@ -28,6 +28,20 @@ from .services import (
 )
 
 
+def _recruiter_email_has_interview_screening_signal(recruiter_email) -> bool:
+    if recruiter_email is None or not recruiter_email.matched_signals:
+        return False
+    signals_text = recruiter_email.matched_signals.lower()
+    return "interview" in signals_text or "screening" in signals_text
+
+
+def _application_has_interview_recruiter_signal(application) -> bool:
+    for recruiter_email in application.recruiter_emails.all():
+        if _recruiter_email_has_interview_screening_signal(recruiter_email):
+            return True
+    return False
+
+
 @login_required
 def agent_dashboard(request):
     actions = build_next_best_actions(request.user, limit=5)
@@ -168,6 +182,9 @@ def application_agent_pack(request, pk):
         cv_evidence=" ".join([application.cv_version, application.cover_letter_version]),
         provider_callable=cv_tailoring_provider,
     )
+    interview_preps = application.interview_preps.all()[:5]
+    latest_recruiter_email = application.recruiter_emails.first()
+    has_interview_signal = _application_has_interview_recruiter_signal(application)
     return render(
         request,
         "ai_agents/application_agent_pack.html",
@@ -177,6 +194,9 @@ def application_agent_pack(request, pk):
             "followup": followup,
             "analysis": analysis,
             "tailoring_advisor": tailoring_advisor,
+            "interview_preps": interview_preps,
+            "latest_recruiter_email": latest_recruiter_email,
+            "has_interview_signal": has_interview_signal,
         },
     )
 

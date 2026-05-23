@@ -25,6 +25,8 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 | Career Evidence screenshots | `docs/screenshots/career_evidence/` |
 | Analytics documentation folder | `docs/analytics/` |
 
+**Sprint 35 (feature branch `sprint-35-interview-email-workflow-polish`):** Interview + Email Workflow Polish — **419** tests validated; evidence doc `docs/evidence/sprint_35_interview_email_workflow_polish.md`. Sprint 34 remains documented below.
+
 ---
 
 ## Evidence Principles
@@ -1536,6 +1538,37 @@ templates/ai_agents/application_agent_pack.html
 ### Reviewer Value
 
 Shows how optional LLM semantic matching can be added without abandoning rule-based safety, manual review, or honest portfolio claims.
+
+---
+
+## Sprint 35 — Interview + Email Workflow Polish (35A-35D)
+
+### Status
+
+- **35A:** Complete — interview prep handoff (`41a95c2`)
+- **35B:** Complete — recruiter email manual workflow (`dfab82f`)
+- **35C:** Complete — Application Detail / AI Pack cross-links (`bee1326`)
+- **35D:** Complete — README and evidence closure (documentation only)
+
+### Documentation Evidence
+
+```text
+docs/evidence/sprint_35_interview_email_workflow_polish.md
+README.md (Sprint 35 position, workflow summary, claim boundaries)
+docs/evidence/evidence_index.md (this section)
+```
+
+### What Sprint 35 Proves
+
+- Manual interview prep create flow with `?application=` pre-fill (no auto-save or auto-create).
+- Recruiter email import/detail numbered manual workflows; mark-sent is status tracking only.
+- Application Detail workflow map and cross-links to AI Pack and interview prep.
+- Application AI Pack lists related interview prep and latest recruiter email (read-only context).
+- **28** new targeted tests across four polish test classes; **419** full suite; no migrations.
+
+### Reviewer Value
+
+Shows end-to-end **manual** job-search operations UX: recruiter signal → advisory drafts → application context → interview prep — without claiming inbox automation or SaaS deployment.
 
 ---
 
