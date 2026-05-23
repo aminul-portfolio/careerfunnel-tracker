@@ -10,6 +10,8 @@ from django.utils import timezone
 from apps.applications.choices import FollowUpStatus, WorkType
 from apps.applications.models import JobApplication
 from apps.job_intelligence import constants as role_fit_constants
+from apps.weekly_review.choices import FunnelDiagnosis, WeeklyMood
+from apps.weekly_review.models import WeeklyReview
 
 from .services import (
     LOCKED_CV,
@@ -119,6 +121,93 @@ class AiAgentServiceTests(TestCase):
         report = build_weekly_coach_report(self.user)
         self.assertTrue(report.headline)
         self.assertGreater(len(report.next_week_plan), 0)
+
+
+class AiAgentWeeklyCoachPolishTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Coach Co",
+            job_title="Data Analyst",
+            date_applied=date(2026, 5, 1),
+        )
+
+    def test_weekly_coach_page_contains_advisory_trust_copy(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(reverse("ai_agents:weekly_coach"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "advisory only")
+        self.assertContains(response, "rule-based")
+        self.assertContains(response, "does not save weekly reviews")
+        self.assertContains(response, "manually saved Weekly Review")
+
+    def test_weekly_coach_links_to_weekly_review_dashboard_and_metrics(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(reverse("ai_agents:weekly_coach"))
+        self.assertContains(response, reverse("weekly_review:weekly_review_list"))
+        self.assertContains(response, reverse("weekly_review:weekly_review_create"))
+        self.assertContains(response, reverse("dashboard:overview"))
+        self.assertContains(response, reverse("metrics:funnel_metrics"))
+
+    def test_weekly_coach_shows_latest_weekly_review_context(self):
+        review = WeeklyReview.objects.create(
+            user=self.user,
+            week_starting=date(2026, 5, 4),
+            week_ending=date(2026, 5, 17),
+            target_applications=12,
+            actual_applications=9,
+            diagnosis=FunnelDiagnosis.CV_TARGETING,
+            mood=WeeklyMood.MIXED,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(reverse("ai_agents:weekly_coach"))
+        self.assertContains(response, "Latest Weekly Review")
+        self.assertContains(response, "May 2026")
+        self.assertContains(response, "12")
+        self.assertContains(response, review.get_diagnosis_display())
+        self.assertContains(response, review.get_absolute_url())
+
+    def test_weekly_coach_handles_no_weekly_review(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(reverse("ai_agents:weekly_coach"))
+        self.assertContains(response, "No Weekly Review saved yet")
+        self.assertContains(response, reverse("weekly_review:weekly_review_create"))
+
+    def test_weekly_coach_get_does_not_mutate_weekly_reviews_or_applications(self):
+        WeeklyReview.objects.create(
+            user=self.user,
+            week_starting=date(2026, 5, 4),
+            week_ending=date(2026, 5, 10),
+        )
+        review_count_before = WeeklyReview.objects.filter(user=self.user).count()
+        application_count_before = JobApplication.objects.filter(user=self.user).count()
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(reverse("ai_agents:weekly_coach"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            WeeklyReview.objects.filter(user=self.user).count(),
+            review_count_before,
+        )
+        self.assertEqual(
+            JobApplication.objects.filter(user=self.user).count(),
+            application_count_before,
+        )
+
+    def test_agent_dashboard_uses_optional_claude_claim_safe_wording(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(reverse("ai_agents:agent_dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "No external AI model or API is called")
+        self.assertContains(response, "optional Claude")
+        self.assertContains(response, "rule-based")
+        self.assertContains(response, "Manual review is required")
+
+    def test_agent_nav_links_to_weekly_review(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(reverse("ai_agents:weekly_coach"))
+        self.assertContains(response, reverse("weekly_review:weekly_review_list"))
+        self.assertContains(response, "Weekly Review")
 
 
 class AiAgentViewTests(TestCase):

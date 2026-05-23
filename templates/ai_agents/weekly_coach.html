@@ -3,15 +3,114 @@
 {% block page_heading %}AI Weekly Coach{% endblock %}
 {% block content %}
 <div class="dashboard-grid">
-    <section class="hero-panel"><p class="eyebrow">Weekly Coach Agent</p><h1>{{ report.headline }}</h1><p>The coach reviews activity, funnel diagnosis, follow-ups, and interview momentum to suggest a realistic next-week plan.</p>{% include "ai_agents/_agent_nav.html" %}</section>
-    <section class="diagnosis-panel diagnosis-primary"><div><p class="eyebrow">Current Diagnosis</p><h2>{{ report.diagnosis }}</h2><p>Use this alongside your weekly review. The agent gives a working diagnosis, not a guarantee.</p></div><div class="diagnosis-action"><strong>Main Rule</strong><p>Change one thing next week based on evidence, not emotion.</p></div></section>
-    <section class="dashboard-two-column">
-        <div class="content-card"><div class="card-header"><p class="eyebrow">Wins</p><h2>What is working</h2></div><ul class="agent-list">{% for item in report.wins %}<li>{{ item }}</li>{% endfor %}</ul></div>
-        <div class="content-card"><div class="card-header"><p class="eyebrow">Risks</p><h2>What needs attention</h2></div><ul class="agent-list">{% for item in report.risks %}<li>{{ item }}</li>{% endfor %}</ul></div>
+    <section class="hero-panel">
+        <p class="eyebrow">Weekly Coach Agent</p>
+        <h1>{{ report.headline }}</h1>
+        <p>
+            Advisory weekly summary from local, rule-based signals in your tracker
+            (funnel metrics, daily logs, follow-ups). Compare this output with your
+            manually saved Weekly Review before you change next week’s plan.
+        </p>
+        <p class="trust-note">
+            AI Weekly Coach is advisory only. It does not save weekly reviews, update
+            applications, send email, submit applications, or create interview prep.
+            No Gmail, Calendar, OAuth, auto-send, or auto-apply is used. CV Tailoring
+            and fit scoring on other agent pages may use optional Claude only when
+            configured; this coach page does not call external APIs.
+        </p>
+        <div class="hero-actions">
+            <a href="{% url 'weekly_review:weekly_review_list' %}" class="btn btn-secondary">Weekly Review list</a>
+            <a href="{% url 'weekly_review:weekly_review_create' %}" class="btn btn-secondary">Add Weekly Review</a>
+            <a href="{% url 'dashboard:overview' %}" class="btn btn-secondary">Dashboard</a>
+            <a href="{% url 'metrics:funnel_metrics' %}" class="btn btn-secondary">Funnel Metrics</a>
+        </div>
+        {% include "ai_agents/_agent_nav.html" %}
     </section>
+
+  {% if latest_weekly_review %}
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Your saved record</p>
+            <h2>Latest Weekly Review</h2>
+        </div>
+        <p class="muted-text">
+            {{ weekly_review_count }} weekly review{{ weekly_review_count|pluralize }} saved.
+            The coach does not edit this record.
+        </p>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span>Week ending</span>
+                <strong>{{ latest_weekly_review.week_ending }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Target applications</span>
+                <strong>{{ latest_weekly_review.target_applications }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Actual applications</span>
+                <strong>{{ latest_weekly_review.actual_applications }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Diagnosis</span>
+                <strong>{{ latest_weekly_review.get_diagnosis_display }}</strong>
+            </div>
+        </div>
+        <div class="hero-actions">
+            <a href="{{ latest_weekly_review.get_absolute_url }}" class="btn btn-primary">View Weekly Review</a>
+        </div>
+    </section>
+  {% else %}
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Manual record</p>
+            <h2>No Weekly Review saved yet</h2>
+        </div>
+        <p class="muted-text">
+            The coach can suggest risks from tracker data, but your official weekly
+            reflection is a manual Weekly Review you create and edit yourself.
+        </p>
+        <div class="hero-actions">
+            <a href="{% url 'weekly_review:weekly_review_create' %}" class="btn btn-primary">Add Weekly Review</a>
+            <a href="{% url 'weekly_review:weekly_review_list' %}" class="btn btn-secondary">Weekly Review list</a>
+        </div>
+    </section>
+  {% endif %}
+
+    <section class="diagnosis-panel diagnosis-primary">
+        <div>
+            <p class="eyebrow">Current Diagnosis</p>
+            <h2>{{ report.diagnosis }}</h2>
+            <p>
+                Rule-based funnel diagnosis from logged applications and activity.
+                Use alongside your manual Weekly Review; this is a working view, not a guarantee.
+            </p>
+        </div>
+        <div class="diagnosis-action">
+            <strong>Main rule</strong>
+            <p>Change one thing next week based on evidence, not emotion.</p>
+        </div>
+    </section>
+
     <section class="dashboard-two-column">
-        <div class="content-card"><div class="card-header"><p class="eyebrow">Next Week Plan</p><h2>Focus actions</h2></div><ol class="agent-list">{% for item in report.next_week_plan %}<li>{{ item }}</li>{% endfor %}</ol></div>
-        <div class="content-card"><div class="card-header"><p class="eyebrow">Avoid</p><h2>Protect your time</h2></div><ul class="agent-list">{% for item in report.avoid_next_week %}<li>{{ item }}</li>{% endfor %}</ul></div>
+        <div class="content-card">
+            <div class="card-header"><p class="eyebrow">Wins</p><h2>What is working</h2></div>
+            <ul class="agent-list">{% for item in report.wins %}<li>{{ item }}</li>{% endfor %}</ul>
+        </div>
+        <div class="content-card">
+            <div class="card-header"><p class="eyebrow">Risks</p><h2>What needs attention</h2></div>
+            <ul class="agent-list">{% for item in report.risks %}<li>{{ item }}</li>{% endfor %}</ul>
+        </div>
+    </section>
+
+    <section class="dashboard-two-column">
+        <div class="content-card">
+            <div class="card-header"><p class="eyebrow">Next Week Plan</p><h2>Focus actions</h2></div>
+            <ol class="agent-list">{% for item in report.next_week_plan %}<li>{{ item }}</li>{% endfor %}</ol>
+        </div>
+        <div class="content-card">
+            <div class="card-header"><p class="eyebrow">Avoid</p><h2>Protect your time</h2></div>
+            <ul class="agent-list">{% for item in report.avoid_next_week %}<li>{{ item }}</li>{% endfor %}</ul>
+        </div>
     </section>
 </div>
 {% endblock %}
