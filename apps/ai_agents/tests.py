@@ -893,8 +893,9 @@ class TestClaudeProvider(TestCase):
             provider = make_claude_provider("test-key")
         self.assertTrue(callable(provider))
 
-    def test_callable_returns_valid_dict_for_well_formed_response(self):
+    def test_provider_callable_returns_valid_dict_from_mock_response(self):
         from .claude_provider import make_claude_provider
+        from .services import AI_SCORING_REQUIRED_PAYLOAD_FIELDS
 
         mock_response = self._make_mock_response(self._valid_ai_payload_json())
         with patch("apps.ai_agents.claude_provider.anthropic.Anthropic") as mock_cls:
@@ -902,11 +903,10 @@ class TestClaudeProvider(TestCase):
             provider = make_claude_provider("test-key")
             result = provider(self._sample_prompt())
         self.assertIsInstance(result, dict)
-        self.assertEqual(result["ai_fit_score"], 72)
-        self.assertEqual(result["confidence"], "medium")
-        self.assertIn("Python", result["evidence_matches"])
+        for field in AI_SCORING_REQUIRED_PAYLOAD_FIELDS:
+            self.assertIn(field, result)
 
-    def test_callable_raises_value_error_when_response_content_empty(self):
+    def test_provider_callable_raises_value_error_when_response_content_empty(self):
         from .claude_provider import make_claude_provider
 
         empty_response = MagicMock()
@@ -918,7 +918,7 @@ class TestClaudeProvider(TestCase):
                 provider(self._sample_prompt())
         self.assertIn("empty", str(ctx.exception).lower())
 
-    def test_callable_raises_value_error_when_json_is_malformed(self):
+    def test_provider_callable_raises_value_error_when_json_malformed(self):
         from .claude_provider import make_claude_provider
 
         mock_response = self._make_mock_response("not valid json {{{")
@@ -929,7 +929,7 @@ class TestClaudeProvider(TestCase):
                 provider(self._sample_prompt())
         self.assertIn("not valid json", str(ctx.exception).lower())
 
-    def test_callable_raises_value_error_when_result_is_not_dict(self):
+    def test_provider_callable_raises_value_error_when_parsed_result_is_not_dict(self):
         from .claude_provider import make_claude_provider
 
         mock_response = self._make_mock_response('["a", "b", "c"]')
@@ -940,7 +940,7 @@ class TestClaudeProvider(TestCase):
                 provider(self._sample_prompt())
         self.assertIn("json object", str(ctx.exception).lower())
 
-    def test_wrapper_uses_fallback_when_provider_callable_is_none(self):
+    def test_openai_wrapper_returns_fallback_when_provider_callable_none(self):
         from .services import build_openai_fit_scoring_with_fallback
 
         result = build_openai_fit_scoring_with_fallback(
@@ -952,8 +952,11 @@ class TestClaudeProvider(TestCase):
         )
         self.assertTrue(result.used_fallback)
         self.assertIsNone(result.ai_result)
+        self.assertTrue(result.manual_review_required)
 
-    def test_wrapper_uses_fallback_when_provider_raises_value_error(self):
+    def test_openai_wrapper_returns_fallback_when_provider_callable_raises_value_error(
+        self,
+    ):
         from .services import build_openai_fit_scoring_with_fallback
 
         def bad_provider(prompt):
@@ -967,4 +970,5 @@ class TestClaudeProvider(TestCase):
             provider_callable=bad_provider,
         )
         self.assertTrue(result.used_fallback)
-        self.assertIn("validation failed", result.fallback_reason.lower())
+        self.assertIsNone(result.ai_result)
+        self.assertTrue(result.manual_review_required)
