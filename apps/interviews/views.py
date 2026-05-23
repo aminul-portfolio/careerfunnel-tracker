@@ -2,11 +2,23 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
+from apps.applications.models import JobApplication
 from apps.applications.services import build_application_evidence_readiness
 from apps.job_intelligence.services import build_smart_review
 
 from .forms import InterviewPrepForm
 from .models import InterviewPrep
+
+
+def _get_prefill_application(request):
+    raw = request.GET.get("application")
+    if not raw:
+        return None
+    try:
+        application_pk = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return JobApplication.objects.filter(pk=application_pk, user=request.user).first()
 
 
 @login_required
@@ -31,6 +43,7 @@ def interview_detail(request, pk):
 
 @login_required
 def interview_create(request):
+    prefill_application = None
     if request.method == "POST":
         form = InterviewPrepForm(request.POST, user=request.user)
         if form.is_valid():
@@ -40,7 +53,11 @@ def interview_create(request):
             messages.success(request, "Interview prep created successfully.")
             return redirect(interview.get_absolute_url())
     else:
-        form = InterviewPrepForm(user=request.user)
+        prefill_application = _get_prefill_application(request)
+        initial = {}
+        if prefill_application is not None:
+            initial["application"] = prefill_application.pk
+        form = InterviewPrepForm(user=request.user, initial=initial)
     return render(
         request,
         "interviews/interview_form.html",
@@ -48,6 +65,7 @@ def interview_create(request):
             "form": form,
             "page_title": "Add Interview Prep",
             "submit_label": "Save Interview Prep",
+            "prefill_application": prefill_application,
         },
     )
 
