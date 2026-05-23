@@ -1,8 +1,10 @@
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 
 from apps.applications.models import JobApplication
 
+from .claude_provider import make_claude_provider
 from .forms import (
     ApplicationChoiceForm,
     CoverLetterQualityForm,
@@ -51,11 +53,14 @@ def job_posting_analyzer(request):
                 location=location,
                 job_posting=job_posting,
             )
+            api_key = getattr(settings, "ANTHROPIC_API_KEY", "")
+            provider = make_claude_provider(api_key) if api_key else None
             ai_wrapper_result = build_openai_fit_scoring_with_fallback(
                 company_name=company_name,
                 job_title=job_title,
                 location=location,
                 job_description=job_posting,
+                provider_callable=provider,
             )
             if ai_wrapper_result.ai_result is not None:
                 ai_score_comparison = compare_openai_wrapper_result_with_rule_based(

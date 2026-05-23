@@ -6,6 +6,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = config("SECRET_KEY", default="unsafe-dev-secret-key")
 DEBUG = config("DEBUG", default=False, cast=bool)
+ANTHROPIC_API_KEY = config("ANTHROPIC_API_KEY", default="")
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
     default="127.0.0.1,localhost",

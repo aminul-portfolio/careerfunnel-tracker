@@ -1199,7 +1199,7 @@ def compare_rule_based_and_ai_scores(
 
 # --- Sprint 32C: OpenAI-shaped wrapper + safe fallback (mocked-first; no network) ---
 
-OPENAI_WRAPPER_PROVIDER_NAME = "OpenAI"
+OPENAI_WRAPPER_PROVIDER_NAME = "Claude"
 OPENAI_WRAPPER_TIMEOUT_SECONDS = 20
 
 OPENAI_WRAPPER_CLAIM_SAFETY_NOTES = [

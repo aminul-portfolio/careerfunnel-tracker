@@ -1,4 +1,6 @@
+import json
 from datetime import date, timedelta
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -836,3 +838,133 @@ class OpenAIFitScoringWrapperTests(TestCase):
         )
         for pattern in forbidden:
             self.assertNotIn(pattern, source)
+
+
+class TestClaudeProvider(TestCase):
+    def _valid_ai_payload_json(self) -> str:
+        return json.dumps({
+            "ai_fit_score": 72,
+            "ai_fit_label": "Moderate Match",
+            "confidence": "medium",
+            "evidence_matches": ["Python", "SQL"],
+            "gaps": ["Tableau"],
+            "deal_breakers": [],
+            "reasoning_summary": "Good skill overlap for a junior role.",
+            "recommended_cv_angle": "General Data Analyst angle.",
+            "recommended_projects": ["BakeOps Intelligence"],
+            "claim_safety_notes": ["Advisory only; manual review required."],
+        })
+
+    def _make_mock_response(self, text: str) -> MagicMock:
+        block = MagicMock()
+        block.type = "text"
+        block.text = text
+        response = MagicMock()
+        response.content = [block]
+        return response
+
+    def _sample_prompt(self) -> dict:
+        return {
+            "company_name": "Test Co",
+            "job_title": "Junior Data Analyst",
+            "location": "London",
+            "job_description": "Python SQL reporting junior",
+            "rule_based_fit_score": 65,
+            "rule_based_recommendation": "Apply selectively",
+            "matched_skills": ["python", "sql"],
+            "risks": [],
+            "deal_breakers": [],
+            "required_output_schema": {
+                "fields": [
+                    "ai_fit_score", "ai_fit_label", "confidence",
+                    "evidence_matches", "gaps", "deal_breakers",
+                    "reasoning_summary", "recommended_cv_angle",
+                    "recommended_projects", "claim_safety_notes",
+                ],
+                "score_range": {"min": 0, "max": 100},
+                "confidence_values": ["high", "low", "medium"],
+            },
+        }
+
+    def test_make_claude_provider_returns_callable(self):
+        from .claude_provider import make_claude_provider
+
+        with patch("apps.ai_agents.claude_provider.anthropic.Anthropic"):
+            provider = make_claude_provider("test-key")
+        self.assertTrue(callable(provider))
+
+    def test_callable_returns_valid_dict_for_well_formed_response(self):
+        from .claude_provider import make_claude_provider
+
+        mock_response = self._make_mock_response(self._valid_ai_payload_json())
+        with patch("apps.ai_agents.claude_provider.anthropic.Anthropic") as mock_cls:
+            mock_cls.return_value.messages.create.return_value = mock_response
+            provider = make_claude_provider("test-key")
+            result = provider(self._sample_prompt())
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result["ai_fit_score"], 72)
+        self.assertEqual(result["confidence"], "medium")
+        self.assertIn("Python", result["evidence_matches"])
+
+    def test_callable_raises_value_error_when_response_content_empty(self):
+        from .claude_provider import make_claude_provider
+
+        empty_response = MagicMock()
+        empty_response.content = []
+        with patch("apps.ai_agents.claude_provider.anthropic.Anthropic") as mock_cls:
+            mock_cls.return_value.messages.create.return_value = empty_response
+            provider = make_claude_provider("test-key")
+            with self.assertRaises(ValueError) as ctx:
+                provider(self._sample_prompt())
+        self.assertIn("empty", str(ctx.exception).lower())
+
+    def test_callable_raises_value_error_when_json_is_malformed(self):
+        from .claude_provider import make_claude_provider
+
+        mock_response = self._make_mock_response("not valid json {{{")
+        with patch("apps.ai_agents.claude_provider.anthropic.Anthropic") as mock_cls:
+            mock_cls.return_value.messages.create.return_value = mock_response
+            provider = make_claude_provider("test-key")
+            with self.assertRaises(ValueError) as ctx:
+                provider(self._sample_prompt())
+        self.assertIn("not valid json", str(ctx.exception).lower())
+
+    def test_callable_raises_value_error_when_result_is_not_dict(self):
+        from .claude_provider import make_claude_provider
+
+        mock_response = self._make_mock_response('["a", "b", "c"]')
+        with patch("apps.ai_agents.claude_provider.anthropic.Anthropic") as mock_cls:
+            mock_cls.return_value.messages.create.return_value = mock_response
+            provider = make_claude_provider("test-key")
+            with self.assertRaises(ValueError) as ctx:
+                provider(self._sample_prompt())
+        self.assertIn("json object", str(ctx.exception).lower())
+
+    def test_wrapper_uses_fallback_when_provider_callable_is_none(self):
+        from .services import build_openai_fit_scoring_with_fallback
+
+        result = build_openai_fit_scoring_with_fallback(
+            company_name="Test Co",
+            job_title="Junior Data Analyst",
+            location="London",
+            job_description="Python SQL reporting junior",
+            provider_callable=None,
+        )
+        self.assertTrue(result.used_fallback)
+        self.assertIsNone(result.ai_result)
+
+    def test_wrapper_uses_fallback_when_provider_raises_value_error(self):
+        from .services import build_openai_fit_scoring_with_fallback
+
+        def bad_provider(prompt):
+            raise ValueError("Simulated malformed Claude response")
+
+        result = build_openai_fit_scoring_with_fallback(
+            company_name="Test Co",
+            job_title="Junior Data Analyst",
+            location="London",
+            job_description="Python SQL reporting junior",
+            provider_callable=bad_provider,
+        )
+        self.assertTrue(result.used_fallback)
+        self.assertIn("validation failed", result.fallback_reason.lower())
