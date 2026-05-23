@@ -1,1 +1,109 @@
-{% extends "base.html" %}{% block title %}Week Ending {{ review.week_ending }} | CareerFunnel Tracker{% endblock %}{% block page_heading %}Weekly Review Detail{% endblock %}{% block content %}<div class="dashboard-grid"><section class="hero-panel"><p class="eyebrow">Weekly Review</p><h1>Week Ending {{ review.week_ending }}</h1><p>{{ review.week_starting }} to {{ review.week_ending }}. Target: {{ review.target_applications }}. Actual: {{ review.actual_applications }}.</p><div class="hero-actions"><a href="{% url 'weekly_review:weekly_review_update' review.pk %}" class="btn btn-primary">Edit Weekly Review</a><a href="{% url 'weekly_review:weekly_review_list' %}" class="btn btn-secondary">Back</a></div></section><section class="content-card"><div class="detail-grid"><div class="detail-item"><span>Diagnosis</span><strong class="badge {{ diagnosis_badge_class }}">{{ review.get_diagnosis_display }}</strong></div><div class="detail-item"><span>Mood</span><strong>{{ review.get_mood_display }}</strong></div><div class="detail-item"><span>Variance</span><strong class="badge {{ variance_badge_class }}">{{ review.application_variance }}</strong></div><div class="detail-item"><span>Response Rate</span><strong>{{ review.response_rate }}%</strong></div><div class="detail-item"><span>Interview Rate</span><strong>{{ review.interview_rate }}%</strong></div><div class="detail-item"><span>Offer Rate</span><strong>{{ review.offer_rate }}%</strong></div></div></section><section class="content-card"><h2>What Worked</h2><p class="note-text">{{ review.what_worked|linebreaks }}</p></section><section class="content-card"><h2>What Blocked Progress</h2><p class="note-text">{{ review.what_blocked|linebreaks }}</p></section><section class="content-card"><h2>One Change for Next Week</h2><p class="note-text">{{ review.change_next_week|linebreaks }}</p></section><section class="danger-zone"><div><p class="eyebrow">Danger Zone</p><h2>Delete this weekly review</h2></div><a href="{% url 'weekly_review:weekly_review_delete' review.pk %}" class="btn btn-danger">Delete</a></section></div>{% endblock %}
+{% extends "base.html" %}
+{% block title %}Week Ending {{ review.week_ending }} | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Weekly Review Detail{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel">
+        <p class="eyebrow">Weekly Review</p>
+        <h1>Week Ending {{ review.week_ending }}</h1>
+        <p>
+            {{ review.week_starting }} to {{ review.week_ending }}.
+            Target: {{ review.target_applications }}. Actual: {{ review.actual_applications }}.
+        </p>
+        <p class="trust-note">
+            This page is a manual reflection record. It does not trigger automated changes to
+            applications, email, interview prep, or submission workflows.
+        </p>
+        <div class="hero-actions">
+            <a href="{% url 'weekly_review:weekly_review_update' review.pk %}" class="btn btn-primary">Edit Weekly Review</a>
+            <a href="{% url 'weekly_review:weekly_review_list' %}" class="btn btn-secondary">Back to list</a>
+        </div>
+    </section>
+
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Navigation</p>
+            <h2>Weekly operating links</h2>
+        </div>
+        <div class="hero-actions">
+            <a href="{% url 'dashboard:overview' %}" class="btn btn-secondary">Dashboard</a>
+            <a href="{% url 'weekly_review:weekly_review_list' %}" class="btn btn-secondary">Weekly Review list</a>
+            <a href="{% url 'ai_agents:weekly_coach' %}" class="btn btn-secondary">AI Weekly Coach</a>
+            <a href="{% url 'metrics:funnel_metrics' %}" class="btn btn-secondary">Funnel Metrics</a>
+        </div>
+    </section>
+
+    <section class="content-card">
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span>Diagnosis</span>
+                <strong class="badge {{ diagnosis_badge_class }}">{{ review.get_diagnosis_display }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Mood</span>
+                <strong>{{ review.get_mood_display }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Variance</span>
+                <strong class="badge {{ variance_badge_class }}">{{ review.application_variance }}</strong>
+            </div>
+            <div class="detail-item">
+                <span>Response Rate</span>
+                <strong>{{ review.response_rate }}%</strong>
+            </div>
+            <div class="detail-item">
+                <span>Interview Rate</span>
+                <strong>{{ review.interview_rate }}%</strong>
+            </div>
+            <div class="detail-item">
+                <span>Offer Rate</span>
+                <strong>{{ review.offer_rate }}%</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="content-card">
+        <h2>What Worked</h2>
+        {% if review.what_worked %}
+            <p class="note-text">{{ review.what_worked|linebreaks }}</p>
+        {% else %}
+            <p class="muted-text">No notes recorded.</p>
+        {% endif %}
+    </section>
+
+    <section class="content-card">
+        <h2>What Blocked Progress</h2>
+        {% if review.what_blocked %}
+            <p class="note-text">{{ review.what_blocked|linebreaks }}</p>
+        {% else %}
+            <p class="muted-text">No notes recorded.</p>
+        {% endif %}
+    </section>
+
+    <section class="content-card">
+        <h2>Lessons Learned</h2>
+        {% if review.lessons_learned %}
+            <p class="note-text">{{ review.lessons_learned|linebreaks }}</p>
+        {% else %}
+            <p class="muted-text">No lessons recorded.</p>
+        {% endif %}
+    </section>
+
+    <section class="content-card">
+        <h2>One Change for Next Week</h2>
+        {% if review.change_next_week %}
+            <p class="note-text">{{ review.change_next_week|linebreaks }}</p>
+        {% else %}
+            <p class="muted-text">No change recorded.</p>
+        {% endif %}
+    </section>
+
+    <section class="danger-zone">
+        <div>
+            <p class="eyebrow">Danger Zone</p>
+            <h2>Delete this weekly review</h2>
+        </div>
+        <a href="{% url 'weekly_review:weekly_review_delete' review.pk %}" class="btn btn-danger">Delete</a>
+    </section>
+</div>
+{% endblock %}

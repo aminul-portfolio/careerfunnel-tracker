@@ -80,6 +80,18 @@ def get_diagnosis_badge_class(diagnosis: str) -> str:
     return diagnosis_map.get(diagnosis, "badge-neutral")
 
 
+def build_weekly_review_workflow_steps() -> tuple[str, ...]:
+    """Static manual workflow copy for templates. No database access or automation."""
+    return (
+        "Review daily logs and applications for the week.",
+        "Enter target vs actual and outcome counts.",
+        "Record what worked, what blocked, and lessons learned.",
+        "Choose a funnel diagnosis manually.",
+        "Set one change for next week.",
+        "Optionally compare with AI Weekly Coach for advisory risks.",
+    )
+
+
 def build_weekly_review_table_rows(reviews):
     return [
         {
