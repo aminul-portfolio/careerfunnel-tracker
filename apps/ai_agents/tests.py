@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -1315,3 +1315,227 @@ class TestClaudeCvTailoringProvider(TestCase):
         self.assertIn("manual review", notes)
         self.assertIn("advisory", notes)
         self.assertTrue(result.manual_review_required)
+
+
+class TestCvTailoringAdvisorSemanticFallback(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="FinSight Group",
+            job_title="Junior Finance Data Analyst",
+            location="Hybrid London",
+            job_description="Python SQL Excel reporting junior",
+            date_applied=date(2026, 5, 1),
+        )
+
+    def _job_fields(self):
+        return {
+            "company_name": "Test Co",
+            "job_title": "Junior Data Analyst",
+            "location": "London",
+            "job_description": "Python SQL Excel reporting junior dashboard",
+            "cv_evidence": "Python Django reporting",
+        }
+
+    def _valid_semantic_provider_payload(self, **overrides):
+        payload = {
+            "semantic_matched_skills": ["django"],
+            "semantic_partial_matches": ["sql"],
+            "semantic_gaps": ["dbt"],
+            "semantic_project_highlights": ["BakeOps Intelligence"],
+            "semantic_experience_angles": ["Operational reporting and KPI tracking"],
+            "semantic_risks": ["Treat optional cloud tools as stretch goals."],
+            "semantic_cover_letter_themes": [
+                "Connect portfolio KPI work to reporting needs."
+            ],
+            "semantic_interview_points": [
+                "Explain one portfolio project from problem to output."
+            ],
+            "reasoning_summary": "Strong Python overlap; treat dbt as a gap.",
+            "claim_safety_notes": ["Semantic output is advisory only."],
+            "manual_review_required": True,
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_rule_based_output_unchanged_when_provider_callable_none(self):
+        fields = self._job_fields()
+        without_provider = build_cv_tailoring_advisor(**fields, provider_callable=None)
+        baseline = build_cv_tailoring_advisor(**fields)
+        self.assertEqual(without_provider, baseline)
+        self.assertEqual(without_provider.recommended_cv, LOCKED_CV)
+        self.assertNotIn(
+            "Semantic enhancement unavailable",
+            " ".join(without_provider.claim_safety_notes),
+        )
+
+    def test_provider_value_error_returns_rule_based_fallback(self):
+        def failing_provider(prompt):
+            raise ValueError("mock semantic failure")
+
+        result = build_cv_tailoring_advisor(
+            **self._job_fields(),
+            provider_callable=failing_provider,
+        )
+        baseline = build_cv_tailoring_advisor(**self._job_fields())
+        self.assertEqual(result.cv_angle, baseline.cv_angle)
+        self.assertEqual(result.role_family, baseline.role_family)
+        self.assertEqual(result.recommended_cv, LOCKED_CV)
+        self.assertIn(
+            "Semantic enhancement unavailable",
+            " ".join(result.claim_safety_notes),
+        )
+
+    def test_provider_non_dict_returns_rule_based_fallback(self):
+        def bad_provider(prompt):
+            return ["not", "a", "dict"]
+
+        result = build_cv_tailoring_advisor(
+            **self._job_fields(),
+            provider_callable=bad_provider,
+        )
+        self.assertIn(
+            "dictionary payload",
+            " ".join(result.claim_safety_notes).lower(),
+        )
+
+    def test_provider_forbidden_fields_return_rule_based_fallback(self):
+        def forbidden_provider(prompt):
+            return self._valid_semantic_provider_payload(full_cv_text="Complete CV.")
+
+        result = build_cv_tailoring_advisor(
+            **self._job_fields(),
+            provider_callable=forbidden_provider,
+        )
+        baseline = build_cv_tailoring_advisor(**self._job_fields())
+        self.assertEqual(result.matched_skills, baseline.matched_skills)
+        self.assertIn(
+            "Semantic enhancement unavailable",
+            " ".join(result.claim_safety_notes),
+        )
+
+    def test_valid_semantic_payload_merges_claimable_strong_skills_only(self):
+        def mock_provider(prompt):
+            return self._valid_semantic_provider_payload(
+                semantic_matched_skills=["python", "django", "dbt"],
+            )
+
+        result = build_cv_tailoring_advisor(
+            **self._job_fields(),
+            provider_callable=mock_provider,
+        )
+        self.assertIn("python", result.matched_skills)
+        self.assertIn("django", result.matched_skills)
+        self.assertNotIn("dbt", result.matched_skills)
+
+    def test_gap_tier_skills_are_demoted_to_missing_skills_not_matched(self):
+        def mock_provider(prompt):
+            return self._valid_semantic_provider_payload(
+                semantic_matched_skills=["snowflake", "airflow"],
+                semantic_gaps=[],
+            )
+
+        result = build_cv_tailoring_advisor(
+            job_title="Data Analyst",
+            job_description="Python SQL snowflake airflow reporting",
+            provider_callable=mock_provider,
+        )
+        self.assertNotIn("snowflake", result.matched_skills)
+        self.assertNotIn("airflow", result.matched_skills)
+        gap_text = " ".join(result.missing_skills).lower()
+        self.assertTrue("snowflake" in gap_text or "airflow" in gap_text)
+
+    def test_unknown_project_names_are_rejected(self):
+        def mock_provider(prompt):
+            return self._valid_semantic_provider_payload(
+                semantic_project_highlights=[
+                    "BakeOps Intelligence",
+                    "Unknown Portfolio App",
+                ],
+            )
+
+        result = build_cv_tailoring_advisor(
+            **self._job_fields(),
+            provider_callable=mock_provider,
+        )
+        self.assertIn("BakeOps Intelligence", result.strongest_projects)
+        self.assertFalse(
+            any("Unknown" in project for project in result.strongest_projects)
+        )
+
+    def test_recommended_cv_always_locked_cv_with_provider(self):
+        def mock_provider(prompt):
+            return self._valid_semantic_provider_payload(
+                semantic_matched_skills=["python"],
+            )
+
+        result = build_cv_tailoring_advisor(
+            **self._job_fields(),
+            provider_callable=mock_provider,
+        )
+        self.assertEqual(result.recommended_cv, LOCKED_CV)
+
+    def test_manual_approval_and_advisory_notes_present_after_semantic_merge(self):
+        def mock_provider(prompt):
+            return self._valid_semantic_provider_payload()
+
+        result = build_cv_tailoring_advisor(
+            **self._job_fields(),
+            provider_callable=mock_provider,
+        )
+        self.assertIn("review and approve", result.approval_reminder.lower())
+        notes = " ".join(result.claim_safety_notes).lower()
+        self.assertIn("manual review", notes)
+        self.assertIn("advisory", notes)
+        self.assertIn("claude semantic enhancement", notes)
+
+    def test_cover_letter_body_like_semantic_text_is_rejected_or_not_merged(self):
+        def mock_provider(prompt):
+            return self._valid_semantic_provider_payload(
+                semantic_cover_letter_themes=[
+                    "Dear hiring manager, here is my cover_letter_body draft."
+                ],
+            )
+
+        result = build_cv_tailoring_advisor(
+            **self._job_fields(),
+            provider_callable=mock_provider,
+        )
+        merged_angles = " ".join(result.cover_letter_angle).lower()
+        self.assertNotIn("cover_letter_body", merged_angles)
+        self.assertNotIn("dear hiring manager", merged_angles)
+
+    @override_settings(ANTHROPIC_API_KEY="")
+    @patch("apps.ai_agents.views.make_claude_cv_tailoring_provider")
+    def test_job_posting_analyzer_uses_rule_based_fallback_without_api_key(
+        self, mock_make_provider,
+    ):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.post(
+            reverse("ai_agents:job_posting_analyzer"),
+            {
+                "company_name": "Test Co",
+                "job_title": "Junior Data Analyst",
+                "location": "London",
+                "job_posting": "Python SQL Excel reporting junior dashboard",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        mock_make_provider.assert_not_called()
+        self.assertContains(response, "Rule-based fallback remains active")
+        self.assertContains(response, LOCKED_CV)
+
+    @override_settings(ANTHROPIC_API_KEY="")
+    @patch("apps.ai_agents.views.make_claude_cv_tailoring_provider")
+    def test_application_agent_pack_uses_rule_based_fallback_without_api_key(
+        self, mock_make_provider,
+    ):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(
+            reverse("ai_agents:application_agent_pack", kwargs={"pk": self.application.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        mock_make_provider.assert_not_called()
+        self.assertContains(response, "CV Tailoring Advisor")
+        self.assertContains(response, "Rule-based fallback remains active")
