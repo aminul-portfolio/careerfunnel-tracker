@@ -147,6 +147,17 @@ def _application_label(application: JobApplication) -> str:
     return f"{application.company_name} - {application.job_title}"
 
 
+def should_prompt_weekly_review(user, today=None) -> bool:
+    """Return True when the user should be reminded to add a manual weekly review."""
+    if today is None:
+        today = timezone.localdate()
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=6)
+    if today != week_end:
+        return False
+    return not WeeklyReview.objects.filter(user=user, week_ending=today).exists()
+
+
 def _missing_evidence_reason(application: JobApplication) -> str:
     missing_fields = []
     if not application.required_skills:
@@ -284,6 +295,19 @@ def build_today_action_panel(user, limit: int = 8) -> list[TodayActionItem]:
                     "Record today's target, actual applications, responses, and useful notes."
                 ),
                 related_url=reverse("daily_log:daily_log_create"),
+            )
+        )
+
+    if should_prompt_weekly_review(user, today):
+        actions.append(
+            TodayActionItem(
+                priority="Medium",
+                title="Weekly review due",
+                reason="Today is the end of the current week and no weekly review exists yet.",
+                recommended_action=(
+                    "Complete the manual weekly review and compare it with the AI Weekly Coach."
+                ),
+                related_url=reverse("weekly_review:weekly_review_create"),
             )
         )
 

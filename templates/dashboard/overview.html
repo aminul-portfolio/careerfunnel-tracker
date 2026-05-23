@@ -27,6 +27,35 @@
         </div>
     </section>
 
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Operating rhythm</p>
+            <h2>Weekly operating rhythm</h2>
+        </div>
+        <p class="muted-text">
+            Manual rhythm only — follow these steps in order. This strip does not trigger automatic
+            actions, submissions, emails, or status updates.
+        </p>
+        <ol class="workflow-list">
+            <li>
+                <a href="{% url 'daily_log:daily_log_list' %}" class="table-link">Daily Log</a>
+                — record daily target vs actual activity.
+            </li>
+            <li>
+                <a href="{% url 'applications:application_list' %}" class="table-link">Applications</a>
+                — maintain tracker evidence for each role.
+            </li>
+            <li>
+                <a href="{% url 'weekly_review:weekly_review_list' %}" class="table-link">Weekly Review</a>
+                — complete manual weekly reflection and diagnosis.
+            </li>
+            <li>
+                <a href="{% url 'ai_agents:weekly_coach' %}" class="table-link">AI Weekly Coach</a>
+                — read advisory risk guidance; compare with your saved review.
+            </li>
+        </ol>
+    </section>
+
     <section class="kpi-grid premium-kpi-grid">
         <div class="kpi-card">
             <p>Total Applications</p>
@@ -68,6 +97,12 @@
                 Calculated from authenticated tracker records across applications, statuses, daily logs,
                 and funnel metrics.
             </p>
+            <p class="reviewer-note">
+                For week-level reflection, use
+                <a href="{% url 'weekly_review:weekly_review_list' %}" class="table-link">Weekly Review</a>.
+                For advisory risks, use
+                <a href="{% url 'ai_agents:weekly_coach' %}" class="table-link">AI Weekly Coach</a>.
+            </p>
         </div>
 
         <div class="diagnosis-action">
@@ -105,7 +140,9 @@
         {% endif %}
 
         <p class="reviewer-note">
-            Rule-based priorities are generated from existing applications, follow-ups, interviews, and daily logs.
+            Today Action is rule-based from saved applications, follow-ups, interviews, and daily logs.
+            It does not submit applications, send email, update statuses automatically, or create
+            interview prep automatically. Open a link to complete the manual step yourself.
         </p>
     </section>
 
@@ -244,6 +281,7 @@
                 <h2>Recent weekly diagnosis</h2>
             </div>
             <a href="{% url 'weekly_review:weekly_review_list' %}" class="table-link">View all</a>
+            <a href="{% url 'ai_agents:weekly_coach' %}" class="table-link">AI Weekly Coach</a>
         </div>
 
         {% if recent_weekly_reviews %}
