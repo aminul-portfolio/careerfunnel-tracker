@@ -9,8 +9,18 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 ## Current Sprint Position
 
 Sprints 25 through 32 (32A-32E) are complete on `main`.
-Sprint **34** (34A-34D) — CV Tailoring Claude Enhancement — is complete on feature branch `sprint-34-cv-tailoring-claude-enhancement` (latest implementation commit: `84aa5f3` Sprint 34C: integrate Claude CV tailoring fallback).
-Current validation baseline: **391 tests passing**.
+Sprint **34** (34A-34D) — CV Tailoring Claude Enhancement — is complete on `main`.
+Sprint **35** (35A-35D) — Interview + Email Workflow Polish — is complete on feature branch `sprint-35-interview-email-workflow-polish` (latest implementation commit: `bee1326` Sprint 35C: polish application and AI pack crosslinks).
+Current validation baseline: **419 tests passing**.
+
+Sprint 35 adds:
+
+- **Interview prep handoff polish** (35A) — application pre-fill on create, manual workflow copy, cross-links from interview prep to application and AI Pack
+- **Recruiter email manual workflow polish** (35B) — numbered manual import/reply steps, interview-prep advisory link from email detail
+- **Application Detail / AI Pack cross-link polish** (35C) — workflow map, prefilled interview prep links, AI Pack links to recruiter emails and saved prep records
+- **Claim-safe manual workflow copy** throughout — no auto-send, auto-apply, automatic submission, automatic status updates, or automatic interview prep creation
+
+Evidence: `docs/evidence/sprint_35_interview_email_workflow_polish.md`.
 
 Sprint 34 adds:
 
@@ -22,7 +32,7 @@ Sprint 34 adds:
 
 Claude usage is accurate: semantic enhancement runs **only when configured**; **rule-based fallback remains active**; **manual review is required**; the test suite uses **mocks only** (no real Claude/API calls in tests).
 
-This README does not claim Gmail API integration, OAuth, web scraping, auto-apply workflows, automatic saving, calendar integration, a live SaaS deployment, production users, automatic email sending, final CV generation, or cover letter body generation.
+This README does not claim Gmail API integration, OAuth, web scraping, auto-apply workflows, automatic saving, calendar integration, a live SaaS deployment, production users, automatic email sending, automatic application status updates, automatic interview prep creation, final CV generation, or cover letter body generation.
 
 ## Business Problem
 
@@ -59,6 +69,8 @@ Implemented surfaces:
 - **Interview Prep Recommended** -- contextual prompt and **Create Interview Prep** link when `matched_signals` contains interview or screening language
 
 This remains manual, rule-based, and advisory only. The repository does not implement or claim Gmail, OAuth, inbox sync, automatic email sending, automatic application status mutation, automatic interview prep creation, or external AI integration. Evidence: `docs/evidence/sprint_29_recruiter_email_workflow_enhancements.md`.
+
+Sprint **35** extends this path with clearer cross-links between Application Detail, recruiter email import/detail, interview prep (including `?application=` pre-fill), and the Application AI Pack — still manual and advisory only. Evidence: `docs/evidence/sprint_35_interview_email_workflow_polish.md`.
 
 ## Five-Minute Reviewer Path
 
@@ -185,13 +197,14 @@ For a portfolio-level evidence map across the user's major GitHub projects, see 
 
 For recruiter-facing portfolio presentation materials, see `docs/career_evidence/portfolio_presentation_pack.md`.
 
-Current verified test count: **391 passing**.
+Current verified test count: **419 passing**.
 
 Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/`. The main supporting documentation is:
 
 - `docs/analytics/metric_definitions.md`
 - `docs/analytics/analytics_lineage.md`
 - `docs/evidence/evidence_index.md`
+- `docs/evidence/sprint_35_interview_email_workflow_polish.md`
 - `docs/evidence/sprint_34_cv_tailoring_claude_enhancement.md`
 - `docs/evidence/sprint_29_recruiter_email_workflow_enhancements.md`
 - `docs/evidence/career_evidence_walkthrough.md`
@@ -294,7 +307,10 @@ http://127.0.0.1:8000/
 - No final CV generation is claimed; the CV Tailoring Advisor suggests angles and evidence pointers only.
 - No cover letter body generation is claimed; only cover-letter **themes** are suggested.
 - No automatic application submission is claimed.
+- No automatic application status updates from recruiter email classification are claimed.
+- No automatic interview prep creation is claimed.
 - No Gmail integration, Calendar integration, or OAuth integration is claimed.
+- No auto-send, auto-apply, or automatic submission workflows are claimed.
 - No auto-apply workflow is claimed.
 - Claude semantic enhancement is not claimed to run on every request — it is optional when configured, with rule-based fallback otherwise.
 - No interview automation or external AI/API interview assistant is claimed.
