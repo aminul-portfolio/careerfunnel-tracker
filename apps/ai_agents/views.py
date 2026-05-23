@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, render
 
 from apps.applications.models import JobApplication
 
-from .claude_provider import make_claude_provider
+from .claude_provider import make_claude_cv_tailoring_provider, make_claude_provider
 from .forms import (
     ApplicationChoiceForm,
     CoverLetterQualityForm,
@@ -67,12 +67,16 @@ def job_posting_analyzer(request):
                     analysis.fit_score,
                     ai_wrapper_result,
                 )
+            cv_tailoring_provider = (
+                make_claude_cv_tailoring_provider(api_key) if api_key else None
+            )
             tailoring_advisor = build_cv_tailoring_advisor(
                 company_name=company_name,
                 job_title=job_title,
                 location=location,
                 job_description=job_posting,
                 cv_evidence="",
+                provider_callable=cv_tailoring_provider,
             )
     else:
         form = JobPostingAnalyzerForm()
@@ -150,6 +154,10 @@ def application_agent_pack(request, pk):
             [application.required_skills, application.job_description, application.notes]
         ),
     )
+    api_key = getattr(settings, "ANTHROPIC_API_KEY", "")
+    cv_tailoring_provider = (
+        make_claude_cv_tailoring_provider(api_key) if api_key else None
+    )
     tailoring_advisor = build_cv_tailoring_advisor(
         company_name=application.company_name,
         job_title=application.job_title,
@@ -158,6 +166,7 @@ def application_agent_pack(request, pk):
             [application.required_skills, application.job_description, application.notes]
         ),
         cv_evidence=" ".join([application.cv_version, application.cover_letter_version]),
+        provider_callable=cv_tailoring_provider,
     )
     return render(
         request,

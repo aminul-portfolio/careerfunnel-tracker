@@ -937,14 +937,14 @@ def _build_interview_evidence_points(role_family: str, strongest_projects: list[
     return list(dict.fromkeys(points))[:6]
 
 
-def build_cv_tailoring_advisor(
+def _build_rule_based_cv_tailoring_advisor(
     company_name: str = "",
     job_title: str = "",
     location: str = "",
     job_description: str = "",
     cv_evidence: str = "",
 ) -> CVTailoringAdvisorResult:
-    """Rule-based CV tailoring suggestions; advisory only — no document generation."""
+    """Rule-based CV tailoring baseline; advisory only — no document generation."""
     combined_description = " ".join(
         part for part in (job_title, job_description) if part
     ).strip()
@@ -993,6 +993,413 @@ def build_cv_tailoring_advisor(
         claim_safety_notes=list(CLAIM_SAFETY_NOTES),
         approval_reminder=APPROVAL_REMINDER,
     )
+
+
+# --- Sprint 34B: CV tailoring semantic contract ---
+
+CV_TAILORING_SEMANTIC_REQUIRED_FIELDS = [
+    "semantic_matched_skills",
+    "semantic_partial_matches",
+    "semantic_gaps",
+    "semantic_project_highlights",
+    "semantic_experience_angles",
+    "semantic_risks",
+    "semantic_cover_letter_themes",
+    "semantic_interview_points",
+    "reasoning_summary",
+    "claim_safety_notes",
+    "manual_review_required",
+]
+
+CV_TAILORING_FORBIDDEN_FIELDS = [
+    "full_cv_text",
+    "professional_summary",
+    "experience_bullets",
+    "cover_letter_body",
+    "cover_letter_text",
+    "cv_body",
+    "application_letter",
+    "recruiter_message",
+    "linkedin_post",
+    "recommended_cv",
+]
+
+CV_TAILORING_CLAIM_SAFETY_NOTES = [
+    "CV tailoring semantic output is advisory only.",
+    "Manual review is required before using recommendations externally.",
+    "No final CV is generated.",
+    "No cover letter body is generated.",
+    "No application is submitted.",
+    "No auto-apply or auto-save is used.",
+    (
+        "No Gmail, Calendar, scraping, recruiter automation, or OAuth "
+        "integration is used."
+    ),
+    "Do not invent skills, employers, dates, metrics, or experience.",
+    "Gap-tier and learning-target skills must not be claimed as proven expertise.",
+]
+
+CV_TAILORING_SEMANTIC_LIST_FIELDS = [
+    "semantic_matched_skills",
+    "semantic_partial_matches",
+    "semantic_gaps",
+    "semantic_project_highlights",
+    "semantic_experience_angles",
+    "semantic_risks",
+    "semantic_cover_letter_themes",
+    "semantic_interview_points",
+    "claim_safety_notes",
+]
+
+
+@dataclass(frozen=True)
+class CVTailoringSemanticResult:
+    semantic_matched_skills: list[str]
+    semantic_partial_matches: list[str]
+    semantic_gaps: list[str]
+    semantic_project_highlights: list[str]
+    semantic_experience_angles: list[str]
+    semantic_risks: list[str]
+    semantic_cover_letter_themes: list[str]
+    semantic_interview_points: list[str]
+    reasoning_summary: str
+    claim_safety_notes: list[str]
+    manual_review_required: bool
+
+
+def _merge_cv_tailoring_claim_notes(extra: list[str]) -> list[str]:
+    merged = list(CV_TAILORING_CLAIM_SAFETY_NOTES)
+    for note in extra:
+        if note and note not in merged:
+            merged.append(note)
+    return merged
+
+
+def parse_cv_tailoring_semantic_payload(payload: dict) -> CVTailoringSemanticResult:
+    """Validate Claude CV tailoring semantic JSON. No network or DB writes."""
+    if not isinstance(payload, dict):
+        raise ValueError("Payload must be a dictionary.")
+
+    errors: list[str] = []
+    for field in CV_TAILORING_FORBIDDEN_FIELDS:
+        if field in payload:
+            errors.append(f"Forbidden field present: {field}.")
+
+    for field in CV_TAILORING_SEMANTIC_REQUIRED_FIELDS:
+        if field not in payload:
+            errors.append(f"Missing required field: {field}.")
+
+    manual_review = payload.get("manual_review_required")
+    if manual_review is not True:
+        errors.append("manual_review_required must be true.")
+
+    raw_summary = payload.get("reasoning_summary")
+    if not isinstance(raw_summary, str):
+        errors.append("reasoning_summary must be a string.")
+    elif not raw_summary.strip():
+        errors.append("reasoning_summary must be a non-empty string.")
+
+    list_fields: dict[str, list[str]] = {}
+    for field in CV_TAILORING_SEMANTIC_LIST_FIELDS:
+        try:
+            list_fields[field] = _parse_string_list_field(payload.get(field), field)
+        except ValueError as exc:
+            errors.append(str(exc))
+
+    if errors:
+        raise ValueError("; ".join(errors))
+
+    return CVTailoringSemanticResult(
+        semantic_matched_skills=list_fields["semantic_matched_skills"],
+        semantic_partial_matches=list_fields["semantic_partial_matches"],
+        semantic_gaps=list_fields["semantic_gaps"],
+        semantic_project_highlights=list_fields["semantic_project_highlights"],
+        semantic_experience_angles=list_fields["semantic_experience_angles"],
+        semantic_risks=list_fields["semantic_risks"],
+        semantic_cover_letter_themes=list_fields["semantic_cover_letter_themes"],
+        semantic_interview_points=list_fields["semantic_interview_points"],
+        reasoning_summary=str(payload["reasoning_summary"]).strip(),
+        claim_safety_notes=_merge_cv_tailoring_claim_notes(
+            list_fields["claim_safety_notes"]
+        ),
+        manual_review_required=True,
+    )
+
+
+CV_TAILORING_SEMANTIC_SUCCESS_NOTE = (
+    "Claude semantic enhancement is advisory only. Manual review required."
+)
+CV_TAILORING_SEMANTIC_FALLBACK_NOTE = (
+    "Semantic enhancement unavailable; rule-based fallback used."
+)
+
+
+def _merge_unique_string_lists(
+    *groups: list[str],
+    limit: int | None = None,
+) -> list[str]:
+    seen: set[str] = set()
+    merged: list[str] = []
+    for group in groups:
+        for item in group:
+            text = item.strip()
+            if not text:
+                continue
+            key = text.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(text)
+    if limit is not None:
+        return merged[:limit]
+    return merged
+
+
+def _filter_safe_advisory_lines(lines: list[str]) -> list[str]:
+    from .evidence_bank import contains_forbidden_claim_field
+
+    return [
+        line.strip()
+        for line in lines
+        if line.strip() and not contains_forbidden_claim_field(line)
+    ]
+
+
+def _with_cv_tailoring_fallback_note(
+    rule_based_result: CVTailoringAdvisorResult,
+    detail: str = "",
+) -> CVTailoringAdvisorResult:
+    notes = list(rule_based_result.claim_safety_notes)
+    fallback_note = CV_TAILORING_SEMANTIC_FALLBACK_NOTE
+    if detail and detail not in notes:
+        notes.append(detail)
+    if fallback_note not in notes:
+        notes.append(fallback_note)
+    return CVTailoringAdvisorResult(
+        recommended_cv=rule_based_result.recommended_cv,
+        cv_angle=rule_based_result.cv_angle,
+        role_family=rule_based_result.role_family,
+        strongest_experience=list(rule_based_result.strongest_experience),
+        strongest_projects=list(rule_based_result.strongest_projects),
+        matched_skills=list(rule_based_result.matched_skills),
+        partial_matches=list(rule_based_result.partial_matches),
+        missing_skills=list(rule_based_result.missing_skills),
+        risks=list(rule_based_result.risks),
+        deal_breakers=list(rule_based_result.deal_breakers),
+        cover_letter_angle=list(rule_based_result.cover_letter_angle),
+        interview_evidence_points=list(rule_based_result.interview_evidence_points),
+        claim_safety_notes=notes,
+        approval_reminder=rule_based_result.approval_reminder,
+    )
+
+
+def _build_evidence_catalog_for_prompt() -> dict:
+    from .evidence_bank import EVIDENCE_ENTRIES, PROJECT_ENTRIES
+
+    def _skill_rows(tier: str) -> list[dict[str, str]]:
+        return [
+            {
+                "id": entry.skill_id,
+                "name": entry.display_name,
+                "summary": entry.evidence_summary,
+            }
+            for entry in EVIDENCE_ENTRIES.values()
+            if entry.tier == tier
+        ]
+
+    return {
+        "strong_skills": _skill_rows("strong"),
+        "partial_skills": _skill_rows("partial"),
+        "gap_learning_skills": _skill_rows("gap_learning"),
+        "projects": [
+            {
+                "id": entry.project_id,
+                "name": entry.display_name,
+                "summary": entry.evidence_summary,
+            }
+            for entry in PROJECT_ENTRIES.values()
+        ],
+    }
+
+
+def build_cv_tailoring_semantic_prompt(
+    company_name: str,
+    job_title: str,
+    location: str,
+    job_description: str,
+    cv_evidence: str,
+    rule_based_result: CVTailoringAdvisorResult,
+) -> dict:
+    """Build provider prompt dict from rule-based baseline and evidence bank catalog."""
+    return {
+        "company_name": company_name,
+        "job_title": job_title,
+        "location": location,
+        "job_description": job_description,
+        "cv_evidence": cv_evidence,
+        "rule_based": {
+            "cv_angle": rule_based_result.cv_angle,
+            "role_family": rule_based_result.role_family,
+            "matched_skills": list(rule_based_result.matched_skills),
+            "partial_matches": list(rule_based_result.partial_matches),
+            "missing_skills": list(rule_based_result.missing_skills),
+            "strongest_projects": list(rule_based_result.strongest_projects),
+            "strongest_experience": list(rule_based_result.strongest_experience),
+            "risks": list(rule_based_result.risks),
+            "deal_breakers": list(rule_based_result.deal_breakers),
+            "cover_letter_angle": list(rule_based_result.cover_letter_angle),
+            "interview_evidence_points": list(
+                rule_based_result.interview_evidence_points
+            ),
+        },
+        "evidence_catalog": _build_evidence_catalog_for_prompt(),
+        "required_output_schema": {
+            "fields": list(CV_TAILORING_SEMANTIC_REQUIRED_FIELDS),
+            "forbidden_fields": list(CV_TAILORING_FORBIDDEN_FIELDS),
+        },
+        "safety_rules": [
+            "Output is advisory only.",
+            "Manual review is required before using recommendations externally.",
+            "Do not generate a final CV, cover letter body, or application copy.",
+            "Do not claim auto-apply, auto-save, or application submission.",
+            "Do not invent skills, employers, dates, metrics, or experience.",
+            "Do not include Gmail, Calendar, inbox, OAuth, or contact data.",
+            "Gap-tier skills must appear in semantic_gaps only, never as proven matches.",
+        ],
+    }
+
+
+def merge_cv_tailoring_with_semantic(
+    rule_based_result: CVTailoringAdvisorResult,
+    semantic_result: CVTailoringSemanticResult,
+) -> CVTailoringAdvisorResult:
+    """Merge validated semantic findings into the rule-based advisor result."""
+    from .evidence_bank import (
+        filter_claimable_for_matched,
+        filter_gap_learning_skills,
+        filter_partial_skills,
+        validate_project_names,
+    )
+
+    semantic_skill_attempts = (
+        semantic_result.semantic_matched_skills + semantic_result.semantic_partial_matches
+    )
+    gap_demoted = filter_gap_learning_skills(semantic_skill_attempts)
+
+    matched_skills = _merge_unique_string_lists(
+        rule_based_result.matched_skills,
+        filter_claimable_for_matched(semantic_result.semantic_matched_skills),
+    )
+    partial_matches = _merge_unique_string_lists(
+        rule_based_result.partial_matches,
+        filter_partial_skills(
+            semantic_result.semantic_partial_matches
+            + semantic_result.semantic_matched_skills
+        ),
+    )
+    missing_skills = _merge_unique_string_lists(
+        rule_based_result.missing_skills,
+        semantic_result.semantic_gaps,
+        gap_demoted,
+    )
+
+    strongest_projects = _merge_unique_string_lists(
+        rule_based_result.strongest_projects,
+        validate_project_names(semantic_result.semantic_project_highlights),
+        limit=6,
+    )
+    strongest_experience = _merge_unique_string_lists(
+        rule_based_result.strongest_experience,
+        _filter_safe_advisory_lines(semantic_result.semantic_experience_angles),
+        limit=6,
+    )
+    risks = _merge_unique_string_lists(
+        rule_based_result.risks,
+        _filter_safe_advisory_lines(semantic_result.semantic_risks),
+        limit=10,
+    )
+    cover_letter_angle = _merge_unique_string_lists(
+        rule_based_result.cover_letter_angle,
+        _filter_safe_advisory_lines(semantic_result.semantic_cover_letter_themes),
+        limit=8,
+    )
+    interview_evidence_points = _merge_unique_string_lists(
+        rule_based_result.interview_evidence_points,
+        _filter_safe_advisory_lines(semantic_result.semantic_interview_points),
+        limit=6,
+    )
+
+    claim_safety_notes = _merge_unique_string_lists(
+        rule_based_result.claim_safety_notes,
+        semantic_result.claim_safety_notes,
+        [CV_TAILORING_SEMANTIC_SUCCESS_NOTE],
+    )
+
+    return CVTailoringAdvisorResult(
+        recommended_cv=LOCKED_CV,
+        cv_angle=rule_based_result.cv_angle,
+        role_family=rule_based_result.role_family,
+        strongest_experience=strongest_experience,
+        strongest_projects=strongest_projects,
+        matched_skills=matched_skills,
+        partial_matches=partial_matches,
+        missing_skills=missing_skills,
+        risks=risks,
+        deal_breakers=list(rule_based_result.deal_breakers),
+        cover_letter_angle=cover_letter_angle,
+        interview_evidence_points=interview_evidence_points,
+        claim_safety_notes=claim_safety_notes,
+        approval_reminder=APPROVAL_REMINDER,
+    )
+
+
+def build_cv_tailoring_advisor(
+    company_name: str = "",
+    job_title: str = "",
+    location: str = "",
+    job_description: str = "",
+    cv_evidence: str = "",
+    provider_callable: Callable[[dict], dict] | None = None,
+) -> CVTailoringAdvisorResult:
+    """CV tailoring suggestions; rule-based baseline with optional semantic enhancement."""
+    rule_based_result = _build_rule_based_cv_tailoring_advisor(
+        company_name=company_name,
+        job_title=job_title,
+        location=location,
+        job_description=job_description,
+        cv_evidence=cv_evidence,
+    )
+    if provider_callable is None:
+        return rule_based_result
+
+    try:
+        prompt = build_cv_tailoring_semantic_prompt(
+            company_name=company_name,
+            job_title=job_title,
+            location=location,
+            job_description=job_description,
+            cv_evidence=cv_evidence,
+            rule_based_result=rule_based_result,
+        )
+        provider_response = provider_callable(prompt)
+        if not isinstance(provider_response, dict):
+            return _with_cv_tailoring_fallback_note(
+                rule_based_result,
+                "Provider callable must return a dictionary payload.",
+            )
+        semantic_result = parse_cv_tailoring_semantic_payload(provider_response)
+    except ValueError as exc:
+        return _with_cv_tailoring_fallback_note(
+            rule_based_result,
+            f"Semantic payload validation failed: {exc}",
+        )
+    except Exception as exc:
+        return _with_cv_tailoring_fallback_note(
+            rule_based_result,
+            f"Provider callable failed: {exc}",
+        )
+
+    return merge_cv_tailoring_with_semantic(rule_based_result, semantic_result)
 
 
 # --- Sprint 32B: AI fit scoring contract (local/mocked only; no external API) ---
