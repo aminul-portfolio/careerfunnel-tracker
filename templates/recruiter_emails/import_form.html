@@ -11,8 +11,16 @@
             <strong>{{ application.company_name }}</strong> -
             {{ application.job_title }}
         </p>
+        <h2>Manual workflow</h2>
+        <ol class="workflow-list">
+            <li>Paste the recruiter email manually below.</li>
+            <li>CareerFunnel classifies the email locally using rule-based signals.</li>
+            <li>Review the suggested action and reply draft on the detail page.</li>
+            <li>Copy and send replies outside CareerFunnel Tracker.</li>
+            <li>Mark the reply as sent manually only after you send it.</li>
+        </ol>
         <p class="muted-text">
-            Manual paste only. No Gmail API, OAuth, background polling, or automatic email sending is used.
+            No Gmail, Calendar, OAuth, auto-send, auto-apply, or automatic submission is used.
         </p>
     </div>
     <form method="post" class="form-stack">

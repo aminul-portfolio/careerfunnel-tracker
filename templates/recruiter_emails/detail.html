@@ -14,10 +14,52 @@
         {% endif %}
         <div class="hero-actions">
             {% if recruiter_email.application %}
-                <a href="{% url 'applications:application_detail' recruiter_email.application.pk %}" class="btn btn-secondary">Back to application</a>
+                <a href="{% url 'applications:application_detail' recruiter_email.application.pk %}" class="btn btn-secondary">Application Detail</a>
+                <a href="{% url 'recruiter_emails:import' recruiter_email.application.pk %}" class="btn btn-secondary">Import another email</a>
+                <a href="{% url 'ai_agents:application_agent_pack' recruiter_email.application.pk %}" class="btn btn-secondary">Application AI Pack</a>
             {% endif %}
         </div>
     </section>
+
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Manual Only</p>
+            <h2>Manual Reply Workflow</h2>
+        </div>
+        <ol class="workflow-list">
+            <li>Review classification and suggested action.</li>
+            <li>Review the reply draft below.</li>
+            <li>Copy the draft into your email client.</li>
+            <li>Send it manually outside CareerFunnel Tracker.</li>
+            <li>Mark reply as sent manually after you send it.</li>
+            <li>Update application status yourself if needed.</li>
+        </ol>
+        <p class="muted-text">
+            Suggested application status is advisory only. This page does not send email.
+            No Gmail, Calendar, OAuth, auto-send, auto-apply, or automatic submission is used.
+        </p>
+    </section>
+
+    {% if show_interview_prep_prompt %}
+        <section class="content-card">
+            <div class="diagnosis-box recruiter-interview-prep-prompt">
+                <h2>Interview Prep Recommended</h2>
+                <p class="muted-text">
+                    This is a recommendation only. Review the recruiter email first, then create
+                    interview prep manually if you decide it is needed. CareerFunnel Tracker does not
+                    create interview prep automatically or update application status.
+                </p>
+                <div class="hero-actions">
+                    <a
+                        href="{% url 'interviews:interview_create' %}?application={{ recruiter_email.application.pk }}"
+                        class="btn btn-primary"
+                    >
+                        Create Interview Prep
+                    </a>
+                </div>
+            </div>
+        </section>
+    {% endif %}
 
     <section class="content-card">
         <div class="card-header">
