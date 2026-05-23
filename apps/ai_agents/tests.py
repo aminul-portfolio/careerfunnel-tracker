@@ -238,6 +238,127 @@ class AiAgentViewTests(TestCase):
         )
 
 
+class ApplicationAgentPackCrossLinkTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="packlink", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Pack Co",
+            job_title="BI Analyst",
+            date_applied=date(2026, 5, 1),
+        )
+        self.client.login(username="packlink", password="StrongPass12345")
+
+    def test_application_agent_pack_links_to_application_detail(self):
+        application_url = reverse(
+            "applications:application_detail",
+            kwargs={"pk": self.application.pk},
+        )
+        response = self.client.get(
+            reverse("ai_agents:application_agent_pack", kwargs={"pk": self.application.pk})
+        )
+
+        self.assertContains(response, application_url)
+        self.assertContains(response, "Application Detail")
+
+    def test_application_agent_pack_links_to_recruiter_import(self):
+        import_url = reverse(
+            "recruiter_emails:import",
+            kwargs={"application_id": self.application.pk},
+        )
+        response = self.client.get(
+            reverse("ai_agents:application_agent_pack", kwargs={"pk": self.application.pk})
+        )
+
+        self.assertContains(response, import_url)
+        self.assertContains(response, "Import recruiter email")
+
+    def test_application_agent_pack_links_to_interview_create_with_application(self):
+        interview_url = (
+            reverse("interviews:interview_create") + f"?application={self.application.pk}"
+        )
+        response = self.client.get(
+            reverse("ai_agents:application_agent_pack", kwargs={"pk": self.application.pk})
+        )
+
+        self.assertContains(response, interview_url)
+
+    def test_application_agent_pack_lists_existing_interview_prep(self):
+        from apps.interviews.models import InterviewPrep
+
+        interview = InterviewPrep.objects.create(
+            user=self.user,
+            application=self.application,
+            interview_date=date(2026, 5, 15),
+        )
+        response = self.client.get(
+            reverse("ai_agents:application_agent_pack", kwargs={"pk": self.application.pk})
+        )
+
+        self.assertContains(response, "Saved interview prep for this application")
+        self.assertContains(response, interview.get_absolute_url())
+
+    def test_application_agent_pack_links_latest_recruiter_email(self):
+        from apps.recruiter_emails.models import RecruiterEmail
+
+        recruiter_email = RecruiterEmail.objects.create(
+            application=self.application,
+            subject="Latest recruiter note",
+            body="Following up on your application.",
+            date_received=timezone.now(),
+        )
+        detail_url = reverse(
+            "recruiter_emails:detail",
+            kwargs={"pk": recruiter_email.pk},
+        )
+        response = self.client.get(
+            reverse("ai_agents:application_agent_pack", kwargs={"pk": self.application.pk})
+        )
+
+        self.assertContains(response, detail_url)
+        self.assertContains(response, "Latest recruiter email")
+
+    def test_application_agent_pack_manual_advisory_only_copy(self):
+        response = self.client.get(
+            reverse("ai_agents:application_agent_pack", kwargs={"pk": self.application.pk})
+        )
+
+        self.assertContains(response, "Application AI Pack is advisory only")
+        self.assertContains(response, "no interview prep is created automatically")
+        self.assertContains(response, "prepare manually before taking action")
+
+    def test_application_agent_pack_no_gmail_oauth_calendar_claims(self):
+        response = self.client.get(
+            reverse("ai_agents:application_agent_pack", kwargs={"pk": self.application.pk})
+        )
+
+        self.assertContains(response, "No Gmail, Calendar, OAuth")
+
+    def test_application_agent_pack_does_not_mutate_application_on_get(self):
+        from apps.interviews.models import InterviewPrep
+        from apps.recruiter_emails.models import RecruiterEmail
+
+        original_status = self.application.status
+        RecruiterEmail.objects.create(
+            application=self.application,
+            subject="Interview",
+            body="We would like to invite you to interview.",
+            date_received=timezone.now(),
+            matched_signals='["interview"]',
+        )
+        prep_count_before = InterviewPrep.objects.count()
+
+        response = self.client.get(
+            reverse("ai_agents:application_agent_pack", kwargs={"pk": self.application.pk})
+        )
+
+        self.application.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.application.status, original_status)
+        self.assertEqual(InterviewPrep.objects.count(), prep_count_before)
+        self.assertTrue(response.context["has_interview_signal"])
+
+
 class AdvancedAiAgentFeatureTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="advanced", password="StrongPass12345")

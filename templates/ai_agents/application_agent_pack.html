@@ -4,6 +4,47 @@
 {% block content %}
 <div class="dashboard-grid">
     <section class="hero-panel"><p class="eyebrow">Application AI Pack</p><h1>{{ application.company_name }} — {{ application.job_title }}</h1><p>One page with job fit, CV/project recommendation, follow-up draft, and interview prep.</p>{% include "ai_agents/_agent_nav.html" %}</section>
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Manual Workflow</p>
+            <h2>Manual workflow links</h2>
+        </div>
+        <p class="muted-text">Application AI Pack is advisory only.</p>
+        <p class="muted-text">No email is sent, no application is submitted, and no interview prep is created automatically.</p>
+        <p class="muted-text">Use this pack to prepare manually before taking action.</p>
+        <p class="muted-text">No Gmail, Calendar, OAuth, auto-send, auto-apply, or automatic submission is used.</p>
+        <div class="hero-actions">
+            <a href="{% url 'applications:application_detail' application.pk %}" class="btn btn-secondary">Application Detail</a>
+            <a href="{% url 'recruiter_emails:import' application.pk %}" class="btn btn-secondary">Import recruiter email</a>
+            <a href="{% url 'interviews:interview_create' %}?application={{ application.pk }}" class="btn btn-secondary">Create Interview Prep</a>
+        </div>
+        {% if latest_recruiter_email %}
+            <p class="note-text">
+                Latest recruiter email:
+                <a href="{% url 'recruiter_emails:detail' latest_recruiter_email.pk %}" class="table-link">
+                    {{ latest_recruiter_email.subject|default:latest_recruiter_email }}
+                </a>
+            </p>
+        {% endif %}
+        {% if has_interview_signal %}
+            <p class="muted-text">
+                Recruiter email history includes interview or screening signals. Review on Application Detail
+                before creating interview prep manually.
+            </p>
+        {% endif %}
+        {% if interview_preps %}
+            <h3>Saved interview prep for this application</h3>
+            <ul class="workflow-list">
+                {% for interview in interview_preps %}
+                    <li>
+                        <a href="{{ interview.get_absolute_url }}" class="table-link">
+                            {{ interview.interview_date }} — {{ interview.get_stage_display }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </section>
     <section class="kpi-grid">
         <div class="kpi-card"><p>Fit Score</p><h2>{{ analysis.fit_score }}</h2></div>
         <div class="kpi-card"><p>Recommendation</p><h2 class="small-kpi-text">{{ analysis.recommendation }}</h2></div>
