@@ -972,3 +972,137 @@ class TestClaudeProvider(TestCase):
         self.assertTrue(result.used_fallback)
         self.assertIsNone(result.ai_result)
         self.assertTrue(result.manual_review_required)
+
+
+class EvidenceBankTests(TestCase):
+    def test_evidence_entries_are_non_empty_and_tiered(self):
+        from .evidence_bank import EVIDENCE_ENTRIES, EvidenceTier
+
+        self.assertGreater(len(EVIDENCE_ENTRIES), 0)
+        allowed_tiers: set[EvidenceTier] = {"strong", "partial", "gap_learning"}
+        for skill_id, entry in EVIDENCE_ENTRIES.items():
+            self.assertEqual(entry.skill_id, skill_id)
+            self.assertIn(entry.tier, allowed_tiers)
+            self.assertTrue(entry.display_name)
+            self.assertTrue(entry.evidence_summary)
+            if entry.tier == "gap_learning":
+                self.assertFalse(entry.claimable)
+            else:
+                self.assertTrue(entry.claimable)
+
+    def test_project_entries_use_canonical_display_names(self):
+        from .evidence_bank import PROJECT_ENTRIES
+
+        expected = {
+            "CareerFunnel Tracker",
+            "BakeOps Intelligence",
+            "MarketVista Dashboard",
+            "DataBridge Market API",
+            "TradeIntel 360",
+            "RiskWise Planner",
+        }
+        display_names = {entry.display_name for entry in PROJECT_ENTRIES.values()}
+        self.assertEqual(display_names, expected)
+        for entry in PROJECT_ENTRIES.values():
+            self.assertTrue(entry.role_families)
+            self.assertTrue(entry.evidence_summary)
+
+    def test_learning_targets_are_gap_learning_not_claimable(self):
+        from apps.job_intelligence.constants import LEARNING_TARGETS
+
+        from .evidence_bank import (
+            GAP_LEARNING_SKILL_IDS,
+            get_evidence_entry,
+            is_claimable_skill,
+        )
+
+        for target in LEARNING_TARGETS:
+            skill_id = target.strip().lower().replace(" ", "_")
+            self.assertIn(
+                skill_id,
+                GAP_LEARNING_SKILL_IDS,
+                msg=f"Expected gap registry to include learning target: {target}",
+            )
+            entry = get_evidence_entry(skill_id)
+            self.assertIsNotNone(entry, msg=f"Missing evidence entry for: {target}")
+            self.assertEqual(entry.tier, "gap_learning")
+            self.assertFalse(entry.claimable)
+            self.assertFalse(is_claimable_skill(skill_id))
+
+    def test_filter_claimable_for_matched_strips_gap_tier_skills(self):
+        from .evidence_bank import filter_claimable_for_matched
+
+        skill_ids = [
+            "python",
+            "sql",
+            "dbt",
+            "snowflake",
+            "airflow",
+            "spark",
+            "kafka",
+            "django",
+        ]
+        claimable = filter_claimable_for_matched(skill_ids)
+        self.assertEqual(claimable, ["python", "django"])
+        self.assertNotIn("dbt", claimable)
+        self.assertNotIn("snowflake", claimable)
+        self.assertNotIn("airflow", claimable)
+        self.assertNotIn("spark", claimable)
+        self.assertNotIn("kafka", claimable)
+        self.assertNotIn("sql", claimable)
+
+    def test_validate_project_names_rejects_unknown_projects(self):
+        from .evidence_bank import validate_project_names
+
+        names = [
+            "BakeOps Intelligence",
+            "Unknown Portfolio App",
+            "CareerFunnel Tracker",
+            "BakeOps Intelligence",
+        ]
+        validated = validate_project_names(names)
+        self.assertEqual(
+            validated,
+            ["BakeOps Intelligence", "CareerFunnel Tracker"],
+        )
+
+    def test_hard_gap_terms_never_promoted_to_strong(self):
+        from .evidence_bank import HARD_GAP_SKILL_IDS, get_evidence_entry, is_claimable_skill
+
+        for skill_id in HARD_GAP_SKILL_IDS:
+            entry = get_evidence_entry(skill_id)
+            self.assertIsNotNone(entry, msg=f"Missing hard-gap entry: {skill_id}")
+            self.assertNotEqual(entry.tier, "strong")
+            self.assertFalse(is_claimable_skill(skill_id))
+
+    def test_unknown_skill_is_not_claimable(self):
+        from .evidence_bank import (
+            filter_claimable_for_matched,
+            get_evidence_entry,
+            is_claimable_skill,
+            tier_for_skill,
+        )
+
+        self.assertIsNone(get_evidence_entry("terraform"))
+        self.assertIsNone(tier_for_skill("terraform"))
+        self.assertFalse(is_claimable_skill("terraform"))
+        self.assertEqual(
+            filter_claimable_for_matched(["python", "terraform", "dbt"]),
+            ["python"],
+        )
+
+    def test_forbidden_claim_field_detector_flags_cv_body_fields(self):
+        from .evidence_bank import contains_forbidden_claim_field
+
+        for field in (
+            "full_cv_text",
+            "professional_summary",
+            "experience_bullets",
+            "cover_letter_body",
+        ):
+            self.assertTrue(
+                contains_forbidden_claim_field(field),
+                msg=f"Expected forbidden field detection for: {field}",
+            )
+        self.assertFalse(contains_forbidden_claim_field("semantic_matched_skills"))
+        self.assertFalse(contains_forbidden_claim_field(""))
