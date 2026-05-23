@@ -88,7 +88,7 @@ class JobApplicationForm(forms.ModelForm):
             "status": forms.Select(attrs={"class": "form-control"}),
             "response_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
             "cv_version": forms.TextInput(
-                attrs={"class": "form-control", "placeholder": "Finance_DA_CV_v1"}
+                attrs={"class": "form-control", "placeholder": "Aminul_Islam_Data_Analyst_CV"}
             ),
             "cover_letter_version": forms.TextInput(
                 attrs={"class": "form-control", "placeholder": "Tailored_CL_v1"}
@@ -99,9 +99,7 @@ class JobApplicationForm(forms.ModelForm):
             "company_researched": forms.CheckboxInput(attrs={"class": "checkbox-input"}),
             "follow_up_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
             "follow_up_status": forms.Select(attrs={"class": "form-control"}),
-            "last_contacted_date": forms.DateInput(
-                attrs={"class": "form-control", "type": "date"}
-            ),
+            "last_contacted_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
             "next_action": forms.TextInput(
                 attrs={
                     "class": "form-control",

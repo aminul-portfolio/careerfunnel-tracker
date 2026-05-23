@@ -8,7 +8,10 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 ## Current Sprint Position
 
-Sprints 25 through 28 (28A-28D) and **Sprint 29** (29A-29D) are complete. Latest completed Sprint 29 tag: `sprint-29d-evidence-documentation-complete`. Latest main baseline: `1189a2c` (merge: sprint-29d evidence documentation). Current validation baseline: **320 tests passing**.
+Sprints 25 through 32 (32A-32E) are complete.
+Latest completed Sprint 32E tag: `sprint-32e-evidence-and-final-closure-complete`.
+Latest main baseline: `eae81b2` (merge: sprint-32e evidence and final closure).
+Current validation baseline: **351 tests passing**.
 
 This README does not claim Gmail API integration, OAuth, web scraping, auto-apply workflows, automatic saving, external AI or LLM services, calendar integration, a live SaaS deployment, production users, or automatic email sending.
 
