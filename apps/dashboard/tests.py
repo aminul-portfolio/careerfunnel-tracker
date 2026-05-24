@@ -20,6 +20,9 @@ from .services import (
     should_prompt_weekly_review,
 )
 
+# Wednesday - not week-ending (Sunday), so empty-state tests stay CI-stable.
+STABLE_NON_WEEK_END = date(2026, 5, 20)
+
 
 class DashboardServiceTests(TestCase):
     def setUp(self):
@@ -111,8 +114,14 @@ class DashboardServiceTests(TestCase):
         self.assertEqual(actions[0].priority, "High")
         self.assertEqual(actions[0].title, "Overdue follow-up: High Priority Co")
 
-    def test_today_action_panel_returns_empty_when_nothing_needs_attention(self):
-        DailyLog.objects.create(user=self.user, log_date=timezone.localdate())
+    @patch(
+        "apps.dashboard.services.timezone.localdate",
+        return_value=STABLE_NON_WEEK_END,
+    )
+    def test_today_action_panel_returns_empty_when_nothing_needs_attention(
+        self, _mock_localdate
+    ):
+        DailyLog.objects.create(user=self.user, log_date=STABLE_NON_WEEK_END)
 
         actions = build_today_action_panel(self.user)
 
@@ -165,8 +174,12 @@ class DashboardViewTests(TestCase):
         self.assertContains(response, "Send a short follow-up and update the follow-up status.")
         self.assertContains(response, application.get_absolute_url())
 
-    def test_dashboard_displays_today_action_panel_empty_state(self):
-        DailyLog.objects.create(user=self.user, log_date=timezone.localdate())
+    @patch(
+        "apps.dashboard.services.timezone.localdate",
+        return_value=STABLE_NON_WEEK_END,
+    )
+    def test_dashboard_displays_today_action_panel_empty_state(self, _mock_localdate):
+        DailyLog.objects.create(user=self.user, log_date=STABLE_NON_WEEK_END)
 
         self.client.login(username="aminul", password="StrongPass12345")
         response = self.client.get(reverse("dashboard:overview"))
