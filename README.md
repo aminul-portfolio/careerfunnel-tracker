@@ -10,8 +10,18 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 Sprints 25 through 32 (32A-32E) are complete on `main`.
 Sprint **34** (34A-34D) — CV Tailoring Claude Enhancement — is complete on `main`.
-Sprint **35** (35A-35D) — Interview + Email Workflow Polish — is complete on feature branch `sprint-35-interview-email-workflow-polish` (latest implementation commit: `bee1326` Sprint 35C: polish application and AI pack crosslinks).
-Current validation baseline: **419 tests passing**.
+Sprint **35** (35A-35D) — Interview + Email Workflow Polish — is complete on `main`.
+Sprint **36** (36A-36D) — Weekly Risk / Final Operating System Polish — is complete on feature branch `sprint-36-weekly-risk-final-os-polish` (implementation commits through `66e0e84` Sprint 36C; 36D documentation closure).
+Current validation baseline: **441 tests passing**.
+
+Sprint 36 adds:
+
+- **Weekly Review manual workflow clarity** (36A) — manual workflow steps, trust copy, lessons learned on detail, cross-links to Dashboard and AI Weekly Coach
+- **AI Weekly Coach advisory/risk guidance** (36B) — rule-based weekly coach trust copy, latest saved Weekly Review context (read-only), claim-safe optional Claude wording on Agent Hub
+- **Dashboard / Today Action operating rhythm** (36C) — weekly operating rhythm strip, manual weekly review prompt on week end, diagnosis links to Weekly Review and AI Weekly Coach
+- **Claim-safe, approval-based operating-system guidance** — no auto-send, auto-apply, automatic submission, automatic status updates, or automatic interview prep creation
+
+Evidence: `docs/evidence/sprint_36_weekly_risk_os_polish.md`.
 
 Sprint 35 adds:
 
@@ -197,13 +207,14 @@ For a portfolio-level evidence map across the user's major GitHub projects, see 
 
 For recruiter-facing portfolio presentation materials, see `docs/career_evidence/portfolio_presentation_pack.md`.
 
-Current verified test count: **419 passing**.
+Current verified test count: **441 passing**.
 
 Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/`. The main supporting documentation is:
 
 - `docs/analytics/metric_definitions.md`
 - `docs/analytics/analytics_lineage.md`
 - `docs/evidence/evidence_index.md`
+- `docs/evidence/sprint_36_weekly_risk_os_polish.md`
 - `docs/evidence/sprint_35_interview_email_workflow_polish.md`
 - `docs/evidence/sprint_34_cv_tailoring_claude_enhancement.md`
 - `docs/evidence/sprint_29_recruiter_email_workflow_enhancements.md`
@@ -314,7 +325,7 @@ http://127.0.0.1:8000/
 - No auto-apply workflow is claimed.
 - Claude semantic enhancement is not claimed to run on every request — it is optional when configured, with rule-based fallback otherwise.
 - No interview automation or external AI/API interview assistant is claimed.
-- No email, calendar, scraping, auto-apply, or background automation is claimed.
+- No email, calendar, scraping, auto-apply, background polling, or background automation is claimed.
 - No scientific CV A/B testing is claimed; CV Version Performance is directional reporting.
 - No financial return calculation is claimed; Source ROI means source outcome performance.
 - No production database architecture is claimed; SQLite is used for portfolio-scale local review.

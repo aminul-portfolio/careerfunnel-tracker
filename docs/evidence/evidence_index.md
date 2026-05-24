@@ -25,7 +25,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 | Career Evidence screenshots | `docs/screenshots/career_evidence/` |
 | Analytics documentation folder | `docs/analytics/` |
 
-**Sprint 35 (feature branch `sprint-35-interview-email-workflow-polish`):** Interview + Email Workflow Polish — **419** tests validated; evidence doc `docs/evidence/sprint_35_interview_email_workflow_polish.md`. Sprint 34 remains documented below.
+**Sprint 35 (merged on `main`):** Interview + Email Workflow Polish — **419** tests validated at closure; evidence doc `docs/evidence/sprint_35_interview_email_workflow_polish.md`.
+
+**Sprint 36 (feature branch `sprint-36-weekly-risk-final-os-polish`):** Weekly Risk / Final Operating System Polish — **441** tests validated; evidence doc `docs/evidence/sprint_36_weekly_risk_os_polish.md`. Sprint 34–35 remain documented below.
 
 ---
 
@@ -1569,6 +1571,37 @@ docs/evidence/evidence_index.md (this section)
 ### Reviewer Value
 
 Shows end-to-end **manual** job-search operations UX: recruiter signal → advisory drafts → application context → interview prep — without claiming inbox automation or SaaS deployment.
+
+---
+
+## Sprint 36 — Weekly Risk / Final Operating System Polish (36A-36D)
+
+### Status
+
+- **36A:** Complete — Weekly Review workflow clarity (`721e044`)
+- **36B:** Complete — AI Weekly Coach / risk guidance (`36ac7cd`)
+- **36C:** Complete — Dashboard / Today Action OS polish (`66e0e84`)
+- **36D:** Complete — README and evidence closure (documentation only)
+
+### Documentation Evidence
+
+```text
+docs/evidence/sprint_36_weekly_risk_os_polish.md
+README.md (Sprint 36 position, operating rhythm summary, claim boundaries)
+docs/evidence/evidence_index.md (this section)
+```
+
+### What Sprint 36 Proves
+
+- Manual weekly operating workflow across Daily Log → Applications → Weekly Review → AI Weekly Coach → Dashboard Today Action.
+- Weekly Review CRUD remains manual; saving a review does not mutate applications, send email, or create interview prep.
+- AI Weekly Coach is advisory and rule-based on the coach page; optional Claude wording aligned on Agent Hub without claiming every tool calls an API.
+- Dashboard week-end Today Action prompt links to manual Weekly Review create only.
+- **21** new targeted tests (`WeeklyReviewWorkflowClaimSafetyTests`, `AiAgentWeeklyCoachPolishTests`, `DashboardWeeklyOsPolishTests`); **441** full suite; no migrations.
+
+### Reviewer Value
+
+Shows a coherent **manual, local, approval-based** weekly operating system for portfolio review without Gmail, Calendar, OAuth, auto-apply, or live SaaS claims.
 
 ---
 
