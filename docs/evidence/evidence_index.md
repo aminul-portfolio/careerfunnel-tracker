@@ -31,6 +31,8 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 37 (feature branch `sprint-37-saas-foundation-audit-design-system-lock`):** SaaS Foundation Audit + Design System Lock - **16** foundation audit tests in `tests/test_sprint_37a_shell_foundation_audit.py`; app suite **441** tests unchanged; combined `apps tests` run **525** tests; evidence doc `docs/evidence/sprint_37_saas_foundation_audit.md`. Audit-only sprint: no redesign, no model/migration changes.
 
+**Sprint 38 (feature branch `sprint-38-premium-saas-shell-navbar-sidebar`):** Premium SaaS Shell - navbar + sidebar upgrade with product workflow groups, claim-safe badges, Quick Add/user menus, responsive drawer controls; **25** shell audit tests; evidence doc `docs/evidence/sprint_38_premium_saas_shell.md`. Shell-only sprint: no dashboard/form/report redesign.
+
 ---
 
 ## Evidence Principles
@@ -1639,6 +1641,47 @@ tests/test_sprint_37a_shell_foundation_audit.py
 ### Reviewer Value
 
 Demonstrates foundation safety before premium redesign: route/static/template integrity, SSR-first rendering, and an explicit design-system direction without claiming live SaaS deployment or new integrations.
+
+---
+
+## Sprint 38 - Premium SaaS Shell: Navbar + Sidebar
+
+### Status
+
+- **38A-38C:** Complete - premium shell structure, grouped sidebar, topbar controls, responsive drawer, shell tests, evidence documentation
+
+### Branch
+
+```text
+sprint-38-premium-saas-shell-navbar-sidebar
+```
+
+### Documentation Evidence
+
+```text
+docs/evidence/sprint_38_premium_saas_shell.md
+docs/evidence/evidence_index.md (this section)
+templates/base.html
+templates/partials/sidebar.html
+templates/partials/navbar.html
+static/css/tokens.css
+static/css/layout.css
+static/css/components.css
+static/js/app.js
+tests/test_sprint_37a_shell_foundation_audit.py
+```
+
+### What Sprint 38 Proves
+
+- Premium product shell with workflow groups: Command -> Pipeline -> Review -> Intelligence -> Reporting Suite -> Evidence -> Account.
+- Claim-safe trust badges (Manual, Advisory, Evidence-based) and Local Portfolio Demo environment badge.
+- Quick Add manual create links and user menu (Profile, Settings, Logout) in SSR-friendly topbar controls.
+- Responsive drawer toggle, overlay, Escape/click close, active `aria-current="page"` navigation enhancement.
+- **25** shell audit tests; dashboard/content templates unchanged; no migrations or business-logic changes.
+
+### Reviewer Value
+
+Shows a cohesive premium SaaS navigation experience while preserving manual, advisory, evidence-based product boundaries and server-side core rendering.
 
 ---
 

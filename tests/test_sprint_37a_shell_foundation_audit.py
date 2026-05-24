@@ -20,17 +20,42 @@ STATIC_DIR = REPO_ROOT / "static"
 
 SIDEBAR_URL_NAMES = (
     "dashboard:overview",
-    "daily_log:daily_log_list",
-    "weekly_review:weekly_review_list",
     "applications:application_list",
     "applications:evaluation_queue",
     "followups:followup_list",
     "interviews:interview_list",
+    "daily_log:daily_log_list",
+    "weekly_review:weekly_review_list",
     "notes:note_list",
     "job_intelligence:smart_review",
     "ai_agents:agent_dashboard",
     "metrics:funnel_metrics",
     "exports:export_center",
+    "dashboard:career_evidence_index",
+)
+
+PRODUCT_NAV_GROUPS = (
+    "Command",
+    "Pipeline",
+    "Review",
+    "Intelligence",
+    "Reporting Suite",
+    "Evidence",
+    "Account",
+)
+
+QUICK_ADD_URL_NAMES = (
+    "applications:application_create",
+    "daily_log:daily_log_create",
+    "weekly_review:weekly_review_create",
+    "notes:note_create",
+)
+
+QUICK_ADD_LABELS = (
+    "Add Application",
+    "Add Daily Log",
+    "Add Weekly Review",
+    "Add Note",
 )
 
 NAVBAR_URL_NAMES = (
@@ -56,6 +81,8 @@ REQUIRED_TOKEN_VARIABLES = (
     "--radius-md",
     "--radius-lg",
     "--font-main",
+    "--focus-ring",
+    "--sidebar-width",
 )
 
 CORE_STYLESHEETS = (
@@ -169,10 +196,13 @@ class DesignSystemLockTests(TestCase):
                     msg=f"Design token {variable_name} must remain defined in tokens.css",
                 )
 
-    def test_app_js_only_enhances_sidebar_active_state(self):
+    def test_app_js_enhances_shell_without_dom_content_injection(self):
         app_js_content = (STATIC_DIR / "js" / "app.js").read_text(encoding="utf-8")
         self.assertIn(".sidebar-link", app_js_content)
         self.assertIn("classList.add(\"active\")", app_js_content)
+        self.assertIn("aria-current", app_js_content)
+        self.assertIn("mobile-nav-toggle", app_js_content)
+        self.assertIn("Escape", app_js_content)
         self.assertNotIn("innerHTML", app_js_content)
         self.assertNotIn("document.write", app_js_content)
 
@@ -191,12 +221,80 @@ class ShellAccessibilityLandmarkTests(Sprint37AShellFoundationAuditMixin, TestCa
         response = self.client.get(reverse("dashboard:overview"))
         self.assertEqual(response.status_code, 200)
         content = response.content.decode()
-        self.assertIn('<html lang="en">', content)
-        self.assertIn('<aside class="sidebar">', content)
-        self.assertIn('<nav class="sidebar-nav">', content)
-        self.assertIn('<main class="main-content">', content)
-        self.assertIn('<header class="topbar">', content)
+        self.assertIn('<html lang="en"', content)
+        self.assertIn('<aside class="sidebar cf-sidebar"', content)
+        self.assertIn('<nav class="sidebar-nav cf-sidebar-nav"', content)
+        self.assertIn('<main class="main-content cf-main-content"', content)
+        self.assertIn('<header class="topbar cf-topbar">', content)
         self.assertIn('<section class="page-content">', content)
+
+
+class Sprint38PremiumShellTests(Sprint37AShellFoundationAuditMixin, TestCase):
+    def test_dashboard_renders_premium_shell(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Job Search Operating System")
+        self.assertContains(response, "Local Portfolio Demo")
+        self.assertContains(response, "cf-trust-badge")
+        self.assertContains(response, "cf-topbar")
+        self.assertContains(response, "cf-sidebar")
+
+    def test_sidebar_contains_product_navigation_groups(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        for group_label in PRODUCT_NAV_GROUPS:
+            with self.subTest(group_label=group_label):
+                self.assertContains(response, group_label)
+
+    def test_sidebar_links_resolve_to_valid_urls(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        for url_name in SIDEBAR_URL_NAMES:
+            with self.subTest(url_name=url_name):
+                self.assertContains(response, reverse(url_name))
+
+    def test_topbar_contains_quick_add_menu(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Quick Add")
+        for label in QUICK_ADD_LABELS:
+            with self.subTest(label=label):
+                self.assertContains(response, label)
+
+    def test_quick_add_links_are_manual_create_links_only(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        for url_name in QUICK_ADD_URL_NAMES:
+            with self.subTest(url_name=url_name):
+                self.assertContains(response, reverse(url_name))
+
+    def test_mobile_drawer_controls_exist(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn('id="mobile-nav-toggle"', content)
+        self.assertIn('id="sidebar-overlay"', content)
+        self.assertIn('aria-controls="app-sidebar"', content)
+
+    def test_shell_supports_aria_current_on_active_navigation(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        app_js_content = (STATIC_DIR / "js" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('setAttribute("aria-current", "page")', app_js_content)
+
+    def test_claim_safe_trust_badges_present(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Manual")
+        self.assertContains(response, "Advisory")
+        self.assertContains(response, "Evidence-based")
+
+    def test_user_menu_contains_profile_settings_logout(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Profile")
+        self.assertContains(response, "Settings")
+        self.assertContains(response, "Logout")
 
 
 class MajorAuthenticatedPageRenderTests(Sprint37AShellFoundationAuditMixin, TestCase):

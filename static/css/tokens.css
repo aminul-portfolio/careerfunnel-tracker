@@ -1,1 +1,32 @@
-:root {--color-bg:#0f172a;--color-surface:#111827;--color-card:#ffffff;--color-text:#0f172a;--color-muted:#64748b;--color-light:#f8fafc;--color-primary:#2563eb;--color-primary-dark:#1d4ed8;--color-success:#16a34a;--color-warning:#f59e0b;--color-danger:#dc2626;--border-soft:#e5e7eb;--shadow-soft:0 20px 45px rgba(15,23,42,.08);--radius-md:14px;--radius-lg:22px;--font-main:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+:root {
+    --color-bg: #0f172a;
+    --color-surface: #111827;
+    --color-card: #ffffff;
+    --color-text: #0f172a;
+    --color-muted: #64748b;
+    --color-light: #f8fafc;
+    --color-primary: #2563eb;
+    --color-primary-dark: #1d4ed8;
+    --color-success: #16a34a;
+    --color-warning: #f59e0b;
+    --color-danger: #dc2626;
+    --border-soft: #e5e7eb;
+    --shadow-soft: 0 20px 45px rgba(15, 23, 42, 0.08);
+    --shadow-shell: 0 24px 60px rgba(15, 23, 42, 0.18);
+    --radius-md: 14px;
+    --radius-lg: 22px;
+    --font-main: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --sidebar-width: 292px;
+    --topbar-height: auto;
+    --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.35);
+    --z-sidebar: 40;
+    --z-overlay: 35;
+    --z-topbar: 30;
+    --motion-fast: 180ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --motion-fast: 0ms;
+    }
+}
