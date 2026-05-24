@@ -479,6 +479,17 @@ def build_weekly_coach_report(user) -> WeeklyCoachReport:
         avoid_next_week=avoid_next_week,
     )
 
+
+def get_latest_weekly_review(user):
+    """Return the most recent saved weekly review for display context. Read-only."""
+    return WeeklyReview.objects.filter(user=user).order_by("-week_ending").first()
+
+
+def count_weekly_reviews(user) -> int:
+    """Count saved weekly reviews for the user. Read-only."""
+    return WeeklyReview.objects.filter(user=user).count()
+
+
 # --- Advanced Smart AI Assistance Layer ---
 
 

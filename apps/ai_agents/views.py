@@ -23,8 +23,10 @@ from .services import (
     build_weekly_coach_report,
     check_cover_letter_quality,
     compare_openai_wrapper_result_with_rule_based,
+    count_weekly_reviews,
     generate_followup_message,
     generate_interview_prep,
+    get_latest_weekly_review,
 )
 
 
@@ -151,8 +153,17 @@ def interview_prep_generator(request):
 
 @login_required
 def weekly_coach(request):
-    report = build_weekly_coach_report(request.user)
-    return render(request, "ai_agents/weekly_coach.html", {"report": report})
+    user = request.user
+    report = build_weekly_coach_report(user)
+    return render(
+        request,
+        "ai_agents/weekly_coach.html",
+        {
+            "report": report,
+            "latest_weekly_review": get_latest_weekly_review(user),
+            "weekly_review_count": count_weekly_reviews(user),
+        },
+    )
 
 
 @login_required

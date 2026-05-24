@@ -8,6 +8,7 @@ from .models import WeeklyReview
 from .services import (
     build_weekly_review_summary,
     build_weekly_review_table_rows,
+    build_weekly_review_workflow_steps,
     get_diagnosis_badge_class,
     get_variance_badge_class,
 )
@@ -23,6 +24,7 @@ def weekly_review_list(request):
             "reviews": reviews,
             "table_rows": build_weekly_review_table_rows(reviews),
             "summary": build_weekly_review_summary(request.user),
+            "workflow_steps": build_weekly_review_workflow_steps(),
         },
     )
 
@@ -70,6 +72,7 @@ def weekly_review_create(request):
             "form": form,
             "page_title": "Add Weekly Review",
             "submit_label": "Save Weekly Review",
+            "workflow_steps": build_weekly_review_workflow_steps(),
         },
     )
 
@@ -93,6 +96,7 @@ def weekly_review_update(request, pk):
             "page_title": "Edit Weekly Review",
             "submit_label": "Update Weekly Review",
             "review": review,
+            "workflow_steps": build_weekly_review_workflow_steps(),
         },
     )
 
