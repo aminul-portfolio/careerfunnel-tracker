@@ -1,9 +1,57 @@
-<header class="topbar">
-    <div><p class="eyebrow">Track intention vs outcome</p><h2>{% block page_heading %}CareerFunnel Tracker{% endblock %}</h2></div>
-    <div class="topbar-actions">
+<header class="topbar cf-topbar">
+    <div class="cf-topbar-start">
+        <button
+            type="button"
+            class="cf-mobile-nav-toggle"
+            id="mobile-nav-toggle"
+            aria-controls="app-sidebar"
+            aria-expanded="false"
+            aria-label="Open navigation menu"
+        >
+            <span class="cf-mobile-nav-toggle-bar" aria-hidden="true"></span>
+            <span class="cf-mobile-nav-toggle-bar" aria-hidden="true"></span>
+            <span class="cf-mobile-nav-toggle-bar" aria-hidden="true"></span>
+        </button>
+        <div class="cf-topbar-heading">
+            <nav class="cf-breadcrumb" aria-label="Breadcrumb">
+                <ol class="cf-breadcrumb-list">
+                    <li class="cf-breadcrumb-item">CareerFunnel</li>
+                    <li class="cf-breadcrumb-item cf-breadcrumb-item-current" aria-current="page">
+                        {% block page_heading %}CareerFunnel Tracker{% endblock %}
+                    </li>
+                </ol>
+            </nav>
+            {% block topbar_subtitle %}
+            <p class="cf-topbar-subtitle">Manual, advisory, evidence-based job-search operating workflow</p>
+            {% endblock %}
+            {% block topbar_actions %}{% endblock %}
+        </div>
+    </div>
+    <div class="topbar-actions cf-topbar-actions">
+        <span class="cf-env-badge">Local Portfolio Demo</span>
         {% if request.user.is_authenticated %}
-            <span class="user-pill">{{ request.user.username }}</span>
-            <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button type="submit" class="btn btn-secondary">Logout</button></form>
+            <details class="cf-quick-add">
+                <summary class="cf-menu-trigger btn btn-primary">Quick Add</summary>
+                <ul class="cf-menu-panel" role="list">
+                    <li><a href="{% url 'applications:application_create' %}">Add Application</a></li>
+                    <li><a href="{% url 'daily_log:daily_log_create' %}">Add Daily Log</a></li>
+                    <li><a href="{% url 'weekly_review:weekly_review_create' %}">Add Weekly Review</a></li>
+                    <li><a href="{% url 'notes:note_create' %}">Add Note</a></li>
+                </ul>
+            </details>
+            <details class="cf-user-menu">
+                <summary class="cf-menu-trigger user-pill">{{ request.user.username }}</summary>
+                <ul class="cf-menu-panel" role="list">
+                    <li><a href="{% url 'dashboard:overview' %}">Profile</a></li>
+                    <li><a href="{% url 'notes:note_list' %}">Settings</a></li>
+                    <li>
+                        <form method="post" action="{% url 'accounts:logout' %}" class="cf-logout-form">
+                            {% csrf_token %}
+                            <button type="submit" class="cf-logout-button">Logout</button>
+                        </form>
+                    </li>
+                </ul>
+            </details>
         {% else %}
             <a href="{% url 'accounts:login' %}" class="btn btn-secondary">Login</a>
             <a href="{% url 'accounts:register' %}" class="btn btn-primary">Register</a>

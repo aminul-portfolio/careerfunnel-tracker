@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="no-js">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,10 +10,12 @@
     <link rel="stylesheet" href="{% static 'css/components.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
-<body>
-    <div class="app-shell">
+<body class="cf-app">
+    <a class="cf-skip-link" href="#main-content">Skip to main content</a>
+    <div class="cf-sidebar-overlay" id="sidebar-overlay" hidden aria-hidden="true"></div>
+    <div class="app-shell cf-app-shell">
         {% include "partials/sidebar.html" %}
-        <main class="main-content">
+        <main class="main-content cf-main-content" id="main-content">
             {% include "partials/navbar.html" %}
             {% include "partials/messages.html" %}
             <section class="page-content">{% block content %}{% endblock %}</section>
