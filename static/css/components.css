@@ -350,3 +350,144 @@ summary:focus-visible {
         transition: none !important;
     }
 }
+
+/* Sprint 39 Career Command Centre */
+.cf-command-centre {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.cf-insight-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.cf-insight-block {
+    background: #f8fafc;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+}
+
+.cf-insight-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--color-primary);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.cf-funnel-flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.cf-funnel-step {
+    min-width: 110px;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    background: #f8fafc;
+}
+
+.cf-funnel-step span {
+    display: block;
+    color: var(--color-muted);
+    font-size: 0.85rem;
+}
+
+.cf-funnel-step strong {
+    font-size: 1.35rem;
+}
+
+.cf-funnel-arrow {
+    color: var(--color-primary);
+    font-weight: 800;
+}
+
+.cf-health-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.cf-health-card {
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    background: #fff;
+}
+
+.cf-health-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.cf-health-card-top h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.cf-health-score {
+    margin: 0 0 0.35rem;
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--color-primary);
+}
+
+.cf-operating-steps {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: grid;
+    gap: 0.85rem;
+}
+
+.cf-operating-step span {
+    display: block;
+    color: var(--color-muted);
+    margin-top: 0.25rem;
+}
+
+.cf-activity-timeline {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.cf-activity-item {
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    background: #f8fafc;
+}
+
+.cf-activity-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.35rem;
+}
+
+.cf-activity-item h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+}
+
+.cf-signal-info .compact-list-item,
+.cf-signal-item.cf-signal-info {
+    border-left: 3px solid #93c5fd;
+}
+
+@media (max-width: 900px) {
+    .cf-insight-grid,
+    .cf-health-grid {
+        grid-template-columns: 1fr;
+    }
+}
