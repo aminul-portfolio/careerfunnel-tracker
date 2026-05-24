@@ -33,6 +33,8 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 38 (feature branch `sprint-38-premium-saas-shell-navbar-sidebar`):** Premium SaaS Shell - navbar + sidebar upgrade with product workflow groups, claim-safe badges, Quick Add/user menus, responsive drawer controls; **25** shell audit tests; evidence doc `docs/evidence/sprint_38_premium_saas_shell.md`. Shell-only sprint: no dashboard/form/report redesign.
 
+**Sprint 39 (feature branch `sprint-39-premium-dashboard-command-centre`):** Premium Dashboard Command Centre - nine dashboard modules, read-only service helpers, **28** dashboard tests; evidence doc `docs/evidence/sprint_39_premium_dashboard_command_centre.md`. Dashboard-only sprint: no forms/reporting/model changes.
+
 ---
 
 ## Evidence Principles
@@ -1682,6 +1684,42 @@ tests/test_sprint_37a_shell_foundation_audit.py
 ### Reviewer Value
 
 Shows a cohesive premium SaaS navigation experience while preserving manual, advisory, evidence-based product boundaries and server-side core rendering.
+
+---
+
+## Sprint 39 - Premium Dashboard Command Centre
+
+### Status
+
+- **39A-39C:** Complete - Career Command Centre modules, read-only dashboard service helpers, tests, evidence documentation
+
+### Branch
+
+```text
+sprint-39-premium-dashboard-command-centre
+```
+
+### Documentation Evidence
+
+```text
+docs/evidence/sprint_39_premium_dashboard_command_centre.md
+docs/evidence/evidence_index.md (this section)
+apps/dashboard/services.py
+apps/dashboard/tests.py
+templates/dashboard/overview.html
+static/css/components.css
+```
+
+### What Sprint 39 Proves
+
+- Dashboard upgraded to Career Command Centre with signature insight, week pulse, KPI strip, today signals, pipeline health matrix, funnel snapshot, evidence readiness, weekly operating pipeline, and recent activity timeline.
+- Read-only helpers: `build_week_pulse`, `build_pipeline_health_matrix`, `build_evidence_readiness_summary`, `build_today_signals`, `build_recent_activity_timeline`.
+- Dashboard GET does not mutate records; all actions link to manual workflow pages.
+- **28** dashboard tests; no migrations or schema changes; forms/reporting unchanged.
+
+### Reviewer Value
+
+Demonstrates a premium command-centre dashboard for portfolio walkthroughs while keeping manual, advisory, evidence-based boundaries explicit.
 
 ---
 

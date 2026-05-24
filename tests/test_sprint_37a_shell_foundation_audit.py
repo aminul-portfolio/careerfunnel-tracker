@@ -94,7 +94,7 @@ CORE_STYLESHEETS = (
 APP_SCRIPT_MARKER = '<script src="/static/js/app.js"'
 
 MAJOR_AUTHENTICATED_PAGES = (
-    ("dashboard:overview", {}, "Portfolio job-search evidence dashboard"),
+    ("dashboard:overview", {}, "Premium manual job-search command centre"),
     ("applications:application_list", {}, "Track every application honestly"),
     ("applications:evaluation_queue", {}, "Evaluation Queue"),
     ("daily_log:daily_log_list", {}, "Track target vs actual every day"),

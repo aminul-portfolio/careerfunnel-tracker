@@ -15,7 +15,12 @@ from apps.weekly_review.models import WeeklyReview
 from .services import (
     TodayActionItem,
     build_dashboard_summary,
+    build_evidence_readiness_summary,
+    build_pipeline_health_matrix,
+    build_recent_activity_timeline,
     build_today_action_panel,
+    build_today_signals,
+    build_week_pulse,
     get_current_week_range,
     should_prompt_weekly_review,
 )
@@ -155,7 +160,7 @@ class DashboardViewTests(TestCase):
         response = self.client.get(reverse("dashboard:overview"))
         self.assertEqual(response.status_code, 200)
         self.assertIn("today_action_panel", response.context)
-        self.assertContains(response, "Today Action Panel")
+        self.assertContains(response, "Today Signals")
 
     def test_dashboard_displays_today_action_panel_item(self):
         today = timezone.localdate()
@@ -170,7 +175,7 @@ class DashboardViewTests(TestCase):
         response = self.client.get(reverse("dashboard:overview"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "High - Overdue follow-up: Action Co")
+        self.assertContains(response, "Overdue follow-up: Action Co")
         self.assertContains(response, "Send a short follow-up and update the follow-up status.")
         self.assertContains(response, application.get_absolute_url())
 
@@ -186,7 +191,7 @@ class DashboardViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["today_action_panel"], [])
-        self.assertContains(response, "Nothing urgent needs attention right now.")
+        self.assertContains(response, "Command centre clear")
 
 
 class DashboardWeeklyOsPolishTests(TestCase):
@@ -199,8 +204,9 @@ class DashboardWeeklyOsPolishTests(TestCase):
         self.client.login(username="aminul", password="StrongPass12345")
         response = self.client.get(reverse("dashboard:overview"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Weekly operating rhythm")
+        self.assertContains(response, "Weekly Operating Pipeline")
         self.assertContains(response, "Manual rhythm only")
+        self.assertContains(response, "Capture")
         self.assertContains(response, reverse("daily_log:daily_log_list"))
         self.assertContains(response, reverse("weekly_review:weekly_review_list"))
         self.assertContains(response, reverse("ai_agents:weekly_coach"))
@@ -274,3 +280,184 @@ class DashboardWeeklyOsPolishTests(TestCase):
         self.assertContains(response, "interview prep automatically")
         self.assertContains(response, "For week-level reflection")
         self.assertContains(response, "advisory risks")
+        self.assertContains(response, "does not submit applications")
+
+
+class DashboardCommandCentrePolishTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+        self.client.login(username="aminul", password="StrongPass12345")
+
+    def _create_application(self, **overrides):
+        defaults = {
+            "user": self.user,
+            "company_name": "Command Co",
+            "job_title": "Data Analyst",
+            "job_url": "https://example.com/job",
+            "required_skills": "SQL, Python",
+            "job_description": "Analyze operational data.",
+            "date_applied": timezone.localdate(),
+            "cv_version": "Aminul_Islam_Data_Analyst_CV",
+        }
+        defaults.update(overrides)
+        return JobApplication.objects.create(**defaults)
+
+    def test_dashboard_renders_career_command_centre_copy(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Career Command Centre")
+        self.assertContains(response, "Premium manual job-search command centre")
+        self.assertContains(response, "Signature Career Insight")
+
+    def test_dashboard_shows_week_pulse(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("week_pulse", response.context)
+        self.assertContains(response, "Week Pulse")
+        self.assertContains(response, response.context["week_pulse"].week_range_label)
+
+    def test_dashboard_shows_pipeline_health_matrix(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("pipeline_health", response.context)
+        self.assertContains(response, "Pipeline Health Matrix")
+        self.assertEqual(len(response.context["pipeline_health"].metrics), 6)
+
+    def test_dashboard_shows_evidence_readiness_summary(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("evidence_readiness", response.context)
+        self.assertContains(response, "Evidence Readiness")
+        self.assertContains(response, "Missing CV versions")
+
+    def test_dashboard_today_signals_remain_manual_and_claim_safe(self):
+        today = timezone.localdate()
+        DailyLog.objects.create(user=self.user, log_date=today)
+        self._create_application(
+            company_name="Signal Co",
+            follow_up_date=today - timedelta(days=1),
+            follow_up_status=FollowUpStatus.DUE,
+        )
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("today_signals", response.context)
+        self.assertContains(response, "Today Signals")
+        self.assertContains(response, "Send a short follow-up and update the follow-up status.")
+        self.assertContains(response, "Open")
+
+    def test_dashboard_get_does_not_mutate_records(self):
+        JobApplication.objects.create(
+            user=self.user,
+            company_name="Stable Co",
+            job_title="Data Analyst",
+            date_applied=date(2026, 5, 1),
+        )
+        WeeklyReview.objects.create(
+            user=self.user,
+            week_starting=date(2026, 4, 27),
+            week_ending=date(2026, 5, 3),
+        )
+        application_count_before = JobApplication.objects.filter(user=self.user).count()
+        review_count_before = WeeklyReview.objects.filter(user=self.user).count()
+        log_count_before = DailyLog.objects.filter(user=self.user).count()
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            JobApplication.objects.filter(user=self.user).count(),
+            application_count_before,
+        )
+        self.assertEqual(
+            WeeklyReview.objects.filter(user=self.user).count(),
+            review_count_before,
+        )
+        self.assertEqual(DailyLog.objects.filter(user=self.user).count(), log_count_before)
+
+    def test_dashboard_links_to_manual_workflow_pages(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        for url_name in (
+            "applications:application_create",
+            "daily_log:daily_log_create",
+            "weekly_review:weekly_review_create",
+            "metrics:funnel_metrics",
+            "followups:followup_list",
+            "interviews:interview_list",
+        ):
+            with self.subTest(url_name=url_name):
+                self.assertContains(response, reverse(url_name))
+
+    @patch(
+        "apps.dashboard.services.timezone.localdate",
+        return_value=STABLE_NON_WEEK_END,
+    )
+    def test_dashboard_empty_state_for_new_user(self, _mock_localdate):
+        DailyLog.objects.create(user=self.user, log_date=STABLE_NON_WEEK_END)
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Command centre clear")
+        self.assertContains(response, "Recent Activity Timeline")
+        self.assertContains(response, "Daily Log")
+        self.assertEqual(build_week_pulse(self.user).target_applications, 0)
+        self.assertEqual(build_evidence_readiness_summary(self.user).missing_cv_versions, 0)
+
+    def test_dashboard_shows_recent_activity_timeline(self):
+        application = self._create_application(company_name="Timeline Co")
+        DailyLog.objects.create(
+            user=self.user,
+            log_date=timezone.localdate(),
+            target_applications=2,
+            actual_applications=1,
+        )
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("recent_activity_timeline", response.context)
+        self.assertContains(response, "Recent Activity Timeline")
+        self.assertContains(response, "Timeline Co")
+        timeline = build_recent_activity_timeline(self.user)
+        self.assertTrue(any(item.title == application.company_name for item in timeline))
+
+    def test_dashboard_shows_funnel_snapshot(self):
+        self._create_application(status=ApplicationStatus.ACKNOWLEDGED)
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("funnel_snapshot", response.context)
+        self.assertContains(response, "Funnel Snapshot")
+        self.assertContains(response, "Applications")
+        self.assertContains(response, "Responses")
+        self.assertContains(response, "Interviews")
+        self.assertContains(response, "Offers")
+
+    def test_dashboard_does_not_claim_automation_or_live_saas(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertContains(response, "does not submit applications")
+        self.assertContains(response, "send email")
+        self.assertContains(response, "update statuses automatically")
+        self.assertContains(response, "create interview prep automatically")
+        self.assertContains(response, "auto-apply")
+        self.assertContains(response, "background polling")
+        self.assertContains(response, "live SaaS deployment")
+
+    def test_build_pipeline_health_matrix_returns_six_metrics(self):
+        matrix = build_pipeline_health_matrix(self.user)
+        labels = [metric.label for metric in matrix.metrics]
+        self.assertEqual(
+            labels,
+            [
+                "Activity volume",
+                "Evidence quality",
+                "Follow-up discipline",
+                "Interview readiness",
+                "Weekly review discipline",
+                "Response conversion",
+            ],
+        )
+
+    @patch(
+        "apps.dashboard.services.timezone.localdate",
+        return_value=STABLE_NON_WEEK_END,
+    )
+    def test_build_today_signals_adds_info_when_no_urgent_actions(self, _mock_localdate):
+        DailyLog.objects.create(user=self.user, log_date=STABLE_NON_WEEK_END)
+        signals = build_today_signals(self.user)
+        self.assertEqual(signals[0].priority, "Info")
+        self.assertIn("Command centre clear", signals[0].title)

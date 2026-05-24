@@ -2,24 +2,25 @@
 
 {% block title %}Dashboard | CareerFunnel Tracker{% endblock %}
 
-{% block content %}
-<div class="dashboard-page">
+{% block page_heading %}Career Command Centre{% endblock %}
 
-    <section class="hero-panel dashboard-hero">
+{% block content %}
+<div class="dashboard-page cf-command-centre">
+
+    <section class="hero-panel dashboard-hero cf-command-hero">
         <div>
-            <p class="eyebrow">CareerFunnel Tracker</p>
-            <h1>Portfolio job-search evidence dashboard</h1>
+            <p class="eyebrow">Career Command Centre</p>
+            <h1>Premium manual job-search command centre</h1>
             <p>
-                A reviewer-friendly view of application activity, response quality, interview movement,
-                daily discipline, and the current funnel diagnosis for a portfolio walkthrough.
+                Today&rsquo;s strongest manual action, pipeline health, weekly pulse, evidence readiness,
+                reporting confidence, and recent activity — all from authenticated tracker records.
             </p>
             <div class="evidence-strip">
-                <span class="evidence-strip-item">Reviewer evidence</span>
-                <span class="evidence-strip-item">Authenticated records</span>
-                <span class="evidence-strip-item">BI-style analysis ready</span>
+                <span class="evidence-strip-item">Manual workflow only</span>
+                <span class="evidence-strip-item">Advisory guidance</span>
+                <span class="evidence-strip-item">Evidence-based records</span>
             </div>
         </div>
-
         <div class="hero-actions">
             <a href="{% url 'applications:application_create' %}" class="btn btn-primary">Add Application</a>
             <a href="{% url 'daily_log:daily_log_create' %}" class="btn btn-secondary">Add Daily Log</a>
@@ -27,70 +28,266 @@
         </div>
     </section>
 
-    <section class="content-card">
+    <section class="content-card cf-signature-insight">
         <div class="card-header">
-            <p class="eyebrow">Operating rhythm</p>
-            <h2>Weekly operating rhythm</h2>
+            <p class="eyebrow">Signature Career Insight</p>
+            <h2>{{ signature_insight.diagnosis }}</h2>
         </div>
-        <p class="muted-text">
-            Manual rhythm only — follow these steps in order. This strip does not trigger automatic
-            actions, submissions, emails, or status updates.
-        </p>
-        <ol class="workflow-list">
-            <li>
-                <a href="{% url 'daily_log:daily_log_list' %}" class="table-link">Daily Log</a>
-                — record daily target vs actual activity.
-            </li>
-            <li>
-                <a href="{% url 'applications:application_list' %}" class="table-link">Applications</a>
-                — maintain tracker evidence for each role.
-            </li>
-            <li>
-                <a href="{% url 'weekly_review:weekly_review_list' %}" class="table-link">Weekly Review</a>
-                — complete manual weekly reflection and diagnosis.
-            </li>
-            <li>
-                <a href="{% url 'ai_agents:weekly_coach' %}" class="table-link">AI Weekly Coach</a>
-                — read advisory risk guidance; compare with your saved review.
-            </li>
-        </ol>
+        <div class="cf-insight-grid">
+            <div class="cf-insight-block">
+                <span class="cf-insight-label">Best manual action</span>
+                <p>{{ signature_insight.best_manual_action }}</p>
+            </div>
+            <div class="cf-insight-block">
+                <span class="cf-insight-label">Why it matters</span>
+                <p>{{ signature_insight.why_it_matters }}</p>
+            </div>
+        </div>
+        {% if signature_insight.manual_url %}
+            <div class="hero-actions">
+                <a href="{{ signature_insight.manual_url }}" class="btn btn-primary">Open manual workflow</a>
+            </div>
+        {% endif %}
     </section>
 
-    <section class="kpi-grid premium-kpi-grid">
+    <section class="dashboard-two-column">
+        <div class="content-card cf-week-pulse">
+            <div class="card-header">
+                <p class="eyebrow">Week Pulse</p>
+                <h2>{{ week_pulse.week_range_label }}</h2>
+            </div>
+            <div class="metric-list">
+                <div class="metric-list-row">
+                    <span>Target applications</span>
+                    <strong>{{ week_pulse.target_applications }}</strong>
+                </div>
+                <div class="metric-list-row">
+                    <span>Actual applications</span>
+                    <strong>{{ week_pulse.actual_applications }}</strong>
+                </div>
+                <div class="metric-list-row">
+                    <span>Variance</span>
+                    <strong>{{ week_pulse.variance }}</strong>
+                </div>
+                <div class="metric-list-row">
+                    <span>Weekly review</span>
+                    <strong>{{ week_pulse.weekly_review_status }}</strong>
+                </div>
+                <div class="metric-list-row">
+                    <span>Follow-ups due</span>
+                    <strong>{{ week_pulse.follow_ups_due }}</strong>
+                </div>
+                <div class="metric-list-row">
+                    <span>Interview prep</span>
+                    <strong>{{ week_pulse.interview_prep_status }}</strong>
+                </div>
+            </div>
+            <div class="hero-actions">
+                {% if week_pulse.weekly_review_url %}
+                    <a href="{{ week_pulse.weekly_review_url }}" class="btn btn-secondary">Weekly review</a>
+                {% endif %}
+                <a href="{{ week_pulse.follow_ups_url }}" class="btn btn-secondary">Follow-ups</a>
+                <a href="{{ week_pulse.interview_prep_url }}" class="btn btn-secondary">Interview prep</a>
+            </div>
+        </div>
+
+        <div class="content-card cf-funnel-snapshot">
+            <div class="card-header">
+                <p class="eyebrow">Funnel Snapshot</p>
+                <h2>Applications &rarr; Responses &rarr; Interviews &rarr; Offers</h2>
+            </div>
+            <div class="cf-funnel-flow">
+                <div class="cf-funnel-step">
+                    <span>Applications</span>
+                    <strong>{{ funnel_snapshot.applications }}</strong>
+                </div>
+                <div class="cf-funnel-arrow" aria-hidden="true">&rarr;</div>
+                <div class="cf-funnel-step">
+                    <span>Responses</span>
+                    <strong>{{ funnel_snapshot.responses }}</strong>
+                </div>
+                <div class="cf-funnel-arrow" aria-hidden="true">&rarr;</div>
+                <div class="cf-funnel-step">
+                    <span>Interviews</span>
+                    <strong>{{ funnel_snapshot.interviews }}</strong>
+                </div>
+                <div class="cf-funnel-arrow" aria-hidden="true">&rarr;</div>
+                <div class="cf-funnel-step">
+                    <span>Offers</span>
+                    <strong>{{ funnel_snapshot.offers }}</strong>
+                </div>
+            </div>
+            <p class="trust-note">Built from logged application statuses. No mock conversion values.</p>
+            <a href="{% url 'metrics:funnel_metrics' %}" class="table-link">Open funnel metrics</a>
+        </div>
+    </section>
+
+    <section class="kpi-grid premium-kpi-grid cf-kpi-strip">
         <div class="kpi-card">
             <p>Total Applications</p>
             <h2>{{ summary.total_applications }}</h2>
             <span class="kpi-note">All logged applications</span>
         </div>
-
         <div class="kpi-card">
             <p>This Week</p>
             <h2>{{ summary.applications_this_week }}</h2>
             <span class="kpi-note">Applications submitted this week</span>
         </div>
-
         <div class="kpi-card">
             <p>Response Rate</p>
             <h2>{{ summary.response_rate }}%</h2>
             <span class="kpi-note">Responses from submitted applications</span>
         </div>
-
         <div class="kpi-card">
             <p>Interview Rate</p>
             <h2>{{ summary.interview_rate }}%</h2>
             <span class="kpi-note">Applications reaching interview stage</span>
         </div>
-
         <div class="kpi-card">
-            <p>Offer Rate</p>
-            <h2>{{ summary.offer_rate }}%</h2>
-            <span class="kpi-note">Applications converting to offer</span>
+            <p>Data Readiness</p>
+            <h2>{{ evidence_readiness.analytics_ready_rate }}%</h2>
+            <span class="kpi-note">Analytics-ready application records</span>
         </div>
+    </section>
+
+    <section class="content-card cf-today-signals">
+        <div class="card-header">
+            <p class="eyebrow">Today Signals</p>
+            <h2>Manual priorities from saved records</h2>
+        </div>
+        {% if today_signals %}
+            <div class="compact-list">
+                {% for signal in today_signals %}
+                    <div class="compact-list-item cf-signal-item cf-signal-{{ signal.priority|lower }}">
+                        <div>
+                            <strong>{{ signal.priority }} — {{ signal.title }}</strong>
+                            <span>{{ signal.reason }}</span>
+                            <span>Recommended: {{ signal.recommended_action }}</span>
+                        </div>
+                        {% if signal.related_url %}
+                            <a href="{{ signal.related_url }}" class="table-link">Open</a>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state small-empty-state">
+                <h3>Nothing urgent needs attention right now.</h3>
+                <p>Keep logging applications, follow-ups, and daily activity manually.</p>
+            </div>
+        {% endif %}
+        <p class="reviewer-note">
+            Today Signals are rule-based from saved applications, follow-ups, interviews, and daily logs.
+            CareerFunnel Tracker does not submit applications, send email, update statuses automatically,
+            create interview prep automatically, auto-apply, run background polling, or claim live SaaS deployment.
+            Open a link to complete the manual step yourself.
+        </p>
+    </section>
+
+    <section class="content-card cf-pipeline-health">
+        <div class="card-header">
+            <p class="eyebrow">Pipeline Health Matrix</p>
+            <h2>Six discipline signals for your search</h2>
+        </div>
+        <div class="cf-health-grid">
+            {% for metric in pipeline_health.metrics %}
+                <article class="cf-health-card cf-health-{{ metric.status_label|slugify }}">
+                    <div class="cf-health-card-top">
+                        <h3>{{ metric.label }}</h3>
+                        <span class="badge badge-info">{{ metric.status_label }}</span>
+                    </div>
+                    <p class="cf-health-score">{{ metric.score }}%</p>
+                    <p class="muted-text">{{ metric.detail }}</p>
+                    <a href="{{ metric.manual_url }}" class="table-link">Open manual workflow</a>
+                </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="dashboard-two-column">
+        <div class="content-card cf-evidence-readiness">
+            <div class="card-header">
+                <p class="eyebrow">Evidence Readiness</p>
+                <h2>Reporting confidence gaps</h2>
+            </div>
+            <div class="metric-list">
+                <div class="metric-list-row">
+                    <span>Missing CV versions</span>
+                    <strong>{{ evidence_readiness.missing_cv_versions }}</strong>
+                </div>
+                <div class="metric-list-row">
+                    <span>Missing job descriptions</span>
+                    <strong>{{ evidence_readiness.missing_job_descriptions }}</strong>
+                </div>
+                <div class="metric-list-row">
+                    <span>Missing required skills</span>
+                    <strong>{{ evidence_readiness.missing_required_skills }}</strong>
+                </div>
+                <div class="metric-list-row">
+                    <span>Missing follow-up data</span>
+                    <strong>{{ evidence_readiness.missing_follow_up_data }}</strong>
+                </div>
+            </div>
+            <p class="trust-note">
+                {{ evidence_readiness.analytics_ready_rate }}% analytics-ready across logged applications.
+            </p>
+            <a href="{{ evidence_readiness.manual_url }}" class="table-link">Open data quality report</a>
+        </div>
+
+        <div class="content-card cf-operating-pipeline">
+            <div class="card-header">
+                <p class="eyebrow">Weekly Operating Pipeline</p>
+                <h2>Capture &rarr; Analyze &rarr; Decide &rarr; Track &rarr; Review &rarr; Improve</h2>
+            </div>
+            <p class="muted-text">
+                Manual rhythm only — this pipeline does not trigger automatic actions, submissions,
+                emails, or status updates.
+            </p>
+            <ol class="cf-operating-steps">
+                {% for step in weekly_operating_pipeline %}
+                    <li class="cf-operating-step">
+                        <strong>{{ step.step }} — {{ step.label }}</strong>
+                        <span>{{ step.description }}</span>
+                        <a href="{{ step.manual_url }}" class="table-link">Open</a>
+                    </li>
+                {% endfor %}
+            </ol>
+        </div>
+    </section>
+
+    <section class="content-card cf-recent-activity">
+        <div class="card-header">
+            <p class="eyebrow">Recent Activity Timeline</p>
+            <h2>Latest manual records across the tracker</h2>
+        </div>
+        {% if recent_activity_timeline %}
+            <div class="cf-activity-timeline">
+                {% for item in recent_activity_timeline %}
+                    <article class="cf-activity-item">
+                        <div class="cf-activity-meta">
+                            <span class="badge badge-muted">{{ item.activity_type }}</span>
+                            <small>{{ item.occurred_at_label }}</small>
+                        </div>
+                        <h3>{{ item.title }}</h3>
+                        <p class="muted-text">{{ item.detail }}</p>
+                        {% if item.related_url %}
+                            <a href="{{ item.related_url }}" class="table-link">View record</a>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state small-empty-state">
+                <h3>No activity yet.</h3>
+                <p>Add your first application or daily log to start the command centre timeline.</p>
+                <a href="{% url 'applications:application_create' %}" class="btn btn-primary">Add Application</a>
+            </div>
+        {% endif %}
     </section>
 
     <section class="diagnosis-panel diagnosis-{{ summary.diagnosis_severity }}">
         <div>
-            <p class="eyebrow">Current Funnel Diagnosis</p>
+            <p class="eyebrow">Reporting Confidence</p>
             <h2>{{ summary.diagnosis_title }}</h2>
             <p>{{ summary.diagnosis_explanation }}</p>
             <p class="trust-note">
@@ -104,224 +301,10 @@
                 <a href="{% url 'ai_agents:weekly_coach' %}" class="table-link">AI Weekly Coach</a>.
             </p>
         </div>
-
         <div class="diagnosis-action">
-            <strong>Recommended Action</strong>
+            <strong>Recommended manual action</strong>
             <p>{{ summary.recommended_action }}</p>
         </div>
-    </section>
-
-    <section class="content-card">
-        <div class="card-header">
-            <p class="eyebrow">Decision Flow</p>
-            <h2>Today Action Panel</h2>
-        </div>
-
-        {% if today_action_panel %}
-            <div class="compact-list">
-                {% for action in today_action_panel %}
-                    <div class="compact-list-item">
-                        <div>
-                            <strong>{{ action.priority }} - {{ action.title }}</strong>
-                            <span>{{ action.reason }}</span>
-                            <span>Recommended: {{ action.recommended_action }}</span>
-                        </div>
-                        {% if action.related_url %}
-                            <a href="{{ action.related_url }}" class="table-link">Open</a>
-                        {% endif %}
-                    </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="empty-state small-empty-state">
-                <h3>Nothing urgent needs attention right now.</h3>
-                <p>Keep logging applications, follow-ups, and daily activity.</p>
-            </div>
-        {% endif %}
-
-        <p class="reviewer-note">
-            Today Action is rule-based from saved applications, follow-ups, interviews, and daily logs.
-            It does not submit applications, send email, update statuses automatically, or create
-            interview prep automatically. Open a link to complete the manual step yourself.
-        </p>
-    </section>
-
-    <section class="dashboard-two-column">
-        <div class="content-card">
-            <div class="card-header">
-                <p class="eyebrow">Funnel Snapshot</p>
-                <h2>Application conversion summary</h2>
-            </div>
-
-            <div class="funnel-stack">
-                <div class="funnel-row">
-                    <span>Applications</span>
-                    <strong>{{ summary.total_applications }}</strong>
-                </div>
-                <div class="funnel-row">
-                    <span>Response Rate</span>
-                    <strong>{{ summary.response_rate }}%</strong>
-                </div>
-                <div class="funnel-row">
-                    <span>Interview Rate</span>
-                    <strong>{{ summary.interview_rate }}%</strong>
-                </div>
-                <div class="funnel-row">
-                    <span>Offer Rate</span>
-                    <strong>{{ summary.offer_rate }}%</strong>
-                </div>
-            </div>
-
-            <p class="trust-note">
-                Reviewer note: this snapshot uses the logged tracker data shown across the app.
-                No mock conversion values are used.
-            </p>
-        </div>
-
-        <div class="content-card">
-            <div class="card-header">
-                <p class="eyebrow">Daily Discipline</p>
-                <h2>Target vs actual</h2>
-            </div>
-
-            <div class="metric-list">
-                <div class="metric-list-row">
-                    <span>Total target applications</span>
-                    <strong>{{ summary.daily_target_total }}</strong>
-                </div>
-                <div class="metric-list-row">
-                    <span>Total actual applications</span>
-                    <strong>{{ summary.daily_actual_total }}</strong>
-                </div>
-                <div class="metric-list-row">
-                    <span>Total variance</span>
-                    <strong>{{ summary.daily_variance_total }}</strong>
-                </div>
-                <div class="metric-list-row">
-                    <span>Target hit rate</span>
-                    <strong>{{ summary.daily_target_hit_rate }}%</strong>
-                </div>
-            </div>
-            <p class="reviewer-note">
-                Built for portfolio walkthroughs where consistency, targets, and follow-through need to be visible.
-            </p>
-        </div>
-    </section>
-
-    <section class="dashboard-two-column">
-        <div class="content-card">
-            <div class="card-header card-header-row">
-                <div>
-                    <p class="eyebrow">Recent Applications</p>
-                    <h2>Latest application records</h2>
-                </div>
-                <a href="{% url 'applications:application_list' %}" class="table-link">View all</a>
-            </div>
-
-            {% if recent_applications %}
-                <div class="compact-list">
-                    {% for application in recent_applications %}
-                        <a href="{{ application.get_absolute_url }}" class="compact-list-item">
-                            <div>
-                                <strong>{{ application.company_name }}</strong>
-                                <span>{{ application.job_title }}</span>
-                            </div>
-                            <small>{{ application.get_status_display }}</small>
-                        </a>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="empty-state small-empty-state">
-                    <h3>No applications yet.</h3>
-                    <p>Add your first application to start the funnel.</p>
-                </div>
-            {% endif %}
-            <p class="reviewer-note">
-                Application records link back to the underlying evidence for review context.
-            </p>
-        </div>
-
-        <div class="content-card">
-            <div class="card-header card-header-row">
-                <div>
-                    <p class="eyebrow">Recent Daily Logs</p>
-                    <h2>Latest daily activity</h2>
-                </div>
-                <a href="{% url 'daily_log:daily_log_list' %}" class="table-link">View all</a>
-            </div>
-
-            {% if recent_daily_logs %}
-                <div class="compact-list">
-                    {% for log in recent_daily_logs %}
-                        <a href="{{ log.get_absolute_url }}" class="compact-list-item">
-                            <div>
-                                <strong>{{ log.log_date }}</strong>
-                                <span>Target {{ log.target_applications }} / Actual {{ log.actual_applications }}</span>
-                            </div>
-                            <small>{{ log.activity_signal }}</small>
-                        </a>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="empty-state small-empty-state">
-                    <h3>No daily logs yet.</h3>
-                    <p>Add daily activity to measure consistency.</p>
-                </div>
-            {% endif %}
-            <p class="reviewer-note">
-                Daily logs provide the evidence trail behind activity targets and actual output.
-            </p>
-        </div>
-    </section>
-
-    <section class="content-card">
-        <div class="card-header card-header-row">
-            <div>
-                <p class="eyebrow">Weekly Reviews</p>
-                <h2>Recent weekly diagnosis</h2>
-            </div>
-            <a href="{% url 'weekly_review:weekly_review_list' %}" class="table-link">View all</a>
-            <a href="{% url 'ai_agents:weekly_coach' %}" class="table-link">AI Weekly Coach</a>
-        </div>
-
-        {% if recent_weekly_reviews %}
-            <div class="table-wrap">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Week Ending</th>
-                            <th>Target</th>
-                            <th>Actual</th>
-                            <th>Responses</th>
-                            <th>Interviews</th>
-                            <th>Diagnosis</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for review in recent_weekly_reviews %}
-                            <tr>
-                                <td>{{ review.week_ending }}</td>
-                                <td>{{ review.target_applications }}</td>
-                                <td>{{ review.actual_applications }}</td>
-                                <td>{{ review.responses_received }}</td>
-                                <td>{{ review.interviews }}</td>
-                                <td>{{ review.get_diagnosis_display }}</td>
-                                <td><a href="{{ review.get_absolute_url }}" class="table-link">View</a></td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="empty-state small-empty-state">
-                <h3>No weekly reviews yet.</h3>
-                <p>Complete your first weekly review after a full week of applications.</p>
-            </div>
-        {% endif %}
-        <p class="reviewer-note">
-            Weekly reviews summarise the decision record behind funnel diagnosis and next actions.
-        </p>
     </section>
 
 </div>
