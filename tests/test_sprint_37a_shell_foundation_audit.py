@@ -47,6 +47,25 @@ REQUIRED_STATIC_FILES = (
     "js/app.js",
 )
 
+REQUIRED_TOKEN_VARIABLES = (
+    "--color-primary",
+    "--color-muted",
+    "--color-text",
+    "--border-soft",
+    "--shadow-soft",
+    "--radius-md",
+    "--radius-lg",
+    "--font-main",
+)
+
+CORE_STYLESHEETS = (
+    "/static/css/tokens.css",
+    "/static/css/layout.css",
+    "/static/css/components.css",
+)
+
+APP_SCRIPT_MARKER = '<script src="/static/js/app.js"'
+
 MAJOR_AUTHENTICATED_PAGES = (
     ("dashboard:overview", {}, "Portfolio job-search evidence dashboard"),
     ("applications:application_list", {}, "Track every application honestly"),
@@ -139,6 +158,34 @@ class RequiredStaticReferenceTests(TestCase):
         self.assertEqual(missing, [], msg=f"Broken static references: {missing}")
 
 
+class DesignSystemLockTests(TestCase):
+    def test_tokens_css_defines_foundation_custom_properties(self):
+        tokens_content = (STATIC_DIR / "css" / "tokens.css").read_text(encoding="utf-8")
+        for variable_name in REQUIRED_TOKEN_VARIABLES:
+            with self.subTest(variable_name=variable_name):
+                self.assertIn(
+                    variable_name,
+                    tokens_content,
+                    msg=f"Design token {variable_name} must remain defined in tokens.css",
+                )
+
+    def test_app_js_only_enhances_sidebar_active_state(self):
+        app_js_content = (STATIC_DIR / "js" / "app.js").read_text(encoding="utf-8")
+        self.assertIn(".sidebar-link", app_js_content)
+        self.assertIn("classList.add(\"active\")", app_js_content)
+        self.assertNotIn("innerHTML", app_js_content)
+        self.assertNotIn("document.write", app_js_content)
+
+
+class BaseShellStylesheetTests(Sprint37AShellFoundationAuditMixin, TestCase):
+    def test_authenticated_shell_includes_core_stylesheet_chain(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        for stylesheet_href in CORE_STYLESHEETS:
+            with self.subTest(stylesheet_href=stylesheet_href):
+                self.assertContains(response, stylesheet_href)
+
+
 class ShellAccessibilityLandmarkTests(Sprint37AShellFoundationAuditMixin, TestCase):
     def test_authenticated_shell_includes_basic_landmarks(self):
         response = self.client.get(reverse("dashboard:overview"))
@@ -205,19 +252,27 @@ class ServerSideShellRenderTests(Sprint37AShellFoundationAuditMixin, TestCase):
         )
         for page_url in pages:
             with self.subTest(page_url=page_url):
-                response = self.client.get(page_url)
-                self.assertEqual(response.status_code, 200)
-                content = response.content.decode()
-                self.assertRegex(content, r"<h1\b")
-                script_marker = '<script src="/static/js/app.js"'
-                self.assertIn(script_marker, content)
-                heading_index = content.index("<h1")
-                script_index = content.index(script_marker)
-                self.assertLess(
-                    heading_index,
-                    script_index,
-                    msg="Primary heading must render before app.js for SSR safety",
-                )
+                self._assert_primary_content_renders_before_app_script(page_url)
+
+    def test_all_major_authenticated_pages_render_primary_content_before_app_script(self):
+        for url_name, url_kwargs, _expected_text in MAJOR_AUTHENTICATED_PAGES:
+            with self.subTest(url_name=url_name):
+                page_url = reverse(url_name, kwargs=url_kwargs)
+                self._assert_primary_content_renders_before_app_script(page_url)
+
+    def _assert_primary_content_renders_before_app_script(self, page_url: str) -> None:
+        response = self.client.get(page_url)
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertRegex(content, r"<h1\b")
+        self.assertIn(APP_SCRIPT_MARKER, content)
+        heading_index = content.index("<h1")
+        script_index = content.index(APP_SCRIPT_MARKER)
+        self.assertLess(
+            heading_index,
+            script_index,
+            msg="Primary heading must render before app.js for SSR safety",
+        )
 
     def test_sidebar_navigation_links_are_present_in_server_html(self):
         response = self.client.get(reverse("dashboard:overview"))

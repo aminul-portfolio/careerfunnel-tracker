@@ -25,9 +25,11 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 | Career Evidence screenshots | `docs/screenshots/career_evidence/` |
 | Analytics documentation folder | `docs/analytics/` |
 
-**Sprint 35 (merged on `main`):** Interview + Email Workflow Polish — **419** tests validated at closure; evidence doc `docs/evidence/sprint_35_interview_email_workflow_polish.md`.
+**Sprint 35 (merged on `main`):** Interview + Email Workflow Polish - **419** tests validated at closure; evidence doc `docs/evidence/sprint_35_interview_email_workflow_polish.md`.
 
-**Sprint 36 (feature branch `sprint-36-weekly-risk-final-os-polish`):** Weekly Risk / Final Operating System Polish — **441** tests validated; evidence doc `docs/evidence/sprint_36_weekly_risk_os_polish.md`. Sprint 34–35 remain documented below.
+**Sprint 36 (feature branch `sprint-36-weekly-risk-final-os-polish`):** Weekly Risk / Final Operating System Polish - **441** tests validated; evidence doc `docs/evidence/sprint_36_weekly_risk_os_polish.md`. Sprint 34-35 remain documented below.
+
+**Sprint 37 (feature branch `sprint-37-saas-foundation-audit-design-system-lock`):** SaaS Foundation Audit + Design System Lock - **16** foundation audit tests in `tests/test_sprint_37a_shell_foundation_audit.py`; app suite **441** tests unchanged; combined `apps tests` run **525** tests; evidence doc `docs/evidence/sprint_37_saas_foundation_audit.md`. Audit-only sprint: no redesign, no model/migration changes.
 
 ---
 
@@ -1420,7 +1422,7 @@ Separates prepared LinkedIn language from actual publication so portfolio promot
 
 ---
 
-## Sprint 31 — CV Tailoring Advisor (31A-31D)
+## Sprint 31 - CV Tailoring Advisor (31A-31D)
 
 ### Status
 
@@ -1456,7 +1458,7 @@ templates/applications/application_detail.html
 
 ### Reviewer Value
 
-Single sprint family showing evidence-first audit → service logic → UI integration → closure, with explicit limitations suitable for portfolio and interview review.
+Single sprint family showing evidence-first audit -> service logic -> UI integration -> closure, with explicit limitations suitable for portfolio and interview review.
 
 ---
 
@@ -1501,14 +1503,14 @@ Shows a disciplined path from audit -> contract -> wrapper -> UI with honest fal
 
 ---
 
-## Sprint 34 — CV Tailoring Claude Enhancement (34A-34D)
+## Sprint 34 - CV Tailoring Claude Enhancement (34A-34D)
 
 ### Status
 
-- **34A:** Complete — evidence bank foundation (`0d84538`)
-- **34B:** Complete — Claude CV tailoring provider and semantic parser (`e84da6a`)
-- **34C:** Complete — CV Tailoring Advisor semantic fallback integration (`84aa5f3`)
-- **34D:** Complete — documentation and evidence (README, evidence index, this sprint doc)
+- **34A:** Complete - evidence bank foundation (`0d84538`)
+- **34B:** Complete - Claude CV tailoring provider and semantic parser (`e84da6a`)
+- **34C:** Complete - CV Tailoring Advisor semantic fallback integration (`84aa5f3`)
+- **34D:** Complete - documentation and evidence (README, evidence index, this sprint doc)
 
 ### Documentation Evidence
 
@@ -1543,14 +1545,14 @@ Shows how optional LLM semantic matching can be added without abandoning rule-ba
 
 ---
 
-## Sprint 35 — Interview + Email Workflow Polish (35A-35D)
+## Sprint 35 - Interview + Email Workflow Polish (35A-35D)
 
 ### Status
 
-- **35A:** Complete — interview prep handoff (`41a95c2`)
-- **35B:** Complete — recruiter email manual workflow (`dfab82f`)
-- **35C:** Complete — Application Detail / AI Pack cross-links (`bee1326`)
-- **35D:** Complete — README and evidence closure (documentation only)
+- **35A:** Complete - interview prep handoff (`41a95c2`)
+- **35B:** Complete - recruiter email manual workflow (`dfab82f`)
+- **35C:** Complete - Application Detail / AI Pack cross-links (`bee1326`)
+- **35D:** Complete - README and evidence closure (documentation only)
 
 ### Documentation Evidence
 
@@ -1562,7 +1564,7 @@ docs/evidence/evidence_index.md (this section)
 
 ### What Sprint 35 Proves
 
-- Manual interview prep create flow with `?application=` pre-fill (no auto-save or auto-create).
+- Manual interview prep create flow with `application=` pre-fill (no auto-save or auto-create).
 - Recruiter email import/detail numbered manual workflows; mark-sent is status tracking only.
 - Application Detail workflow map and cross-links to AI Pack and interview prep.
 - Application AI Pack lists related interview prep and latest recruiter email (read-only context).
@@ -1570,18 +1572,18 @@ docs/evidence/evidence_index.md (this section)
 
 ### Reviewer Value
 
-Shows end-to-end **manual** job-search operations UX: recruiter signal → advisory drafts → application context → interview prep — without claiming inbox automation or SaaS deployment.
+Shows end-to-end **manual** job-search operations UX: recruiter signal -> advisory drafts -> application context -> interview prep - without claiming inbox automation or SaaS deployment.
 
 ---
 
-## Sprint 36 — Weekly Risk / Final Operating System Polish (36A-36D)
+## Sprint 36 - Weekly Risk / Final Operating System Polish (36A-36D)
 
 ### Status
 
-- **36A:** Complete — Weekly Review workflow clarity (`721e044`)
-- **36B:** Complete — AI Weekly Coach / risk guidance (`36ac7cd`)
-- **36C:** Complete — Dashboard / Today Action OS polish (`66e0e84`)
-- **36D:** Complete — README and evidence closure (documentation only)
+- **36A:** Complete - Weekly Review workflow clarity (`721e044`)
+- **36B:** Complete - AI Weekly Coach / risk guidance (`36ac7cd`)
+- **36C:** Complete - Dashboard / Today Action OS polish (`66e0e84`)
+- **36D:** Complete - README and evidence closure (documentation only)
 
 ### Documentation Evidence
 
@@ -1593,7 +1595,7 @@ docs/evidence/evidence_index.md (this section)
 
 ### What Sprint 36 Proves
 
-- Manual weekly operating workflow across Daily Log → Applications → Weekly Review → AI Weekly Coach → Dashboard Today Action.
+- Manual weekly operating workflow across Daily Log -> Applications -> Weekly Review -> AI Weekly Coach -> Dashboard Today Action.
 - Weekly Review CRUD remains manual; saving a review does not mutate applications, send email, or create interview prep.
 - AI Weekly Coach is advisory and rule-based on the coach page; optional Claude wording aligned on Agent Hub without claiming every tool calls an API.
 - Dashboard week-end Today Action prompt links to manual Weekly Review create only.
@@ -1602,6 +1604,41 @@ docs/evidence/evidence_index.md (this section)
 ### Reviewer Value
 
 Shows a coherent **manual, local, approval-based** weekly operating system for portfolio review without Gmail, Calendar, OAuth, auto-apply, or live SaaS claims.
+
+---
+
+## Sprint 37 - SaaS Foundation Audit + Design System Lock
+
+### Status
+
+- **37A:** Complete - shell, URL, and static audit tests (`f5dc8c3`)
+- **37B-37D:** Complete - static asset audit completion, design-system lock, smoke-test completion, evidence documentation (audit-only; no redesign)
+
+### Branch
+
+```text
+sprint-37-saas-foundation-audit-design-system-lock
+```
+
+### Documentation Evidence
+
+```text
+docs/evidence/sprint_37_saas_foundation_audit.md
+docs/evidence/evidence_index.md (this section)
+tests/test_sprint_37a_shell_foundation_audit.py
+```
+
+### What Sprint 37 Proves
+
+- Sidebar, navbar, and root redirect URL safety with no invalid `dashboard:home` references.
+- Required static assets and template `{% static %}` references resolve to existing source files.
+- Authenticated major pages render server-side with accessibility landmarks and primary content before `app.js`.
+- Design-system lock: stable shell, token-first CSS (`tokens.css` -> `layout.css` -> `components.css`), reserved future `cf-*` prefix, non-critical JavaScript only.
+- **16** targeted foundation audit tests; app suite remains **441**; combined `apps tests` run **525**; no migrations or business-logic changes.
+
+### Reviewer Value
+
+Demonstrates foundation safety before premium redesign: route/static/template integrity, SSR-first rendering, and an explicit design-system direction without claiming live SaaS deployment or new integrations.
 
 ---
 
