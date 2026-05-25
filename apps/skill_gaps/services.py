@@ -101,6 +101,22 @@ class SkillGapEvidenceReadinessContext:
 
 
 @dataclass(frozen=True)
+class PortfolioEvidenceMappingGroup:
+    key: str
+    label: str
+    items: tuple[ApplicationSkillGap, ...]
+
+
+@dataclass(frozen=True)
+class SkillGapPortfolioEvidenceMappingContext:
+    map_to_portfolio_proof_now: PortfolioEvidenceMappingGroup
+    strengthen_cv_interview_evidence_next: PortfolioEvidenceMappingGroup
+    evidence_backlog: PortfolioEvidenceMappingGroup
+    resolved_evidence_mapping_context: PortfolioEvidenceMappingGroup
+    has_unresolved: bool
+
+
+@dataclass(frozen=True)
 class SkillGapDashboardContext:
     summary: SkillGapDashboardSummary
     gaps: tuple[ApplicationSkillGap, ...]
@@ -110,6 +126,7 @@ class SkillGapDashboardContext:
     action_plan: SkillGapActionPlanContext
     learning_plan: SkillGapLearningPlanContext
     evidence_readiness: SkillGapEvidenceReadinessContext
+    portfolio_evidence_mapping: SkillGapPortfolioEvidenceMappingContext
 
 
 HIGH_PRIORITY_VALUES = (
@@ -292,6 +309,9 @@ def build_skill_gap_dashboard_context(*, user, query_params) -> SkillGapDashboar
         action_plan=build_skill_gap_action_plan_context(user=user),
         learning_plan=build_skill_gap_learning_plan_context(user=user),
         evidence_readiness=build_skill_gap_evidence_readiness_context(user=user),
+        portfolio_evidence_mapping=build_skill_gap_portfolio_evidence_mapping_context(
+            user=user,
+        ),
     )
 
 
@@ -455,3 +475,59 @@ def build_skill_gap_evidence_readiness_context(
     unresolved = get_evidence_readiness_items(user=user)
     resolved = tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=True))
     return group_evidence_readiness_items(unresolved, resolved_items=resolved)
+
+
+def get_portfolio_evidence_mapping_items(*, user) -> tuple[ApplicationSkillGap, ...]:
+    """Unresolved saved gaps for portfolio proof mapping, highest priority first."""
+    return tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=False))
+
+
+def group_portfolio_evidence_mapping_items(
+    unresolved_items: tuple[ApplicationSkillGap, ...],
+    *,
+    resolved_items: tuple[ApplicationSkillGap, ...],
+) -> SkillGapPortfolioEvidenceMappingContext:
+    proof_now: list[ApplicationSkillGap] = []
+    strengthen_next: list[ApplicationSkillGap] = []
+    mapping_backlog: list[ApplicationSkillGap] = []
+
+    for gap in unresolved_items:
+        if gap.priority in HIGH_PRIORITY_VALUES:
+            proof_now.append(gap)
+        elif gap.priority in MEDIUM_PRIORITY_VALUES:
+            strengthen_next.append(gap)
+        else:
+            mapping_backlog.append(gap)
+
+    return SkillGapPortfolioEvidenceMappingContext(
+        map_to_portfolio_proof_now=PortfolioEvidenceMappingGroup(
+            key="map_to_portfolio_proof_now",
+            label="Map to portfolio proof now",
+            items=tuple(proof_now),
+        ),
+        strengthen_cv_interview_evidence_next=PortfolioEvidenceMappingGroup(
+            key="strengthen_cv_interview_evidence_next",
+            label="Strengthen CV/interview evidence next",
+            items=tuple(strengthen_next),
+        ),
+        evidence_backlog=PortfolioEvidenceMappingGroup(
+            key="evidence_backlog",
+            label="Evidence backlog",
+            items=tuple(mapping_backlog),
+        ),
+        resolved_evidence_mapping_context=PortfolioEvidenceMappingGroup(
+            key="resolved_evidence_mapping_context",
+            label="Resolved evidence mapping context",
+            items=resolved_items,
+        ),
+        has_unresolved=bool(unresolved_items),
+    )
+
+
+def build_skill_gap_portfolio_evidence_mapping_context(
+    *,
+    user,
+) -> SkillGapPortfolioEvidenceMappingContext:
+    unresolved = get_portfolio_evidence_mapping_items(user=user)
+    resolved = tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=True))
+    return group_portfolio_evidence_mapping_items(unresolved, resolved_items=resolved)

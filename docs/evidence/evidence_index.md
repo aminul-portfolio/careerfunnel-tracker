@@ -53,7 +53,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 46 (feature branch `sprint-46-skill-gap-learning-plan-foundation`):** Skill Gap Learning Plan Foundation - Manual learning plan section on `/skill-gaps/` with grouped learning focus and suggested practice; **10** new learning-plan tests (**44** total in `apps.skill_gaps.tests`); evidence doc `docs/evidence/sprint_46_skill_gap_learning_plan_foundation.md`. Read-only, ASCII-safe text, no model/migration changes.
 
-**Sprint 47 (feature branch `sprint-47-skill-gap-evidence-readiness-foundation`):** Skill Gap Evidence Readiness Foundation - Manual evidence readiness section on `/skill-gaps/` with grouped evidence focus and suggested evidence prompts; **10** new evidence-readiness tests (**54** total in `apps.skill_gaps.tests`); evidence doc `docs/evidence/sprint_47_skill_gap_evidence_readiness_foundation.md`. Read-only, ASCII-safe text, no model/migration changes. Sprint 48 not started.
+**Sprint 47 (feature branch `sprint-47-skill-gap-evidence-readiness-foundation`):** Skill Gap Evidence Readiness Foundation - Manual evidence readiness section on `/skill-gaps/` with grouped evidence focus and suggested evidence prompts; **10** new evidence-readiness tests (**54** total in `apps.skill_gaps.tests`); evidence doc `docs/evidence/sprint_47_skill_gap_evidence_readiness_foundation.md`. Read-only, ASCII-safe text, no model/migration changes.
+
+**Sprint 48 (feature branch `sprint-48-skill-gap-portfolio-evidence-mapping`):** Skill Gap Portfolio Evidence Mapping Foundation - Manual portfolio evidence mapping section on `/skill-gaps/` with grouped portfolio proof focus and manual proof prompts; **10** new portfolio-mapping tests (**64** total in `apps.skill_gaps.tests`); evidence doc `docs/evidence/sprint_48_skill_gap_portfolio_evidence_mapping.md`. Read-only, ASCII-safe text, no model/migration changes. Sprint 49 not started.
 
 ---
 
