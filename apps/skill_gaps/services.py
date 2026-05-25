@@ -133,6 +133,22 @@ class SkillGapInterviewStoryMappingContext:
 
 
 @dataclass(frozen=True)
+class CvBulletMappingGroup:
+    key: str
+    label: str
+    items: tuple[ApplicationSkillGap, ...]
+
+
+@dataclass(frozen=True)
+class SkillGapCvBulletMappingContext:
+    draft_cv_bullet_prompts_now: CvBulletMappingGroup
+    strengthen_cv_evidence_next: CvBulletMappingGroup
+    cv_bullet_backlog: CvBulletMappingGroup
+    resolved_cv_context: CvBulletMappingGroup
+    has_unresolved: bool
+
+
+@dataclass(frozen=True)
 class SkillGapDashboardContext:
     summary: SkillGapDashboardSummary
     gaps: tuple[ApplicationSkillGap, ...]
@@ -144,6 +160,7 @@ class SkillGapDashboardContext:
     evidence_readiness: SkillGapEvidenceReadinessContext
     portfolio_evidence_mapping: SkillGapPortfolioEvidenceMappingContext
     interview_story_mapping: SkillGapInterviewStoryMappingContext
+    cv_bullet_mapping: SkillGapCvBulletMappingContext
 
 
 HIGH_PRIORITY_VALUES = (
@@ -332,6 +349,7 @@ def build_skill_gap_dashboard_context(*, user, query_params) -> SkillGapDashboar
         interview_story_mapping=build_skill_gap_interview_story_mapping_context(
             user=user,
         ),
+        cv_bullet_mapping=build_skill_gap_cv_bullet_mapping_context(user=user),
     )
 
 
@@ -607,3 +625,56 @@ def build_skill_gap_interview_story_mapping_context(
     unresolved = get_interview_story_mapping_items(user=user)
     resolved = tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=True))
     return group_interview_story_mapping_items(unresolved, resolved_items=resolved)
+
+
+def get_cv_bullet_mapping_items(*, user) -> tuple[ApplicationSkillGap, ...]:
+    """Unresolved saved gaps for CV bullet focus, highest priority score first."""
+    return tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=False))
+
+
+def group_cv_bullet_mapping_items(
+    unresolved_items: tuple[ApplicationSkillGap, ...],
+    *,
+    resolved_items: tuple[ApplicationSkillGap, ...],
+) -> SkillGapCvBulletMappingContext:
+    draft_now: list[ApplicationSkillGap] = []
+    strengthen_next: list[ApplicationSkillGap] = []
+    bullet_backlog: list[ApplicationSkillGap] = []
+
+    for gap in unresolved_items:
+        if gap.priority in HIGH_PRIORITY_VALUES:
+            draft_now.append(gap)
+        elif gap.priority in MEDIUM_PRIORITY_VALUES:
+            strengthen_next.append(gap)
+        else:
+            bullet_backlog.append(gap)
+
+    return SkillGapCvBulletMappingContext(
+        draft_cv_bullet_prompts_now=CvBulletMappingGroup(
+            key="draft_cv_bullet_prompts_now",
+            label="Draft CV bullet prompts now",
+            items=tuple(draft_now),
+        ),
+        strengthen_cv_evidence_next=CvBulletMappingGroup(
+            key="strengthen_cv_evidence_next",
+            label="Strengthen CV evidence next",
+            items=tuple(strengthen_next),
+        ),
+        cv_bullet_backlog=CvBulletMappingGroup(
+            key="cv_bullet_backlog",
+            label="CV bullet backlog",
+            items=tuple(bullet_backlog),
+        ),
+        resolved_cv_context=CvBulletMappingGroup(
+            key="resolved_cv_context",
+            label="Resolved CV context",
+            items=resolved_items,
+        ),
+        has_unresolved=bool(unresolved_items),
+    )
+
+
+def build_skill_gap_cv_bullet_mapping_context(*, user) -> SkillGapCvBulletMappingContext:
+    unresolved = get_cv_bullet_mapping_items(user=user)
+    resolved = tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=True))
+    return group_cv_bullet_mapping_items(unresolved, resolved_items=resolved)
