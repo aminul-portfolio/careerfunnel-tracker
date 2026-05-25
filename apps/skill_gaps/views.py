@@ -24,5 +24,6 @@ def dashboard(request):
             "resolved_filter": context.resolved_filter,
             "action_plan": context.action_plan,
             "learning_plan": context.learning_plan,
+            "evidence_readiness": context.evidence_readiness,
         },
     )
