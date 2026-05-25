@@ -271,6 +271,137 @@
         {% endif %}
     </section>
 
+    <section id="manual-evidence-readiness" class="content-card cf-skill-gap-evidence-readiness">
+        <div class="card-header">
+            <p class="eyebrow">Manual evidence readiness</p>
+            <h2>Evidence focus</h2>
+            <p class="section-note">
+                Advisory only. Based on saved skill-gap records. Review and decide manually -
+                this section suggests evidence focus only; it does not create files or rewrite CVs.
+            </p>
+        </div>
+
+        {% if evidence_readiness.has_unresolved %}
+        <div class="cf-evidence-readiness-groups">
+            {% if evidence_readiness.evidence_needed_now.items %}
+            <div class="cf-evidence-readiness-group">
+                <h3>{{ evidence_readiness.evidence_needed_now.label }}</h3>
+                <ul class="cf-evidence-readiness-list">
+                    {% for gap in evidence_readiness.evidence_needed_now.items %}
+                    <li class="cf-evidence-readiness-item">
+                        <div class="cf-evidence-readiness-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-warning">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                            - {{ gap.get_stage_display }} - {{ gap.get_current_tier_display }}
+                            - score {{ gap.priority_score }}
+                        </p>
+                        <p><strong>Suggested evidence:</strong>
+                            {% if gap.suggested_action %}{{ gap.suggested_action }}{% else %}
+                            Gather proof for this skill from saved project and application notes.{% endif %}
+                        </p>
+                        <ul class="table-subtext cf-evidence-prompt-list">
+                            <li>Portfolio project evidence</li>
+                            <li>CV bullet evidence</li>
+                            <li>Interview story evidence</li>
+                            <li>Dashboard/reporting evidence</li>
+                        </ul>
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if evidence_readiness.strengthen_next.items %}
+            <div class="cf-evidence-readiness-group">
+                <h3>{{ evidence_readiness.strengthen_next.label }}</h3>
+                <ul class="cf-evidence-readiness-list">
+                    {% for gap in evidence_readiness.strengthen_next.items %}
+                    <li class="cf-evidence-readiness-item">
+                        <div class="cf-evidence-readiness-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-info">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                            - {{ gap.get_stage_display }} - {{ gap.get_current_tier_display }}
+                        </p>
+                        <p><strong>Suggested evidence:</strong>
+                            {% if gap.suggested_action %}{{ gap.suggested_action }}{% else %}
+                            Strengthen saved examples before the next application stage.{% endif %}
+                        </p>
+                        <ul class="table-subtext cf-evidence-prompt-list">
+                            <li>Portfolio project evidence</li>
+                            <li>CV bullet evidence</li>
+                            <li>Interview story evidence</li>
+                            <li>Dashboard/reporting evidence</li>
+                        </ul>
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if evidence_readiness.evidence_backlog.items %}
+            <div class="cf-evidence-readiness-group">
+                <h3>{{ evidence_readiness.evidence_backlog.label }}</h3>
+                <ul class="cf-evidence-readiness-list">
+                    {% for gap in evidence_readiness.evidence_backlog.items %}
+                    <li class="cf-evidence-readiness-item">
+                        <div class="cf-evidence-readiness-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-info">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                        </p>
+                        {% if gap.suggested_action %}
+                        <p><strong>Suggested evidence:</strong> {{ gap.suggested_action }}</p>
+                        {% endif %}
+                        <ul class="table-subtext cf-evidence-prompt-list">
+                            <li>Portfolio project evidence</li>
+                            <li>CV bullet evidence</li>
+                        </ul>
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if evidence_readiness.resolved_evidence_context.items %}
+            <div class="cf-evidence-readiness-group cf-evidence-readiness-group-resolved">
+                <h3>{{ evidence_readiness.resolved_evidence_context.label }}</h3>
+                <p class="section-note">Completed gaps for context only - not primary evidence focus.</p>
+                <ul class="cf-evidence-readiness-list">
+                    {% for gap in evidence_readiness.resolved_evidence_context.items %}
+                    <li class="cf-evidence-readiness-item">
+                        <strong>{{ gap.skill_name }}</strong>
+                        <span class="table-context">
+                            {{ gap.application.company_name }} - resolved
+                            {% if gap.resolved_tier %} ({{ gap.resolved_tier }}){% endif %}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No unresolved skill gaps for manual evidence readiness.</h3>
+            <p>
+                When you save unresolved skill gaps, evidence focus areas will appear here.
+                Review and decide manually - nothing is created or updated automatically.
+            </p>
+        </div>
+        {% endif %}
+    </section>
+
     <section class="content-card">
         <div class="card-header card-header-row">
             <div>

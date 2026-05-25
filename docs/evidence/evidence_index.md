@@ -51,7 +51,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 45 (feature branch `sprint-45-skill-gap-action-plan-foundation`):** Skill Gap Action Plan Foundation - Manual action plan section on `/skill-gaps/` with grouped suggested next steps; **8** new action-plan tests (**34** total in `apps.skill_gaps.tests`); evidence doc `docs/evidence/sprint_45_skill_gap_action_plan_foundation.md`. Read-only, no model/migration changes.
 
-**Sprint 46 (feature branch `sprint-46-skill-gap-learning-plan-foundation`):** Skill Gap Learning Plan Foundation - Manual learning plan section on `/skill-gaps/` with grouped learning focus and suggested practice; **10** new learning-plan tests (**44** total in `apps.skill_gaps.tests`); evidence doc `docs/evidence/sprint_46_skill_gap_learning_plan_foundation.md`. Read-only, ASCII-safe text, no model/migration changes. Sprint 47 not started.
+**Sprint 46 (feature branch `sprint-46-skill-gap-learning-plan-foundation`):** Skill Gap Learning Plan Foundation - Manual learning plan section on `/skill-gaps/` with grouped learning focus and suggested practice; **10** new learning-plan tests (**44** total in `apps.skill_gaps.tests`); evidence doc `docs/evidence/sprint_46_skill_gap_learning_plan_foundation.md`. Read-only, ASCII-safe text, no model/migration changes.
+
+**Sprint 47 (feature branch `sprint-47-skill-gap-evidence-readiness-foundation`):** Skill Gap Evidence Readiness Foundation - Manual evidence readiness section on `/skill-gaps/` with grouped evidence focus and suggested evidence prompts; **10** new evidence-readiness tests (**54** total in `apps.skill_gaps.tests`); evidence doc `docs/evidence/sprint_47_skill_gap_evidence_readiness_foundation.md`. Read-only, ASCII-safe text, no model/migration changes. Sprint 48 not started.
 
 ---
 

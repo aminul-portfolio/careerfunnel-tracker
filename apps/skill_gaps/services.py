@@ -85,6 +85,22 @@ class SkillGapLearningPlanContext:
 
 
 @dataclass(frozen=True)
+class EvidenceReadinessGroup:
+    key: str
+    label: str
+    items: tuple[ApplicationSkillGap, ...]
+
+
+@dataclass(frozen=True)
+class SkillGapEvidenceReadinessContext:
+    evidence_needed_now: EvidenceReadinessGroup
+    strengthen_next: EvidenceReadinessGroup
+    evidence_backlog: EvidenceReadinessGroup
+    resolved_evidence_context: EvidenceReadinessGroup
+    has_unresolved: bool
+
+
+@dataclass(frozen=True)
 class SkillGapDashboardContext:
     summary: SkillGapDashboardSummary
     gaps: tuple[ApplicationSkillGap, ...]
@@ -93,6 +109,7 @@ class SkillGapDashboardContext:
     resolved_filter: str
     action_plan: SkillGapActionPlanContext
     learning_plan: SkillGapLearningPlanContext
+    evidence_readiness: SkillGapEvidenceReadinessContext
 
 
 HIGH_PRIORITY_VALUES = (
@@ -274,6 +291,7 @@ def build_skill_gap_dashboard_context(*, user, query_params) -> SkillGapDashboar
         resolved_filter=resolved_filter,
         action_plan=build_skill_gap_action_plan_context(user=user),
         learning_plan=build_skill_gap_learning_plan_context(user=user),
+        evidence_readiness=build_skill_gap_evidence_readiness_context(user=user),
     )
 
 
@@ -381,3 +399,59 @@ def build_skill_gap_learning_plan_context(*, user) -> SkillGapLearningPlanContex
     unresolved = get_learning_plan_items(user=user)
     resolved = tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=True))
     return group_learning_plan_items(unresolved, resolved_items=resolved)
+
+
+def get_evidence_readiness_items(*, user) -> tuple[ApplicationSkillGap, ...]:
+    """Unresolved saved gaps for evidence focus, highest priority score first."""
+    return tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=False))
+
+
+def group_evidence_readiness_items(
+    unresolved_items: tuple[ApplicationSkillGap, ...],
+    *,
+    resolved_items: tuple[ApplicationSkillGap, ...],
+) -> SkillGapEvidenceReadinessContext:
+    evidence_now: list[ApplicationSkillGap] = []
+    strengthen_next: list[ApplicationSkillGap] = []
+    evidence_backlog: list[ApplicationSkillGap] = []
+
+    for gap in unresolved_items:
+        if gap.priority in HIGH_PRIORITY_VALUES:
+            evidence_now.append(gap)
+        elif gap.priority in MEDIUM_PRIORITY_VALUES:
+            strengthen_next.append(gap)
+        else:
+            evidence_backlog.append(gap)
+
+    return SkillGapEvidenceReadinessContext(
+        evidence_needed_now=EvidenceReadinessGroup(
+            key="evidence_needed_now",
+            label="Evidence needed now",
+            items=tuple(evidence_now),
+        ),
+        strengthen_next=EvidenceReadinessGroup(
+            key="strengthen_next",
+            label="Strengthen next",
+            items=tuple(strengthen_next),
+        ),
+        evidence_backlog=EvidenceReadinessGroup(
+            key="evidence_backlog",
+            label="Evidence backlog",
+            items=tuple(evidence_backlog),
+        ),
+        resolved_evidence_context=EvidenceReadinessGroup(
+            key="resolved_evidence_context",
+            label="Resolved evidence context",
+            items=resolved_items,
+        ),
+        has_unresolved=bool(unresolved_items),
+    )
+
+
+def build_skill_gap_evidence_readiness_context(
+    *,
+    user,
+) -> SkillGapEvidenceReadinessContext:
+    unresolved = get_evidence_readiness_items(user=user)
+    resolved = tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=True))
+    return group_evidence_readiness_items(unresolved, resolved_items=resolved)
