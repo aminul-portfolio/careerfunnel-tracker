@@ -494,10 +494,10 @@ class SkillGapDashboardTests(TestCase):
         ]
         self.assertEqual(migration_files, ["0001_initial.py"])
 
-    def test_no_sprint_51_text_on_dashboard_page(self):
+    def test_no_sprint_52_text_on_dashboard_page(self):
         self._login()
         response = self.client.get(self.url)
-        self.assertNotContains(response, "Sprint 51")
+        self.assertNotContains(response, "Sprint 52")
 
     def test_dashboard_avoids_forbidden_claim_language(self):
         self._login()
@@ -1807,7 +1807,7 @@ class SkillGapCvBulletMappingTests(TestCase):
         self.assertNotIn("automatic cv rewriting", content)
         self.assertNotIn("gmail", content)
         self.assertNotIn("oauth", content)
-        self.assertNotIn("sprint 51", content)
+        self.assertNotIn("sprint 52", content)
 
     def test_no_model_changes_or_migrations_added(self):
         migration_dir = REPO_ROOT / "apps" / "skill_gaps" / "migrations"
@@ -1824,6 +1824,47 @@ class SkillGapCvBulletMappingTests(TestCase):
             REPO_ROOT / "apps" / "skill_gaps" / "views.py",
             REPO_ROOT / "apps" / "skill_gaps" / "tests.py",
             REPO_ROOT / "templates" / "skill_gaps" / "dashboard.html",
+        )
+        for path in ascii_paths:
+            content = path.read_text(encoding="utf-8")
+            self.assertTrue(
+                all(ord(char) < 128 for char in content),
+                msg=f"Non-ASCII character found in {path}",
+            )
+
+
+class SkillGapSprint51ReviewerWalkthroughTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="revuser", password="StrongPass12345")
+        self.url = reverse("skill_gaps:dashboard")
+
+    def _login(self):
+        self.client.login(username="revuser", password="StrongPass12345")
+
+    def test_skill_gaps_dashboard_renders_reviewer_workflow_copy(self):
+        self._login()
+        response = self.client.get(self.url)
+        self.assertContains(response, "Reviewer walkthrough")
+        self.assertContains(response, "Skill gaps workflow (manual and advisory)")
+        self.assertContains(response, "Manual action plan")
+        self.assertContains(response, "Manual CV bullet mapping")
+        self.assertContains(response, "Review and decide manually")
+
+    def test_sprint_51_reviewer_copy_remains_claim_safe(self):
+        self._login()
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+        self.assertIn("advisory only", content)
+        self.assertIn("based on saved skill-gap records", content)
+        self.assertIn("not implemented on this page", content)
+        self.assertIn("external account integrations", content)
+        self.assertIn("finished cv edits", content)
+        self.assertNotIn("sprint 52", content)
+
+    def test_sprint_51_changed_files_are_ascii_safe(self):
+        ascii_paths = (
+            REPO_ROOT / "templates" / "skill_gaps" / "dashboard.html",
+            REPO_ROOT / "docs" / "evidence" / "sprint_51_final_reviewer_walkthrough_polish.md",
         )
         for path in ascii_paths:
             content = path.read_text(encoding="utf-8")

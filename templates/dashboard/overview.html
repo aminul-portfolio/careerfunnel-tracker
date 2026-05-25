@@ -28,6 +28,29 @@
         </div>
     </section>
 
+    <section id="reviewer-walkthrough" class="content-card cf-reviewer-walkthrough">
+        <div class="card-header">
+            <p class="eyebrow">Reviewer walkthrough</p>
+            <h2>How to assess this portfolio project</h2>
+            <p class="section-note">
+                CareerFunnel Tracker is a manual, advisory, deterministic job-search analytics app for one user.
+                Review saved records, rule-based guidance, and evidence docs - not live SaaS automation.
+            </p>
+        </div>
+        <ol class="cf-reviewer-steps">
+            <li>Start here on the dashboard for today signals, pipeline health, and evidence readiness gaps.</li>
+            <li>Review applications, follow-ups, interviews, daily logs, and weekly reviews you control manually.</li>
+            <li>Open <a href="{% url 'metrics:funnel_metrics' %}" class="table-link">Funnel Metrics</a> for reporting and export evidence.</li>
+            <li>Open <a href="{% url 'skill_gaps:dashboard' %}" class="table-link">Skill Intelligence Dashboard</a> for saved skill gaps and advisory planning sections.</li>
+            <li>Read <code>docs/evidence/evidence_index.md</code> and sprint evidence under <code>docs/evidence/</code> for the implementation trail.</li>
+        </ol>
+        <p class="reviewer-note">
+            Deliberately not implemented: automatic application submission, automatic outbound email,
+            Gmail/Calendar/OAuth integration, scraping, automatic CV rewriting, automatic interview prep generation,
+            AI prediction claims, background polling, live SaaS users, production deployment, or billing.
+        </p>
+    </section>
+
     <section class="content-card cf-signature-insight">
         <div class="card-header">
             <p class="eyebrow">Signature Career Insight</p>

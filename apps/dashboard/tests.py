@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from pathlib import Path
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -461,3 +462,47 @@ class DashboardCommandCentrePolishTests(TestCase):
         signals = build_today_signals(self.user)
         self.assertEqual(signals[0].priority, "Info")
         self.assertIn("Command centre clear", signals[0].title)
+
+
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+class Sprint51ReviewerWalkthroughPolishTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="revdash", password="StrongPass12345")
+
+    def test_dashboard_renders_reviewer_walkthrough_copy(self):
+        self.client.login(username="revdash", password="StrongPass12345")
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Reviewer walkthrough")
+        self.assertContains(response, "How to assess this portfolio project")
+        self.assertContains(response, "Skill Intelligence Dashboard")
+        self.assertContains(response, "Deliberately not implemented")
+
+    def test_sprint_51_reviewer_copy_remains_claim_safe(self):
+        self.client.login(username="revdash", password="StrongPass12345")
+        response = self.client.get(reverse("dashboard:overview"))
+        content = response.content.decode().lower()
+        self.assertIn("manual workflow only", content)
+        self.assertIn("deliberately not implemented", content)
+        self.assertIn("automatic application submission", content)
+        self.assertIn("automatic cv rewriting", content)
+        self.assertNotIn("sprint 52", content)
+
+    def test_no_sprint_52_text_on_dashboard_home(self):
+        self.client.login(username="revdash", password="StrongPass12345")
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertNotContains(response, "Sprint 52")
+
+    def test_sprint_51_changed_files_are_ascii_safe(self):
+        ascii_paths = (
+            REPO_ROOT / "templates" / "dashboard" / "overview.html",
+            REPO_ROOT / "docs" / "evidence" / "sprint_51_final_reviewer_walkthrough_polish.md",
+        )
+        for path in ascii_paths:
+            content = path.read_text(encoding="utf-8")
+            self.assertTrue(
+                all(ord(char) < 128 for char in content),
+                msg=f"Non-ASCII character found in {path}",
+            )

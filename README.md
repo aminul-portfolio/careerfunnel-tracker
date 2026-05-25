@@ -82,14 +82,37 @@ This remains manual, rule-based, and advisory only. The repository does not impl
 
 Sprint **35** extends this path with clearer cross-links between Application Detail, recruiter email import/detail, interview prep (including `?application=` pre-fill), and the Application AI Pack — still manual and advisory only. Evidence: `docs/evidence/sprint_35_interview_email_workflow_polish.md`.
 
+## How to review this project
+
+CareerFunnel Tracker is a **local Django portfolio project** for one job seeker. It turns manually logged applications, follow-ups, interviews, and reviews into explainable funnel metrics, data-quality signals, and reviewer-ready evidence. The workflow is **manual, advisory, deterministic, and evidence-based** - not a live SaaS product.
+
+**Implemented manual workflow (high level):**
+
+- Job and application tracking with statuses, sources, CV versions, and save-quality warnings.
+- Funnel metrics, exports, and data-quality reporting from authenticated records.
+- Rule-based decision support (fit review, follow-ups, interview prep handoffs) without automatic submission.
+- Skill Intelligence Dashboard at `/skill-gaps/` with saved skill gaps plus read-only advisory sections: action plan, learning plan, evidence readiness, portfolio evidence mapping, interview story mapping, and CV bullet mapping.
+- Career Evidence OS (markdown + dashboard viewer) for portfolio and recruiter review.
+
+**Claim safety - deliberately not implemented:**
+
+- No auto-apply, auto-send, or automatic application status updates.
+- No Gmail, Calendar, OAuth, inbox sync, or scraping.
+- No automatic CV rewriting, automatic interview prep generation, or automatic skill-gap creation.
+- No fake AI/ML prediction claims; optional Claude paths are advisory and fall back to rule-based logic when not configured.
+- No live SaaS users, production deployment claims, billing, or subscription claims.
+
+Evidence index: `docs/evidence/evidence_index.md`. Sprint 51 reviewer polish: `docs/evidence/sprint_51_final_reviewer_walkthrough_polish.md`.
+
 ## Five-Minute Reviewer Path
 
-1. Open the dashboard and scan the headline job-search status.
+1. Open the dashboard (`/dashboard/`) and read the reviewer walkthrough note, then scan today signals and pipeline health.
 2. Review the Evaluation Queue for opportunities that need fit checks or conversion into applications.
 3. Open Funnel Metrics and inspect weekly trend, source performance, CV version performance, and rejection patterns.
-4. Create or edit an application and observe the save-quality warnings for analytics-critical gaps.
-5. Open the Data Quality Report and connect the warnings back to reporting impact.
-6. Review `docs/analytics/metric_definitions.md`, `docs/analytics/analytics_lineage.md`, and `docs/evidence/evidence_index.md` for the supporting evidence trail.
+4. Open **Skill Intelligence Dashboard** at `/skill-gaps/` and walk the manual action plan through CV bullet mapping sections (all read-only).
+5. Create or edit an application and observe the save-quality warnings for analytics-critical gaps.
+6. Open the Data Quality Report and connect the warnings back to reporting impact.
+7. Review `docs/analytics/metric_definitions.md`, `docs/analytics/analytics_lineage.md`, and `docs/evidence/evidence_index.md` for the supporting evidence trail.
 
 ### Career Evidence reviewer path (Sprint 23)
 
