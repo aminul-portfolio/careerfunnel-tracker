@@ -117,6 +117,22 @@ class SkillGapPortfolioEvidenceMappingContext:
 
 
 @dataclass(frozen=True)
+class InterviewStoryMappingGroup:
+    key: str
+    label: str
+    items: tuple[ApplicationSkillGap, ...]
+
+
+@dataclass(frozen=True)
+class SkillGapInterviewStoryMappingContext:
+    prepare_interview_stories_now: InterviewStoryMappingGroup
+    strengthen_evidence_stories_next: InterviewStoryMappingGroup
+    story_backlog: InterviewStoryMappingGroup
+    resolved_story_context: InterviewStoryMappingGroup
+    has_unresolved: bool
+
+
+@dataclass(frozen=True)
 class SkillGapDashboardContext:
     summary: SkillGapDashboardSummary
     gaps: tuple[ApplicationSkillGap, ...]
@@ -127,6 +143,7 @@ class SkillGapDashboardContext:
     learning_plan: SkillGapLearningPlanContext
     evidence_readiness: SkillGapEvidenceReadinessContext
     portfolio_evidence_mapping: SkillGapPortfolioEvidenceMappingContext
+    interview_story_mapping: SkillGapInterviewStoryMappingContext
 
 
 HIGH_PRIORITY_VALUES = (
@@ -310,6 +327,9 @@ def build_skill_gap_dashboard_context(*, user, query_params) -> SkillGapDashboar
         learning_plan=build_skill_gap_learning_plan_context(user=user),
         evidence_readiness=build_skill_gap_evidence_readiness_context(user=user),
         portfolio_evidence_mapping=build_skill_gap_portfolio_evidence_mapping_context(
+            user=user,
+        ),
+        interview_story_mapping=build_skill_gap_interview_story_mapping_context(
             user=user,
         ),
     )
@@ -531,3 +551,59 @@ def build_skill_gap_portfolio_evidence_mapping_context(
     unresolved = get_portfolio_evidence_mapping_items(user=user)
     resolved = tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=True))
     return group_portfolio_evidence_mapping_items(unresolved, resolved_items=resolved)
+
+
+def get_interview_story_mapping_items(*, user) -> tuple[ApplicationSkillGap, ...]:
+    """Unresolved saved gaps for interview story focus, highest priority score first."""
+    return tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=False))
+
+
+def group_interview_story_mapping_items(
+    unresolved_items: tuple[ApplicationSkillGap, ...],
+    *,
+    resolved_items: tuple[ApplicationSkillGap, ...],
+) -> SkillGapInterviewStoryMappingContext:
+    prepare_now: list[ApplicationSkillGap] = []
+    strengthen_next: list[ApplicationSkillGap] = []
+    story_backlog: list[ApplicationSkillGap] = []
+
+    for gap in unresolved_items:
+        if gap.priority in HIGH_PRIORITY_VALUES:
+            prepare_now.append(gap)
+        elif gap.priority in MEDIUM_PRIORITY_VALUES:
+            strengthen_next.append(gap)
+        else:
+            story_backlog.append(gap)
+
+    return SkillGapInterviewStoryMappingContext(
+        prepare_interview_stories_now=InterviewStoryMappingGroup(
+            key="prepare_interview_stories_now",
+            label="Prepare interview stories now",
+            items=tuple(prepare_now),
+        ),
+        strengthen_evidence_stories_next=InterviewStoryMappingGroup(
+            key="strengthen_evidence_stories_next",
+            label="Strengthen evidence stories next",
+            items=tuple(strengthen_next),
+        ),
+        story_backlog=InterviewStoryMappingGroup(
+            key="story_backlog",
+            label="Story backlog",
+            items=tuple(story_backlog),
+        ),
+        resolved_story_context=InterviewStoryMappingGroup(
+            key="resolved_story_context",
+            label="Resolved story context",
+            items=resolved_items,
+        ),
+        has_unresolved=bool(unresolved_items),
+    )
+
+
+def build_skill_gap_interview_story_mapping_context(
+    *,
+    user,
+) -> SkillGapInterviewStoryMappingContext:
+    unresolved = get_interview_story_mapping_items(user=user)
+    resolved = tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=True))
+    return group_interview_story_mapping_items(unresolved, resolved_items=resolved)
