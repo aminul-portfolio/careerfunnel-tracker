@@ -59,7 +59,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 49 (feature branch `sprint-49-skill-gap-interview-story-mapping`):** Skill Gap Interview Story Mapping Foundation - Manual interview story mapping section on `/skill-gaps/` with grouped STAR-style story prompts; **10** new interview-story tests (**74** total in `apps.skill_gaps.tests`); evidence doc `docs/evidence/sprint_49_skill_gap_interview_story_mapping.md`. Read-only, ASCII-safe text, no model/migration changes.
 
-**Sprint 50 (feature branch `sprint-50-skill-gap-cv-bullet-mapping`):** Skill Gap CV Bullet Mapping Foundation - Manual CV bullet mapping section on `/skill-gaps/` with grouped CV bullet prompts (no automatic rewriting); **10** new CV-bullet tests (**84** total in `apps.skill_gaps.tests`); evidence doc `docs/evidence/sprint_50_skill_gap_cv_bullet_mapping.md`. Read-only, ASCII-safe text, no model/migration changes. Sprint 51 not started.
+**Sprint 50 (feature branch `sprint-50-skill-gap-cv-bullet-mapping`):** Skill Gap CV Bullet Mapping Foundation - Manual CV bullet mapping section on `/skill-gaps/` with grouped CV bullet prompts (no automatic rewriting); **10** new CV-bullet tests (**84** total in `apps.skill_gaps.tests`); evidence doc `docs/evidence/sprint_50_skill_gap_cv_bullet_mapping.md`. Read-only, ASCII-safe text, no model/migration changes.
+
+**Sprint 51 (feature branch `sprint-51-final-reviewer-walkthrough-polish`):** Final Reviewer Walkthrough Polish - README "How to review", dashboard reviewer note (`templates/dashboard/overview.html`), skill-gaps reviewer workflow note; **4** dashboard + **3** skill-gaps reviewer tests; evidence doc `docs/evidence/sprint_51_final_reviewer_walkthrough_polish.md`. Copy/UX only; no view wiring changes; no models/migrations. Sprint 52 not started.
 
 ---
 
