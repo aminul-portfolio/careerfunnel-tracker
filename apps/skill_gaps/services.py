@@ -69,6 +69,22 @@ class SkillGapActionPlanContext:
 
 
 @dataclass(frozen=True)
+class LearningPlanGroup:
+    key: str
+    label: str
+    items: tuple[ApplicationSkillGap, ...]
+
+
+@dataclass(frozen=True)
+class SkillGapLearningPlanContext:
+    immediate_learning_focus: LearningPlanGroup
+    practice_next: LearningPlanGroup
+    backlog_learning_items: LearningPlanGroup
+    resolved_learning_context: LearningPlanGroup
+    has_unresolved: bool
+
+
+@dataclass(frozen=True)
 class SkillGapDashboardContext:
     summary: SkillGapDashboardSummary
     gaps: tuple[ApplicationSkillGap, ...]
@@ -76,6 +92,7 @@ class SkillGapDashboardContext:
     stage_filter: str
     resolved_filter: str
     action_plan: SkillGapActionPlanContext
+    learning_plan: SkillGapLearningPlanContext
 
 
 HIGH_PRIORITY_VALUES = (
@@ -256,6 +273,7 @@ def build_skill_gap_dashboard_context(*, user, query_params) -> SkillGapDashboar
         stage_filter=stage_filter,
         resolved_filter=resolved_filter,
         action_plan=build_skill_gap_action_plan_context(user=user),
+        learning_plan=build_skill_gap_learning_plan_context(user=user),
     )
 
 
@@ -310,3 +328,56 @@ def build_skill_gap_action_plan_context(*, user) -> SkillGapActionPlanContext:
     unresolved = get_action_plan_items(user=user)
     resolved = tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=True))
     return group_action_plan_items(unresolved, resolved_items=resolved)
+
+
+def get_learning_plan_items(*, user) -> tuple[ApplicationSkillGap, ...]:
+    """Unresolved saved gaps for learning focus, highest priority score first."""
+    return tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=False))
+
+
+def group_learning_plan_items(
+    unresolved_items: tuple[ApplicationSkillGap, ...],
+    *,
+    resolved_items: tuple[ApplicationSkillGap, ...],
+) -> SkillGapLearningPlanContext:
+    immediate_focus: list[ApplicationSkillGap] = []
+    practice_next: list[ApplicationSkillGap] = []
+    backlog_items: list[ApplicationSkillGap] = []
+
+    for gap in unresolved_items:
+        if gap.priority in HIGH_PRIORITY_VALUES:
+            immediate_focus.append(gap)
+        elif gap.priority in MEDIUM_PRIORITY_VALUES:
+            practice_next.append(gap)
+        else:
+            backlog_items.append(gap)
+
+    return SkillGapLearningPlanContext(
+        immediate_learning_focus=LearningPlanGroup(
+            key="immediate_learning_focus",
+            label="Immediate learning focus",
+            items=tuple(immediate_focus),
+        ),
+        practice_next=LearningPlanGroup(
+            key="practice_next",
+            label="Practice next",
+            items=tuple(practice_next),
+        ),
+        backlog_learning_items=LearningPlanGroup(
+            key="backlog_learning_items",
+            label="Backlog learning items",
+            items=tuple(backlog_items),
+        ),
+        resolved_learning_context=LearningPlanGroup(
+            key="resolved_learning_context",
+            label="Resolved learning context",
+            items=resolved_items,
+        ),
+        has_unresolved=bool(unresolved_items),
+    )
+
+
+def build_skill_gap_learning_plan_context(*, user) -> SkillGapLearningPlanContext:
+    unresolved = get_learning_plan_items(user=user)
+    resolved = tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=True))
+    return group_learning_plan_items(unresolved, resolved_items=resolved)

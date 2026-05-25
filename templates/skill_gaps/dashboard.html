@@ -156,6 +156,121 @@
         {% endif %}
     </section>
 
+    <section id="manual-learning-plan" class="content-card cf-skill-gap-learning-plan">
+        <div class="card-header">
+            <p class="eyebrow">Manual learning plan</p>
+            <h2>Learning focus</h2>
+            <p class="section-note">
+                Advisory only. Based on saved skill-gap records. Review and decide manually -
+                this section suggests practice focus only; it does not create courses or records.
+            </p>
+        </div>
+
+        {% if learning_plan.has_unresolved %}
+        <div class="cf-learning-plan-groups">
+            {% if learning_plan.immediate_learning_focus.items %}
+            <div class="cf-learning-plan-group">
+                <h3>{{ learning_plan.immediate_learning_focus.label }}</h3>
+                <ul class="cf-learning-plan-list">
+                    {% for gap in learning_plan.immediate_learning_focus.items %}
+                    <li class="cf-learning-plan-item">
+                        <div class="cf-learning-plan-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-warning">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                            - {{ gap.get_stage_display }} - {{ gap.get_current_tier_display }}
+                            - score {{ gap.priority_score }}
+                        </p>
+                        <p><strong>Suggested practice:</strong>
+                            {% if gap.suggested_action %}{{ gap.suggested_action }}{% else %}
+                            Review this skill manually against saved evidence.{% endif %}
+                        </p>
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if learning_plan.practice_next.items %}
+            <div class="cf-learning-plan-group">
+                <h3>{{ learning_plan.practice_next.label }}</h3>
+                <ul class="cf-learning-plan-list">
+                    {% for gap in learning_plan.practice_next.items %}
+                    <li class="cf-learning-plan-item">
+                        <div class="cf-learning-plan-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-info">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                            - {{ gap.get_stage_display }} - {{ gap.get_current_tier_display }}
+                        </p>
+                        <p><strong>Suggested practice:</strong>
+                            {% if gap.suggested_action %}{{ gap.suggested_action }}{% else %}
+                            Schedule manual practice for this skill.{% endif %}
+                        </p>
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if learning_plan.backlog_learning_items.items %}
+            <div class="cf-learning-plan-group">
+                <h3>{{ learning_plan.backlog_learning_items.label }}</h3>
+                <ul class="cf-learning-plan-list">
+                    {% for gap in learning_plan.backlog_learning_items.items %}
+                    <li class="cf-learning-plan-item">
+                        <div class="cf-learning-plan-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-info">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                        </p>
+                        {% if gap.suggested_action %}
+                        <p><strong>Suggested practice:</strong> {{ gap.suggested_action }}</p>
+                        {% endif %}
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if learning_plan.resolved_learning_context.items %}
+            <div class="cf-learning-plan-group cf-learning-plan-group-resolved">
+                <h3>{{ learning_plan.resolved_learning_context.label }}</h3>
+                <p class="section-note">Completed gaps for context only - not primary learning focus.</p>
+                <ul class="cf-learning-plan-list">
+                    {% for gap in learning_plan.resolved_learning_context.items %}
+                    <li class="cf-learning-plan-item">
+                        <strong>{{ gap.skill_name }}</strong>
+                        <span class="table-context">
+                            {{ gap.application.company_name }} - resolved
+                            {% if gap.resolved_tier %} ({{ gap.resolved_tier }}){% endif %}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No unresolved skill gaps for a manual learning plan.</h3>
+            <p>
+                When you save unresolved skill gaps, learning focus areas will appear here.
+                Review and decide manually - nothing is created or updated automatically.
+            </p>
+        </div>
+        {% endif %}
+    </section>
+
     <section class="content-card">
         <div class="card-header card-header-row">
             <div>
