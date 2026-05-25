@@ -402,6 +402,140 @@
         {% endif %}
     </section>
 
+    <section id="manual-portfolio-evidence-mapping" class="content-card cf-skill-gap-portfolio-mapping">
+        <div class="card-header">
+            <p class="eyebrow">Manual portfolio evidence mapping</p>
+            <h2>Portfolio proof focus</h2>
+            <p class="section-note">
+                Advisory only. Based on saved skill-gap records. Review and decide manually -
+                proof ideas below are prompts only, not proof that already exists unless you saved it.
+            </p>
+        </div>
+
+        {% if portfolio_evidence_mapping.has_unresolved %}
+        <div class="cf-portfolio-mapping-groups">
+            {% if portfolio_evidence_mapping.map_to_portfolio_proof_now.items %}
+            <div class="cf-portfolio-mapping-group">
+                <h3>{{ portfolio_evidence_mapping.map_to_portfolio_proof_now.label }}</h3>
+                <ul class="cf-portfolio-mapping-list">
+                    {% for gap in portfolio_evidence_mapping.map_to_portfolio_proof_now.items %}
+                    <li class="cf-portfolio-mapping-item">
+                        <div class="cf-portfolio-mapping-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-warning">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                            - {{ gap.get_stage_display }} - {{ gap.get_current_tier_display }}
+                            - score {{ gap.priority_score }}
+                        </p>
+                        <p><strong>Suggested proof ideas:</strong>
+                            {% if gap.suggested_action %}{{ gap.suggested_action }}{% else %}
+                            Map this skill to proof you can gather manually from saved notes.{% endif %}
+                        </p>
+                        <ul class="table-subtext cf-portfolio-proof-prompt-list">
+                            <li>Portfolio project proof (manual prompt)</li>
+                            <li>CV bullet proof (manual prompt)</li>
+                            <li>Interview story proof (manual prompt)</li>
+                            <li>Dashboard/reporting proof (manual prompt)</li>
+                            <li>Business impact proof (manual prompt)</li>
+                            <li>Data-quality/reconciliation proof (manual prompt, if relevant)</li>
+                        </ul>
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if portfolio_evidence_mapping.strengthen_cv_interview_evidence_next.items %}
+            <div class="cf-portfolio-mapping-group">
+                <h3>{{ portfolio_evidence_mapping.strengthen_cv_interview_evidence_next.label }}</h3>
+                <ul class="cf-portfolio-mapping-list">
+                    {% for gap in portfolio_evidence_mapping.strengthen_cv_interview_evidence_next.items %}
+                    <li class="cf-portfolio-mapping-item">
+                        <div class="cf-portfolio-mapping-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-info">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                            - {{ gap.get_stage_display }} - {{ gap.get_current_tier_display }}
+                        </p>
+                        <p><strong>Suggested proof ideas:</strong>
+                            {% if gap.suggested_action %}{{ gap.suggested_action }}{% else %}
+                            Plan CV and interview proof you can add manually before the next stage.{% endif %}
+                        </p>
+                        <ul class="table-subtext cf-portfolio-proof-prompt-list">
+                            <li>Portfolio project proof (manual prompt)</li>
+                            <li>CV bullet proof (manual prompt)</li>
+                            <li>Interview story proof (manual prompt)</li>
+                            <li>Dashboard/reporting proof (manual prompt)</li>
+                            <li>Business impact proof (manual prompt)</li>
+                        </ul>
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if portfolio_evidence_mapping.evidence_backlog.items %}
+            <div class="cf-portfolio-mapping-group">
+                <h3>{{ portfolio_evidence_mapping.evidence_backlog.label }}</h3>
+                <ul class="cf-portfolio-mapping-list">
+                    {% for gap in portfolio_evidence_mapping.evidence_backlog.items %}
+                    <li class="cf-portfolio-mapping-item">
+                        <div class="cf-portfolio-mapping-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-info">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                        </p>
+                        {% if gap.suggested_action %}
+                        <p><strong>Suggested proof ideas:</strong> {{ gap.suggested_action }}</p>
+                        {% endif %}
+                        <ul class="table-subtext cf-portfolio-proof-prompt-list">
+                            <li>Portfolio project proof (manual prompt)</li>
+                            <li>CV bullet proof (manual prompt)</li>
+                        </ul>
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if portfolio_evidence_mapping.resolved_evidence_mapping_context.items %}
+            <div class="cf-portfolio-mapping-group cf-portfolio-mapping-group-resolved">
+                <h3>{{ portfolio_evidence_mapping.resolved_evidence_mapping_context.label }}</h3>
+                <p class="section-note">Completed gaps for context only - not primary portfolio proof focus.</p>
+                <ul class="cf-portfolio-mapping-list">
+                    {% for gap in portfolio_evidence_mapping.resolved_evidence_mapping_context.items %}
+                    <li class="cf-portfolio-mapping-item">
+                        <strong>{{ gap.skill_name }}</strong>
+                        <span class="table-context">
+                            {{ gap.application.company_name }} - resolved
+                            {% if gap.resolved_tier %} ({{ gap.resolved_tier }}){% endif %}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No unresolved skill gaps for manual portfolio evidence mapping.</h3>
+            <p>
+                When you save unresolved skill gaps, portfolio proof focus areas will appear here.
+                Review and decide manually - nothing is created or updated automatically.
+            </p>
+        </div>
+        {% endif %}
+    </section>
+
     <section class="content-card">
         <div class="card-header card-header-row">
             <div>

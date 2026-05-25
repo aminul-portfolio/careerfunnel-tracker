@@ -25,6 +25,7 @@ from .services import (
     build_skill_gap_dashboard_context,
     build_skill_gap_evidence_readiness_context,
     build_skill_gap_learning_plan_context,
+    build_skill_gap_portfolio_evidence_mapping_context,
     compute_priority_score,
     create_or_update_gap,
     get_action_plan_items,
@@ -32,6 +33,7 @@ from .services import (
     get_global_failure_count,
     get_goal_weight,
     get_learning_plan_items,
+    get_portfolio_evidence_mapping_items,
     get_stage_weight,
     mark_gap_resolved,
 )
@@ -488,10 +490,10 @@ class SkillGapDashboardTests(TestCase):
         ]
         self.assertEqual(migration_files, ["0001_initial.py"])
 
-    def test_no_sprint_48_text_on_dashboard_page(self):
+    def test_no_sprint_49_text_on_dashboard_page(self):
         self._login()
         response = self.client.get(self.url)
-        self.assertNotContains(response, "Sprint 48")
+        self.assertNotContains(response, "Sprint 49")
 
     def test_dashboard_avoids_forbidden_claim_language(self):
         self._login()
@@ -1107,7 +1109,7 @@ class SkillGapEvidenceReadinessTests(TestCase):
         self.assertNotIn("predictive ai", content)
         self.assertNotIn("gmail", content)
         self.assertNotIn("oauth", content)
-        self.assertNotIn("sprint 48", content)
+        self.assertNotIn("sprint 49", content)
 
     def test_no_model_changes_or_migrations_added(self):
         migration_dir = REPO_ROOT / "apps" / "skill_gaps" / "migrations"
@@ -1119,6 +1121,240 @@ class SkillGapEvidenceReadinessTests(TestCase):
         self.assertEqual(migration_files, ["0001_initial.py"])
 
     def test_sprint_47_changed_files_are_ascii_safe(self):
+        ascii_paths = (
+            REPO_ROOT / "apps" / "skill_gaps" / "services.py",
+            REPO_ROOT / "apps" / "skill_gaps" / "views.py",
+            REPO_ROOT / "apps" / "skill_gaps" / "tests.py",
+            REPO_ROOT / "templates" / "skill_gaps" / "dashboard.html",
+        )
+        for path in ascii_paths:
+            content = path.read_text(encoding="utf-8")
+            self.assertTrue(
+                all(ord(char) < 128 for char in content),
+                msg=f"Non-ASCII character found in {path}",
+            )
+
+
+class SkillGapPortfolioEvidenceMappingTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="portuser", password="StrongPass12345")
+        self.other_user = User.objects.create_user(
+            username="portother",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skill_gaps:dashboard")
+        self.app = JobApplication.objects.create(
+            user=self.user,
+            company_name="Acme",
+            job_title="Data Analyst",
+            date_applied=date(2026, 5, 10),
+        )
+        self.other_app = JobApplication.objects.create(
+            user=self.other_user,
+            company_name="Rival",
+            job_title="Engineer",
+            date_applied=date(2026, 5, 11),
+        )
+
+    def _login(self):
+        self.client.login(username="portuser", password="StrongPass12345")
+
+    def _create_gap(
+        self,
+        *,
+        application,
+        skill_name,
+        priority,
+        priority_score,
+        resolved=False,
+    ):
+        return ApplicationSkillGap.objects.create(
+            application=application,
+            stage=SkillGapStage.APPLICATION,
+            skill_name=skill_name,
+            current_tier=SkillTier.MISSING,
+            priority=priority,
+            goal_weight=Decimal("1.00"),
+            failure_count=0,
+            stage_weight=Decimal("1.00"),
+            priority_score=priority_score,
+            identified_by=SkillGapIdentifiedBy.MANUAL,
+            suggested_action=f"Map {skill_name} proof manually.",
+            resolved=resolved,
+        )
+
+    def test_portfolio_evidence_mapping_section_appears_on_dashboard(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="Python",
+            priority=SkillGapPriority.HIGH,
+            priority_score=Decimal("8.00"),
+        )
+        self._login()
+        response = self.client.get(self.url)
+        self.assertContains(response, "Manual portfolio evidence mapping")
+        self.assertContains(response, "Portfolio proof focus")
+        self.assertContains(response, "Suggested proof ideas")
+        self.assertContains(response, "Portfolio project proof (manual prompt)")
+        self.assertContains(response, "CV bullet proof (manual prompt)")
+        self.assertContains(response, "Interview story proof (manual prompt)")
+        self.assertContains(response, "Dashboard/reporting proof (manual prompt)")
+        self.assertContains(response, "Business impact proof (manual prompt)")
+        self.assertContains(response, "Review and decide manually")
+
+    def test_portfolio_evidence_mapping_context_is_user_scoped(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="SQL",
+            priority=SkillGapPriority.MEDIUM,
+            priority_score=Decimal("4.00"),
+        )
+        self._create_gap(
+            application=self.other_app,
+            skill_name="HiddenSkill",
+            priority=SkillGapPriority.CRITICAL,
+            priority_score=Decimal("12.00"),
+        )
+        mapping = build_skill_gap_portfolio_evidence_mapping_context(user=self.user)
+        names = {
+            gap.skill_name
+            for group in (
+                mapping.map_to_portfolio_proof_now,
+                mapping.strengthen_cv_interview_evidence_next,
+                mapping.evidence_backlog,
+            )
+            for gap in group.items
+        }
+        self.assertIn("SQL", names)
+        self.assertNotIn("HiddenSkill", names)
+
+    def test_high_priority_unresolved_appear_before_mapping_backlog(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="LowSkill",
+            priority=SkillGapPriority.LOW,
+            priority_score=Decimal("1.00"),
+        )
+        self._create_gap(
+            application=self.app,
+            skill_name="CriticalSkill",
+            priority=SkillGapPriority.CRITICAL,
+            priority_score=Decimal("12.00"),
+        )
+        mapping = build_skill_gap_portfolio_evidence_mapping_context(user=self.user)
+        self.assertEqual(
+            mapping.map_to_portfolio_proof_now.items[0].skill_name,
+            "CriticalSkill",
+        )
+        self.assertEqual(mapping.evidence_backlog.items[0].skill_name, "LowSkill")
+
+    def test_resolved_gaps_not_in_primary_portfolio_proof_focus(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="OpenGap",
+            priority=SkillGapPriority.HIGH,
+            priority_score=Decimal("7.00"),
+        )
+        self._create_gap(
+            application=self.app,
+            skill_name="DoneGap",
+            priority=SkillGapPriority.HIGH,
+            priority_score=Decimal("9.00"),
+            resolved=True,
+        )
+        mapping = build_skill_gap_portfolio_evidence_mapping_context(user=self.user)
+        primary_names = [
+            gap.skill_name for gap in mapping.map_to_portfolio_proof_now.items
+        ]
+        primary_names += [
+            gap.skill_name for gap in mapping.strengthen_cv_interview_evidence_next.items
+        ]
+        primary_names += [gap.skill_name for gap in mapping.evidence_backlog.items]
+        self.assertEqual(primary_names, ["OpenGap"])
+        self.assertEqual(
+            mapping.resolved_evidence_mapping_context.items[0].skill_name,
+            "DoneGap",
+        )
+
+    def test_empty_portfolio_evidence_mapping_when_no_unresolved_gaps(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="DoneOnly",
+            priority=SkillGapPriority.LOW,
+            priority_score=Decimal("1.00"),
+            resolved=True,
+        )
+        self._login()
+        response = self.client.get(self.url)
+        self.assertContains(
+            response,
+            "No unresolved skill gaps for manual portfolio evidence mapping",
+        )
+        mapping = build_skill_gap_portfolio_evidence_mapping_context(user=self.user)
+        self.assertFalse(mapping.has_unresolved)
+
+    def test_dashboard_get_does_not_mutate_skill_gaps_for_portfolio_mapping(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="Stable",
+            priority=SkillGapPriority.MEDIUM,
+            priority_score=Decimal("3.00"),
+        )
+        self._login()
+        before = ApplicationSkillGap.objects.filter(application__user=self.user).count()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        after = ApplicationSkillGap.objects.filter(application__user=self.user).count()
+        self.assertEqual(before, after)
+
+    def test_get_portfolio_evidence_mapping_items_returns_only_unresolved_ordered(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="A",
+            priority=SkillGapPriority.LOW,
+            priority_score=Decimal("1.00"),
+        )
+        self._create_gap(
+            application=self.app,
+            skill_name="B",
+            priority=SkillGapPriority.HIGH,
+            priority_score=Decimal("9.00"),
+        )
+        self._create_gap(
+            application=self.app,
+            skill_name="C",
+            priority=SkillGapPriority.MEDIUM,
+            priority_score=Decimal("4.00"),
+            resolved=True,
+        )
+        items = get_portfolio_evidence_mapping_items(user=self.user)
+        self.assertEqual([gap.skill_name for gap in items], ["B", "A"])
+
+    def test_portfolio_evidence_mapping_avoids_forbidden_claim_language(self):
+        self._login()
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+        self.assertIn("manual portfolio evidence mapping", content)
+        self.assertIn("advisory only", content)
+        self.assertIn("based on saved skill-gap records", content)
+        self.assertIn("prompts only", content)
+        self.assertNotIn("auto-apply", content)
+        self.assertNotIn("auto-send", content)
+        self.assertNotIn("predictive ai", content)
+        self.assertNotIn("gmail", content)
+        self.assertNotIn("oauth", content)
+        self.assertNotIn("sprint 49", content)
+
+    def test_no_model_changes_or_migrations_added(self):
+        migration_dir = REPO_ROOT / "apps" / "skill_gaps" / "migrations"
+        migration_files = [
+            path.name
+            for path in migration_dir.glob("*.py")
+            if path.name != "__init__.py"
+        ]
+        self.assertEqual(migration_files, ["0001_initial.py"])
+
+    def test_sprint_48_changed_files_are_ascii_safe(self):
         ascii_paths = (
             REPO_ROOT / "apps" / "skill_gaps" / "services.py",
             REPO_ROOT / "apps" / "skill_gaps" / "views.py",
