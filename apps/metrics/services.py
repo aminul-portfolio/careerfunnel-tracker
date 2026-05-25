@@ -2304,9 +2304,9 @@ def build_reporting_foundation_context(user, query_params=None) -> dict:
     return {
         "report_title": "Premium Reporting Foundation",
         "report_subtitle": (
-            "Funnel performance, data quality, application quality, source performance, "
-            "and CV version performance - built from stored records for manual, "
-            "evidence-based review."
+            "See where the job-search funnel is leaking. Funnel performance, data quality, "
+            "application quality, source performance, and CV version performance are built "
+            "from stored records for manual, evidence-based review."
         ),
         "report_trust_note": (
             "Reporting GET requests are read-only. All workflow links open "

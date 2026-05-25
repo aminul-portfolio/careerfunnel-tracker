@@ -1427,6 +1427,8 @@ class PremiumReportingSourceCvTests(TestCase):
 
     def _get(self, query_string=""):
         self._login()
+        if query_string and not query_string.startswith("?"):
+            query_string = f"?{query_string}"
         target = f"{self.url}{query_string}" if query_string else self.url
         return self.client.get(target)
 
