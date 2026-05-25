@@ -9,5 +9,5 @@ def funnel_metrics(request):
     return render(
         request,
         "metrics/funnel_metrics.html",
-        build_reporting_foundation_context(request.user),
+        build_reporting_foundation_context(request.user, request.GET),
     )

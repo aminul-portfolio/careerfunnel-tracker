@@ -1401,15 +1401,194 @@ class PremiumReportingFoundationTests(TestCase):
         self.assertIn("Review applications manually", content)
         self.assertIn(reverse("applications:application_create"), content)
 
-    def test_no_sprint_40b_or_40c_scope_leak(self):
+    def test_no_sprint_40c_scope_not_in_primary_nav(self):
         response = self._get_funnel_metrics()
         content = response.content.decode()
-        self.assertIn("Sprint 40B/C not in scope", content)
-        nav_start = content.index('aria-label="Sprint 40A reporting sections"')
+        self.assertIn("Sprint 40C not in scope", content)
+        nav_start = content.index('aria-label="Reporting suite sections"')
         nav_end = content.index("</nav>", nav_start)
         nav_html = content[nav_start:nav_end]
         self.assertIn("Funnel Performance", nav_html)
         self.assertIn("Data Quality", nav_html)
         self.assertIn("Application Quality", nav_html)
+        self.assertIn("Source Performance", nav_html)
+        self.assertIn("CV Version Performance", nav_html)
         self.assertNotIn("Weekly Trend", nav_html)
-        self.assertNotIn("Source ROI", nav_html)
+        self.assertNotIn("Rejection", nav_html)
+
+
+class PremiumReportingSourceCvTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+        self.url = reverse("metrics:funnel_metrics")
+
+    def _login(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+
+    def _get(self, query_string=""):
+        self._login()
+        target = f"{self.url}{query_string}" if query_string else self.url
+        return self.client.get(target)
+
+    def _create_app(self, **kwargs):
+        defaults = {
+            "user": self.user,
+            "company_name": "Acme",
+            "job_title": "Analyst",
+            "date_applied": date(2026, 5, 1),
+            "status": ApplicationStatus.SUBMITTED,
+            "source": ApplicationSource.OTHER,
+        }
+        defaults.update(kwargs)
+        return JobApplication.objects.create(**defaults)
+
+    def _seed_source_rows(self):
+        sources = (
+            ApplicationSource.LINKEDIN,
+            ApplicationSource.REED,
+            ApplicationSource.COMPANY_WEBSITE,
+            ApplicationSource.INDEED,
+        )
+        for index, source in enumerate(sources):
+            status = (
+                ApplicationStatus.ACKNOWLEDGED
+                if index % 2 == 0
+                else ApplicationStatus.SUBMITTED
+            )
+            self._create_app(
+                company_name=f"Co {index}",
+                source=source,
+                status=status,
+            )
+
+    def _seed_cv_rows(self):
+        versions = ("Aminul_Islam_Data_Analyst_CV", "Alt_CV", "Legacy_CV", "Trial_CV")
+        for index, cv_version in enumerate(versions):
+            status = (
+                ApplicationStatus.ACKNOWLEDGED
+                if index % 2 == 0
+                else ApplicationStatus.SUBMITTED
+            )
+            self._create_app(
+                company_name=f"CV Co {index}",
+                cv_version=cv_version,
+                status=status,
+            )
+
+    def test_source_performance_report_renders(self):
+        self._seed_source_rows()
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn("Source Performance", content)
+        self.assertIn("source_performance", response.context)
+        self.assertIn("cf-report-filter-bar", content)
+
+    def test_cv_version_performance_report_renders(self):
+        self._seed_cv_rows()
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn("CV Version Performance", content)
+        self.assertIn("cv_version_performance", response.context)
+
+    def test_report_filter_bar_renders(self):
+        self._seed_source_rows()
+        response = self._get("src_q=Linked")
+        content = response.content.decode()
+        self.assertIn("cf-report-filter-bar", content)
+        self.assertIn("Apply filters", content)
+        self.assertIn('name="src_q"', content)
+
+    def test_report_table_renders(self):
+        self._seed_source_rows()
+        response = self._get()
+        content = response.content.decode()
+        self.assertIn("cf-report-table", content)
+        self.assertIn("cf-report-result-count", content)
+
+    def test_report_pagination_renders(self):
+        self._seed_source_rows()
+        response = self._get("src_pp=2&src_page=2")
+        content = response.content.decode()
+        self.assertIn("cf-report-pagination", content)
+        self.assertIn("Page 2 of", content)
+
+    def test_search_filters_source_report(self):
+        self._seed_source_rows()
+        response = self._get("src_q=Linked")
+        source_table = response.context["source_performance"].table
+        labels = [row.cells[0].value for row in source_table.rows]
+        self.assertIn("LinkedIn", labels)
+        self.assertNotIn("Reed.co.uk", labels)
+
+    def test_search_filters_cv_report(self):
+        self._seed_cv_rows()
+        response = self._get("cv_q=Alt")
+        cv_table = response.context["cv_version_performance"].table
+        labels = [row.cells[0].value for row in cv_table.rows]
+        self.assertIn("Alt_CV", labels)
+        self.assertNotIn("Legacy_CV", labels)
+
+    def test_filter_chips_and_reset_link_render(self):
+        self._seed_source_rows()
+        response = self._get("src_q=Linked&src_filter=has_responses")
+        content = response.content.decode()
+        self.assertIn("cf-report-filter-chip", content)
+        self.assertIn("Reset filters", content)
+        self.assertIn("Search:", content)
+
+    def test_pagination_first_second_last_page(self):
+        self._seed_source_rows()
+        first = self._get("src_pp=2&src_page=1")
+        second = self._get("src_pp=2&src_page=2")
+        first_page = first.context["source_performance"].table.pagination
+        second_page = second.context["source_performance"].table.pagination
+        self.assertEqual(first_page.current_page, 1)
+        self.assertEqual(second_page.current_page, 2)
+        self.assertEqual(second_page.total_pages, 2)
+        self.assertEqual(second_page.start_index, 3)
+        self.assertEqual(second_page.end_index, 4)
+
+    def test_invalid_page_falls_back_safely(self):
+        self._seed_source_rows()
+        response = self._get("src_pp=2&src_page=999")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Page 2 of")
+
+    def test_query_parameters_preserved_across_pagination(self):
+        self._seed_source_rows()
+        response = self._get("src_q=Linked&src_pp=2&src_page=1")
+        content = response.content.decode()
+        self.assertIn("src_q=Linked", content)
+        self.assertIn("src_pp=2", content)
+
+    def test_empty_filtered_state_renders(self):
+        self._seed_source_rows()
+        response = self._get("src_q=NoMatchingSourceName")
+        self.assertContains(response, "No rows match the current filters")
+
+    def test_reporting_get_does_not_mutate_records(self):
+        self._seed_source_rows()
+        count_before = JobApplication.objects.filter(user=self.user).count()
+        response = self._get("src_pp=2&src_page=2&cv_q=Alt")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            JobApplication.objects.filter(user=self.user).count(),
+            count_before,
+        )
+
+    def test_sprint_40c_scope_not_implemented(self):
+        response = self._get()
+        content = response.content.decode()
+        self.assertIn("Sprint 40C not in scope", content)
+        self.assertNotIn("Visual Analytics", content)
+        self.assertNotIn("Tableau", content)
+
+    def test_reporting_copy_remains_claim_safe(self):
+        response = self._get()
+        content = response.content.decode()
+        self.assertIn("advisory and evidence-based", content)
+        self.assertIn("read-only", content)
+        self.assertIn("manual", content.lower())
+        self.assertNotIn("auto-apply", content.lower())

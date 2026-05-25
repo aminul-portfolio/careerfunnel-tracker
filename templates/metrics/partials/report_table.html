@@ -1,0 +1,54 @@
+<p class="cf-report-result-count">
+    Showing {{ table.result_count }} of {{ table.filtered_total }} matching rows
+    ({{ table.unfiltered_total }} total).
+</p>
+{% if table.show_unfiltered_empty %}
+{% include "metrics/partials/report_empty_state.html" with message="No records yet. Log applications to populate this report." only %}
+{% elif table.show_filtered_empty %}
+{% include "metrics/partials/report_empty_state.html" with title="No rows match the current filters" message="Try clearing search or filters, or reset filters to see all rows again." only %}
+{% else %}
+<div class="cf-report-table-wrap table-wrap">
+    <table class="data-table cf-report-table">
+        <thead>
+            <tr>
+                {% for column in table.columns %}
+                <th scope="col">{{ column.label }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in table.rows %}
+            <tr>
+                {% for cell in row.cells %}
+                <td>
+                    {% if cell.badge_class %}
+                    <span class="cf-report-data-badge {{ cell.badge_class }}">{{ cell.value }}</span>
+                    {% else %}
+                    {{ cell.value }}
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div class="cf-report-table-cards">
+    {% for row in table.rows %}
+    <article class="cf-report-table-card">
+        {% for label, cell in row.labeled_cells %}
+        <div class="cf-report-table-card-row">
+            <span>{{ label }}</span>
+            <strong>
+                {% if cell.badge_class %}
+                <span class="cf-report-data-badge {{ cell.badge_class }}">{{ cell.value }}</span>
+                {% else %}
+                {{ cell.value }}
+                {% endif %}
+            </strong>
+        </div>
+        {% endfor %}
+    </article>
+    {% endfor %}
+</div>
+{% endif %}

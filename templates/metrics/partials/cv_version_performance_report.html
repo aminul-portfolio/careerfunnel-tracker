@@ -1,0 +1,17 @@
+<section id="cv-version-performance" class="content-card cf-report-section">
+    <div class="card-header">
+        <p class="eyebrow">CV Version Performance</p>
+        <h2>CV version outcome comparison</h2>
+        <p class="section-note">Directional performance tracking by stored CV version - not automated A/B testing.</p>
+    </div>
+    {% include "metrics/partials/advisory_note.html" with copy=cv_version_performance.advisory_copy only %}
+    <p class="cf-report-interpretation">{{ cv_version_performance.interpretation }}</p>
+    {% include "metrics/partials/report_filter_bar.html" with filter_bar=cv_version_performance.filter_bar only %}
+    {% include "metrics/partials/report_table.html" with table=cv_version_performance.table only %}
+    {% include "metrics/partials/report_pagination.html" with pagination=cv_version_performance.table.pagination only %}
+    <div class="cf-report-manual-actions">
+        {% for action in cv_version_performance.manual_actions %}
+        {% include "metrics/partials/manual_action_link.html" with action=action only %}
+        {% endfor %}
+    </div>
+</section>
