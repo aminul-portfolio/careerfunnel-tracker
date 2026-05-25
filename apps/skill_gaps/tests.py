@@ -23,11 +23,13 @@ from .services import (
     assign_priority,
     build_skill_gap_action_plan_context,
     build_skill_gap_dashboard_context,
+    build_skill_gap_learning_plan_context,
     compute_priority_score,
     create_or_update_gap,
     get_action_plan_items,
     get_global_failure_count,
     get_goal_weight,
+    get_learning_plan_items,
     get_stage_weight,
     mark_gap_resolved,
 )
@@ -484,10 +486,10 @@ class SkillGapDashboardTests(TestCase):
         ]
         self.assertEqual(migration_files, ["0001_initial.py"])
 
-    def test_no_sprint_46_text_on_dashboard_page(self):
+    def test_no_sprint_47_text_on_dashboard_page(self):
         self._login()
         response = self.client.get(self.url)
-        self.assertNotContains(response, "Sprint 46")
+        self.assertNotContains(response, "Sprint 47")
 
     def test_dashboard_avoids_forbidden_claim_language(self):
         self._login()
@@ -687,3 +689,224 @@ class SkillGapActionPlanTests(TestCase):
         self.assertNotIn("auto-apply", content)
         self.assertNotIn("predictive ai", content)
         self.assertNotIn("gmail", content)
+
+
+class SkillGapLearningPlanTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="learnuser", password="StrongPass12345")
+        self.other_user = User.objects.create_user(
+            username="learnother",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skill_gaps:dashboard")
+        self.app = JobApplication.objects.create(
+            user=self.user,
+            company_name="Acme",
+            job_title="Data Analyst",
+            date_applied=date(2026, 5, 10),
+        )
+        self.other_app = JobApplication.objects.create(
+            user=self.other_user,
+            company_name="Rival",
+            job_title="Engineer",
+            date_applied=date(2026, 5, 11),
+        )
+
+    def _login(self):
+        self.client.login(username="learnuser", password="StrongPass12345")
+
+    def _create_gap(
+        self,
+        *,
+        application,
+        skill_name,
+        priority,
+        priority_score,
+        resolved=False,
+    ):
+        return ApplicationSkillGap.objects.create(
+            application=application,
+            stage=SkillGapStage.APPLICATION,
+            skill_name=skill_name,
+            current_tier=SkillTier.MISSING,
+            priority=priority,
+            goal_weight=Decimal("1.00"),
+            failure_count=0,
+            stage_weight=Decimal("1.00"),
+            priority_score=priority_score,
+            identified_by=SkillGapIdentifiedBy.MANUAL,
+            suggested_action=f"Practice {skill_name} manually.",
+            resolved=resolved,
+        )
+
+    def test_learning_plan_section_appears_on_dashboard(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="Python",
+            priority=SkillGapPriority.HIGH,
+            priority_score=Decimal("8.00"),
+        )
+        self._login()
+        response = self.client.get(self.url)
+        self.assertContains(response, "Manual learning plan")
+        self.assertContains(response, "Learning focus")
+        self.assertContains(response, "Suggested practice")
+        self.assertContains(response, "Review and decide manually")
+
+    def test_learning_plan_context_is_user_scoped(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="SQL",
+            priority=SkillGapPriority.MEDIUM,
+            priority_score=Decimal("4.00"),
+        )
+        self._create_gap(
+            application=self.other_app,
+            skill_name="HiddenSkill",
+            priority=SkillGapPriority.CRITICAL,
+            priority_score=Decimal("12.00"),
+        )
+        plan = build_skill_gap_learning_plan_context(user=self.user)
+        names = {
+            gap.skill_name
+            for group in (
+                plan.immediate_learning_focus,
+                plan.practice_next,
+                plan.backlog_learning_items,
+            )
+            for gap in group.items
+        }
+        self.assertIn("SQL", names)
+        self.assertNotIn("HiddenSkill", names)
+
+    def test_high_priority_unresolved_appear_before_backlog_learning_items(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="LowSkill",
+            priority=SkillGapPriority.LOW,
+            priority_score=Decimal("1.00"),
+        )
+        self._create_gap(
+            application=self.app,
+            skill_name="CriticalSkill",
+            priority=SkillGapPriority.CRITICAL,
+            priority_score=Decimal("12.00"),
+        )
+        plan = build_skill_gap_learning_plan_context(user=self.user)
+        self.assertEqual(
+            plan.immediate_learning_focus.items[0].skill_name,
+            "CriticalSkill",
+        )
+        self.assertEqual(
+            plan.backlog_learning_items.items[0].skill_name,
+            "LowSkill",
+        )
+
+    def test_resolved_gaps_not_in_primary_learning_focus(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="OpenGap",
+            priority=SkillGapPriority.HIGH,
+            priority_score=Decimal("7.00"),
+        )
+        self._create_gap(
+            application=self.app,
+            skill_name="DoneGap",
+            priority=SkillGapPriority.HIGH,
+            priority_score=Decimal("9.00"),
+            resolved=True,
+        )
+        plan = build_skill_gap_learning_plan_context(user=self.user)
+        primary_names = [
+            gap.skill_name for gap in plan.immediate_learning_focus.items
+        ]
+        primary_names += [gap.skill_name for gap in plan.practice_next.items]
+        primary_names += [gap.skill_name for gap in plan.backlog_learning_items.items]
+        self.assertEqual(primary_names, ["OpenGap"])
+        self.assertEqual(plan.resolved_learning_context.items[0].skill_name, "DoneGap")
+
+    def test_empty_learning_plan_when_no_unresolved_gaps(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="DoneOnly",
+            priority=SkillGapPriority.LOW,
+            priority_score=Decimal("1.00"),
+            resolved=True,
+        )
+        self._login()
+        response = self.client.get(self.url)
+        self.assertContains(response, "No unresolved skill gaps for a manual learning plan")
+        plan = build_skill_gap_learning_plan_context(user=self.user)
+        self.assertFalse(plan.has_unresolved)
+
+    def test_dashboard_get_does_not_mutate_skill_gaps_for_learning_plan(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="Stable",
+            priority=SkillGapPriority.MEDIUM,
+            priority_score=Decimal("3.00"),
+        )
+        self._login()
+        before = ApplicationSkillGap.objects.filter(application__user=self.user).count()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        after = ApplicationSkillGap.objects.filter(application__user=self.user).count()
+        self.assertEqual(before, after)
+
+    def test_get_learning_plan_items_returns_only_unresolved_ordered(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="A",
+            priority=SkillGapPriority.LOW,
+            priority_score=Decimal("1.00"),
+        )
+        self._create_gap(
+            application=self.app,
+            skill_name="B",
+            priority=SkillGapPriority.HIGH,
+            priority_score=Decimal("9.00"),
+        )
+        self._create_gap(
+            application=self.app,
+            skill_name="C",
+            priority=SkillGapPriority.MEDIUM,
+            priority_score=Decimal("4.00"),
+            resolved=True,
+        )
+        items = get_learning_plan_items(user=self.user)
+        self.assertEqual([gap.skill_name for gap in items], ["B", "A"])
+
+    def test_learning_plan_avoids_forbidden_claim_language(self):
+        self._login()
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+        self.assertIn("manual learning plan", content)
+        self.assertIn("advisory only", content)
+        self.assertIn("based on saved skill-gap records", content)
+        self.assertNotIn("auto-apply", content)
+        self.assertNotIn("predictive ai", content)
+        self.assertNotIn("gmail", content)
+        self.assertNotIn("sprint 47", content)
+
+    def test_no_model_changes_or_migrations_added(self):
+        migration_dir = REPO_ROOT / "apps" / "skill_gaps" / "migrations"
+        migration_files = [
+            path.name
+            for path in migration_dir.glob("*.py")
+            if path.name != "__init__.py"
+        ]
+        self.assertEqual(migration_files, ["0001_initial.py"])
+
+    def test_sprint_46_changed_files_are_ascii_safe(self):
+        ascii_paths = (
+            REPO_ROOT / "apps" / "skill_gaps" / "services.py",
+            REPO_ROOT / "apps" / "skill_gaps" / "views.py",
+            REPO_ROOT / "apps" / "skill_gaps" / "tests.py",
+            REPO_ROOT / "templates" / "skill_gaps" / "dashboard.html",
+        )
+        for path in ascii_paths:
+            content = path.read_text(encoding="utf-8")
+            self.assertTrue(
+                all(ord(char) < 128 for char in content),
+                msg=f"Non-ASCII character found in {path}",
+            )
