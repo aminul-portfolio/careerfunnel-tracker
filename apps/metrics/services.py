@@ -2404,7 +2404,7 @@ def _weekly_trend_interpretation(
     return (
         f"Latest active week ({latest.week_start}) shows {latest.applications} "
         f"applications and {latest.responses} responses ({latest.response_rate}% "
-        "response rate). Use this as manual, advisory context - not a forecast."
+        "response rate). Use this as manual, advisory context only."
     )
 
 
@@ -2436,8 +2436,9 @@ def build_weekly_trend_report(user, weeks: int = 10) -> WeeklyTrendReport:
         manual_actions=manual_actions,
         advisory_copy=_REPORTING_ADVISORY_COPY,
         chart_evidence_note=(
-            "Chart.js line chart built from stored application dates in this tracker. "
-            "No external analytics platform or live dashboard is used."
+            "Local weekly trend visual built from stored application dates in this tracker. "
+            "Calculated from saved tracker records. Manual review only. "
+            "No external analytics calls."
         ),
     )
 

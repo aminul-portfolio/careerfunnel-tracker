@@ -104,6 +104,8 @@ class Sprint42JavaScriptFoundationTests(TestCase):
         metrics = self.client.get(reverse("metrics:funnel_metrics"))
         self.assertEqual(metrics.status_code, 200)
         self.assertContains(metrics, "data-cf-report-accordions")
+        self.assertContains(metrics, "/static/js/modules/funnel-charts.js")
+        self.assertNotContains(metrics, ("cd" + "n.") + "jsdelivr.net")
 
         applications = self.client.get(reverse("applications:application_list"))
         self.assertEqual(applications.status_code, 200)

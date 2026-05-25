@@ -1234,9 +1234,12 @@ class MetricsViewTests(TestCase):
     def test_weekly_trend_chart_markup_appears_on_funnel_metrics_page(self):
         response = self._get_funnel_metrics()
         content = response.content.decode()
-        self.assertIn('id="weekly-trend-chart"', content)
+        self.assertIn('id="weekly-trend-chart-root"', content)
         self.assertIn('id="weekly-trend-data"', content)
-        self.assertIn("https://cdn.jsdelivr.net/npm/chart.js", content)
+        self.assertIn("data-cf-weekly-trend-chart", content)
+        self.assertIn("/static/js/modules/funnel-charts.js", content)
+        self.assertNotIn(("cd" + "n.") + "jsdelivr.net", content.lower())
+        self.assertNotIn("chart" + ".js", content.lower())
 
     def test_weekly_trend_table_displays_rows(self):
         today = timezone.localdate()
@@ -1643,7 +1646,7 @@ class PremiumReportingSprint40cTests(TestCase):
         content = response.content.decode()
         self.assertIn("weekly_trend_report", response.context)
         self.assertTrue(response.context["weekly_trend_report"].has_enough_weeks)
-        self.assertIn("not a forecast", content)
+        self.assertIn("manual, advisory context only", content)
 
     def test_visual_analytics_evidence_renders(self):
         response = self._get()
@@ -1691,3 +1694,113 @@ class PremiumReportingSprint40cTests(TestCase):
         report = response.context["weekly_trend_report"]
         self.assertFalse(report.has_enough_weeks)
         self.assertContains(response, "Fewer than two active weeks")
+
+
+class Sprint52Phase2FoundationTests(TestCase):
+    """Sprint 52 Phase 2 - premium CSS foundation and local weekly trend chart."""
+
+    username = "sprint52metrics"
+    password = "StrongPass12345"
+
+    SPRINT_52_ASCII_PATHS = (
+        "static/css/components.css",
+        "static/js/modules/funnel-charts.js",
+        "templates/metrics/funnel_metrics.html",
+        "templates/metrics/partials/weekly_trend_report.html",
+        "templates/metrics/partials/report_header.html",
+    )
+
+    FORBIDDEN_JS_PATTERNS = (
+        "fetch(",
+        "xmlhttprequest",
+        "setinterval(",
+    )
+
+    @staticmethod
+    def _external_script_host_marker():
+        return ("cd" + "n.") + "js" + "delivr"
+
+    @staticmethod
+    def _remote_chart_library_marker():
+        return "chart" + ".js"
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username=self.username,
+            password=self.password,
+        )
+        self.client.login(username=self.username, password=self.password)
+        self.metrics_url = reverse("metrics:funnel_metrics")
+
+    def test_metrics_page_has_no_remote_chart_script(self):
+        response = self.client.get(self.metrics_url)
+        content = response.content.decode().lower()
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(self._external_script_host_marker() + ".net", content)
+        self.assertNotIn(self._remote_chart_library_marker(), content)
+        self.assertNotIn("http" + "://", content)
+        self.assertNotIn("https" + "://", content)
+
+    def test_metrics_page_includes_local_chart_foundation(self):
+        response = self.client.get(self.metrics_url)
+        content = response.content.decode()
+        self.assertIn("cf-chart-card", content)
+        self.assertIn("cf-chart-shell", content)
+        self.assertIn("data-cf-weekly-trend-chart", content)
+        self.assertIn("/static/js/modules/funnel-charts.js", content)
+        self.assertIn('id="weekly-trend-data"', content)
+
+    def test_weekly_trend_section_and_table_remain(self):
+        response = self.client.get(self.metrics_url)
+        self.assertContains(response, 'id="weekly-trend"')
+        self.assertContains(response, "Weekly Trend")
+        self.assertContains(response, "Week starting")
+        self.assertContains(response, "cf-data-table")
+
+    def test_weekly_trend_chart_data_is_saved_record_based(self):
+        response = self.client.get(self.metrics_url)
+        chart_data = response.context["weekly_trend_chart_data"]
+        self.assertEqual(
+            set(chart_data),
+            {"labels", "applications", "responses"},
+        )
+        self.assertEqual(len(chart_data["labels"]), 10)
+
+    def test_metrics_page_claim_safe_chart_notes(self):
+        response = self.client.get(self.metrics_url)
+        content = response.content.decode().lower()
+        self.assertIn("calculated from saved tracker records", content)
+        self.assertIn("manual review only", content)
+        self.assertNotIn("auto-apply", content)
+        self.assertNotIn("live saas users", content)
+        self.assertNotIn("predictive ai", content)
+        self.assertNotIn("billing", content)
+
+    def test_funnel_charts_module_avoids_external_runtime_patterns(self):
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent.parent
+        module = repo_root / "static" / "js" / "modules" / "funnel-charts.js"
+        content = module.read_text(encoding="utf-8").lower()
+        for pattern in self.FORBIDDEN_JS_PATTERNS:
+            with self.subTest(pattern=pattern):
+                self.assertNotIn(pattern, content)
+        self.assertNotIn(self._external_script_host_marker(), content)
+        self.assertNotIn(self._remote_chart_library_marker(), content)
+        self.assertNotIn("http" + "://", content)
+        self.assertNotIn("https" + "://", content)
+
+    def test_sprint_52_changed_files_are_ascii_safe(self):
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent.parent
+        for rel_path in self.SPRINT_52_ASCII_PATHS:
+            with self.subTest(rel_path=rel_path):
+                raw = (repo_root / rel_path).read_bytes()
+                text = raw.decode("utf-8")
+                self.assertEqual(raw.decode("ascii", errors="strict"), text)
+
+    def test_report_header_uses_premium_page_hero_class(self):
+        response = self.client.get(self.metrics_url)
+        self.assertContains(response, "cf-page-hero")
+        self.assertContains(response, "cf-report-header")

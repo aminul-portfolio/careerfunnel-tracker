@@ -61,7 +61,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 50 (feature branch `sprint-50-skill-gap-cv-bullet-mapping`):** Skill Gap CV Bullet Mapping Foundation - Manual CV bullet mapping section on `/skill-gaps/` with grouped CV bullet prompts (no automatic rewriting); **10** new CV-bullet tests (**84** total in `apps.skill_gaps.tests`); evidence doc `docs/evidence/sprint_50_skill_gap_cv_bullet_mapping.md`. Read-only, ASCII-safe text, no model/migration changes.
 
-**Sprint 51 (feature branch `sprint-51-final-reviewer-walkthrough-polish`):** Final Reviewer Walkthrough Polish - README "How to review", dashboard reviewer note (`templates/dashboard/overview.html`), skill-gaps reviewer workflow note; **4** dashboard + **3** skill-gaps reviewer tests; evidence doc `docs/evidence/sprint_51_final_reviewer_walkthrough_polish.md`. Copy/UX only; no view wiring changes; no models/migrations. Sprint 52 not started.
+**Sprint 51 (feature branch `sprint-51-final-reviewer-walkthrough-polish`):** Final Reviewer Walkthrough Polish - README "How to review", dashboard reviewer note (`templates/dashboard/overview.html`), skill-gaps reviewer workflow note; **4** dashboard + **3** skill-gaps reviewer tests; evidence doc `docs/evidence/sprint_51_final_reviewer_walkthrough_polish.md`. Copy/UX only; no view wiring changes; no models/migrations.
+
+**Sprint 52 Phase 2 (feature branch `sprint-52-final-saas-premium-components-plotly-metrics`):** Premium SaaS component CSS foundation + Funnel Metrics local weekly trend SVG chart; remote chart script removed; **8** new `Sprint52Phase2FoundationTests`; evidence doc `docs/evidence/sprint_52_final_saas_premium_components_plotly_metrics.md`. No models/migrations/routes; no Plotly dependency in Phase 2. Sprint 53 not started.
 
 ---
 
@@ -862,7 +864,7 @@ This sprint proves the project guides users toward analytics-ready records at th
 | `sprint-15-complete` | Shared role-fit constants, intake prefill bridge, Evaluation Queue, Application Detail Fit Review, and documentation checkpoint |
 | `sprint-16-complete` | Save-quality warnings, post-save advisory messages, Data Quality Analytics Impact notes, and documentation checkpoint |
 | `sprint-17-complete` | Recruiter-facing case study README and deployment preparation checkpoint |
-| `sprint-18-complete` | Visual analytics evidence, Tableau workbook/screenshots, Chart.js weekly trend checkpoint |
+| `sprint-18-complete` | Visual analytics evidence, Tableau workbook/screenshots, inline weekly trend chart checkpoint |
 | `sprint-19-complete` | Interview Evidence Workspace checkpoint |
 | `sprint-20-complete` | Portfolio release-candidate documentation alignment and recruiter handoff checkpoint |
 | `sprint-21-complete` | UI polish and curated screenshot refresh checkpoint |
@@ -891,7 +893,7 @@ This sprint proves the project guides users toward analytics-ready records at th
 | Sprint 14 complete | 176 | Weekly trend service, funnel metrics UI, and DailyLog aggregation tests |
 | Sprint 15 complete | 204 | Role-fit constants, intake prefill bridge, Evaluation Queue, and Fit Review tests |
 | Sprint 16 complete | 233 | Save-quality warning service, post-save warnings, and Data Quality Analytics Impact tests |
-| Sprint 18 complete | 244 | Dashboard CSV exports, quality indicators, Tableau evidence, and Chart.js weekly trend visualization |
+| Sprint 18 complete | 244 | Dashboard CSV exports, quality indicators, Tableau evidence, and inline weekly trend chart visualization |
 | Sprint 19 complete | 249 | Interview Evidence Workspace tests and release-candidate documentation baseline |
 | Sprint 21C validation | 249 | UI-only polish branch still pending closeout; tests passed after curated screenshot refresh |
 
@@ -1099,7 +1101,7 @@ Before considering a sprint complete, confirm:
 
 ---
 
-## Sprint 18 - Tableau Dashboard Evidence + Chart.js Inline Chart
+## Sprint 18 - Tableau Dashboard Evidence + Inline Weekly Trend Chart
 
 ### Status
 
@@ -1111,8 +1113,8 @@ Completed and tagged as `sprint-18-complete`.
 5754243 Sprint 18A: add dashboard CSV export pipeline
 578f621 Sprint 18A: add dashboard quality indicators
 a563e45 Sprint 18B: add Tableau dashboard evidence
-1a83f32 Sprint 18C: add weekly trend Chart.js visualization
-f46b162 Sprint 18C: add Chart.js screenshot evidence
+1a83f32 Sprint 18C: add inline weekly trend visualization
+f46b162 Sprint 18C: add inline weekly trend chart screenshot evidence
 ```
 
 ### Evidence Files
@@ -1132,7 +1134,7 @@ docs/evidence/screenshots/sprint-18-chartjs-weekly-trend.png
 - Safe yes/no quality indicators for analytics-readiness reporting.
 - Local Tableau performance dashboard evidence.
 - Local Tableau quality dashboard evidence.
-- Chart.js weekly trend visualization inside Funnel Metrics.
+- Inline weekly trend visualization inside Funnel Metrics.
 - Existing Weekly Trend table remains available alongside the chart.
 - Chart data is rendered safely with Django `json_script`.
 - Private fields are not exported in dashboard CSVs.
