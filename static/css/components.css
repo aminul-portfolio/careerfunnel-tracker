@@ -624,6 +624,44 @@ summary:focus-visible {
     margin-top: 0.5rem;
 }
 
+.cf-skill-intelligence .cf-skill-trust-list {
+    margin: 0.75rem 0 1rem;
+}
+
+.cf-skill-evidence-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.cf-skill-evidence-card {
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    background: #f8fafc;
+}
+
+.cf-skill-evidence-card h3 {
+    margin: 0 0 0.5rem;
+}
+
+.cf-skill-match-count {
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    margin: 0.5rem 0 0;
+}
+
+.cf-role-checklist {
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.cf-role-checklist:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
 .cf-report-filter-bar {
     display: grid;
     gap: 0.75rem;

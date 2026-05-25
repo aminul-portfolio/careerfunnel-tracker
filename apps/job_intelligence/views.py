@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404, render
 
 from apps.applications.models import JobApplication
 
-from .services import build_smart_review, build_smart_review_rows
+from .services import build_skill_intelligence_context, build_smart_review, build_smart_review_rows
 
 
 @login_required
@@ -12,6 +12,15 @@ def smart_review(request):
         request,
         "job_intelligence/smart_review.html",
         {"rows": build_smart_review_rows(request.user)},
+    )
+
+
+@login_required
+def skill_intelligence(request):
+    return render(
+        request,
+        "job_intelligence/skill_intelligence.html",
+        {"skill_intelligence": build_skill_intelligence_context(request.user)},
     )
 
 

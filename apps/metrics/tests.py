@@ -1663,11 +1663,16 @@ class PremiumReportingSprint40cTests(TestCase):
             count_before,
         )
 
-    def test_sprint_41_scope_not_implemented(self):
-        response = self._get()
+    def test_sprint_42_scope_not_implemented(self):
+        self._login()
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
         content = response.content.decode()
-        self.assertNotIn("Sprint 41", content)
-        self.assertNotIn("Skill Intelligence", content)
+
+        self.assertNotIn("Sprint 42", content)
+        self.assertNotIn("automatic CV rewriting", content)
+        self.assertNotIn("predictive AI", content)
 
     def test_claim_safety_wording_remains_clean(self):
         response = self._get()
