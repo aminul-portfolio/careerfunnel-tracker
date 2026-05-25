@@ -20,6 +20,7 @@ urlpatterns = [
     path("recruiter-emails/", include("apps.recruiter_emails.urls")),
     path("smart-review/", include("apps.job_intelligence.urls")),
     path("ai-agents/", include("apps.ai_agents.urls")),
+    path("skill-gaps/", include("apps.skill_gaps.urls")),
 ]
 
 if settings.DEBUG:
