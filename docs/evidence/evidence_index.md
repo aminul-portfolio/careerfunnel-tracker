@@ -43,7 +43,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 41 (feature branch `sprint-41-skill-intelligence-foundation`):** Skill Intelligence Foundation - manual evidence summary, gap review prompts, role-readiness checklists (DA/BI/AE/DE), portfolio mapping; **11** new `SkillIntelligenceFoundationTests`; evidence doc `docs/evidence/sprint_41_skill_intelligence_foundation.md`. No models/migrations.
 
-**Sprint 42 (feature branch `sprint-42-javascript-dynamic-ux-foundation`):** JavaScript Dynamic UX Foundation - modular progressive enhancement (sidebar collapse, mobile drawer, table scan, form UX, report accordions, copy/toast); **11** new `Sprint42JavaScriptFoundationTests`; evidence doc `docs/evidence/sprint_42_javascript_dynamic_ux_foundation.md`. No models/migrations. Sprint 43 not started.
+**Sprint 42 (feature branch `sprint-42-javascript-dynamic-ux-foundation`):** JavaScript Dynamic UX Foundation - modular progressive enhancement (sidebar collapse, mobile drawer, table scan, form UX, report accordions, copy/toast); **11** new `Sprint42JavaScriptFoundationTests`; evidence doc `docs/evidence/sprint_42_javascript_dynamic_ux_foundation.md`. No models/migrations.
+
+**Sprint 43 (feature branch `sprint-43-skill-gap-foundation`):** Skill Gap Foundation - new `apps.skill_gaps` app with `ApplicationSkillGap` model, rule-based services, admin, migration `0001_initial`; **14** tests in `apps.skill_gaps.tests`; SQL proof `G:\workflow_tools\sprint43_sqlmigrate_skill_gaps_0001.txt`; evidence doc `docs/evidence/sprint_43_skill_gap_foundation.md`. Failure counts use only `REJECTED` and `AUTO_REJECTED`. No dashboard route. Sprint 44 not started.
 
 ---
 
