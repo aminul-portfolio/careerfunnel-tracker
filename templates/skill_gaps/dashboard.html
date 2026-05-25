@@ -19,7 +19,7 @@
         </div>
         <p class="trust-note">
             Based on manually saved application skill-gap records. Rule-based priority scores are
-            for review only — not hiring decisions, predictions, or automatic CV changes.
+            for review only - not hiring decisions or automatic CV changes.
         </p>
     </section>
 
@@ -41,6 +41,119 @@
             <h2>{{ summary.high_priority }}</h2>
             <span class="kpi-note">High or critical priority</span>
         </div>
+    </section>
+
+    <section id="manual-action-plan" class="content-card cf-skill-gap-action-plan">
+        <div class="card-header">
+            <p class="eyebrow">Manual action plan</p>
+            <h2>Suggested next steps</h2>
+            <p class="section-note">
+                Advisory only. Based on saved skill-gap records. Review and decide manually -
+                this section does not create learning plans or change gap records.
+            </p>
+        </div>
+
+        {% if action_plan.has_unresolved %}
+        <div class="cf-action-plan-groups">
+            {% if action_plan.high_priority_unresolved.items %}
+            <div class="cf-action-plan-group">
+                <h3>{{ action_plan.high_priority_unresolved.label }}</h3>
+                <ul class="cf-action-plan-list">
+                    {% for gap in action_plan.high_priority_unresolved.items %}
+                    <li class="cf-action-plan-item">
+                        <div class="cf-action-plan-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-warning">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                            - {{ gap.get_stage_display }} - {{ gap.get_current_tier_display }}
+                            - score {{ gap.priority_score }}
+                        </p>
+                        {% if gap.suggested_action %}
+                        <p><strong>Suggested action:</strong> {{ gap.suggested_action }}</p>
+                        {% else %}
+                        <p><strong>Suggested action:</strong> Review this skill manually against saved evidence.</p>
+                        {% endif %}
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if action_plan.medium_priority_unresolved.items %}
+            <div class="cf-action-plan-group">
+                <h3>{{ action_plan.medium_priority_unresolved.label }}</h3>
+                <ul class="cf-action-plan-list">
+                    {% for gap in action_plan.medium_priority_unresolved.items %}
+                    <li class="cf-action-plan-item">
+                        <div class="cf-action-plan-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-info">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                            - {{ gap.get_stage_display }} - {{ gap.get_current_tier_display }}
+                        </p>
+                        {% if gap.suggested_action %}
+                        <p><strong>Suggested action:</strong> {{ gap.suggested_action }}</p>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if action_plan.lower_priority_backlog.items %}
+            <div class="cf-action-plan-group">
+                <h3>{{ action_plan.lower_priority_backlog.label }}</h3>
+                <ul class="cf-action-plan-list">
+                    {% for gap in action_plan.lower_priority_backlog.items %}
+                    <li class="cf-action-plan-item">
+                        <div class="cf-action-plan-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-info">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                        </p>
+                        {% if gap.suggested_action %}
+                        <p><strong>Suggested action:</strong> {{ gap.suggested_action }}</p>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if action_plan.resolved_context.items %}
+            <div class="cf-action-plan-group cf-action-plan-group-resolved">
+                <h3>{{ action_plan.resolved_context.label }}</h3>
+                <p class="section-note">Completed gaps for context only - not listed as primary next actions.</p>
+                <ul class="cf-action-plan-list">
+                    {% for gap in action_plan.resolved_context.items %}
+                    <li class="cf-action-plan-item">
+                        <strong>{{ gap.skill_name }}</strong>
+                        <span class="table-context">
+                            {{ gap.application.company_name }} - resolved
+                            {% if gap.resolved_tier %} ({{ gap.resolved_tier }}){% endif %}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No unresolved skill gaps for a manual action plan.</h3>
+            <p>
+                When you save unresolved skill gaps, suggested next steps will appear here.
+                Review and decide manually - nothing is created or updated automatically.
+            </p>
+        </div>
+        {% endif %}
     </section>
 
     <section class="content-card">
@@ -110,7 +223,7 @@
                             <span class="badge badge-warning">Open</span>
                             {% endif %}
                         </td>
-                        <td>{{ gap.suggested_action|default:"—" }}</td>
+                        <td>{{ gap.suggested_action|default:"-" }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

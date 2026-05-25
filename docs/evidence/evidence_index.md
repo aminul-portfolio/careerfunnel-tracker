@@ -47,7 +47,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 43 (feature branch `sprint-43-skill-gap-foundation`):** Skill Gap Foundation - new `apps.skill_gaps` app with `ApplicationSkillGap` model, rule-based services, admin, migration `0001_initial`; **14** tests in `apps.skill_gaps.tests`; SQL proof `G:\workflow_tools\sprint43_sqlmigrate_skill_gaps_0001.txt`; evidence doc `docs/evidence/sprint_43_skill_gap_foundation.md`. Failure counts use only `REJECTED` and `AUTO_REJECTED`.
 
-**Sprint 44 (feature branch `sprint-44-skill-intelligence-dashboard`):** Skill Intelligence Dashboard Foundation - read-only `/skill-gaps/` page (`skill_gaps:dashboard`), user-scoped summaries and GET filters; **12** new dashboard tests (**26** total in `apps.skill_gaps.tests`); evidence doc `docs/evidence/sprint_44_skill_intelligence_dashboard.md`. No model/migration changes. Sprint 45 not started.
+**Sprint 44 (feature branch `sprint-44-skill-intelligence-dashboard`):** Skill Intelligence Dashboard Foundation - read-only `/skill-gaps/` page (`skill_gaps:dashboard`), user-scoped summaries and GET filters; **12** dashboard tests (**26** total in `apps.skill_gaps.tests`); evidence doc `docs/evidence/sprint_44_skill_intelligence_dashboard.md`. No model/migration changes.
+
+**Sprint 45 (feature branch `sprint-45-skill-gap-action-plan-foundation`):** Skill Gap Action Plan Foundation - Manual action plan section on `/skill-gaps/` with grouped suggested next steps; **8** new action-plan tests (**34** total in `apps.skill_gaps.tests`); evidence doc `docs/evidence/sprint_45_skill_gap_action_plan_foundation.md`. Read-only, no model/migration changes. Sprint 46 not started.
 
 ---
 

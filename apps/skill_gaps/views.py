@@ -22,5 +22,6 @@ def dashboard(request):
             "priority_filter": context.priority_filter,
             "stage_filter": context.stage_filter,
             "resolved_filter": context.resolved_filter,
+            "action_plan": context.action_plan,
         },
     )

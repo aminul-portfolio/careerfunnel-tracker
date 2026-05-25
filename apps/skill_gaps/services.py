@@ -53,18 +53,37 @@ class SkillGapDashboardSummary:
 
 
 @dataclass(frozen=True)
+class ActionPlanGroup:
+    key: str
+    label: str
+    items: tuple[ApplicationSkillGap, ...]
+
+
+@dataclass(frozen=True)
+class SkillGapActionPlanContext:
+    high_priority_unresolved: ActionPlanGroup
+    medium_priority_unresolved: ActionPlanGroup
+    lower_priority_backlog: ActionPlanGroup
+    resolved_context: ActionPlanGroup
+    has_unresolved: bool
+
+
+@dataclass(frozen=True)
 class SkillGapDashboardContext:
     summary: SkillGapDashboardSummary
     gaps: tuple[ApplicationSkillGap, ...]
     priority_filter: str
     stage_filter: str
     resolved_filter: str
+    action_plan: SkillGapActionPlanContext
 
 
 HIGH_PRIORITY_VALUES = (
     SkillGapPriority.HIGH,
     SkillGapPriority.CRITICAL,
 )
+
+MEDIUM_PRIORITY_VALUES = (SkillGapPriority.MEDIUM,)
 
 
 def get_stage_weight(stage: str) -> Decimal:
@@ -236,4 +255,58 @@ def build_skill_gap_dashboard_context(*, user, query_params) -> SkillGapDashboar
         priority_filter=priority_filter,
         stage_filter=stage_filter,
         resolved_filter=resolved_filter,
+        action_plan=build_skill_gap_action_plan_context(user=user),
     )
+
+
+def get_action_plan_items(*, user) -> tuple[ApplicationSkillGap, ...]:
+    """Unresolved saved gaps for the user, highest priority score first."""
+    return tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=False))
+
+
+def group_action_plan_items(
+    unresolved_items: tuple[ApplicationSkillGap, ...],
+    *,
+    resolved_items: tuple[ApplicationSkillGap, ...],
+) -> SkillGapActionPlanContext:
+    high_priority: list[ApplicationSkillGap] = []
+    medium_priority: list[ApplicationSkillGap] = []
+    lower_backlog: list[ApplicationSkillGap] = []
+
+    for gap in unresolved_items:
+        if gap.priority in HIGH_PRIORITY_VALUES:
+            high_priority.append(gap)
+        elif gap.priority in MEDIUM_PRIORITY_VALUES:
+            medium_priority.append(gap)
+        else:
+            lower_backlog.append(gap)
+
+    return SkillGapActionPlanContext(
+        high_priority_unresolved=ActionPlanGroup(
+            key="high_priority",
+            label="High-priority unresolved gaps",
+            items=tuple(high_priority),
+        ),
+        medium_priority_unresolved=ActionPlanGroup(
+            key="medium_priority",
+            label="Medium-priority unresolved gaps",
+            items=tuple(medium_priority),
+        ),
+        lower_priority_backlog=ActionPlanGroup(
+            key="lower_backlog",
+            label="Lower-priority backlog",
+            items=tuple(lower_backlog),
+        ),
+        resolved_context=ActionPlanGroup(
+            key="resolved_context",
+            label="Resolved context",
+            items=resolved_items,
+        ),
+        has_unresolved=bool(unresolved_items),
+    )
+
+
+def build_skill_gap_action_plan_context(*, user) -> SkillGapActionPlanContext:
+    unresolved = get_action_plan_items(user=user)
+    resolved = tuple(get_user_skill_gaps_queryset(user=user).filter(resolved=True))
+    return group_action_plan_items(unresolved, resolved_items=resolved)
