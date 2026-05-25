@@ -200,11 +200,15 @@ class DesignSystemLockTests(TestCase):
 
     def test_app_js_enhances_shell_without_dom_content_injection(self):
         app_js_content = (STATIC_DIR / "js" / "app.js").read_text(encoding="utf-8")
-        self.assertIn(".sidebar-link", app_js_content)
-        self.assertIn("classList.add(\"active\")", app_js_content)
-        self.assertIn("aria-current", app_js_content)
-        self.assertIn("mobile-nav-toggle", app_js_content)
-        self.assertIn("Escape", app_js_content)
+        sidebar_js_content = (STATIC_DIR / "js/modules/sidebar.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("CF.sidebar", app_js_content)
+        self.assertIn(".sidebar-link", sidebar_js_content)
+        self.assertIn('classList.add("active")', sidebar_js_content)
+        self.assertIn("aria-current", sidebar_js_content)
+        self.assertIn("mobile-nav-toggle", sidebar_js_content)
+        self.assertIn("Escape", sidebar_js_content)
         self.assertNotIn("innerHTML", app_js_content)
         self.assertNotIn("document.write", app_js_content)
 
@@ -281,8 +285,10 @@ class Sprint38PremiumShellTests(Sprint37AShellFoundationAuditMixin, TestCase):
     def test_shell_supports_aria_current_on_active_navigation(self):
         response = self.client.get(reverse("dashboard:overview"))
         self.assertEqual(response.status_code, 200)
-        app_js_content = (STATIC_DIR / "js" / "app.js").read_text(encoding="utf-8")
-        self.assertIn('setAttribute("aria-current", "page")', app_js_content)
+        sidebar_js_content = (STATIC_DIR / "js/modules/sidebar.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('setAttribute("aria-current", "page")', sidebar_js_content)
 
     def test_claim_safe_trust_badges_present(self):
         response = self.client.get(reverse("dashboard:overview"))
