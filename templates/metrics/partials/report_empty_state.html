@@ -1,0 +1,11 @@
+<div class="cf-report-empty-state empty-state">
+    {% if title %}<h3>{{ title }}</h3>{% endif %}
+    <p>{{ message }}</p>
+    {% if manual_actions %}
+    <div class="cf-report-manual-actions">
+        {% for action in manual_actions %}
+        {% include "metrics/partials/manual_action_link.html" with action=action only %}
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>

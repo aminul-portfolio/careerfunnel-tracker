@@ -1,0 +1,51 @@
+<section id="funnel-performance" class="content-card cf-report-section">
+    <div class="card-header">
+        <p class="eyebrow">Funnel Performance</p>
+        <h2>Applications through offers</h2>
+        <p class="section-note">Conversion rates and stage counts from stored application records. Advisory interpretation only - no automatic decisions.</p>
+        {% include "metrics/partials/confidence_badge.html" with badge=funnel_performance.confidence only %}
+    </div>
+    {% include "metrics/partials/advisory_note.html" with copy=funnel_performance.advisory_copy only %}
+    {% include "metrics/partials/report_kpi_strip.html" with kpis=funnel_performance.kpis only %}
+    <section id="current-diagnosis" class="diagnosis-panel {{ diagnosis_panel_class }}">
+        <div>
+            <p class="eyebrow">Current Diagnosis</p>
+            <h3>{{ diagnosis.diagnosis_title }}</h3>
+            <p>{{ funnel_performance.interpretation }}</p>
+        </div>
+        <div class="diagnosis-action">
+            <strong>Recommended manual action</strong>
+            <p>{{ funnel_performance.recommended_action }}</p>
+        </div>
+    </section>
+    <section id="application-funnel" class="cf-report-subsection">
+        <div class="card-header">
+            <p class="eyebrow">Application Funnel</p>
+            <h3>Stage-by-Stage Breakdown</h3>
+            <p class="section-note">Shows how applications progress from submission through responses, interviews, and offers.</p>
+        </div>
+        {% if funnel_performance.applications == 0 %}
+        {% include "metrics/partials/report_empty_state.html" with title="No funnel data yet" message="Log your first application to start building funnel performance metrics. After 10 to 15 applications, conversion interpretation becomes more reliable." manual_actions=funnel_performance.manual_actions only %}
+        {% else %}
+        <div class="funnel-stack">
+            {% for row in funnel_performance.stage_rows %}
+            <div class="funnel-row">
+                <div>
+                    <strong>{{ row.stage }}</strong>
+                    <p>{{ row.description }}</p>
+                </div>
+                <div class="funnel-numbers">
+                    <span>{{ row.count }}</span>
+                    <small>{{ row.rate }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </section>
+    <div class="cf-report-manual-actions">
+        {% for action in funnel_performance.manual_actions %}
+        {% include "metrics/partials/manual_action_link.html" with action=action only %}
+        {% endfor %}
+    </div>
+</section>

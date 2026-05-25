@@ -1087,7 +1087,7 @@ def _build_analytics_impact_notes(report: DataQualityReport) -> tuple[str, ...]:
     if combined_src > 0:
         notes.append(
             f"Source ROI: {_impact_count_phrase(combined_src, total)} cannot be attributed "
-            f"to a specific channel — they appear under the generic 'Other' row in the "
+            f"to a specific channel - they appear under the generic 'Other' row in the "
             f"source breakdown."
         )
 
@@ -1270,3 +1270,408 @@ def build_funnel_stage_rows(metrics: FunnelMetrics):
             "description": "Applications that reached offer stage.",
         },
     ]
+
+
+# --- Sprint 40A Premium Reporting Foundation ---
+
+_REPORTING_ADVISORY_COPY = (
+    "All reporting on this page is advisory and evidence-based. "
+    "Metrics come from stored records only. No automatic decisions, "
+    "status changes, or submissions are triggered by viewing these reports."
+)
+
+
+@dataclass(frozen=True)
+class ReportManualAction:
+    label: str
+    url: str
+
+
+@dataclass(frozen=True)
+class ReportKPI:
+    label: str
+    value: str
+    note: str = ""
+
+
+@dataclass(frozen=True)
+class ReportingConfidenceBadge:
+    label: str
+    level: str
+    detail: str
+
+
+@dataclass(frozen=True)
+class FunnelPerformanceReport:
+    applications: int
+    responses: int
+    interviews: int
+    offers: int
+    response_rate: float
+    interview_rate: float
+    offer_rate: float
+    interpretation: str
+    recommended_action: str
+    kpis: tuple[ReportKPI, ...]
+    stage_rows: tuple[dict, ...]
+    confidence: ReportingConfidenceBadge
+    manual_actions: tuple[ReportManualAction, ...]
+    advisory_copy: str
+
+
+@dataclass(frozen=True)
+class DataQualityFoundationReport:
+    underlying: DataQualityReport
+    confidence: ReportingConfidenceBadge
+    missing_cv_version: int
+    missing_job_description: int
+    missing_required_skills: int
+    missing_follow_up_data: int
+    kpis: tuple[ReportKPI, ...]
+    manual_actions: tuple[ReportManualAction, ...]
+    empty_state_title: str
+    empty_state_message: str
+    advisory_copy: str
+
+
+@dataclass(frozen=True)
+class ApplicationQualityFoundationRow:
+    application_id: int
+    company_name: str
+    job_title: str
+    status: str
+    quality_status: str
+    issue_count: int
+    issues: tuple[str, ...]
+    recommended_action: str
+    manual_review_url: str
+
+
+@dataclass(frozen=True)
+class ApplicationQualityFoundationReport:
+    underlying: ApplicationQualityReport
+    completeness_label: str
+    evidence_strength_label: str
+    decision_readiness_label: str
+    confidence: ReportingConfidenceBadge
+    kpis: tuple[ReportKPI, ...]
+    manual_actions: tuple[ReportManualAction, ...]
+    review_rows: tuple[ApplicationQualityFoundationRow, ...]
+    empty_state_title: str
+    empty_state_message: str
+    advisory_copy: str
+
+
+def _confidence_from_rate(rate: float) -> ReportingConfidenceBadge:
+    if rate >= 80:
+        return ReportingConfidenceBadge(
+            label="High confidence",
+            level="high",
+            detail="Enough complete records to support reliable advisory reporting.",
+        )
+    if rate >= 50:
+        return ReportingConfidenceBadge(
+            label="Moderate confidence",
+            level="medium",
+            detail="Some data gaps remain. Treat conclusions as directional only.",
+        )
+    if rate > 0:
+        return ReportingConfidenceBadge(
+            label="Low confidence",
+            level="low",
+            detail="Significant data gaps reduce how much conclusions can be trusted in analytics.",
+        )
+    return ReportingConfidenceBadge(
+        label="Not enough data",
+        level="unknown",
+        detail="Log applications and complete key fields before expecting reliable reporting.",
+    )
+
+
+def _funnel_confidence(metrics: FunnelMetrics) -> ReportingConfidenceBadge:
+    if metrics.total_applications == 0:
+        return ReportingConfidenceBadge(
+            label="Not enough data",
+            level="unknown",
+            detail=(
+                "No applications logged yet. Funnel conversion rates need "
+                "at least a few records."
+            ),
+        )
+    if metrics.total_applications < 10:
+        return ReportingConfidenceBadge(
+            label="Low confidence",
+            level="low",
+            detail="Fewer than 10 applications. Conversion rates may shift as volume grows.",
+        )
+    if metrics.total_applications < 25:
+        return ReportingConfidenceBadge(
+            label="Moderate confidence",
+            level="medium",
+            detail="Enough volume for directional funnel signals. Continue logging consistently.",
+        )
+    return ReportingConfidenceBadge(
+        label="High confidence",
+        level="high",
+        detail="Sufficient application volume for evidence-based funnel interpretation.",
+    )
+
+
+def _reporting_manual_actions(*specs: tuple[str, str]) -> tuple[ReportManualAction, ...]:
+    from django.urls import reverse
+
+    return tuple(
+        ReportManualAction(label=label, url=reverse(name)) for label, name in specs
+    )
+
+
+def _completeness_label(report: ApplicationQualityReport) -> str:
+    if report.total_applications == 0:
+        return "No records yet"
+    clean_rate = 100.0 - report.quality_issue_rate
+    if clean_rate >= 90:
+        return "Strong completeness"
+    if clean_rate >= 70:
+        return "Moderate completeness"
+    return "Needs cleanup"
+
+
+def _evidence_strength_label(data_quality: DataQualityReport) -> str:
+    if data_quality.total_applications == 0:
+        return "No evidence yet"
+    rate = data_quality.analytics_ready_rate
+    if rate >= 80:
+        return "Strong evidence"
+    if rate >= 50:
+        return "Partial evidence"
+    return "Weak evidence"
+
+
+def _decision_readiness_label(
+    app_report: ApplicationQualityReport,
+    data_quality: DataQualityReport,
+) -> str:
+    if app_report.total_applications == 0:
+        return "Not ready"
+    if (
+        app_report.quality_issue_rate <= 20
+        and data_quality.missing_follow_up_count == 0
+        and data_quality.analytics_ready_rate >= 70
+    ):
+        return "Ready for manual review"
+    if app_report.quality_issue_rate <= 50:
+        return "Review with caution"
+    return "Not decision-ready"
+
+
+def _row_quality_status(issue_count: int) -> str:
+    if issue_count == 0:
+        return "Strong"
+    if issue_count <= 2:
+        return "Needs review"
+    return "Weak"
+
+
+def build_funnel_performance_report(
+    user,
+    *,
+    metrics: FunnelMetrics | None = None,
+    diagnosis=None,
+) -> FunnelPerformanceReport:
+    metrics = metrics or build_funnel_metrics(user)
+    diagnosis = diagnosis or diagnose_funnel(metrics)
+    stage_rows = tuple(build_funnel_stage_rows(metrics))
+    kpis = (
+        ReportKPI("Applications", str(metrics.total_applications)),
+        ReportKPI("Responses", str(metrics.response_count), f"{metrics.response_rate}% rate"),
+        ReportKPI("Interviews", str(metrics.interview_count), f"{metrics.interview_rate}% rate"),
+        ReportKPI("Offers", str(metrics.offer_count), f"{metrics.offer_rate}% rate"),
+    )
+    manual_actions = _reporting_manual_actions(
+        ("Log application manually", "applications:application_create"),
+        ("Review application list", "applications:application_list"),
+        ("Open weekly review", "weekly_review:weekly_review_list"),
+    )
+    return FunnelPerformanceReport(
+        applications=metrics.total_applications,
+        responses=metrics.response_count,
+        interviews=metrics.interview_count,
+        offers=metrics.offer_count,
+        response_rate=metrics.response_rate,
+        interview_rate=metrics.interview_rate,
+        offer_rate=metrics.offer_rate,
+        interpretation=diagnosis.explanation,
+        recommended_action=diagnosis.recommended_action,
+        kpis=kpis,
+        stage_rows=stage_rows,
+        confidence=_funnel_confidence(metrics),
+        manual_actions=manual_actions,
+        advisory_copy=_REPORTING_ADVISORY_COPY,
+    )
+
+
+def build_data_quality_foundation_report(
+    user,
+    *,
+    data_quality: DataQualityReport | None = None,
+) -> DataQualityFoundationReport:
+    data_quality = data_quality or build_data_quality_report(user)
+    total = data_quality.total_applications
+    if total == 0:
+        empty_title = "Start logging applications"
+        empty_message = (
+            "There are no application records yet. Add your first application "
+            "with CV version, job description, required skills, and follow-up "
+            "dates so data quality reporting becomes meaningful for reviewers."
+        )
+    else:
+        empty_title = ""
+        empty_message = ""
+    kpis = (
+        ReportKPI("Analytics-ready", str(data_quality.analytics_ready_applications)),
+        ReportKPI("Data quality score", f"{data_quality.data_quality_score}%"),
+        ReportKPI("Missing CV version", str(data_quality.missing_cv_version_count)),
+        ReportKPI("Missing job description", str(data_quality.missing_job_description_count)),
+        ReportKPI("Missing required skills", str(data_quality.missing_required_skills_count)),
+        ReportKPI("Missing follow-up data", str(data_quality.missing_follow_up_count)),
+    )
+    manual_actions = _reporting_manual_actions(
+        ("Review applications manually", "applications:application_list"),
+        ("Open evaluation queue", "applications:evaluation_queue"),
+    )
+    return DataQualityFoundationReport(
+        underlying=data_quality,
+        confidence=_confidence_from_rate(data_quality.analytics_ready_rate),
+        missing_cv_version=data_quality.missing_cv_version_count,
+        missing_job_description=data_quality.missing_job_description_count,
+        missing_required_skills=data_quality.missing_required_skills_count,
+        missing_follow_up_data=data_quality.missing_follow_up_count,
+        kpis=kpis,
+        manual_actions=manual_actions,
+        empty_state_title=empty_title,
+        empty_state_message=empty_message,
+        advisory_copy=_REPORTING_ADVISORY_COPY,
+    )
+
+
+def build_application_quality_foundation_report(
+    user,
+    *,
+    app_report: ApplicationQualityReport | None = None,
+    data_quality: DataQualityReport | None = None,
+) -> ApplicationQualityFoundationReport:
+    app_report = app_report or build_application_quality_report(user)
+    data_quality = data_quality or build_data_quality_report(user)
+    from django.urls import reverse
+
+    review_rows = tuple(
+        ApplicationQualityFoundationRow(
+            application_id=row.application_id,
+            company_name=row.company_name,
+            job_title=row.job_title,
+            status=row.status,
+            quality_status=_row_quality_status(row.issue_count),
+            issue_count=row.issue_count,
+            issues=row.issues,
+            recommended_action=row.recommended_action,
+            manual_review_url=reverse(
+                "applications:application_detail",
+                kwargs={"pk": row.application_id},
+            ),
+        )
+        for row in app_report.issue_rows
+    )
+    if app_report.total_applications == 0:
+        empty_title = "No applications to review yet"
+        empty_message = (
+            "Application quality reporting appears once you log applications. "
+            "Each record should include CV version, source, job description, "
+            "required skills, and follow-up dates for trustworthy manual review."
+        )
+    elif not review_rows:
+        empty_title = ""
+        empty_message = ""
+    else:
+        empty_title = ""
+        empty_message = ""
+    kpis = (
+        ReportKPI("Total applications", str(app_report.total_applications)),
+        ReportKPI("With issues", str(app_report.applications_with_issues)),
+        ReportKPI("Issue rate", f"{app_report.quality_issue_rate}%"),
+        ReportKPI("Completeness", _completeness_label(app_report)),
+    )
+    manual_actions = _reporting_manual_actions(
+        ("Review applications manually", "applications:application_list"),
+        ("Open evaluation queue", "applications:evaluation_queue"),
+    )
+    return ApplicationQualityFoundationReport(
+        underlying=app_report,
+        completeness_label=_completeness_label(app_report),
+        evidence_strength_label=_evidence_strength_label(data_quality),
+        decision_readiness_label=_decision_readiness_label(app_report, data_quality),
+        confidence=_confidence_from_rate(100.0 - app_report.quality_issue_rate),
+        kpis=kpis,
+        manual_actions=manual_actions,
+        review_rows=review_rows,
+        empty_state_title=empty_title,
+        empty_state_message=empty_message,
+        advisory_copy=_REPORTING_ADVISORY_COPY,
+    )
+
+
+def build_reporting_foundation_context(user) -> dict:
+    """Assemble Sprint 40A reporting foundation plus legacy metrics context."""
+    metrics = build_funnel_metrics(user)
+    diagnosis = diagnose_funnel(metrics)
+    application_quality_report = build_application_quality_report(user)
+    data_quality_report = build_data_quality_report(user)
+    weekly_trend_rows = build_weekly_trend(user)
+    weekly_trend_has_data = sum(
+        1 for row in weekly_trend_rows if row.applications > 0
+    ) >= 2
+    weekly_trend_chart_data = {
+        "labels": [row.week_start.isoformat() for row in weekly_trend_rows],
+        "applications": [row.applications for row in weekly_trend_rows],
+        "responses": [row.responses for row in weekly_trend_rows],
+    }
+    funnel_performance = build_funnel_performance_report(
+        user,
+        metrics=metrics,
+        diagnosis=diagnosis,
+    )
+    data_quality_foundation = build_data_quality_foundation_report(
+        user,
+        data_quality=data_quality_report,
+    )
+    application_quality_foundation = build_application_quality_foundation_report(
+        user,
+        app_report=application_quality_report,
+        data_quality=data_quality_report,
+    )
+    return {
+        "report_title": "Premium Reporting Foundation",
+        "report_subtitle": (
+            "Funnel performance, data quality, and application quality - "
+            "built from stored records for manual, evidence-based review."
+        ),
+        "report_trust_note": (
+            "Reporting GET requests are read-only. All workflow links open "
+            "manual pages only."
+        ),
+        "reporting_advisory_copy": _REPORTING_ADVISORY_COPY,
+        "funnel_performance": funnel_performance,
+        "data_quality_foundation": data_quality_foundation,
+        "application_quality_foundation": application_quality_foundation,
+        "metrics": metrics,
+        "diagnosis": diagnosis,
+        "funnel_stage_rows": list(funnel_performance.stage_rows),
+        "diagnosis_panel_class": get_diagnosis_panel_class(diagnosis.severity),
+        "source_roi_rows": build_source_roi(user),
+        "cv_version_rows": build_cv_version_performance(user),
+        "rejection_report": build_rejection_pattern_report(user),
+        "application_quality_report": application_quality_report,
+        "data_quality_report": data_quality_report,
+        "weekly_trend_rows": weekly_trend_rows,
+        "weekly_trend_has_data": weekly_trend_has_data,
+        "weekly_trend_chart_data": weekly_trend_chart_data,
+    }

@@ -2,74 +2,23 @@
 {% block title %}Funnel Metrics | CareerFunnel Tracker{% endblock %}
 {% block page_heading %}Funnel Metrics{% endblock %}
 {% block content %}
-<div class="dashboard-grid">
-    <section class="hero-panel">
-        <p class="eyebrow">Funnel Intelligence</p>
-        <h1>See where the job-search funnel is leaking.</h1>
-        <p>This page converts your application records, daily logs, and weekly reviews into a diagnosis.</p>
-        <p class="trust-note">Built from stored application, daily log, and review records so reviewers can trace each metric back to captured activity.</p>
-    </section>
-    <nav class="section-nav" aria-label="Metrics sections">
-        <a href="#application-funnel">Funnel</a>
-        <a href="#weekly-trend">Weekly Trend</a>
-        <a href="#source-roi">Source ROI</a>
-        <a href="#cv-performance">CV Performance</a>
-        <a href="#rejections">Rejections</a>
-        <a href="#application-quality">Application Quality</a>
+<div class="dashboard-grid cf-report-page">
+    {% include "metrics/partials/report_header.html" with eyebrow="Reporting Suite" title=report_title subtitle=report_subtitle trust_note=report_trust_note only %}
+    <nav class="section-nav cf-report-section-nav" aria-label="Sprint 40A reporting sections">
+        <a href="#funnel-performance">Funnel Performance</a>
         <a href="#data-quality">Data Quality</a>
+        <a href="#application-quality">Application Quality</a>
     </nav>
-    <section id="current-diagnosis" class="diagnosis-panel {{ diagnosis_panel_class }}">
-        <div>
-            <p class="eyebrow">Current Diagnosis</p>
-            <h2>{{ diagnosis.diagnosis_title }}</h2>
-            <p class="section-note">Read this first for the plain-English interpretation of the current funnel health.</p>
-            <p>{{ diagnosis.explanation }}</p>
-        </div>
-        <div class="diagnosis-action">
-            <strong>Recommended Action</strong>
-            <p>{{ diagnosis.recommended_action }}</p>
-        </div>
+    {% include "metrics/partials/advisory_note.html" with copy=reporting_advisory_copy only %}
+    {% include "metrics/partials/funnel_performance_report.html" %}
+    {% include "metrics/partials/data_quality_foundation_report.html" %}
+    {% include "metrics/partials/application_quality_foundation_report.html" %}
+    <section class="content-card cf-report-legacy" aria-label="Extended analytics not in Sprint 40A scope">
+        <p class="eyebrow">Extended analytics</p>
+        <h2>Pre-existing sections (Sprint 40B/C not in scope)</h2>
+        <p class="section-note">Daily discipline, weekly trend, source ROI, CV performance, and rejection analysis remain available for backward compatibility. Sprint 40A does not expand these areas.</p>
     </section>
-    <section id="kpi-cards" class="kpi-grid">
-        <div class="kpi-card">
-            <p>Total Applications</p>
-            <h2>{{ metrics.total_applications }}</h2>
-        </div>
-        <div class="kpi-card">
-            <p>Response Rate</p>
-            <h2>{{ metrics.response_rate }}%</h2>
-        </div>
-        <div class="kpi-card">
-            <p>Interview Rate</p>
-            <h2>{{ metrics.interview_rate }}%</h2>
-        </div>
-        <div class="kpi-card">
-            <p>Offer Rate</p>
-            <h2>{{ metrics.offer_rate }}%</h2>
-        </div>
-    </section>
-    <section id="application-funnel" class="content-card">
-        <div class="card-header">
-            <p class="eyebrow">Application Funnel</p>
-            <h2>Stage-by-Stage Breakdown</h2>
-            <p class="section-note">Shows how applications progress from submission through responses, interviews, offers, and outcomes.</p>
-        </div>
-        <div class="funnel-stack">
-            {% for row in funnel_stage_rows %}
-            <div class="funnel-row">
-                <div>
-                    <strong>{{ row.stage }}</strong>
-                    <p>{{ row.description }}</p>
-                </div>
-                <div class="funnel-numbers">
-                    <span>{{ row.count }}</span>
-                    <small>{{ row.rate }}</small>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </section>
-    <section id="daily-discipline" class="content-card">
+    <section id="daily-discipline" class="content-card cf-report-legacy">
         <div class="card-header">
             <p class="eyebrow">Daily Discipline</p>
             <h2>Target vs Actual</h2>
@@ -94,7 +43,7 @@
             </div>
         </div>
     </section>
-    <section id="weekly-trend" class="content-card">
+    <section id="weekly-trend" class="content-card cf-report-legacy">
         <div class="card-header">
             <p class="eyebrow">Weekly Trend</p>
             <h2>Applications and responses by week</h2>
@@ -132,7 +81,7 @@
             </table>
         </div>
     </section>
-    <section id="source-roi" class="content-card">
+    <section id="source-roi" class="content-card cf-report-legacy">
         <div class="card-header">
             <p class="eyebrow">Source ROI</p>
             <h2>Application source performance</h2>
@@ -176,7 +125,7 @@
         </div>
         {% endif %}
     </section>
-    <section id="cv-performance" class="content-card">
+    <section id="cv-performance" class="content-card cf-report-legacy">
         <div class="card-header">
             <p class="eyebrow">CV Version Performance</p>
             <h2>CV version outcome comparison</h2>
@@ -224,7 +173,7 @@
         </div>
         {% endif %}
     </section>
-    <section id="rejections" class="content-card">
+    <section id="rejections" class="content-card cf-report-legacy">
         <div class="card-header">
             <p class="eyebrow">Rejection Pattern Analysis</p>
             <h2>Where applications are breaking down</h2>
@@ -335,202 +284,6 @@
         {% else %}
         <div class="empty-state small-empty-state">
             <p>No CV-version rejection data yet.</p>
-        </div>
-        {% endif %}
-    </section>
-    <section id="application-quality" class="content-card">
-        <div class="card-header">
-            <p class="eyebrow">Application Quality</p>
-            <h2>Applications needing better evidence</h2>
-            <p class="trust-note">Built from real JobApplication records. Flags incomplete records that weaken tracking, follow-up, and analytics quality.</p>
-            <p class="section-note">Use this section to identify application records that need clearer evidence before their metrics can be trusted.</p>
-        </div>
-        <div class="detail-grid">
-            <div class="detail-item">
-                <span>Total Applications</span>
-                <strong>{{ application_quality_report.total_applications }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Applications With Issues</span>
-                <strong>{{ application_quality_report.applications_with_issues }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Quality Issue Rate</span>
-                <strong>{{ application_quality_report.quality_issue_rate }}%</strong>
-            </div>
-            <div class="detail-item">
-                <span>Missing CV Version</span>
-                <strong>{{ application_quality_report.missing_cv_version_count }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Missing Source</span>
-                <strong>{{ application_quality_report.missing_source_count }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Missing Job Description</span>
-                <strong>{{ application_quality_report.missing_job_description_count }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Missing Required Skills</span>
-                <strong>{{ application_quality_report.missing_required_skills_count }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Missing Follow-Up Date</span>
-                <strong>{{ application_quality_report.missing_follow_up_count }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Seniority Risk Count</span>
-                <strong>{{ application_quality_report.seniority_risk_count }}</strong>
-            </div>
-        </div>
-        <h3>Recommended Actions</h3>
-        {% if application_quality_report.recommendations %}
-        <ul class="agent-list">
-            {% for rec in application_quality_report.recommendations %}
-            <li>{{ rec }}</li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <div class="empty-state small-empty-state">
-            <p>No application quality recommendations available yet.</p>
-        </div>
-        {% endif %}
-        <h3>Applications needing action</h3>
-        <p class="table-context">Lists the specific applications whose missing fields or risk flags need attention.</p>
-        {% if application_quality_report.issue_rows %}
-        <div class="table-wrap">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Company</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Issues</th>
-                        <th>Recommended Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in application_quality_report.issue_rows %}
-                    <tr>
-                        <td><strong>{{ row.company_name }}</strong></td>
-                        <td>{{ row.job_title }}</td>
-                        <td>{{ row.status }}</td>
-                        <td>
-                            {% if row.issues %}
-                            <ul class="agent-list">
-                                {% for issue in row.issues %}
-                                <li>{{ issue }}</li>
-                                {% endfor %}
-                            </ul>
-                            {% else %}
-                            -
-                            {% endif %}
-                        </td>
-                        <td>{{ row.recommended_action }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="empty-state small-empty-state">
-            <p>No application quality issues detected.</p>
-        </div>
-        {% endif %}
-    </section>
-    <section id="data-quality" class="content-card">
-        <div class="card-header">
-            <p class="eyebrow">Data Quality</p>
-            <h2>Analytics readiness and data trust</h2>
-            <p class="trust-note">Built from real JobApplication records. Shows whether the data is complete enough for reliable analytics.</p>
-            <p class="section-note">Summarizes the completeness checks that determine how reliable the page's analytics are.</p>
-        </div>
-        <div class="detail-grid">
-            <div class="detail-item">
-                <span>Total Applications</span>
-                <strong>{{ data_quality_report.total_applications }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Analytics-Ready Applications</span>
-                <strong>{{ data_quality_report.analytics_ready_applications }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Analytics-Ready Rate</span>
-                <strong>{{ data_quality_report.analytics_ready_rate }}%</strong>
-            </div>
-            <div class="detail-item">
-                <span>Data Quality Score</span>
-                <strong>{{ data_quality_report.data_quality_score }}%</strong>
-            </div>
-            <div class="detail-item">
-                <span>Missing Source</span>
-                <strong>{{ data_quality_report.missing_source_count }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Generic Source</span>
-                <strong>{{ data_quality_report.generic_source_count }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Missing CV Version</span>
-                <strong>{{ data_quality_report.missing_cv_version_count }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Missing Job Description</span>
-                <strong>{{ data_quality_report.missing_job_description_count }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Missing Required Skills</span>
-                <strong>{{ data_quality_report.missing_required_skills_count }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Missing Follow-Up Date</span>
-                <strong>{{ data_quality_report.missing_follow_up_count }}</strong>
-            </div>
-        </div>
-        <h3>Recommended Cleanup Actions</h3>
-        {% if data_quality_report.recommendations %}
-        <ul class="agent-list">
-            {% for rec in data_quality_report.recommendations %}
-            <li>{{ rec }}</li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <div class="empty-state small-empty-state">
-            <p>No data quality recommendations available yet.</p>
-        </div>
-        {% endif %}
-        <h3>Data quality checks</h3>
-        <p class="table-context">Each row explains one readiness check, how many records are affected, and the recommended cleanup.</p>
-        {% if data_quality_report.checks %}
-        <div class="table-wrap">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Check</th>
-                        <th>Issues</th>
-                        <th>Applications</th>
-                        <th>Completion Rate</th>
-                        <th>Severity</th>
-                        <th>Recommendation</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in data_quality_report.checks %}
-                    <tr>
-                        <td><strong>{{ row.check_name }}</strong></td>
-                        <td>{{ row.issue_count }}</td>
-                        <td>{{ row.total_applications }}</td>
-                        <td>{{ row.completion_rate }}%</td>
-                        <td>{{ row.severity }}</td>
-                        <td>{{ row.recommendation }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="empty-state small-empty-state">
-            <p>No data quality checks available yet.</p>
         </div>
         {% endif %}
     </section>

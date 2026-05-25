@@ -1297,3 +1297,119 @@ class MetricsViewTests(TestCase):
         response = self._get_funnel_metrics()
         self.assertContains(response, "Analytics Impact")
         self.assertContains(response, "Source ROI")
+
+
+class PremiumReportingFoundationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+
+    def _login(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+
+    def _get_funnel_metrics(self):
+        self._login()
+        return self.client.get(reverse("metrics:funnel_metrics"))
+
+    def _create_app(self, **kwargs):
+        defaults = {
+            "user": self.user,
+            "company_name": "Acme",
+            "job_title": "Analyst",
+            "date_applied": date(2026, 5, 1),
+            "status": ApplicationStatus.SUBMITTED,
+            "source": ApplicationSource.OTHER,
+        }
+        defaults.update(kwargs)
+        return JobApplication.objects.create(**defaults)
+
+    def test_funnel_performance_report_renders(self):
+        self._create_app(status=ApplicationStatus.INTERVIEW)
+        response = self._get_funnel_metrics()
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn("Funnel Performance", content)
+        self.assertIn("Application Funnel", content)
+        self.assertIn("Current Diagnosis", content)
+        self.assertIn("funnel_performance", response.context)
+
+    def test_data_quality_report_renders(self):
+        response = self._get_funnel_metrics()
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn("Data Quality", content)
+        self.assertIn("Analytics readiness", content)
+        self.assertIn("data_quality_foundation", response.context)
+
+    def test_application_quality_report_renders(self):
+        self._create_app(cv_version="", job_description="")
+        response = self._get_funnel_metrics()
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn("Application Quality", content)
+        self.assertIn("Decision readiness", content)
+        self.assertIn("application_quality_foundation", response.context)
+
+    def test_reporting_foundation_uses_shared_report_components(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        self.assertIn("cf-report-header", content)
+        self.assertIn("cf-report-kpi-strip", content)
+        self.assertIn("cf-report-confidence", content)
+        self.assertIn("cf-report-manual-link", content)
+        self.assertIn("cf-report-advisory", content)
+        self.assertIn("cf-report-empty-state", content)
+
+    def test_reporting_pages_are_claim_safe(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        self.assertIn("advisory and evidence-based", content)
+        self.assertIn("read-only", content)
+        self.assertNotIn("auto-apply", content.lower())
+        self.assertNotIn("automatic status", content.lower())
+
+    def test_reporting_get_does_not_mutate_records(self):
+        self._create_app()
+        app_count_before = JobApplication.objects.filter(user=self.user).count()
+        log_count_before = DailyLog.objects.filter(user=self.user).count()
+        response = self._get_funnel_metrics()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            JobApplication.objects.filter(user=self.user).count(),
+            app_count_before,
+        )
+        self.assertEqual(
+            DailyLog.objects.filter(user=self.user).count(),
+            log_count_before,
+        )
+
+    def test_reporting_empty_state_for_new_user(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        self.assertIn("No funnel data yet", content)
+        self.assertIn("Start logging applications", content)
+
+    def test_reporting_confidence_badges_render(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        self.assertIn("cf-report-confidence", content)
+        self.assertIn("Not enough data", content)
+
+    def test_reporting_links_remain_manual(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        self.assertIn("Log application manually", content)
+        self.assertIn("Review applications manually", content)
+        self.assertIn(reverse("applications:application_create"), content)
+
+    def test_no_sprint_40b_or_40c_scope_leak(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        self.assertIn("Sprint 40B/C not in scope", content)
+        nav_start = content.index('aria-label="Sprint 40A reporting sections"')
+        nav_end = content.index("</nav>", nav_start)
+        nav_html = content[nav_start:nav_end]
+        self.assertIn("Funnel Performance", nav_html)
+        self.assertIn("Data Quality", nav_html)
+        self.assertIn("Application Quality", nav_html)
+        self.assertNotIn("Weekly Trend", nav_html)
+        self.assertNotIn("Source ROI", nav_html)

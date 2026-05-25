@@ -1,0 +1,75 @@
+<section id="data-quality" class="content-card cf-report-section">
+    <div class="card-header">
+        <p class="eyebrow">Data Quality</p>
+        <h2>Analytics readiness and data trust</h2>
+        <p class="section-note">Missing CV version, job description, required skills, and follow-up data reduce reporting confidence.</p>
+        {% include "metrics/partials/confidence_badge.html" with badge=data_quality_foundation.confidence only %}
+    </div>
+    {% include "metrics/partials/advisory_note.html" with copy=data_quality_foundation.advisory_copy only %}
+    {% include "metrics/partials/report_kpi_strip.html" with kpis=data_quality_foundation.kpis only %}
+    {% if data_quality_foundation.underlying.total_applications == 0 %}
+    {% include "metrics/partials/report_empty_state.html" with title=data_quality_foundation.empty_state_title message=data_quality_foundation.empty_state_message manual_actions=data_quality_foundation.manual_actions only %}
+    {% else %}
+    <div class="detail-grid">
+        <div class="detail-item">
+            <span>Analytics-ready applications</span>
+            <strong>{{ data_quality_foundation.underlying.analytics_ready_applications }}</strong>
+        </div>
+        <div class="detail-item">
+            <span>Analytics-ready rate</span>
+            <strong>{{ data_quality_foundation.underlying.analytics_ready_rate }}%</strong>
+        </div>
+        <div class="detail-item">
+            <span>Data quality score</span>
+            <strong>{{ data_quality_foundation.underlying.data_quality_score }}%</strong>
+        </div>
+    </div>
+    <h3>Data quality checks</h3>
+    <p class="table-context">Each row explains one readiness check, how many records are affected, and the recommended manual cleanup.</p>
+    {% if data_quality_foundation.underlying.checks %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Check</th>
+                    <th>Issues</th>
+                    <th>Applications</th>
+                    <th>Completion rate</th>
+                    <th>Severity</th>
+                    <th>Recommendation</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in data_quality_foundation.underlying.checks %}
+                <tr>
+                    <td><strong>{{ row.check_name }}</strong></td>
+                    <td>{{ row.issue_count }}</td>
+                    <td>{{ row.total_applications }}</td>
+                    <td>{{ row.completion_rate }}%</td>
+                    <td>{{ row.severity }}</td>
+                    <td>{{ row.recommendation }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    {% include "metrics/partials/report_empty_state.html" with message="No data quality checks available yet." manual_actions=data_quality_foundation.manual_actions only %}
+    {% endif %}
+    <h3>Recommended cleanup actions</h3>
+    {% if data_quality_foundation.underlying.recommendations %}
+    <ul class="agent-list">
+        {% for rec in data_quality_foundation.underlying.recommendations %}
+        <li>{{ rec }}</li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="section-note">No cleanup recommendations yet. Continue logging complete application records.</p>
+    {% endif %}
+    {% endif %}
+    <div class="cf-report-manual-actions">
+        {% for action in data_quality_foundation.manual_actions %}
+        {% include "metrics/partials/manual_action_link.html" with action=action only %}
+        {% endfor %}
+    </div>
+</section>
