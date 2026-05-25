@@ -674,6 +674,142 @@
         {% endif %}
     </section>
 
+    <section id="manual-cv-bullet-mapping" class="content-card cf-skill-gap-cv-bullet-mapping">
+        <div class="card-header">
+            <p class="eyebrow">Manual CV bullet mapping</p>
+            <h2>CV bullet focus</h2>
+            <p class="section-note">
+                Advisory only. Based on saved skill-gap records. Review and decide manually -
+                bullet prompts below are manual prompts only, not completed CV content unless you saved it.
+                This section does not rewrite your CV automatically.
+            </p>
+        </div>
+
+        {% if cv_bullet_mapping.has_unresolved %}
+        <div class="cf-cv-bullet-groups">
+            {% if cv_bullet_mapping.draft_cv_bullet_prompts_now.items %}
+            <div class="cf-cv-bullet-group">
+                <h3>{{ cv_bullet_mapping.draft_cv_bullet_prompts_now.label }}</h3>
+                <ul class="cf-cv-bullet-list">
+                    {% for gap in cv_bullet_mapping.draft_cv_bullet_prompts_now.items %}
+                    <li class="cf-cv-bullet-item">
+                        <div class="cf-cv-bullet-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-warning">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                            - {{ gap.get_stage_display }} - {{ gap.get_current_tier_display }}
+                            - score {{ gap.priority_score }}
+                        </p>
+                        <p><strong>Suggested CV bullet prompts:</strong>
+                            {% if gap.suggested_action %}{{ gap.suggested_action }}{% else %}
+                            Draft bullet ideas manually from saved project and role notes.{% endif %}
+                        </p>
+                        <ul class="table-subtext cf-cv-bullet-prompt-list">
+                            <li>Skill evidence prompt (manual)</li>
+                            <li>Project evidence prompt (manual)</li>
+                            <li>Business impact prompt (manual)</li>
+                            <li>Data-quality/reconciliation prompt (manual, if relevant)</li>
+                            <li>Dashboard/reporting prompt (manual, if relevant)</li>
+                            <li>Action/result prompt (manual)</li>
+                            <li>Keyword alignment prompt (manual)</li>
+                        </ul>
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if cv_bullet_mapping.strengthen_cv_evidence_next.items %}
+            <div class="cf-cv-bullet-group">
+                <h3>{{ cv_bullet_mapping.strengthen_cv_evidence_next.label }}</h3>
+                <ul class="cf-cv-bullet-list">
+                    {% for gap in cv_bullet_mapping.strengthen_cv_evidence_next.items %}
+                    <li class="cf-cv-bullet-item">
+                        <div class="cf-cv-bullet-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-info">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                            - {{ gap.get_stage_display }} - {{ gap.get_current_tier_display }}
+                        </p>
+                        <p><strong>Suggested CV bullet prompts:</strong>
+                            {% if gap.suggested_action %}{{ gap.suggested_action }}{% else %}
+                            Strengthen CV evidence wording manually before the next application.{% endif %}
+                        </p>
+                        <ul class="table-subtext cf-cv-bullet-prompt-list">
+                            <li>Skill evidence prompt (manual)</li>
+                            <li>Project evidence prompt (manual)</li>
+                            <li>Business impact prompt (manual)</li>
+                            <li>Action/result prompt (manual)</li>
+                            <li>Keyword alignment prompt (manual)</li>
+                        </ul>
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if cv_bullet_mapping.cv_bullet_backlog.items %}
+            <div class="cf-cv-bullet-group">
+                <h3>{{ cv_bullet_mapping.cv_bullet_backlog.label }}</h3>
+                <ul class="cf-cv-bullet-list">
+                    {% for gap in cv_bullet_mapping.cv_bullet_backlog.items %}
+                    <li class="cf-cv-bullet-item">
+                        <div class="cf-cv-bullet-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-info">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                        </p>
+                        {% if gap.suggested_action %}
+                        <p><strong>Suggested CV bullet prompts:</strong> {{ gap.suggested_action }}</p>
+                        {% endif %}
+                        <ul class="table-subtext cf-cv-bullet-prompt-list">
+                            <li>Skill evidence prompt (manual)</li>
+                            <li>Keyword alignment prompt (manual)</li>
+                        </ul>
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if cv_bullet_mapping.resolved_cv_context.items %}
+            <div class="cf-cv-bullet-group cf-cv-bullet-group-resolved">
+                <h3>{{ cv_bullet_mapping.resolved_cv_context.label }}</h3>
+                <p class="section-note">Completed gaps for context only - not primary CV bullet focus.</p>
+                <ul class="cf-cv-bullet-list">
+                    {% for gap in cv_bullet_mapping.resolved_cv_context.items %}
+                    <li class="cf-cv-bullet-item">
+                        <strong>{{ gap.skill_name }}</strong>
+                        <span class="table-context">
+                            {{ gap.application.company_name }} - resolved
+                            {% if gap.resolved_tier %} ({{ gap.resolved_tier }}){% endif %}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No unresolved skill gaps for manual CV bullet mapping.</h3>
+            <p>
+                When you save unresolved skill gaps, CV bullet focus areas will appear here.
+                Review and decide manually - nothing is created or updated automatically.
+            </p>
+        </div>
+        {% endif %}
+    </section>
+
     <section class="content-card">
         <div class="card-header card-header-row">
             <div>
