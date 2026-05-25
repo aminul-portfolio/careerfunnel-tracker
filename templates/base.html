@@ -13,6 +13,7 @@
 <body class="cf-app">
     <a class="cf-skip-link" href="#main-content">Skip to main content</a>
     <div class="cf-sidebar-overlay" id="sidebar-overlay" hidden aria-hidden="true"></div>
+    <div id="cf-toast-root" class="cf-toast-root" aria-live="polite" aria-atomic="true"></div>
     <div class="app-shell cf-app-shell">
         {% include "partials/sidebar.html" %}
         <main class="main-content cf-main-content" id="main-content">
@@ -21,6 +22,14 @@
             <section class="page-content">{% block content %}{% endblock %}</section>
         </main>
     </div>
+    <script src="{% static 'js/modules/toasts.js' %}"></script>
+    <script src="{% static 'js/modules/confirmations.js' %}"></script>
+    <script src="{% static 'js/modules/forms.js' %}"></script>
+    <script src="{% static 'js/modules/sidebar.js' %}"></script>
+    <script src="{% static 'js/modules/table-controls.js' %}"></script>
+    <script src="{% static 'js/modules/filters.js' %}"></script>
+    <script src="{% static 'js/modules/copy-evidence.js' %}"></script>
+    <script src="{% static 'js/modules/report-accordions.js' %}"></script>
     <script src="{% static 'js/app.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>

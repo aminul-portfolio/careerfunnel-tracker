@@ -41,7 +41,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 40C (feature branch `sprint-40c-rejection-weekly-visual-export-polish`):** Rejection Patterns, Weekly Trend, Visual Analytics Evidence, and Export Centre polish; **7** new `PremiumReportingSprint40cTests`; **4** `ExportCentrePolishTests`; evidence doc `docs/evidence/sprint_40c_rejection_weekly_visual_export_polish.md`. Completes Sprint 40 reporting suite.
 
-**Sprint 41 (feature branch `sprint-41-skill-intelligence-foundation`):** Skill Intelligence Foundation - manual evidence summary, gap review prompts, role-readiness checklists (DA/BI/AE/DE), portfolio mapping; **11** new `SkillIntelligenceFoundationTests`; evidence doc `docs/evidence/sprint_41_skill_intelligence_foundation.md`. No models/migrations. Sprint 42 not started.
+**Sprint 41 (feature branch `sprint-41-skill-intelligence-foundation`):** Skill Intelligence Foundation - manual evidence summary, gap review prompts, role-readiness checklists (DA/BI/AE/DE), portfolio mapping; **11** new `SkillIntelligenceFoundationTests`; evidence doc `docs/evidence/sprint_41_skill_intelligence_foundation.md`. No models/migrations.
+
+**Sprint 42 (feature branch `sprint-42-javascript-dynamic-ux-foundation`):** JavaScript Dynamic UX Foundation - modular progressive enhancement (sidebar collapse, mobile drawer, table scan, form UX, report accordions, copy/toast); **11** new `Sprint42JavaScriptFoundationTests`; evidence doc `docs/evidence/sprint_42_javascript_dynamic_ux_foundation.md`. No models/migrations. Sprint 43 not started.
 
 ---
 

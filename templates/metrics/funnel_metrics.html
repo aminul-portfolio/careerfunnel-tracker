@@ -2,7 +2,7 @@
 {% block title %}Funnel Metrics | CareerFunnel Tracker{% endblock %}
 {% block page_heading %}Funnel Metrics{% endblock %}
 {% block content %}
-<div class="dashboard-grid cf-report-page">
+<div class="dashboard-grid cf-report-page" data-cf-report-accordions>
     {% include "metrics/partials/report_header.html" with eyebrow="Reporting Suite" title=report_title subtitle=report_subtitle trust_note=report_trust_note only %}
     <nav class="section-nav cf-report-section-nav" aria-label="Reporting suite sections">
         <a href="#funnel-performance">Funnel Performance</a>

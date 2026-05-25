@@ -13,7 +13,7 @@
             <h1>Premium manual job-search command centre</h1>
             <p>
                 Today&rsquo;s strongest manual action, pipeline health, weekly pulse, evidence readiness,
-                reporting confidence, and recent activity — all from authenticated tracker records.
+                reporting confidence, and recent activity - all from authenticated tracker records.
             </p>
             <div class="evidence-strip">
                 <span class="evidence-strip-item">Manual workflow only</span>
@@ -51,7 +51,7 @@
     </section>
 
     <section class="dashboard-two-column">
-        <div class="content-card cf-week-pulse">
+    <section class="content-card cf-week-pulse" data-cf-collapsible-card>
             <div class="card-header">
                 <p class="eyebrow">Week Pulse</p>
                 <h2>{{ week_pulse.week_range_label }}</h2>
@@ -89,7 +89,7 @@
                 <a href="{{ week_pulse.follow_ups_url }}" class="btn btn-secondary">Follow-ups</a>
                 <a href="{{ week_pulse.interview_prep_url }}" class="btn btn-secondary">Interview prep</a>
             </div>
-        </div>
+        </section>
 
         <div class="content-card cf-funnel-snapshot">
             <div class="card-header">
@@ -160,7 +160,7 @@
                 {% for signal in today_signals %}
                     <div class="compact-list-item cf-signal-item cf-signal-{{ signal.priority|lower }}">
                         <div>
-                            <strong>{{ signal.priority }} — {{ signal.title }}</strong>
+                            <strong>{{ signal.priority }} - {{ signal.title }}</strong>
                             <span>{{ signal.reason }}</span>
                             <span>Recommended: {{ signal.recommended_action }}</span>
                         </div>
@@ -184,7 +184,7 @@
         </p>
     </section>
 
-    <section class="content-card cf-pipeline-health">
+    <section class="content-card cf-pipeline-health" data-cf-collapsible-card>
         <div class="card-header">
             <p class="eyebrow">Pipeline Health Matrix</p>
             <h2>Six discipline signals for your search</h2>
@@ -240,13 +240,13 @@
                 <h2>Capture &rarr; Analyze &rarr; Decide &rarr; Track &rarr; Review &rarr; Improve</h2>
             </div>
             <p class="muted-text">
-                Manual rhythm only — this pipeline does not trigger automatic actions, submissions,
+                Manual rhythm only - this pipeline does not trigger automatic actions, submissions,
                 emails, or status updates.
             </p>
             <ol class="cf-operating-steps">
                 {% for step in weekly_operating_pipeline %}
                     <li class="cf-operating-step">
-                        <strong>{{ step.step }} — {{ step.label }}</strong>
+                        <strong>{{ step.step }} - {{ step.label }}</strong>
                         <span>{{ step.description }}</span>
                         <a href="{{ step.manual_url }}" class="table-link">Open</a>
                     </li>

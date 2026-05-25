@@ -819,3 +819,102 @@ summary:focus-visible {
         grid-template-columns: 1fr;
     }
 }
+
+/* Sprint 42 - JavaScript Dynamic UX Foundation */
+.cf-sidebar-collapse-toggle {
+    margin-left: auto;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(30, 41, 59, 0.65);
+    color: #e2e8f0;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.cf-sidebar-collapse-toggle span {
+    display: inline-block;
+    transition: transform var(--motion-fast);
+}
+
+@media (min-width: 901px) {
+    .cf-sidebar-brand {
+        align-items: center;
+    }
+
+    .cf-sidebar-collapse-toggle {
+        display: inline-flex;
+    }
+}
+
+.cf-toast-root {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 60;
+    display: grid;
+    gap: 0.5rem;
+    max-width: min(360px, calc(100vw - 2rem));
+    pointer-events: none;
+}
+
+.cf-toast {
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    background: #0f172a;
+    color: #f8fafc;
+    font-size: 0.9rem;
+    box-shadow: var(--shadow-soft);
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+.cf-toast--hide {
+    opacity: 0;
+}
+
+.cf-btn-loading {
+    opacity: 0.85;
+    cursor: wait;
+}
+
+.cf-table-client-filter {
+    margin: 0.75rem 0 1rem;
+    display: grid;
+    gap: 0.35rem;
+}
+
+.cf-client-filter-note,
+.cf-report-filter-hint,
+.cf-client-filter-status {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+}
+
+.cf-copy-btn {
+    margin-top: 0.5rem;
+}
+
+.cf-collapse-toggle {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-soft);
+    background: #f8fafc;
+    cursor: pointer;
+}
+
+html.cf-js-ready .cf-report-section.cf-section-collapsed .cf-collapsible-panel,
+html.cf-js-ready [data-cf-collapsible-card].cf-section-collapsed .cf-collapsible-panel {
+    display: none;
+}
+
+.card-header {
+    position: relative;
+}

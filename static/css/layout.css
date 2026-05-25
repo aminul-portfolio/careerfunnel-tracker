@@ -281,4 +281,31 @@ html.cf-sidebar-open {
     .cf-mobile-nav-toggle {
         display: none;
     }
+
+    html.cf-js-ready.cf-sidebar-collapsed .cf-sidebar {
+        width: var(--sidebar-collapsed-width);
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    html.cf-js-ready.cf-sidebar-collapsed .cf-brand-copy,
+    html.cf-js-ready.cf-sidebar-collapsed .cf-nav-group-label,
+    html.cf-js-ready.cf-sidebar-collapsed .cf-nav-link {
+        opacity: 0;
+        pointer-events: none;
+        height: 0;
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+    }
+
+    html.cf-js-ready.cf-sidebar-collapsed .cf-sidebar-collapse-toggle span {
+        transform: rotate(180deg);
+    }
+
+    html.cf-js-ready.cf-sidebar-collapsed .main-content,
+    html.cf-js-ready.cf-sidebar-collapsed .cf-main-content {
+        margin-left: var(--sidebar-collapsed-width);
+        width: calc(100% - var(--sidebar-collapsed-width));
+    }
 }

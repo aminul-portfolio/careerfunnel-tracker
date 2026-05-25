@@ -40,7 +40,16 @@
             <dl class="career-evidence-meta">
                 <div>
                     <dt>Source file</dt>
-                    <dd><code>{{ card.source_path }}</code></dd>
+                    <dd>
+                        <code>{{ card.source_path }}</code>
+                        <button
+                            type="button"
+                            class="btn btn-secondary cf-copy-btn"
+                            data-cf-copy="{{ card.source_path }}"
+                        >
+                            Copy path
+                        </button>
+                    </dd>
                 </div>
                 <div>
                     <dt>Last modified</dt>
