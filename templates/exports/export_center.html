@@ -5,91 +5,96 @@
 {% block page_heading %}Export Centre{% endblock %}
 
 {% block content %}
-<div class="dashboard-grid">
+<div class="dashboard-grid cf-export-centre">
     <section class="hero-panel">
         <p class="eyebrow">Export Evidence</p>
         <h1>Download reviewer-ready tracker evidence.</h1>
         <p>
-            Export authenticated tracker records for backup, structured review, BI-style analysis,
-            and portfolio walkthrough evidence that shows how the job search is being managed.
+            Export authenticated tracker records for backup, structured review, offline spreadsheet
+            analysis, and portfolio walkthrough evidence that shows how the job search is being managed.
         </p>
+        <p class="trust-note cf-export-manual-notice">{{ export_evidence.manual_notice }}</p>
         <div class="evidence-strip">
+            <span class="evidence-strip-item">Manual download</span>
             <span class="evidence-strip-item">Reviewer evidence</span>
-            <span class="evidence-strip-item">Backup workbook</span>
-            <span class="evidence-strip-item">BI-style analysis</span>
+            <span class="evidence-strip-item">Offline workbook</span>
         </div>
     </section>
 
     <section class="content-card">
         <div class="card-header">
             <p class="eyebrow">Full Backup</p>
-            <h2>Complete Tracker Workbook</h2>
-            <p>Downloads one Excel file containing all tracker sheets for backup and portfolio review.</p>
+            <h2>Complete tracker workbook</h2>
+            <p>Click to download one Excel file containing all tracker sheets. You initiate each export manually.</p>
         </div>
-        <a href="{% url 'exports:export_full_tracker' %}" class="btn btn-primary">Download Full Tracker</a>
+        <a href="{% url 'exports:export_full_tracker' %}" class="btn btn-primary">Download full tracker (manual)</a>
     </section>
 
     <section class="export-grid">
         <article class="export-card">
             <div>
                 <p class="eyebrow">Applications</p>
-                <h3>Applications Export</h3>
+                <h3>Applications export</h3>
                 <p>Download logged job applications, statuses, and reviewer evidence for funnel progress.</p>
             </div>
-            <a href="{% url 'exports:export_applications' %}" class="btn btn-secondary">Download</a>
+            <a href="{% url 'exports:export_applications' %}" class="btn btn-secondary">Download manually</a>
         </article>
 
         <article class="export-card">
             <div>
                 <p class="eyebrow">Daily Log</p>
-                <h3>Daily Logs Export</h3>
+                <h3>Daily logs export</h3>
                 <p>Download daily targets, actual applications, variance, and notes for activity evidence.</p>
             </div>
-            <a href="{% url 'exports:export_daily_logs' %}" class="btn btn-secondary">Download</a>
+            <a href="{% url 'exports:export_daily_logs' %}" class="btn btn-secondary">Download manually</a>
         </article>
 
         <article class="export-card">
             <div>
                 <p class="eyebrow">Weekly Review</p>
-                <h3>Weekly Reviews Export</h3>
-                <p>Download weekly diagnosis, conversion rates, and decision context for BI-style analysis.</p>
+                <h3>Weekly reviews export</h3>
+                <p>Download weekly diagnosis, conversion rates, and decision context for offline review.</p>
             </div>
-            <a href="{% url 'exports:export_weekly_reviews' %}" class="btn btn-secondary">Download</a>
+            <a href="{% url 'exports:export_weekly_reviews' %}" class="btn btn-secondary">Download manually</a>
         </article>
 
         <article class="export-card">
             <div>
                 <p class="eyebrow">Interview Prep</p>
-                <h3>Interview Prep Export</h3>
+                <h3>Interview prep export</h3>
                 <p>Download interview-preparation records and supporting notes where available.</p>
             </div>
-            <a href="{% url 'exports:export_interviews' %}" class="btn btn-secondary">Download</a>
+            <a href="{% url 'exports:export_interviews' %}" class="btn btn-secondary">Download manually</a>
         </article>
 
         <article class="export-card">
             <div>
                 <p class="eyebrow">Notes</p>
-                <h3>Notes & Decisions Export</h3>
+                <h3>Notes and decisions export</h3>
                 <p>Download strategy notes, lessons, and decisions that support the reviewer narrative.</p>
             </div>
-            <a href="{% url 'exports:export_notes' %}" class="btn btn-secondary">Download</a>
+            <a href="{% url 'exports:export_notes' %}" class="btn btn-secondary">Download manually</a>
         </article>
     </section>
 
-    <section class="content-card">
+    <section class="content-card cf-export-trust-panel">
         <div class="card-header">
-            <p class="eyebrow">Trust & Evidence</p>
+            <p class="eyebrow">Trust and evidence</p>
             <h2>Authenticated tracker records only</h2>
-            <p>
-                Exports are generated from your authenticated user records. Workbook downloads
-                are useful for review, backup, and BI-style analysis, and no fake export data is used.
-            </p>
+            <p>Exports are generated from your signed-in user records when you click download.</p>
             <ul class="page-proof-list">
-                <li>Reviewer evidence stays tied to the records already captured in the tracker.</li>
-                <li>Backup exports support independent review without adding new backend features.</li>
-                <li>BI-style analysis can start from the downloaded workbook or focused sheets.</li>
+                {% for point in export_evidence.trust_points %}
+                <li>{{ point }}</li>
+                {% endfor %}
+            </ul>
+            <h3>What Export Centre does not do</h3>
+            <ul class="workflow-list">
+                {% for item in export_evidence.limitations %}
+                <li>{{ item }}</li>
+                {% endfor %}
             </ul>
         </div>
+        <a href="{% url 'metrics:funnel_metrics' %}" class="cf-report-manual-link">{{ export_evidence.reporting_link_label }}</a>
     </section>
 </div>
 {% endblock %}

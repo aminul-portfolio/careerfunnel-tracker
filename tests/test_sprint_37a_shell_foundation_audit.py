@@ -104,7 +104,7 @@ MAJOR_AUTHENTICATED_PAGES = (
     ("followups:followup_list", {}, "Never lose an application after submission"),
     ("job_intelligence:smart_review", {}, "Score fit, readiness, CV choice, and project evidence"),
     ("ai_agents:agent_dashboard", {}, "Turn tracker data into next actions"),
-    ("metrics:funnel_metrics", {}, "See where the job-search funnel is leaking"),
+    ("metrics:funnel_metrics", {}, "Premium Reporting Foundation"),
     ("exports:export_center", {}, "Download reviewer-ready tracker evidence"),
 )
 

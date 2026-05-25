@@ -6,6 +6,7 @@ from django.utils import timezone
 from .services import (
     build_applications_workbook,
     build_daily_logs_workbook,
+    build_export_centre_context,
     build_full_tracker_workbook,
     build_interviews_workbook,
     build_notes_workbook,
@@ -28,7 +29,8 @@ def dated_filename(prefix: str) -> str:
 
 @login_required
 def export_center(request):
-    return render(request, "exports/export_center.html")
+    context = build_export_centre_context()
+    return render(request, "exports/export_center.html", context)
 
 
 @login_required

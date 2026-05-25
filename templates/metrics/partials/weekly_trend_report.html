@@ -1,0 +1,54 @@
+<section id="weekly-trend" class="content-card cf-report-section">
+    <div class="card-header">
+        <p class="eyebrow">Weekly Trend</p>
+        <h2>Applications and responses by week</h2>
+        <p class="section-note">Last ten Monday-starting weeks from logged application dates. Advisory interpretation only.</p>
+    </div>
+    {% include "metrics/partials/advisory_note.html" with copy=weekly_trend_report.advisory_copy only %}
+    <p class="cf-report-interpretation">{{ weekly_trend_report.interpretation }}</p>
+    <p class="cf-report-chart-evidence trust-note">{{ weekly_trend_report.chart_evidence_note }}</p>
+    <div class="diagnosis-action cf-report-manual-next">
+        <strong>Recommended manual next action</strong>
+        <p>{{ weekly_trend_report.manual_next_action }}</p>
+    </div>
+    <div class="chart-card">
+        <canvas id="weekly-trend-chart" aria-label="Weekly trend chart from stored tracker data" role="img"></canvas>
+    </div>
+    {{ weekly_trend_report.chart_data|json_script:"weekly-trend-data" }}
+    {% if not weekly_trend_report.has_enough_weeks %}
+    <div class="cf-report-sample-note empty-state small-empty-state">
+        <p>{{ weekly_trend_report.sparse_data_message }}</p>
+        <p>Active weeks logged: {{ weekly_trend_report.active_week_count }}.</p>
+    </div>
+    {% endif %}
+    {% if weekly_trend_report.active_week_count == 0 %}
+    <p class="section-note">Chart axes show the rolling ten-week window. Lines stay at zero until applications are logged.</p>
+    {% endif %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Week starting</th>
+                    <th>Applications</th>
+                    <th>Responses</th>
+                    <th>Response rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in weekly_trend_report.rows %}
+                <tr>
+                    <td><strong>{{ row.week_start }}</strong></td>
+                    <td>{{ row.applications }}</td>
+                    <td>{{ row.responses }}</td>
+                    <td>{{ row.response_rate }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="cf-report-manual-actions">
+        {% for action in weekly_trend_report.manual_actions %}
+        {% include "metrics/partials/manual_action_link.html" with action=action only %}
+        {% endfor %}
+    </div>
+</section>

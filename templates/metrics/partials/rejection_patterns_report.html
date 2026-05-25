@@ -1,0 +1,114 @@
+<section id="rejection-patterns" class="content-card cf-report-section">
+    <div class="card-header">
+        <p class="eyebrow">Rejection Patterns</p>
+        <h2>Where applications are breaking down</h2>
+        <p class="section-note">Historical outcomes from stored JobApplication records. Directional evidence only - no prediction or automatic decision-making.</p>
+    </div>
+    {% include "metrics/partials/advisory_note.html" with copy=rejection_patterns.advisory_copy only %}
+    <p class="cf-report-interpretation">{{ rejection_patterns.interpretation }}</p>
+    <div class="cf-report-sample-note diagnosis-panel diagnosis-warning">
+        <p class="eyebrow">Sample size</p>
+        <p>{{ rejection_patterns.sample_size_note }}</p>
+    </div>
+    <div class="diagnosis-action cf-report-manual-next">
+        <strong>Recommended manual next action</strong>
+        <p>{{ rejection_patterns.manual_next_action }}</p>
+    </div>
+    <div class="detail-grid">
+        <div class="detail-item">
+            <span>Total applications</span>
+            <strong>{{ rejection_patterns.underlying.total_applications }}</strong>
+        </div>
+        <div class="detail-item">
+            <span>Total rejections</span>
+            <strong>{{ rejection_patterns.underlying.total_rejections }}</strong>
+        </div>
+        <div class="detail-item">
+            <span>Auto rejections</span>
+            <strong>{{ rejection_patterns.underlying.auto_rejections }}</strong>
+        </div>
+        <div class="detail-item">
+            <span>Rejection rate</span>
+            <strong>{{ rejection_patterns.underlying.rejection_rate }}%</strong>
+        </div>
+        <div class="detail-item">
+            <span>Auto-rejection rate</span>
+            <strong>{{ rejection_patterns.underlying.auto_rejection_rate }}%</strong>
+        </div>
+        <div class="detail-item">
+            <span>Seniority risk count</span>
+            <strong>{{ rejection_patterns.underlying.seniority_risk_count }}</strong>
+        </div>
+    </div>
+    <h3>Manual review actions</h3>
+    {% if rejection_patterns.underlying.recommendations %}
+    <ul class="agent-list">
+        {% for rec in rejection_patterns.underlying.recommendations %}
+        <li>{{ rec }}</li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="section-note">No rejection recommendations yet. Log more outcomes to surface manual cleanup actions.</p>
+    {% endif %}
+    <h3>Rejections by source</h3>
+    <p class="table-context">Compare channels manually. High rates may reflect targeting, not a guaranteed future outcome.</p>
+    {% if rejection_patterns.underlying.by_source %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Source</th>
+                    <th>Rejections</th>
+                    <th>Applications</th>
+                    <th>Rejection rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rejection_patterns.underlying.by_source %}
+                <tr>
+                    <td><strong>{{ row.source_label }}</strong></td>
+                    <td>{{ row.rejection_count }}</td>
+                    <td>{{ row.total_applications }}</td>
+                    <td>{{ row.rejection_rate }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    {% include "metrics/partials/report_empty_state.html" with message="No source-level rejection data yet." only %}
+    {% endif %}
+    <h3>Rejections by CV version</h3>
+    <p class="table-context">Shows whether rejections cluster around particular CV versions for manual review.</p>
+    {% if rejection_patterns.underlying.by_cv_version %}
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>CV version</th>
+                    <th>Rejections</th>
+                    <th>Applications</th>
+                    <th>Rejection rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rejection_patterns.underlying.by_cv_version %}
+                <tr>
+                    <td><strong>{{ row.cv_version }}</strong></td>
+                    <td>{{ row.rejection_count }}</td>
+                    <td>{{ row.total_applications }}</td>
+                    <td>{{ row.rejection_rate }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    {% include "metrics/partials/report_empty_state.html" with message="No CV-version rejection data yet." only %}
+    {% endif %}
+    <div class="cf-report-manual-actions">
+        {% for action in rejection_patterns.manual_actions %}
+        {% include "metrics/partials/manual_action_link.html" with action=action only %}
+        {% endfor %}
+    </div>
+</section>

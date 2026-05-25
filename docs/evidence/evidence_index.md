@@ -37,7 +37,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 40A (feature branch `sprint-40a-premium-reporting-foundation`):** Premium Reporting Foundation - funnel performance, data quality, and application quality reports with shared reporting components; **10** new `PremiumReportingFoundationTests`; evidence doc `docs/evidence/sprint_40a_premium_reporting_foundation.md`. Reporting-only sprint: no dashboard/forms/model/migration changes.
 
-**Sprint 40B (feature branch `sprint-40b-source-cv-reports-search-filter-pagination`):** Source Performance + CV Version Performance with reusable search/filter/pagination; **15** new `PremiumReportingSourceCvTests`; **112** metrics tests passing; evidence doc `docs/evidence/sprint_40b_source_cv_reports_search_filter_pagination.md`. Uses Django `Paginator` for portfolio-scale pagination. Sprint 40C not implemented.
+**Sprint 40B (feature branch `sprint-40b-source-cv-reports-search-filter-pagination`):** Source Performance + CV Version Performance with reusable search/filter/pagination; **15** new `PremiumReportingSourceCvTests`; evidence doc `docs/evidence/sprint_40b_source_cv_reports_search_filter_pagination.md`. Uses Django `Paginator` for portfolio-scale pagination.
+
+**Sprint 40C (feature branch `sprint-40c-rejection-weekly-visual-export-polish`):** Rejection Patterns, Weekly Trend, Visual Analytics Evidence, and Export Centre polish; **7** new `PremiumReportingSprint40cTests`; **4** `ExportCentrePolishTests`; evidence doc `docs/evidence/sprint_40c_rejection_weekly_visual_export_polish.md`. Completes Sprint 40 reporting suite. Sprint 41 not started.
 
 ---
 
