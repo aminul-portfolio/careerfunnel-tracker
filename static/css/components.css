@@ -594,6 +594,36 @@ summary:focus-visible {
     color: #991b1b;
 }
 
+.cf-report-sample-note {
+    margin: 1rem 0;
+    padding: 1rem;
+    border-radius: var(--radius-lg);
+}
+
+.cf-report-manual-next {
+    margin: 1rem 0;
+}
+
+.cf-report-chart-evidence {
+    margin: 0.5rem 0 1rem;
+}
+
+.cf-report-visual-evidence {
+    border-left: 3px solid #93c5fd;
+}
+
+.cf-report-supplementary {
+    border-style: dotted;
+}
+
+.cf-export-centre .cf-export-manual-notice {
+    margin-top: 0.75rem;
+}
+
+.cf-export-trust-panel {
+    margin-top: 0.5rem;
+}
+
 .cf-report-filter-bar {
     display: grid;
     gap: 0.75rem;

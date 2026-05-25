@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from io import BytesIO
 
 from openpyxl import Workbook
@@ -11,6 +12,42 @@ from apps.daily_log.models import DailyLog
 from apps.interviews.models import InterviewPrep
 from apps.notes.models import Note
 from apps.weekly_review.models import WeeklyReview
+
+_EXPORT_MANUAL_NOTICE = (
+    "Each download is a manual action. You choose when to export. "
+    "No scheduled deliveries, no background jobs, and no automatic uploads."
+)
+
+
+@dataclass(frozen=True)
+class ExportCentreEvidence:
+    manual_notice: str
+    trust_points: tuple[str, ...]
+    limitations: tuple[str, ...]
+    reporting_link_label: str
+
+
+def build_export_centre_context() -> dict:
+    return {
+        "export_evidence": ExportCentreEvidence(
+            manual_notice=_EXPORT_MANUAL_NOTICE,
+            trust_points=(
+                "Exports are generated on demand from your authenticated tracker records.",
+                "Workbooks support backup, reviewer walkthroughs, and offline spreadsheet review.",
+                "No fake export data, live SaaS customers, or production deployment is implied.",
+            ),
+            limitations=(
+                "Downloads are not sent on a schedule and do not run in the background.",
+                "No Gmail, calendar, OAuth, or external BI platform is connected to Export Centre.",
+                (
+                    "Tableau and Power BI are not integrated - use the downloaded "
+                    "workbook locally if needed."
+                ),
+            ),
+            reporting_link_label="Return to metrics reporting",
+        ),
+    }
+
 
 HEADER_FILL = PatternFill(fill_type="solid", fgColor="1E293B")
 HEADER_FONT = Font(bold=True, color="FFFFFF")

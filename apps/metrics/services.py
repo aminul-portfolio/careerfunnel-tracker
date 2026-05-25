@@ -275,7 +275,8 @@ def _seniority_risk_q() -> Q:
 
 
 _SAMPLE_WARNING_LOW_VOLUME = (
-    "Not enough applications yet for strong pattern conclusions. Treat this as directional only."
+    "Fewer than 20 logged applications. Rejection patterns are directional only - "
+    "not predictions and not automatic screening decisions."
 )
 
 
@@ -2270,21 +2271,213 @@ def build_cv_version_performance_report(
     )
 
 
+# --- Sprint 40C Rejection, Weekly Trend, Visual Evidence ---
+
+_REJECTION_SAMPLE_NOTE = (
+    "Sample size is limited. Rejection patterns are directional evidence only - "
+    "not predictions and not automatic decisions."
+)
+
+_WEEKLY_TREND_SPARSE_NOTE = (
+    "Fewer than two active weeks logged. Week-over-week movement is not reliable "
+    "yet; keep logging applications before interpreting the chart."
+)
+
+_VISUAL_ANALYTICS_LIMITATIONS = (
+    "Charts on this page are rendered in CareerFunnel Tracker from your stored "
+    "SQLite records only.",
+    "No Tableau, Power BI, live SaaS dashboards, or external BI tooling is connected.",
+    "Low application volume can make weekly lines look decisive when they are not.",
+    "Reviewers should treat charts as supporting evidence alongside tables and exports.",
+)
+
+
+@dataclass(frozen=True)
+class RejectionPatternsReport:
+    underlying: RejectionPatternReport
+    interpretation: str
+    sample_size_note: str
+    manual_next_action: str
+    manual_actions: tuple[ReportManualAction, ...]
+    advisory_copy: str
+
+
+@dataclass(frozen=True)
+class WeeklyTrendReport:
+    rows: tuple[WeeklyTrendRow, ...]
+    active_week_count: int
+    has_enough_weeks: bool
+    interpretation: str
+    sparse_data_message: str
+    chart_data: dict[str, list]
+    show_chart: bool
+    manual_next_action: str
+    manual_actions: tuple[ReportManualAction, ...]
+    advisory_copy: str
+    chart_evidence_note: str
+
+
+@dataclass(frozen=True)
+class VisualAnalyticsEvidence:
+    title: str
+    summary: str
+    interpretation_points: tuple[str, ...]
+    limitations: tuple[str, ...]
+    data_source_note: str
+    manual_actions: tuple[ReportManualAction, ...]
+
+
+def _rejection_patterns_interpretation(report: RejectionPatternReport) -> str:
+    if report.total_applications == 0:
+        return (
+            "No rejection pattern can be summarised until applications are logged. "
+            "This report describes past outcomes only - it does not predict future results."
+        )
+    if not report.has_enough_data:
+        return (
+            f"You have {report.total_applications} logged applications and "
+            f"{report.total_rejections} rejections. Treat source and CV breakdowns "
+            "as early directional signals, not firm conclusions."
+        )
+    if report.auto_rejection_rate >= 25.0:
+        return (
+            "Auto-rejections are a noticeable share of outcomes. Review targeting, "
+            "keywords, and role fit manually before changing CV strategy."
+        )
+    if report.total_rejections == 0:
+        return (
+            "No rejected or auto-rejected statuses recorded yet. Keep logging outcomes "
+            "so rejection clustering by source or CV version can be reviewed manually."
+        )
+    return (
+        f"Recorded rejection rate is {report.rejection_rate}% across "
+        f"{report.total_applications} applications. Compare sources and CV versions "
+        "side by side, then decide manual next steps in the application list."
+    )
+
+
+def _rejection_manual_next_action(report: RejectionPatternReport) -> str:
+    if report.total_applications == 0:
+        return "Log applications with final statuses before using rejection breakdowns."
+    if report.seniority_risk_count > 0:
+        return "Open the evaluation queue and review stretch-role applications manually."
+    if report.auto_rejection_rate >= 25.0:
+        return "Review recent applications manually and confirm each role is realistic."
+    return "Compare rejection tables below, then update records manually in application detail."
+
+
+def build_rejection_patterns_report(user) -> RejectionPatternsReport:
+    underlying = build_rejection_pattern_report(user)
+    sample_note = underlying.sample_warning or _REJECTION_SAMPLE_NOTE
+    manual_actions = _reporting_manual_actions(
+        ("Review applications manually", "applications:application_list"),
+        ("Open evaluation queue", "applications:evaluation_queue"),
+    )
+    return RejectionPatternsReport(
+        underlying=underlying,
+        interpretation=_rejection_patterns_interpretation(underlying),
+        sample_size_note=sample_note,
+        manual_next_action=_rejection_manual_next_action(underlying),
+        manual_actions=manual_actions,
+        advisory_copy=_REPORTING_ADVISORY_COPY,
+    )
+
+
+def _weekly_trend_interpretation(
+    rows: list[WeeklyTrendRow],
+    active_week_count: int,
+) -> str:
+    if active_week_count == 0:
+        return (
+            "No weekly trend is available until application dates are logged. "
+            "The chart will stay empty until data exists."
+        )
+    if active_week_count < 2:
+        return (
+            "Only one active week is logged. Do not over-read week-over-week "
+            "movement - continue logging before drawing conclusions."
+        )
+    recent = [row for row in rows if row.applications > 0][-3:]
+    if not recent:
+        return "Recent weeks show no application volume in the rolling window."
+    latest = recent[-1]
+    return (
+        f"Latest active week ({latest.week_start}) shows {latest.applications} "
+        f"applications and {latest.responses} responses ({latest.response_rate}% "
+        "response rate). Use this as manual, advisory context - not a forecast."
+    )
+
+
+def build_weekly_trend_report(user, weeks: int = 10) -> WeeklyTrendReport:
+    rows = build_weekly_trend(user, weeks=weeks)
+    active_week_count = sum(1 for row in rows if row.applications > 0)
+    has_enough_weeks = active_week_count >= 2
+    chart_data = {
+        "labels": [row.week_start.isoformat() for row in rows],
+        "applications": [row.applications for row in rows],
+        "responses": [row.responses for row in rows],
+    }
+    manual_actions = _reporting_manual_actions(
+        ("Log application manually", "applications:application_create"),
+        ("Open daily log", "daily_log:daily_log_list"),
+    )
+    return WeeklyTrendReport(
+        rows=tuple(rows),
+        active_week_count=active_week_count,
+        has_enough_weeks=has_enough_weeks,
+        interpretation=_weekly_trend_interpretation(rows, active_week_count),
+        sparse_data_message=_WEEKLY_TREND_SPARSE_NOTE,
+        chart_data=chart_data,
+        show_chart=active_week_count > 0,
+        manual_next_action=(
+            "Log applications across at least two different weeks, then compare "
+            "the table and chart manually."
+        ),
+        manual_actions=manual_actions,
+        advisory_copy=_REPORTING_ADVISORY_COPY,
+        chart_evidence_note=(
+            "Chart.js line chart built from stored application dates in this tracker. "
+            "No external analytics platform or live dashboard is used."
+        ),
+    )
+
+
+def build_visual_analytics_evidence() -> VisualAnalyticsEvidence:
+    manual_actions = _reporting_manual_actions(
+        ("Open metrics reporting", "metrics:funnel_metrics"),
+        ("Open export centre", "exports:export_center"),
+    )
+    return VisualAnalyticsEvidence(
+        title="Visual analytics evidence",
+        summary=(
+            "Charts and tables on this reporting page help reviewers see patterns in "
+            "logged job-search activity. They are generated from stored tracker data "
+            "at page load - not from production SaaS analytics or external BI tools."
+        ),
+        interpretation_points=(
+            "Funnel and performance tables summarise counts and rates from JobApplication records.",
+            "Weekly trend lines show application and response volume by Monday-starting week.",
+            "Rejection breakdowns group historical outcomes - they do not trigger actions.",
+            "Use exports for offline spreadsheet review when a portable workbook is needed.",
+        ),
+        limitations=_VISUAL_ANALYTICS_LIMITATIONS,
+        data_source_note=(
+            "All visuals are derived from the local CareerFunnel Tracker database for "
+            "the signed-in user. Refresh the page after logging new records."
+        ),
+        manual_actions=manual_actions,
+    )
+
+
 def build_reporting_foundation_context(user, query_params=None) -> dict:
     """Assemble Sprint 40A reporting foundation plus legacy metrics context."""
     metrics = build_funnel_metrics(user)
     diagnosis = diagnose_funnel(metrics)
     application_quality_report = build_application_quality_report(user)
     data_quality_report = build_data_quality_report(user)
-    weekly_trend_rows = build_weekly_trend(user)
-    weekly_trend_has_data = sum(
-        1 for row in weekly_trend_rows if row.applications > 0
-    ) >= 2
-    weekly_trend_chart_data = {
-        "labels": [row.week_start.isoformat() for row in weekly_trend_rows],
-        "applications": [row.applications for row in weekly_trend_rows],
-        "responses": [row.responses for row in weekly_trend_rows],
-    }
+    weekly_trend_report = build_weekly_trend_report(user)
+    rejection_patterns = build_rejection_patterns_report(user)
+    visual_analytics_evidence = build_visual_analytics_evidence()
     funnel_performance = build_funnel_performance_report(
         user,
         metrics=metrics,
@@ -2304,9 +2497,9 @@ def build_reporting_foundation_context(user, query_params=None) -> dict:
     return {
         "report_title": "Premium Reporting Foundation",
         "report_subtitle": (
-            "See where the job-search funnel is leaking. Funnel performance, data quality, "
-            "application quality, source performance, and CV version performance are built "
-            "from stored records for manual, evidence-based review."
+            "Funnel performance, data quality, application quality, source and CV "
+            "performance, rejection patterns, and weekly trend - built from stored "
+            "records for manual, evidence-based review."
         ),
         "report_trust_note": (
             "Reporting GET requests are read-only. All workflow links open "
@@ -2318,16 +2511,19 @@ def build_reporting_foundation_context(user, query_params=None) -> dict:
         "application_quality_foundation": application_quality_foundation,
         "source_performance": source_performance,
         "cv_version_performance": cv_version_performance,
+        "rejection_patterns": rejection_patterns,
+        "weekly_trend_report": weekly_trend_report,
+        "visual_analytics_evidence": visual_analytics_evidence,
         "metrics": metrics,
         "diagnosis": diagnosis,
         "funnel_stage_rows": list(funnel_performance.stage_rows),
         "diagnosis_panel_class": get_diagnosis_panel_class(diagnosis.severity),
         "source_roi_rows": build_source_roi(user),
         "cv_version_rows": build_cv_version_performance(user),
-        "rejection_report": build_rejection_pattern_report(user),
+        "rejection_report": rejection_patterns.underlying,
         "application_quality_report": application_quality_report,
         "data_quality_report": data_quality_report,
-        "weekly_trend_rows": weekly_trend_rows,
-        "weekly_trend_has_data": weekly_trend_has_data,
-        "weekly_trend_chart_data": weekly_trend_chart_data,
+        "weekly_trend_rows": list(weekly_trend_report.rows),
+        "weekly_trend_has_data": weekly_trend_report.has_enough_weeks,
+        "weekly_trend_chart_data": weekly_trend_report.chart_data,
     }

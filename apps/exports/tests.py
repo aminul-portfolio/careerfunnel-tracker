@@ -108,6 +108,56 @@ class ExportViewTests(TestCase):
                 self.assertEqual(response["Content-Type"], XLSX_CONTENT_TYPE)
                 self.assertIn(".xlsx", response["Content-Disposition"])
 
+
+class ExportCentrePolishTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="aminul",
+            password="StrongPass12345",
+        )
+
+    def test_export_centre_renders_manual_polish_copy(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(reverse("exports:export_center"))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn("export_evidence", response.context)
+        self.assertIn("manual action", content.lower())
+        self.assertIn("no scheduled", content.lower())
+        self.assertIn("Download manually", content)
+        self.assertIn("Tableau and Power BI are not integrated", content)
+
+    def test_export_actions_remain_manual_get_downloads(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(reverse("exports:export_applications"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], XLSX_CONTENT_TYPE)
+        self.assertIn("attachment", response["Content-Disposition"])
+
+    def test_export_centre_get_does_not_mutate_application_records(self):
+        JobApplication.objects.create(
+            user=self.user,
+            company_name="Export Co",
+            job_title="Analyst",
+            date_applied=date(2026, 5, 9),
+            status=ApplicationStatus.SUBMITTED,
+        )
+        count_before = JobApplication.objects.filter(user=self.user).count()
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(reverse("exports:export_center"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            JobApplication.objects.filter(user=self.user).count(),
+            count_before,
+        )
+
+    def test_export_centre_claims_no_background_jobs(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(reverse("exports:export_center"))
+        content = response.content.decode()
+        self.assertIn("background", content.lower())
+        self.assertNotIn("auto-apply", content.lower())
+
     def test_export_routes_require_login(self):
         for route_name in EXPORT_ROUTE_NAMES:
             with self.subTest(route_name=route_name):

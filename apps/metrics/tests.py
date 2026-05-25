@@ -405,8 +405,8 @@ class RejectionPatternReportTests(TestCase):
     """Tests for rejection pattern analytics (Sprint 2B Task 1)."""
 
     _LOW_SAMPLE_WARNING = (
-        "Not enough applications yet for strong pattern conclusions. "
-        "Treat this as directional only."
+        "Fewer than 20 logged applications. Rejection patterns are directional only - "
+        "not predictions and not automatic screening decisions."
     )
 
     def setUp(self):
@@ -1246,7 +1246,7 @@ class MetricsViewTests(TestCase):
         self._create_app(date_applied=previous_monday)
         response = self._get_funnel_metrics()
         content = response.content.decode()
-        self.assertIn("Week Starting", content)
+        self.assertIn("Week starting", content)
         self.assertIn("<table", content)
         self.assertIn(format_date(current_monday, "j M Y"), content)
         self.assertIn(format_date(previous_monday, "j M Y"), content)
@@ -1264,7 +1264,7 @@ class MetricsViewTests(TestCase):
         self._create_app(company_name="OnlyWeek", date_applied=current_monday)
         response = self._get_funnel_metrics()
         content = response.content.decode()
-        self.assertIn("Not enough data yet", content)
+        self.assertIn("Fewer than two active weeks", content)
         self.assertFalse(response.context["weekly_trend_has_data"])
 
     def test_existing_funnel_metrics_page_behavior_unchanged(self):
@@ -1401,10 +1401,9 @@ class PremiumReportingFoundationTests(TestCase):
         self.assertIn("Review applications manually", content)
         self.assertIn(reverse("applications:application_create"), content)
 
-    def test_no_sprint_40c_scope_not_in_primary_nav(self):
+    def test_reporting_suite_includes_sprint_40c_sections_in_nav(self):
         response = self._get_funnel_metrics()
         content = response.content.decode()
-        self.assertIn("Sprint 40C not in scope", content)
         nav_start = content.index('aria-label="Reporting suite sections"')
         nav_end = content.index("</nav>", nav_start)
         nav_html = content[nav_start:nav_end]
@@ -1413,8 +1412,9 @@ class PremiumReportingFoundationTests(TestCase):
         self.assertIn("Application Quality", nav_html)
         self.assertIn("Source Performance", nav_html)
         self.assertIn("CV Version Performance", nav_html)
-        self.assertNotIn("Weekly Trend", nav_html)
-        self.assertNotIn("Rejection", nav_html)
+        self.assertIn("Rejection Patterns", nav_html)
+        self.assertIn("Weekly Trend", nav_html)
+        self.assertIn("Visual Evidence", nav_html)
 
 
 class PremiumReportingSourceCvTests(TestCase):
@@ -1580,12 +1580,13 @@ class PremiumReportingSourceCvTests(TestCase):
             count_before,
         )
 
-    def test_sprint_40c_scope_not_implemented(self):
+    def test_sprint_40c_reporting_sections_render(self):
         response = self._get()
         content = response.content.decode()
-        self.assertIn("Sprint 40C not in scope", content)
-        self.assertNotIn("Visual Analytics", content)
-        self.assertNotIn("Tableau", content)
+        self.assertIn("Rejection Patterns", content)
+        self.assertIn("Weekly Trend", content)
+        self.assertIn("Visual Analytics Evidence", content)
+        self.assertNotIn("Sprint 40C not in scope", content)
 
     def test_reporting_copy_remains_claim_safe(self):
         response = self._get()
@@ -1594,3 +1595,94 @@ class PremiumReportingSourceCvTests(TestCase):
         self.assertIn("read-only", content)
         self.assertIn("manual", content.lower())
         self.assertNotIn("auto-apply", content.lower())
+
+class PremiumReportingSprint40cTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+        self.url = reverse("metrics:funnel_metrics")
+
+    def _login(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+
+    def _get(self):
+        self._login()
+        return self.client.get(self.url)
+
+    def _create_app(self, **kwargs):
+        defaults = {
+            "user": self.user,
+            "company_name": "Acme",
+            "job_title": "Analyst",
+            "date_applied": date(2026, 5, 1),
+            "status": ApplicationStatus.SUBMITTED,
+            "source": ApplicationSource.OTHER,
+        }
+        defaults.update(kwargs)
+        return JobApplication.objects.create(**defaults)
+
+    def test_rejection_pattern_report_renders_advisory_copy(self):
+        self._create_app(status=ApplicationStatus.REJECTED)
+        response = self._get()
+        content = response.content.decode()
+        self.assertIn("rejection_patterns", response.context)
+        self.assertIn("directional", content.lower())
+        self.assertIn("not predict", content.lower())
+        self.assertIn("Recommended manual next action", content)
+
+    def test_weekly_trend_report_renders_advisory_copy(self):
+        today = timezone.localdate()
+        monday = _monday_start(today)
+        previous = monday - timedelta(weeks=1)
+        self._create_app(date_applied=monday, status=ApplicationStatus.ACKNOWLEDGED)
+        self._create_app(
+            company_name="Prior Co",
+            date_applied=previous,
+            status=ApplicationStatus.SUBMITTED,
+        )
+        response = self._get()
+        content = response.content.decode()
+        self.assertIn("weekly_trend_report", response.context)
+        self.assertTrue(response.context["weekly_trend_report"].has_enough_weeks)
+        self.assertIn("not a forecast", content)
+
+    def test_visual_analytics_evidence_renders(self):
+        response = self._get()
+        content = response.content.decode()
+        self.assertIn("visual_analytics_evidence", response.context)
+        self.assertIn("Visual Analytics Evidence", content)
+        self.assertIn("stored SQLite records", content)
+        self.assertIn("No Tableau, Power BI", content)
+
+    def test_reporting_get_does_not_mutate_records(self):
+        self._create_app()
+        count_before = JobApplication.objects.filter(user=self.user).count()
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            JobApplication.objects.filter(user=self.user).count(),
+            count_before,
+        )
+
+    def test_sprint_41_scope_not_implemented(self):
+        response = self._get()
+        content = response.content.decode()
+        self.assertNotIn("Sprint 41", content)
+        self.assertNotIn("Skill Intelligence", content)
+
+    def test_claim_safety_wording_remains_clean(self):
+        response = self._get()
+        content = response.content.decode()
+        self.assertIn("advisory and evidence-based", content)
+        self.assertIn("read-only", content)
+        self.assertNotIn("auto-apply", content.lower())
+        self.assertNotIn("live saas users", content.lower())
+        self.assertNotIn("production deployment", content.lower())
+
+    def test_weekly_trend_sparse_weeks_show_sample_message(self):
+        today = timezone.localdate()
+        monday = _monday_start(today)
+        self._create_app(date_applied=monday)
+        response = self._get()
+        report = response.context["weekly_trend_report"]
+        self.assertFalse(report.has_enough_weeks)
+        self.assertContains(response, "Fewer than two active weeks")

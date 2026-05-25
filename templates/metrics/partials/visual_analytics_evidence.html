@@ -1,0 +1,25 @@
+<section id="visual-analytics-evidence" class="content-card cf-report-section cf-report-visual-evidence">
+    <div class="card-header">
+        <p class="eyebrow">Visual Analytics Evidence</p>
+        <h2>{{ visual_analytics_evidence.title }}</h2>
+        <p class="section-note">{{ visual_analytics_evidence.summary }}</p>
+    </div>
+    <p class="trust-note">{{ visual_analytics_evidence.data_source_note }}</p>
+    <h3>How to interpret charts and tables</h3>
+    <ul class="agent-list">
+        {% for point in visual_analytics_evidence.interpretation_points %}
+        <li>{{ point }}</li>
+        {% endfor %}
+    </ul>
+    <h3>Limitations (claim-safe)</h3>
+    <ul class="workflow-list">
+        {% for item in visual_analytics_evidence.limitations %}
+        <li>{{ item }}</li>
+        {% endfor %}
+    </ul>
+    <div class="cf-report-manual-actions">
+        {% for action in visual_analytics_evidence.manual_actions %}
+        {% include "metrics/partials/manual_action_link.html" with action=action only %}
+        {% endfor %}
+    </div>
+</section>

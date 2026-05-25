@@ -10,6 +10,9 @@
         <a href="#application-quality">Application Quality</a>
         <a href="#source-performance">Source Performance</a>
         <a href="#cv-version-performance">CV Version Performance</a>
+        <a href="#rejection-patterns">Rejection Patterns</a>
+        <a href="#weekly-trend">Weekly Trend</a>
+        <a href="#visual-analytics-evidence">Visual Evidence</a>
     </nav>
     {% include "metrics/partials/advisory_note.html" with copy=reporting_advisory_copy only %}
     {% include "metrics/partials/funnel_performance_report.html" %}
@@ -17,187 +20,33 @@
     {% include "metrics/partials/application_quality_foundation_report.html" %}
     {% include "metrics/partials/source_performance_report.html" %}
     {% include "metrics/partials/cv_version_performance_report.html" %}
-    <section class="content-card cf-report-legacy" aria-label="Extended analytics not in Sprint 40B scope">
-        <p class="eyebrow">Extended analytics</p>
-        <h2>Pre-existing sections (Sprint 40C not in scope)</h2>
-        <p class="section-note">Daily discipline, weekly trend, and rejection analysis remain for backward compatibility. Sprint 40B does not expand weekly trend or rejection patterns.</p>
-    </section>
-    <section id="daily-discipline" class="content-card cf-report-legacy">
+    {% include "metrics/partials/rejection_patterns_report.html" %}
+    {% include "metrics/partials/weekly_trend_report.html" %}
+    {% include "metrics/partials/visual_analytics_evidence.html" %}
+    <section id="daily-discipline" class="content-card cf-report-supplementary">
         <div class="card-header">
             <p class="eyebrow">Daily Discipline</p>
-            <h2>Target vs Actual</h2>
-            <p class="section-note">Compares planned application activity with the daily log totals used by the tracker.</p>
+            <h2>Target vs actual</h2>
+            <p class="section-note">Compares planned application activity with daily log totals. Supplementary context only.</p>
         </div>
         <div class="detail-grid">
             <div class="detail-item">
-                <span>Daily Target Total</span>
+                <span>Daily target total</span>
                 <strong>{{ metrics.daily_target_total }}</strong>
             </div>
             <div class="detail-item">
-                <span>Daily Actual Total</span>
+                <span>Daily actual total</span>
                 <strong>{{ metrics.daily_actual_total }}</strong>
             </div>
             <div class="detail-item">
-                <span>Total Variance</span>
+                <span>Total variance</span>
                 <strong>{{ metrics.daily_variance_total }}</strong>
             </div>
             <div class="detail-item">
-                <span>Daily Target Hit Rate</span>
+                <span>Daily target hit rate</span>
                 <strong>{{ metrics.daily_target_hit_rate }}%</strong>
             </div>
         </div>
-    </section>
-    <section id="weekly-trend" class="content-card cf-report-legacy">
-        <div class="card-header">
-            <p class="eyebrow">Weekly Trend</p>
-            <h2>Applications and responses by week</h2>
-            <p class="section-note">Last ten Monday-starting weeks from logged application dates.</p>
-        </div>
-        <div class="chart-card">
-            <canvas id="weekly-trend-chart" aria-label="Weekly trend chart" role="img"></canvas>
-        </div>
-        {{ weekly_trend_chart_data|json_script:"weekly-trend-data" }}
-        {% if not weekly_trend_has_data %}
-        <div class="empty-state small-empty-state">
-            <p>Not enough data yet. Log applications across at least two different weeks before week-over-week trends are meaningful.</p>
-        </div>
-        {% endif %}
-        <div class="table-wrap">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Week Starting</th>
-                        <th>Applications</th>
-                        <th>Responses</th>
-                        <th>Response Rate</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in weekly_trend_rows %}
-                    <tr>
-                        <td><strong>{{ row.week_start }}</strong></td>
-                        <td>{{ row.applications }}</td>
-                        <td>{{ row.responses }}</td>
-                        <td>{{ row.response_rate }}%</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </section>
-    <section id="rejections" class="content-card cf-report-legacy">
-        <div class="card-header">
-            <p class="eyebrow">Rejection Pattern Analysis</p>
-            <h2>Where applications are breaking down</h2>
-            <p class="trust-note">Built from real JobApplication outcomes. Rejection statuses include rejected and auto-rejected.</p>
-            <p class="section-note">Highlights rejection volume, repeated patterns, and the cleanup actions most likely to improve future applications.</p>
-        </div>
-        {% if rejection_report.sample_warning %}
-        <div class="diagnosis-panel diagnosis-warning">
-            <div>
-                <p class="eyebrow">Sample size</p>
-                <p>{{ rejection_report.sample_warning }}</p>
-            </div>
-        </div>
-        {% endif %}
-        <div class="detail-grid">
-            <div class="detail-item">
-                <span>Total Applications</span>
-                <strong>{{ rejection_report.total_applications }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Total Rejections</span>
-                <strong>{{ rejection_report.total_rejections }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Auto Rejections</span>
-                <strong>{{ rejection_report.auto_rejections }}</strong>
-            </div>
-            <div class="detail-item">
-                <span>Rejection Rate</span>
-                <strong>{{ rejection_report.rejection_rate }}%</strong>
-            </div>
-            <div class="detail-item">
-                <span>Auto-Rejection Rate</span>
-                <strong>{{ rejection_report.auto_rejection_rate }}%</strong>
-            </div>
-            <div class="detail-item">
-                <span>Seniority Risk Count</span>
-                <strong>{{ rejection_report.seniority_risk_count }}</strong>
-            </div>
-        </div>
-        <h3>Recommended Actions</h3>
-        {% if rejection_report.recommendations %}
-        <ul class="agent-list">
-            {% for rec in rejection_report.recommendations %}
-            <li>{{ rec }}</li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <div class="empty-state small-empty-state">
-            <p>No rejection recommendations available yet.</p>
-        </div>
-        {% endif %}
-        <h3>Rejections by source</h3>
-        <p class="table-context">Compares rejection patterns across the same application source groups used above.</p>
-        {% if rejection_report.by_source %}
-        <div class="table-wrap">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Source</th>
-                        <th>Rejections</th>
-                        <th>Applications</th>
-                        <th>Rejection Rate</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in rejection_report.by_source %}
-                    <tr>
-                        <td><strong>{{ row.source_label }}</strong></td>
-                        <td>{{ row.rejection_count }}</td>
-                        <td>{{ row.total_applications }}</td>
-                        <td>{{ row.rejection_rate }}%</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="empty-state small-empty-state">
-            <p>No source-level rejection data yet.</p>
-        </div>
-        {% endif %}
-        <h3>Rejections by CV version</h3>
-        <p class="table-context">Shows whether rejection patterns are clustering around particular CV versions.</p>
-        {% if rejection_report.by_cv_version %}
-        <div class="table-wrap">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>CV Version</th>
-                        <th>Rejections</th>
-                        <th>Applications</th>
-                        <th>Rejection Rate</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in rejection_report.by_cv_version %}
-                    <tr>
-                        <td><strong>{{ row.cv_version }}</strong></td>
-                        <td>{{ row.rejection_count }}</td>
-                        <td>{{ row.total_applications }}</td>
-                        <td>{{ row.rejection_rate }}%</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="empty-state small-empty-state">
-            <p>No CV-version rejection data yet.</p>
-        </div>
-        {% endif %}
     </section>
     {% include "metrics/data_quality_report.html" %}
 </div>
