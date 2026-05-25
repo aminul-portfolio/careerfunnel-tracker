@@ -26,5 +26,6 @@ def dashboard(request):
             "learning_plan": context.learning_plan,
             "evidence_readiness": context.evidence_readiness,
             "portfolio_evidence_mapping": context.portfolio_evidence_mapping,
+            "interview_story_mapping": context.interview_story_mapping,
         },
     )

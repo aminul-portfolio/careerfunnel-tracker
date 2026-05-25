@@ -536,6 +536,144 @@
         {% endif %}
     </section>
 
+    <section id="manual-interview-story-mapping" class="content-card cf-skill-gap-interview-story-mapping">
+        <div class="card-header">
+            <p class="eyebrow">Manual interview story mapping</p>
+            <h2>Interview story focus</h2>
+            <p class="section-note">
+                Advisory only. Based on saved skill-gap records. Review and decide manually -
+                story prompts below are manual prompts only, not completed interview evidence unless you saved it.
+            </p>
+        </div>
+
+        {% if interview_story_mapping.has_unresolved %}
+        <div class="cf-interview-story-groups">
+            {% if interview_story_mapping.prepare_interview_stories_now.items %}
+            <div class="cf-interview-story-group">
+                <h3>{{ interview_story_mapping.prepare_interview_stories_now.label }}</h3>
+                <ul class="cf-interview-story-list">
+                    {% for gap in interview_story_mapping.prepare_interview_stories_now.items %}
+                    <li class="cf-interview-story-item">
+                        <div class="cf-interview-story-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-warning">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                            - {{ gap.get_stage_display }} - {{ gap.get_current_tier_display }}
+                            - score {{ gap.priority_score }}
+                        </p>
+                        <p><strong>Suggested story prompts:</strong>
+                            {% if gap.suggested_action %}{{ gap.suggested_action }}{% else %}
+                            Draft interview talking points manually from saved application notes.{% endif %}
+                        </p>
+                        <ul class="table-subtext cf-interview-story-prompt-list">
+                            <li>Situation prompt (manual)</li>
+                            <li>Task prompt (manual)</li>
+                            <li>Action prompt (manual)</li>
+                            <li>Result prompt (manual)</li>
+                            <li>Business impact prompt (manual)</li>
+                            <li>Data-quality/reconciliation prompt (manual, if relevant)</li>
+                            <li>Dashboard/reporting explanation prompt (manual, if relevant)</li>
+                            <li>Learning/improvement prompt (manual)</li>
+                        </ul>
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if interview_story_mapping.strengthen_evidence_stories_next.items %}
+            <div class="cf-interview-story-group">
+                <h3>{{ interview_story_mapping.strengthen_evidence_stories_next.label }}</h3>
+                <ul class="cf-interview-story-list">
+                    {% for gap in interview_story_mapping.strengthen_evidence_stories_next.items %}
+                    <li class="cf-interview-story-item">
+                        <div class="cf-interview-story-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-info">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                            - {{ gap.get_stage_display }} - {{ gap.get_current_tier_display }}
+                        </p>
+                        <p><strong>Suggested story prompts:</strong>
+                            {% if gap.suggested_action %}{{ gap.suggested_action }}{% else %}
+                            Strengthen STAR-style notes before the next interview stage.{% endif %}
+                        </p>
+                        <ul class="table-subtext cf-interview-story-prompt-list">
+                            <li>Situation prompt (manual)</li>
+                            <li>Task prompt (manual)</li>
+                            <li>Action prompt (manual)</li>
+                            <li>Result prompt (manual)</li>
+                            <li>Business impact prompt (manual)</li>
+                            <li>Dashboard/reporting explanation prompt (manual)</li>
+                        </ul>
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if interview_story_mapping.story_backlog.items %}
+            <div class="cf-interview-story-group">
+                <h3>{{ interview_story_mapping.story_backlog.label }}</h3>
+                <ul class="cf-interview-story-list">
+                    {% for gap in interview_story_mapping.story_backlog.items %}
+                    <li class="cf-interview-story-item">
+                        <div class="cf-interview-story-item-head">
+                            <strong>{{ gap.skill_name }}</strong>
+                            <span class="badge badge-info">{{ gap.get_priority_display }}</span>
+                        </div>
+                        <p class="table-context">
+                            {{ gap.application.company_name }} - {{ gap.application.job_title }}
+                        </p>
+                        {% if gap.suggested_action %}
+                        <p><strong>Suggested story prompts:</strong> {{ gap.suggested_action }}</p>
+                        {% endif %}
+                        <ul class="table-subtext cf-interview-story-prompt-list">
+                            <li>Situation prompt (manual)</li>
+                            <li>Action prompt (manual)</li>
+                            <li>Result prompt (manual)</li>
+                        </ul>
+                        <p class="table-subtext">Long-term goal: {{ gap.get_long_term_goal_display }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if interview_story_mapping.resolved_story_context.items %}
+            <div class="cf-interview-story-group cf-interview-story-group-resolved">
+                <h3>{{ interview_story_mapping.resolved_story_context.label }}</h3>
+                <p class="section-note">Completed gaps for context only - not primary interview story focus.</p>
+                <ul class="cf-interview-story-list">
+                    {% for gap in interview_story_mapping.resolved_story_context.items %}
+                    <li class="cf-interview-story-item">
+                        <strong>{{ gap.skill_name }}</strong>
+                        <span class="table-context">
+                            {{ gap.application.company_name }} - resolved
+                            {% if gap.resolved_tier %} ({{ gap.resolved_tier }}){% endif %}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No unresolved skill gaps for manual interview story mapping.</h3>
+            <p>
+                When you save unresolved skill gaps, interview story focus areas will appear here.
+                Review and decide manually - nothing is created or updated automatically.
+            </p>
+        </div>
+        {% endif %}
+    </section>
+
     <section class="content-card">
         <div class="card-header card-header-row">
             <div>
