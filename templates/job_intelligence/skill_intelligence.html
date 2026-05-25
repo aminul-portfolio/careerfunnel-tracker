@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Skill Intelligence | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Skill Intelligence{% endblock %}
+{% block content %}
+<div class="dashboard-grid cf-skill-intelligence">
+    <section class="hero-panel">
+        <p class="eyebrow">Skill Intelligence</p>
+        <h1>Manual, evidence-based skill review for DA / BI / AE / DE roles.</h1>
+        <p>{{ skill_intelligence.advisory_copy }}</p>
+        <ul class="workflow-list cf-skill-trust-list">
+            {% for point in skill_intelligence.trust_points %}
+            <li>{{ point }}</li>
+            {% endfor %}
+        </ul>
+        <div class="cf-report-manual-actions">
+            {% for action in skill_intelligence.manual_actions %}
+            <a href="{{ action.url }}" class="cf-report-manual-link">{{ action.label }}</a>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section id="skill-evidence-summary" class="content-card cf-skill-section">
+        <div class="card-header">
+            <p class="eyebrow">Skill Evidence Summary</p>
+            <h2>Claim-safe skill areas</h2>
+            <p class="section-note">
+                Summaries use static portfolio references and keyword matches in
+                {{ skill_intelligence.application_count }} logged application record(s).
+                This is not automatic AI extraction or ML scoring.
+            </p>
+        </div>
+        <div class="cf-skill-evidence-grid">
+            {% for skill in skill_intelligence.skill_evidence %}
+            <article class="cf-skill-evidence-card">
+                <h3>{{ skill.name }}</h3>
+                <p>{{ skill.evidence_summary }}</p>
+                <p class="table-context">{{ skill.career_evidence_note }}</p>
+                {% if skill.portfolio_projects %}
+                <p><strong>Portfolio projects:</strong> {{ skill.portfolio_projects|join:", " }}</p>
+                {% endif %}
+                <p class="cf-skill-match-count">
+                    Keyword matches in saved application text: {{ skill.matched_in_applications }}
+                </p>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section id="skill-gap-review" class="content-card cf-skill-section">
+        <div class="card-header">
+            <p class="eyebrow">Skill Gap Review</p>
+            <h2>Manual review prompts</h2>
+            <p class="section-note">Advisory prompts only - not weaknesses, hiring decisions, or predictions.</p>
+        </div>
+        <ul class="agent-list">
+            {% for gap in skill_intelligence.skill_gaps %}
+            <li>
+                <strong>{{ gap.skill_or_area }}</strong> - {{ gap.prompt }}
+                <span class="table-context">{{ gap.context }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section id="role-readiness-checklist" class="content-card cf-skill-section">
+        <div class="card-header">
+            <p class="eyebrow">Role-Readiness Checklist</p>
+            <h2>Manual checklists by role family</h2>
+            <p class="section-note">Use before applying. No numeric job-fit score on this page.</p>
+        </div>
+        {% for role in skill_intelligence.role_checklists %}
+        <article class="cf-role-checklist">
+            <h3>{{ role.role_title }}</h3>
+            <p>{{ role.summary }}</p>
+            <ul class="workflow-list">
+                {% for item in role.items %}
+                <li><strong>{{ item.label }}</strong> - {{ item.guidance }}</li>
+                {% endfor %}
+            </ul>
+        </article>
+        {% endfor %}
+    </section>
+
+    <section id="portfolio-evidence-mapping" class="content-card cf-skill-section">
+        <div class="card-header">
+            <p class="eyebrow">Portfolio Evidence Mapping</p>
+            <h2>Projects linked to skill areas</h2>
+            <p class="section-note">Read-only mapping to existing Career Evidence and portfolio narratives.</p>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Project</th>
+                        <th>Skills demonstrated</th>
+                        <th>Manual note</th>
+                        <th>Career Evidence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in skill_intelligence.portfolio_mappings %}
+                    <tr>
+                        <td><strong>{{ row.project_name }}</strong></td>
+                        <td>{{ row.skills_demonstrated|join:", " }}</td>
+                        <td>{{ row.manual_note }}</td>
+                        <td>
+                            <a href="{{ row.career_evidence_url }}" class="cf-report-manual-link">Open manually</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

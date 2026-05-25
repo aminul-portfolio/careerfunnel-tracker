@@ -39,7 +39,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 40B (feature branch `sprint-40b-source-cv-reports-search-filter-pagination`):** Source Performance + CV Version Performance with reusable search/filter/pagination; **15** new `PremiumReportingSourceCvTests`; evidence doc `docs/evidence/sprint_40b_source_cv_reports_search_filter_pagination.md`. Uses Django `Paginator` for portfolio-scale pagination.
 
-**Sprint 40C (feature branch `sprint-40c-rejection-weekly-visual-export-polish`):** Rejection Patterns, Weekly Trend, Visual Analytics Evidence, and Export Centre polish; **7** new `PremiumReportingSprint40cTests`; **4** `ExportCentrePolishTests`; evidence doc `docs/evidence/sprint_40c_rejection_weekly_visual_export_polish.md`. Completes Sprint 40 reporting suite. Sprint 41 not started.
+**Sprint 40C (feature branch `sprint-40c-rejection-weekly-visual-export-polish`):** Rejection Patterns, Weekly Trend, Visual Analytics Evidence, and Export Centre polish; **7** new `PremiumReportingSprint40cTests`; **4** `ExportCentrePolishTests`; evidence doc `docs/evidence/sprint_40c_rejection_weekly_visual_export_polish.md`. Completes Sprint 40 reporting suite.
+
+**Sprint 41 (feature branch `sprint-41-skill-intelligence-foundation`):** Skill Intelligence Foundation - manual evidence summary, gap review prompts, role-readiness checklists (DA/BI/AE/DE), portfolio mapping; **11** new `SkillIntelligenceFoundationTests`; evidence doc `docs/evidence/sprint_41_skill_intelligence_foundation.md`. No models/migrations. Sprint 42 not started.
 
 ---
 

@@ -10,6 +10,7 @@ from .constants import (
     DEAL_BREAKERS,
     GOOD_LOCATION_WORDS,
     GOOD_SKILLS,
+    LEARNING_TARGETS,
     TARGET_TITLES,
 )
 
@@ -89,11 +90,11 @@ def calculate_job_fit_score(application: JobApplication) -> tuple[int, list[str]
 
 def fit_label(score: int) -> str:
     if score >= 80:
-        return "Strong — Apply"
+        return "Strong - Apply"
     if score >= 60:
-        return "Good — Apply selectively"
+        return "Good - Apply selectively"
     if score >= 40:
-        return "Weak — Review before applying"
+        return "Weak - Review before applying"
     return "Skip / low fit"
 
 
@@ -226,3 +227,458 @@ def build_smart_review_rows(user):
     for application in applications:
         rows.append({"application": application, "review": build_smart_review(application)})
     return rows
+
+
+# --- Sprint 41 Skill Intelligence Foundation ---
+
+_SKILL_INTELLIGENCE_ADVISORY = (
+    "Skill Intelligence is manual, advisory, and evidence-based. It helps you "
+    "review role requirements, skills, evidence, and gaps before applying. "
+    "It does not make hiring decisions, rewrite CVs, auto-apply, or use "
+    "predictive AI/ML."
+)
+
+_SKILL_TRUST_POINTS = (
+    "Read-only GET page - viewing this screen does not update applications.",
+    "Skill mentions are counted from text you already saved on application records.",
+    "Gap prompts are review reminders, not grades, predictions, or rejections.",
+    "No automatic CV rewriting, submission, or interview prep creation.",
+)
+
+
+@dataclass(frozen=True)
+class ManualWorkflowLink:
+    label: str
+    url: str
+
+
+@dataclass(frozen=True)
+class SkillCategoryEvidence:
+    name: str
+    evidence_summary: str
+    portfolio_projects: tuple[str, ...]
+    career_evidence_note: str
+    matched_in_applications: int
+
+
+@dataclass(frozen=True)
+class SkillGapPrompt:
+    skill_or_area: str
+    prompt: str
+    context: str
+
+
+@dataclass(frozen=True)
+class ReadinessChecklistItem:
+    label: str
+    guidance: str
+
+
+@dataclass(frozen=True)
+class RoleReadinessChecklist:
+    role_key: str
+    role_title: str
+    summary: str
+    items: tuple[ReadinessChecklistItem, ...]
+
+
+@dataclass(frozen=True)
+class PortfolioSkillMapping:
+    project_name: str
+    skills_demonstrated: tuple[str, ...]
+    manual_note: str
+    career_evidence_url: str
+
+
+@dataclass(frozen=True)
+class SkillIntelligenceContext:
+    advisory_copy: str
+    trust_points: tuple[str, ...]
+    application_count: int
+    skill_evidence: tuple[SkillCategoryEvidence, ...]
+    skill_gaps: tuple[SkillGapPrompt, ...]
+    role_checklists: tuple[RoleReadinessChecklist, ...]
+    portfolio_mappings: tuple[PortfolioSkillMapping, ...]
+    manual_actions: tuple[ManualWorkflowLink, ...]
+
+
+_SKILL_CATALOG: tuple[dict, ...] = (
+    {
+        "name": "Python",
+        "keywords": ("python", "pandas"),
+        "summary": "Scripting and analysis workflows in portfolio projects and applications.",
+        "projects": ("CareerFunnel Tracker", "BakeOps Intelligence", "MarketVista Dashboard"),
+        "evidence_note": "Career Evidence project report and application keyword matches.",
+    },
+    {
+        "name": "SQL",
+        "keywords": ("sql", "query", "database"),
+        "summary": "Structured querying for reporting, KPI checks, and data preparation.",
+        "projects": ("MarketVista Dashboard", "BakeOps Intelligence"),
+        "evidence_note": "Job fit matrix and logged application requirements.",
+    },
+    {
+        "name": "Excel",
+        "keywords": ("excel", "spreadsheet"),
+        "summary": "Spreadsheet analysis and stakeholder-friendly tables.",
+        "projects": ("BakeOps Intelligence",),
+        "evidence_note": "Operational analytics and finance-style reporting evidence.",
+    },
+    {
+        "name": "Django",
+        "keywords": ("django",),
+        "summary": "Web application delivery for tracker and portfolio tooling.",
+        "projects": ("CareerFunnel Tracker",),
+        "evidence_note": "CareerFunnel Tracker implementation evidence.",
+    },
+    {
+        "name": "Data analysis",
+        "keywords": ("data analysis", "data analyst", "analytics"),
+        "summary": "Exploratory analysis, metric interpretation, and decision support.",
+        "projects": ("MarketVista Dashboard", "TradeIntel 360"),
+        "evidence_note": "Core DA narrative across projects and applications.",
+    },
+    {
+        "name": "Reporting",
+        "keywords": ("reporting", "report", "insights"),
+        "summary": "Narrative and tabular outputs for business stakeholders.",
+        "projects": ("MarketVista Dashboard", "RiskWise Planner"),
+        "evidence_note": "Recruiter pack and reporting-focused roles.",
+    },
+    {
+        "name": "KPI dashboards",
+        "keywords": ("dashboard", "kpi", "power bi", "metrics"),
+        "summary": "Visual monitoring of operational and commercial KPIs.",
+        "projects": ("MarketVista Dashboard", "BakeOps Intelligence"),
+        "evidence_note": "Dashboard-centric BI and operations roles.",
+    },
+    {
+        "name": "ETL / data preparation",
+        "keywords": ("etl", "pipeline", "data preparation", "integration"),
+        "summary": "Ingestion, cleaning, and hand-off between systems.",
+        "projects": ("DataBridge Market API", "TradeIntel 360"),
+        "evidence_note": "Analytics engineering and data product angles.",
+    },
+    {
+        "name": "Business operations / FX operations",
+        "keywords": ("operations", "fx", "finance", "reconciliation", "ledger"),
+        "summary": "Finance and operations context from prior experience and projects.",
+        "projects": ("TradeIntel 360", "RiskWise Planner"),
+        "evidence_note": "Finance DA targeting and recruiter evidence.",
+    },
+    {
+        "name": "Portfolio evidence",
+        "keywords": ("portfolio", "project", "case study"),
+        "summary": "Documented projects that support interview and application narratives.",
+        "projects": ("CareerFunnel Tracker", "BakeOps Intelligence", "MarketVista Dashboard"),
+        "evidence_note": "Career Evidence OS viewer and project evidence report.",
+    },
+)
+
+_ROLE_READINESS_CHECKLISTS: tuple[RoleReadinessChecklist, ...] = (
+    RoleReadinessChecklist(
+        role_key="da",
+        role_title="Data Analyst",
+        summary=(
+            "Manual checklist for junior/graduate data analyst roles. Confirm "
+            "evidence in applications and portfolio before applying."
+        ),
+        items=(
+            ReadinessChecklistItem(
+                "SQL and Excel artefacts",
+                "Can you point to queries, tables, or spreadsheets used in real examples",
+            ),
+            ReadinessChecklistItem(
+                "Python analysis examples",
+                "Do you have a notebook, script, or project walkthrough ready to discuss",
+            ),
+            ReadinessChecklistItem(
+                "Stakeholder reporting",
+                "Can you explain one KPI story clearly without overstating scope",
+            ),
+            ReadinessChecklistItem(
+                "Application evidence captured",
+                "Are required skills and job descriptions saved on each target role",
+            ),
+        ),
+    ),
+    RoleReadinessChecklist(
+        role_key="bi",
+        role_title="BI Analyst",
+        summary=(
+            "Manual checklist for BI and reporting-heavy roles. Focus on "
+            "dashboards, metric definitions, and refresh discipline."
+        ),
+        items=(
+            ReadinessChecklistItem(
+                "Dashboard examples",
+                "Which portfolio project shows end-to-end metric design",
+            ),
+            ReadinessChecklistItem(
+                "Metric definitions",
+                "Can you define numerators, denominators, and caveats manually",
+            ),
+            ReadinessChecklistItem(
+                "Data quality checks",
+                "Have you documented how you validate source data before publishing",
+            ),
+            ReadinessChecklistItem(
+                "Role text reviewed",
+                (
+                    "Does the posting mention Power BI, Looker, or similar tools "
+                    "you can discuss honestly"
+                ),
+            ),
+        ),
+    ),
+    RoleReadinessChecklist(
+        role_key="ae",
+        role_title="Analytics Engineer",
+        summary=(
+            "Manual checklist for analytics engineering and data product roles. "
+            "Emphasise pipelines, modelling hand-offs, and reliability."
+        ),
+        items=(
+            ReadinessChecklistItem(
+                "Pipeline or integration story",
+                "Can you walk through ingestion, transforms, and outputs from a project",
+            ),
+            ReadinessChecklistItem(
+                "SQL + Python combination",
+                "Is there evidence of both extraction logic and downstream consumption",
+            ),
+            ReadinessChecklistItem(
+                "Documentation habit",
+                "Are assumptions, dependencies, and refresh steps written down",
+            ),
+            ReadinessChecklistItem(
+                "Stretch-role honesty",
+                "Review seniority signals manually - do not rely on this page as a fit score.",
+            ),
+        ),
+    ),
+    RoleReadinessChecklist(
+        role_key="de",
+        role_title="Data Engineer",
+        summary=(
+            "Manual checklist for data engineer postings. Use only when you can "
+            "support infrastructure and pipeline claims with evidence."
+        ),
+        items=(
+            ReadinessChecklistItem(
+                "Pipeline ownership",
+                "Which project shows you built or maintained a repeatable data flow",
+            ),
+            ReadinessChecklistItem(
+                "Operational awareness",
+                "Can you discuss failures, retries, and monitoring without inventing tooling",
+            ),
+            ReadinessChecklistItem(
+                "Storage and modelling basics",
+                "Are source-to-target mappings documented in portfolio or notes",
+            ),
+            ReadinessChecklistItem(
+                "Manual gap review",
+                "Review LEARNING_TARGETS areas manually before claiming platform expertise.",
+            ),
+        ),
+    ),
+)
+
+_PORTFOLIO_SKILL_MAPPINGS: tuple[PortfolioSkillMapping, ...] = (
+    PortfolioSkillMapping(
+        project_name="CareerFunnel Tracker",
+        skills_demonstrated=(
+            "Python",
+            "Django",
+            "Data analysis",
+            "Reporting",
+            "Portfolio evidence",
+        ),
+        manual_note=(
+            "Local job-search operating system with rule-based analytics "
+            "and evidence tracking."
+        ),
+        career_evidence_url="",
+    ),
+    PortfolioSkillMapping(
+        project_name="BakeOps Intelligence",
+        skills_demonstrated=("Python", "SQL", "Excel", "KPI dashboards", "Data analysis"),
+        manual_note="Operational KPI and waste-reduction analytics narrative.",
+        career_evidence_url="",
+    ),
+    PortfolioSkillMapping(
+        project_name="MarketVista Dashboard",
+        skills_demonstrated=("SQL", "Reporting", "KPI dashboards", "Data analysis"),
+        manual_note="Commercial metrics and dashboard storytelling.",
+        career_evidence_url="",
+    ),
+    PortfolioSkillMapping(
+        project_name="TradeIntel 360",
+        skills_demonstrated=(
+            "Data analysis",
+            "Reporting",
+            "Business operations / FX operations",
+            "ETL / data preparation",
+        ),
+        manual_note="Finance and markets themed analytics evidence.",
+        career_evidence_url="",
+    ),
+    PortfolioSkillMapping(
+        project_name="DataBridge Market API",
+        skills_demonstrated=("Python", "ETL / data preparation", "Django"),
+        manual_note="API and ingestion oriented evidence for engineering-leaning roles.",
+        career_evidence_url="",
+    ),
+)
+
+
+def _application_text_corpus(user) -> tuple[str, int]:
+    applications = JobApplication.objects.filter(user=user).only(
+        "required_skills",
+        "job_description",
+        "job_title",
+        "notes",
+    )
+    chunks: list[str] = []
+    count = 0
+    for application in applications:
+        count += 1
+        chunks.extend(
+            [
+                application.required_skills or "",
+                application.job_description or "",
+                application.job_title or "",
+                application.notes or "",
+            ]
+        )
+    return "\n".join(chunks).lower(), count
+
+
+def _count_keyword_matches(corpus: str, keywords: tuple[str, ...]) -> int:
+    return sum(corpus.count(keyword) for keyword in keywords)
+
+
+def _build_skill_evidence(corpus: str) -> tuple[SkillCategoryEvidence, ...]:
+    rows: list[SkillCategoryEvidence] = []
+    for entry in _SKILL_CATALOG:
+        rows.append(
+            SkillCategoryEvidence(
+                name=entry["name"],
+                evidence_summary=entry["summary"],
+                portfolio_projects=tuple(entry["projects"]),
+                career_evidence_note=entry["evidence_note"],
+                matched_in_applications=_count_keyword_matches(corpus, entry["keywords"]),
+            )
+        )
+    return tuple(rows)
+
+
+def _build_skill_gap_prompts(
+    corpus: str,
+    *,
+    application_count: int,
+) -> tuple[SkillGapPrompt, ...]:
+    prompts: list[SkillGapPrompt] = []
+
+    if application_count == 0:
+        prompts.append(
+            SkillGapPrompt(
+                skill_or_area="Application records",
+                prompt="Log applications with required skills and job descriptions first.",
+                context=(
+                    "Skill Intelligence uses text you have already saved - "
+                    "not live job-board scraping."
+                ),
+            )
+        )
+        return tuple(prompts)
+
+    for entry in _SKILL_CATALOG:
+        if _count_keyword_matches(corpus, entry["keywords"]) == 0:
+            prompts.append(
+                SkillGapPrompt(
+                    skill_or_area=entry["name"],
+                    prompt=(
+                        f"Review {entry['name']} manually before applying to roles that require it."
+                    ),
+                    context=(
+                        "No keyword matches found in saved application text yet. "
+                        "Update records or portfolio evidence if the skill is part of your story."
+                    ),
+                )
+            )
+
+    for target in LEARNING_TARGETS:
+        if target not in corpus:
+            prompts.append(
+                SkillGapPrompt(
+                    skill_or_area=target,
+                    prompt=(
+                        f"Review {target} manually if target roles list it "
+                        "as required or preferred."
+                    ),
+                    context=(
+                        "Listed as a learning target for stretch roles - not a failed assessment."
+                    ),
+                )
+            )
+
+    if not prompts:
+        prompts.append(
+            SkillGapPrompt(
+                skill_or_area="Ongoing review",
+                prompt="Keep comparing new job posts to your saved skills and portfolio evidence.",
+                context=(
+                    "Core catalog areas appear in logged text. "
+                    "Continue manual review per role."
+                ),
+            )
+        )
+    return tuple(prompts[:12])
+
+
+def _skill_intelligence_manual_actions() -> tuple[ManualWorkflowLink, ...]:
+    from django.urls import reverse
+
+    return (
+        ManualWorkflowLink(
+            "Review applications manually",
+            reverse("applications:application_list"),
+        ),
+        ManualWorkflowLink("Open Smart Review", reverse("job_intelligence:smart_review")),
+        ManualWorkflowLink(
+            "Open Career Evidence",
+            reverse("dashboard:career_evidence_index"),
+        ),
+        ManualWorkflowLink(
+            "Add application manually",
+            reverse("applications:application_create"),
+        ),
+    )
+
+
+def build_skill_intelligence_context(user) -> SkillIntelligenceContext:
+    from django.urls import reverse
+
+    corpus, application_count = _application_text_corpus(user)
+    career_evidence_url = reverse("dashboard:career_evidence_index")
+    portfolio_mappings = tuple(
+        PortfolioSkillMapping(
+            project_name=item.project_name,
+            skills_demonstrated=item.skills_demonstrated,
+            manual_note=item.manual_note,
+            career_evidence_url=career_evidence_url,
+        )
+        for item in _PORTFOLIO_SKILL_MAPPINGS
+    )
+    return SkillIntelligenceContext(
+        advisory_copy=_SKILL_INTELLIGENCE_ADVISORY,
+        trust_points=_SKILL_TRUST_POINTS,
+        application_count=application_count,
+        skill_evidence=_build_skill_evidence(corpus),
+        skill_gaps=_build_skill_gap_prompts(corpus, application_count=application_count),
+        role_checklists=_ROLE_READINESS_CHECKLISTS,
+        portfolio_mappings=portfolio_mappings,
+        manual_actions=_skill_intelligence_manual_actions(),
+    )
