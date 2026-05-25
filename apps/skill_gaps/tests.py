@@ -5,7 +5,7 @@ from pathlib import Path
 from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.test import TestCase
-from django.urls import NoReverseMatch, reverse
+from django.urls import reverse
 
 from apps.applications.choices import ApplicationStatus
 from apps.applications.models import JobApplication
@@ -21,6 +21,7 @@ from .models import (
 from .services import (
     FAILURE_STATUSES,
     assign_priority,
+    build_skill_gap_dashboard_context,
     compute_priority_score,
     create_or_update_gap,
     get_global_failure_count,
@@ -263,13 +264,7 @@ class SkillGapServiceMutationTests(TestCase):
 
 
 class SkillGapSprint43GuardTests(TestCase):
-    def test_no_dashboard_route_page_added(self):
-        with self.assertRaises(NoReverseMatch):
-            reverse("skill_gaps:dashboard")
-        with self.assertRaises(NoReverseMatch):
-            reverse("skill_gaps:skill_gap_list")
-
-    def test_no_sprint_44_text_in_skill_gaps_app(self):
+    def test_no_sprint_44_text_in_skill_gaps_core_modules(self):
         scanned_paths = (
             REPO_ROOT / "apps" / "skill_gaps" / "models.py",
             REPO_ROOT / "apps" / "skill_gaps" / "services.py",
@@ -299,3 +294,195 @@ class SkillGapSprint43GuardTests(TestCase):
         ):
             with self.subTest(term=forbidden):
                 self.assertNotIn(forbidden, lowered)
+
+
+class SkillGapDashboardTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="dashuser", password="StrongPass12345")
+        self.other_user = User.objects.create_user(
+            username="otherdash",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skill_gaps:dashboard")
+        self.app = JobApplication.objects.create(
+            user=self.user,
+            company_name="Acme",
+            job_title="Data Analyst",
+            date_applied=date(2026, 5, 10),
+        )
+        self.other_app = JobApplication.objects.create(
+            user=self.other_user,
+            company_name="Other Co",
+            job_title="BI Analyst",
+            date_applied=date(2026, 5, 11),
+        )
+
+    def _login(self):
+        self.client.login(username="dashuser", password="StrongPass12345")
+
+    def _create_gap(
+        self,
+        *,
+        application,
+        skill_name,
+        priority,
+        resolved=False,
+        stage=SkillGapStage.APPLICATION,
+    ):
+        score = Decimal("6.00") if priority == SkillGapPriority.HIGH else Decimal("1.00")
+        return ApplicationSkillGap.objects.create(
+            application=application,
+            stage=stage,
+            skill_name=skill_name,
+            current_tier=SkillTier.MISSING,
+            priority=priority,
+            goal_weight=Decimal("1.00"),
+            failure_count=0,
+            stage_weight=Decimal("1.00"),
+            priority_score=score,
+            identified_by=SkillGapIdentifiedBy.MANUAL,
+            resolved=resolved,
+        )
+
+    def test_dashboard_requires_login(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 302)
+
+    def test_authenticated_user_can_access_dashboard(self):
+        self._login()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Skill Intelligence Dashboard")
+        self.assertContains(response, "Advisory only")
+
+    def test_dashboard_shows_only_current_user_skill_gaps(self):
+        self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.HIGH)
+        self._create_gap(
+            application=self.other_app,
+            skill_name="Tableau",
+            priority=SkillGapPriority.CRITICAL,
+        )
+        self._login()
+        response = self.client.get(self.url)
+        self.assertContains(response, "Python")
+        self.assertNotContains(response, "Tableau")
+        self.assertNotContains(response, "Other Co")
+
+    def test_empty_state_when_no_skill_gaps(self):
+        self._login()
+        response = self.client.get(self.url)
+        self.assertContains(response, "No saved skill gaps to show")
+
+    def test_summary_counts_are_correct(self):
+        self._create_gap(application=self.app, skill_name="SQL", priority=SkillGapPriority.HIGH)
+        self._create_gap(
+            application=self.app,
+            skill_name="Excel",
+            priority=SkillGapPriority.LOW,
+            resolved=True,
+        )
+        self._create_gap(
+            application=self.app,
+            skill_name="dbt",
+            priority=SkillGapPriority.CRITICAL,
+        )
+        self._login()
+        response = self.client.get(self.url)
+        self.assertContains(response, "Total saved skill gaps")
+        self.assertContains(response, "Unresolved")
+        self.assertContains(response, "Resolved")
+        self.assertContains(response, "High-priority gaps")
+        context = build_skill_gap_dashboard_context(user=self.user, query_params={})
+        self.assertEqual(context.summary.total, 3)
+        self.assertEqual(context.summary.unresolved, 2)
+        self.assertEqual(context.summary.resolved, 1)
+        self.assertEqual(context.summary.high_priority, 2)
+
+    def test_priority_filter_works(self):
+        self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.HIGH)
+        self._create_gap(application=self.app, skill_name="SQL", priority=SkillGapPriority.LOW)
+        self._login()
+        response = self.client.get(self.url, {"priority": SkillGapPriority.HIGH})
+        self.assertContains(response, "Python")
+        self.assertNotContains(response, ">SQL<")
+
+    def test_stage_filter_works(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="Python",
+            priority=SkillGapPriority.MEDIUM,
+            stage=SkillGapStage.SCREENING,
+        )
+        self._create_gap(
+            application=self.app,
+            skill_name="SQL",
+            priority=SkillGapPriority.MEDIUM,
+            stage=SkillGapStage.APPLICATION,
+        )
+        self._login()
+        response = self.client.get(self.url, {"stage": SkillGapStage.SCREENING})
+        self.assertContains(response, "Python")
+        self.assertNotContains(response, ">SQL<")
+
+    def test_resolved_filter_works(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="Open skill",
+            priority=SkillGapPriority.LOW,
+        )
+        self._create_gap(
+            application=self.app,
+            skill_name="Closed skill",
+            priority=SkillGapPriority.LOW,
+            resolved=True,
+        )
+        self._login()
+        response = self.client.get(self.url, {"resolved": "yes"})
+        self.assertContains(response, "Closed skill")
+        self.assertNotContains(response, "Open skill")
+
+    def test_dashboard_is_read_only(self):
+        self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.LOW)
+        self._login()
+        get_response = self.client.get(self.url)
+        self.assertEqual(get_response.status_code, 200)
+        post_response = self.client.post(self.url, {"skill_name": "Hack"})
+        self.assertEqual(post_response.status_code, 405)
+        self.assertEqual(ApplicationSkillGap.objects.count(), 1)
+
+    def test_build_skill_gap_dashboard_context_scopes_by_user(self):
+        self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.LOW)
+        self._create_gap(
+            application=self.other_app,
+            skill_name="Hidden",
+            priority=SkillGapPriority.LOW,
+        )
+        context = build_skill_gap_dashboard_context(user=self.user, query_params={})
+        self.assertEqual(context.summary.total, 1)
+        self.assertEqual(len(context.gaps), 1)
+        self.assertEqual(context.gaps[0].skill_name, "Python")
+
+    def test_no_model_changes_or_migrations_added(self):
+        migration_dir = REPO_ROOT / "apps" / "skill_gaps" / "migrations"
+        migration_files = [
+            path.name
+            for path in migration_dir.glob("*.py")
+            if path.name != "__init__.py"
+        ]
+        self.assertEqual(migration_files, ["0001_initial.py"])
+
+    def test_no_sprint_45_text_on_dashboard_page(self):
+        self._login()
+        response = self.client.get(self.url)
+        self.assertNotContains(response, "Sprint 45")
+
+    def test_dashboard_avoids_forbidden_claim_language(self):
+        self._login()
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+        self.assertIn("advisory only", content)
+        self.assertIn("manually saved", content)
+        self.assertNotIn("auto-apply", content)
+        self.assertNotIn("predictive ai", content)
+        self.assertNotIn("gmail", content)
+        self.assertNotIn("live saas users", content)

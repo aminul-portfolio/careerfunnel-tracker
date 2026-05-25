@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Skill Gaps | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Skill Intelligence Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid cf-skill-gap-dashboard">
+    <section class="hero-panel">
+        <p class="eyebrow">Saved skill gaps</p>
+        <h1>Skill Intelligence Dashboard</h1>
+        <p>
+            Advisory only. This read-only view surfaces manually saved application skill-gap
+            records from your tracker. It does not create, update, or delete gaps automatically.
+        </p>
+        <div class="evidence-strip">
+            <span class="evidence-strip-item">Saved skill gaps</span>
+            <span class="evidence-strip-item">Advisory only</span>
+            <span class="evidence-strip-item">Based on manually saved application skill-gap records</span>
+        </div>
+        <p class="trust-note">
+            Based on manually saved application skill-gap records. Rule-based priority scores are
+            for review only — not hiring decisions, predictions, or automatic CV changes.
+        </p>
+    </section>
+
+    <section class="kpi-grid">
+        <div class="kpi-card">
+            <p>Total saved skill gaps</p>
+            <h2>{{ summary.total }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Unresolved</p>
+            <h2>{{ summary.unresolved }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Resolved</p>
+            <h2>{{ summary.resolved }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>High-priority gaps</p>
+            <h2>{{ summary.high_priority }}</h2>
+            <span class="kpi-note">High or critical priority</span>
+        </div>
+    </section>
+
+    <section class="content-card">
+        <div class="card-header card-header-row">
+            <div>
+                <p class="eyebrow">Saved records</p>
+                <h2>Application skill gaps</h2>
+                <p class="section-note">Read-only list. Use Django admin or service workflows elsewhere to manage records.</p>
+            </div>
+        </div>
+
+        <form method="get" class="filter-bar cf-skill-gap-filter-bar" aria-label="Filter saved skill gaps">
+            <select name="priority" class="form-control" aria-label="Filter by priority">
+                <option value="">All priorities</option>
+                <option value="critical"{% if priority_filter == "critical" %} selected{% endif %}>Critical</option>
+                <option value="high"{% if priority_filter == "high" %} selected{% endif %}>High</option>
+                <option value="medium"{% if priority_filter == "medium" %} selected{% endif %}>Medium</option>
+                <option value="low"{% if priority_filter == "low" %} selected{% endif %}>Low</option>
+            </select>
+            <select name="stage" class="form-control" aria-label="Filter by stage">
+                <option value="">All stages</option>
+                <option value="application"{% if stage_filter == "application" %} selected{% endif %}>Application</option>
+                <option value="screening"{% if stage_filter == "screening" %} selected{% endif %}>Screening</option>
+                <option value="technical"{% if stage_filter == "technical" %} selected{% endif %}>Technical</option>
+                <option value="interview"{% if stage_filter == "interview" %} selected{% endif %}>Interview</option>
+            </select>
+            <select name="resolved" class="form-control" aria-label="Filter by resolved status">
+                <option value="">All resolution states</option>
+                <option value="no"{% if resolved_filter == "no" %} selected{% endif %}>Unresolved</option>
+                <option value="yes"{% if resolved_filter == "yes" %} selected{% endif %}>Resolved</option>
+            </select>
+            <button type="submit" class="btn btn-secondary">Apply filters</button>
+            <a href="{% url 'skill_gaps:dashboard' %}" class="btn btn-secondary">Reset</a>
+        </form>
+
+        {% if skill_gaps %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Skill</th>
+                        <th>Application</th>
+                        <th>Stage</th>
+                        <th>Current tier</th>
+                        <th>Priority</th>
+                        <th>Priority score</th>
+                        <th>Resolved</th>
+                        <th>Suggested action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for gap in skill_gaps %}
+                    <tr>
+                        <td><strong>{{ gap.skill_name }}</strong></td>
+                        <td>
+                            {{ gap.application.company_name }}
+                            <span class="table-subtext">{{ gap.application.job_title }}</span>
+                        </td>
+                        <td>{{ gap.get_stage_display }}</td>
+                        <td>{{ gap.get_current_tier_display }}</td>
+                        <td><span class="badge badge-info">{{ gap.get_priority_display }}</span></td>
+                        <td>{{ gap.priority_score }}</td>
+                        <td>
+                            {% if gap.resolved %}
+                            <span class="badge badge-success">Resolved</span>
+                            {% else %}
+                            <span class="badge badge-warning">Open</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ gap.suggested_action|default:"—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No saved skill gaps to show.</h3>
+            <p>
+                Skill gaps appear here after you save them against an application record.
+                This dashboard does not create gaps automatically.
+            </p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

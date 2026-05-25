@@ -44,6 +44,29 @@ class SkillGapUpsertResult:
     created: bool
 
 
+@dataclass(frozen=True)
+class SkillGapDashboardSummary:
+    total: int
+    unresolved: int
+    resolved: int
+    high_priority: int
+
+
+@dataclass(frozen=True)
+class SkillGapDashboardContext:
+    summary: SkillGapDashboardSummary
+    gaps: tuple[ApplicationSkillGap, ...]
+    priority_filter: str
+    stage_filter: str
+    resolved_filter: str
+
+
+HIGH_PRIORITY_VALUES = (
+    SkillGapPriority.HIGH,
+    SkillGapPriority.CRITICAL,
+)
+
+
 def get_stage_weight(stage: str) -> Decimal:
     return STAGE_WEIGHTS.get(stage, Decimal("1.00"))
 
@@ -154,3 +177,63 @@ def mark_gap_resolved(
         update_fields=["resolved", "resolved_tier", "resolved_date", "updated_at"],
     )
     return gap
+
+
+def get_user_skill_gaps_queryset(*, user):
+    """Read-only queryset scoped to the authenticated user."""
+    return (
+        ApplicationSkillGap.objects.filter(application__user=user)
+        .select_related("application")
+        .order_by("-priority_score", "-updated_at")
+    )
+
+
+def apply_skill_gap_dashboard_filters(
+    queryset,
+    *,
+    priority: str,
+    stage: str,
+    resolved: str,
+):
+    """Read-only GET filters for the dashboard list."""
+    if priority:
+        queryset = queryset.filter(priority=priority)
+    if stage:
+        queryset = queryset.filter(stage=stage)
+    if resolved == "yes":
+        queryset = queryset.filter(resolved=True)
+    elif resolved == "no":
+        queryset = queryset.filter(resolved=False)
+    return queryset
+
+
+def build_skill_gap_dashboard_summary(*, user) -> SkillGapDashboardSummary:
+    base_qs = get_user_skill_gaps_queryset(user=user)
+    return SkillGapDashboardSummary(
+        total=base_qs.count(),
+        unresolved=base_qs.filter(resolved=False).count(),
+        resolved=base_qs.filter(resolved=True).count(),
+        high_priority=base_qs.filter(priority__in=HIGH_PRIORITY_VALUES).count(),
+    )
+
+
+def build_skill_gap_dashboard_context(*, user, query_params) -> SkillGapDashboardContext:
+    priority_filter = (query_params.get("priority") or "").strip()
+    stage_filter = (query_params.get("stage") or "").strip()
+    resolved_filter = (query_params.get("resolved") or "").strip()
+
+    base_qs = get_user_skill_gaps_queryset(user=user)
+    filtered_qs = apply_skill_gap_dashboard_filters(
+        base_qs,
+        priority=priority_filter,
+        stage=stage_filter,
+        resolved=resolved_filter,
+    )
+
+    return SkillGapDashboardContext(
+        summary=build_skill_gap_dashboard_summary(user=user),
+        gaps=tuple(filtered_qs),
+        priority_filter=priority_filter,
+        stage_filter=stage_filter,
+        resolved_filter=resolved_filter,
+    )
