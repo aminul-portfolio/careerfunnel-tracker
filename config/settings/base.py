@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.recruiter_emails",
     "apps.job_intelligence",
     "apps.ai_agents",
+    "apps.skill_gaps",
 ]
 
 MIDDLEWARE = [
