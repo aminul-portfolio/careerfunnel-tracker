@@ -1,0 +1,9 @@
+<div class="cf-report-kpi-strip kpi-grid">
+    {% for kpi in kpis %}
+    <div class="cf-report-kpi kpi-card">
+        <p>{{ kpi.label }}</p>
+        <h2>{{ kpi.value }}</h2>
+        {% if kpi.note %}<small class="kpi-note">{{ kpi.note }}</small>{% endif %}
+    </div>
+    {% endfor %}
+</div>

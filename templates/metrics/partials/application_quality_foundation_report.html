@@ -1,0 +1,87 @@
+<section id="application-quality" class="content-card cf-report-section">
+    <div class="card-header">
+        <p class="eyebrow">Application Quality</p>
+        <h2>Completeness, evidence strength, and decision readiness</h2>
+        <p class="section-note">Flags incomplete records that weaken manual review. Quality status labels are advisory only.</p>
+        {% include "metrics/partials/confidence_badge.html" with badge=application_quality_foundation.confidence only %}
+    </div>
+    {% include "metrics/partials/advisory_note.html" with copy=application_quality_foundation.advisory_copy only %}
+    <div class="cf-report-quality-labels detail-grid">
+        <div class="detail-item">
+            <span>Application completeness</span>
+            <strong>{{ application_quality_foundation.completeness_label }}</strong>
+        </div>
+        <div class="detail-item">
+            <span>Evidence strength</span>
+            <strong>{{ application_quality_foundation.evidence_strength_label }}</strong>
+        </div>
+        <div class="detail-item">
+            <span>Decision readiness</span>
+            <strong>{{ application_quality_foundation.decision_readiness_label }}</strong>
+        </div>
+    </div>
+    {% include "metrics/partials/report_kpi_strip.html" with kpis=application_quality_foundation.kpis only %}
+    {% if application_quality_foundation.underlying.total_applications == 0 %}
+    {% include "metrics/partials/report_empty_state.html" with title=application_quality_foundation.empty_state_title message=application_quality_foundation.empty_state_message manual_actions=application_quality_foundation.manual_actions only %}
+    {% elif application_quality_foundation.review_rows %}
+    <h3>Applications needing manual review</h3>
+    <p class="table-context">Open each application manually to improve evidence before relying on its metrics.</p>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Company</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Quality status</th>
+                    <th>Issues</th>
+                    <th>Manual review</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in application_quality_foundation.review_rows %}
+                <tr>
+                    <td><strong>{{ row.company_name }}</strong></td>
+                    <td>{{ row.job_title }}</td>
+                    <td>{{ row.status }}</td>
+                    <td><span class="cf-report-quality-status cf-report-quality-status--{{ row.quality_status|lower|cut:' ' }}">{{ row.quality_status }}</span></td>
+                    <td>
+                        {% if row.issues %}
+                        <ul class="agent-list">
+                            {% for issue in row.issues %}
+                            <li>{{ issue }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ row.manual_review_url }}" class="cf-report-manual-link">Open manual review</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state small-empty-state">
+        <p>No application quality issues detected. Records look complete enough for manual review.</p>
+    </div>
+    {% endif %}
+    <h3>Recommended actions</h3>
+    {% if application_quality_foundation.underlying.recommendations %}
+    <ul class="agent-list">
+        {% for rec in application_quality_foundation.underlying.recommendations %}
+        <li>{{ rec }}</li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="section-note">No application quality recommendations available yet.</p>
+    {% endif %}
+    <div class="cf-report-manual-actions">
+        {% for action in application_quality_foundation.manual_actions %}
+        {% include "metrics/partials/manual_action_link.html" with action=action only %}
+        {% endfor %}
+    </div>
+</section>
