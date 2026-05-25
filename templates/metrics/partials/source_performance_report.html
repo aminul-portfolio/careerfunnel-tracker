@@ -1,0 +1,17 @@
+<section id="source-performance" class="content-card cf-report-section">
+    <div class="card-header">
+        <p class="eyebrow">Source Performance</p>
+        <h2>Application source outcomes</h2>
+        <p class="section-note">Compare sourcing channels by application volume, responses, interviews, and offers. Advisory only - manual review required.</p>
+    </div>
+    {% include "metrics/partials/advisory_note.html" with copy=source_performance.advisory_copy only %}
+    <p class="cf-report-interpretation">{{ source_performance.interpretation }}</p>
+    {% include "metrics/partials/report_filter_bar.html" with filter_bar=source_performance.filter_bar only %}
+    {% include "metrics/partials/report_table.html" with table=source_performance.table only %}
+    {% include "metrics/partials/report_pagination.html" with pagination=source_performance.table.pagination only %}
+    <div class="cf-report-manual-actions">
+        {% for action in source_performance.manual_actions %}
+        {% include "metrics/partials/manual_action_link.html" with action=action only %}
+        {% endfor %}
+    </div>
+</section>

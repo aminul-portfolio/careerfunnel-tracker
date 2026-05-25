@@ -4,19 +4,23 @@
 {% block content %}
 <div class="dashboard-grid cf-report-page">
     {% include "metrics/partials/report_header.html" with eyebrow="Reporting Suite" title=report_title subtitle=report_subtitle trust_note=report_trust_note only %}
-    <nav class="section-nav cf-report-section-nav" aria-label="Sprint 40A reporting sections">
+    <nav class="section-nav cf-report-section-nav" aria-label="Reporting suite sections">
         <a href="#funnel-performance">Funnel Performance</a>
         <a href="#data-quality">Data Quality</a>
         <a href="#application-quality">Application Quality</a>
+        <a href="#source-performance">Source Performance</a>
+        <a href="#cv-version-performance">CV Version Performance</a>
     </nav>
     {% include "metrics/partials/advisory_note.html" with copy=reporting_advisory_copy only %}
     {% include "metrics/partials/funnel_performance_report.html" %}
     {% include "metrics/partials/data_quality_foundation_report.html" %}
     {% include "metrics/partials/application_quality_foundation_report.html" %}
-    <section class="content-card cf-report-legacy" aria-label="Extended analytics not in Sprint 40A scope">
+    {% include "metrics/partials/source_performance_report.html" %}
+    {% include "metrics/partials/cv_version_performance_report.html" %}
+    <section class="content-card cf-report-legacy" aria-label="Extended analytics not in Sprint 40B scope">
         <p class="eyebrow">Extended analytics</p>
-        <h2>Pre-existing sections (Sprint 40B/C not in scope)</h2>
-        <p class="section-note">Daily discipline, weekly trend, source ROI, CV performance, and rejection analysis remain available for backward compatibility. Sprint 40A does not expand these areas.</p>
+        <h2>Pre-existing sections (Sprint 40C not in scope)</h2>
+        <p class="section-note">Daily discipline, weekly trend, and rejection analysis remain for backward compatibility. Sprint 40B does not expand weekly trend or rejection patterns.</p>
     </section>
     <section id="daily-discipline" class="content-card cf-report-legacy">
         <div class="card-header">
@@ -80,98 +84,6 @@
                 </tbody>
             </table>
         </div>
-    </section>
-    <section id="source-roi" class="content-card cf-report-legacy">
-        <div class="card-header">
-            <p class="eyebrow">Source ROI</p>
-            <h2>Application source performance</h2>
-            <p>Grouped from real JobApplication records by application source.</p>
-            <p class="table-context">Use this table to compare which sourcing channels are producing responses, interviews, and offers.</p>
-        </div>
-        {% if source_roi_rows %}
-        <div class="table-wrap">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Source</th>
-                        <th>Applications</th>
-                        <th>Responses</th>
-                        <th>Response Rate</th>
-                        <th>Interviews</th>
-                        <th>Interview Rate</th>
-                        <th>Offers</th>
-                        <th>Offer Rate</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in source_roi_rows %}
-                    <tr>
-                        <td><strong>{{ row.source_label }}</strong></td>
-                        <td>{{ row.total_applications }}</td>
-                        <td>{{ row.responses }}</td>
-                        <td>{{ row.response_rate }}%</td>
-                        <td>{{ row.interviews }}</td>
-                        <td>{{ row.interview_rate }}%</td>
-                        <td>{{ row.offers }}</td>
-                        <td>{{ row.offer_rate }}%</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="empty-state small-empty-state">
-            <p>No source ROI data yet. Add applications with sources to populate this table.</p>
-        </div>
-        {% endif %}
-    </section>
-    <section id="cv-performance" class="content-card cf-report-legacy">
-        <div class="card-header">
-            <p class="eyebrow">CV Version Performance</p>
-            <h2>CV version outcome comparison</h2>
-            <p>This is performance tracking, not scientific A/B testing.</p>
-            <p class="table-context">Use this as a directional comparison of outcomes attached to each stored CV version.</p>
-        </div>
-        {% if cv_version_rows %}
-        <div class="table-wrap">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>CV Version</th>
-                        <th>Applications</th>
-                        <th>Responses</th>
-                        <th>Response Rate</th>
-                        <th>Interviews</th>
-                        <th>Interview Rate</th>
-                        <th>Offers</th>
-                        <th>Offer Rate</th>
-                        <th>Rejections</th>
-                        <th>Rejection Rate</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in cv_version_rows %}
-                    <tr>
-                        <td><strong>{{ row.cv_version }}</strong></td>
-                        <td>{{ row.total_applications }}</td>
-                        <td>{{ row.responses }}</td>
-                        <td>{{ row.response_rate }}%</td>
-                        <td>{{ row.interviews }}</td>
-                        <td>{{ row.interview_rate }}%</td>
-                        <td>{{ row.offers }}</td>
-                        <td>{{ row.offer_rate }}%</td>
-                        <td>{{ row.rejections }}</td>
-                        <td>{{ row.rejection_rate }}%</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="empty-state small-empty-state">
-            <p>No CV version data yet. Add applications with CV versions to populate this table.</p>
-        </div>
-        {% endif %}
     </section>
     <section id="rejections" class="content-card cf-report-legacy">
         <div class="card-header">

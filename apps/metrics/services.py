@@ -3,7 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
 from decimal import Decimal
+from urllib.parse import urlencode
 
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import CharField, Count, F, Q, Sum, Value
 from django.db.models.functions import Coalesce, NullIf, Trim
 from django.utils import timezone
@@ -1619,7 +1621,656 @@ def build_application_quality_foundation_report(
     )
 
 
-def build_reporting_foundation_context(user) -> dict:
+# --- Sprint 40B Source + CV Reports + Search/Filter/Pagination ---
+
+REPORT_DEFAULT_PER_PAGE = 5
+REPORT_PER_PAGE_OPTIONS = (2, 5, 10)
+SOURCE_PARAM_PREFIX = "src_"
+CV_PARAM_PREFIX = "cv_"
+
+
+@dataclass(frozen=True)
+class ReportFilterOption:
+    value: str
+    label: str
+
+
+@dataclass(frozen=True)
+class ReportActiveFilter:
+    param: str
+    value: str
+    label: str
+
+
+@dataclass(frozen=True)
+class ReportFilterBarState:
+    form_id: str
+    anchor: str
+    search_param: str
+    search_value: str
+    search_placeholder: str
+    filter_param: str
+    filter_value: str
+    filter_options: tuple[ReportFilterOption, ...]
+    per_page_param: str
+    per_page_value: int
+    per_page_options: tuple[int, ...]
+    active_filters: tuple[ReportActiveFilter, ...]
+    reset_url: str
+    preserved_hidden_fields: tuple[tuple[str, str], ...]
+
+
+@dataclass(frozen=True)
+class ReportTableColumn:
+    key: str
+    label: str
+
+
+@dataclass(frozen=True)
+class ReportTableCell:
+    value: str
+    badge_class: str = ""
+
+
+@dataclass(frozen=True)
+class ReportTableRow:
+    cells: tuple[ReportTableCell, ...]
+    labeled_cells: tuple[tuple[str, ReportTableCell], ...]
+
+
+@dataclass(frozen=True)
+class ReportPaginationState:
+    page_param: str
+    per_page_param: str
+    current_page: int
+    per_page: int
+    total_results: int
+    total_pages: int
+    has_previous: bool
+    has_next: bool
+    previous_url: str
+    next_url: str
+    start_index: int
+    end_index: int
+
+
+@dataclass(frozen=True)
+class ReportTableView:
+    columns: tuple[ReportTableColumn, ...]
+    rows: tuple[ReportTableRow, ...]
+    pagination: ReportPaginationState | None
+    result_count: int
+    filtered_total: int
+    unfiltered_total: int
+    show_filtered_empty: bool
+    show_unfiltered_empty: bool
+
+
+@dataclass(frozen=True)
+class SourcePerformanceReport:
+    table: ReportTableView
+    interpretation: str
+    filter_bar: ReportFilterBarState
+    manual_actions: tuple[ReportManualAction, ...]
+    advisory_copy: str
+
+
+@dataclass(frozen=True)
+class CVVersionPerformanceReport:
+    table: ReportTableView
+    interpretation: str
+    filter_bar: ReportFilterBarState
+    manual_actions: tuple[ReportManualAction, ...]
+    advisory_copy: str
+
+
+_SOURCE_FILTER_OPTIONS = (
+    ReportFilterOption("all", "All sources"),
+    ReportFilterOption("has_responses", "Has responses"),
+    ReportFilterOption("no_responses", "No responses yet"),
+    ReportFilterOption("has_interviews", "Reached interview"),
+    ReportFilterOption("has_offers", "Has offers"),
+)
+
+_CV_FILTER_OPTIONS = (
+    ReportFilterOption("all", "All CV versions"),
+    ReportFilterOption("has_responses", "Has responses"),
+    ReportFilterOption("no_responses", "No responses yet"),
+    ReportFilterOption("unspecified", "Unspecified CV version"),
+    ReportFilterOption("has_rejections", "Has rejections"),
+)
+
+
+def _query_dict_to_flat(query_params) -> dict[str, str]:
+    if query_params is None:
+        return {}
+    flat: dict[str, str] = {}
+    for key in query_params:
+        value = query_params.get(key)
+        if value not in (None, ""):
+            flat[key] = str(value)
+    return flat
+
+
+def _parse_positive_int(value: str | None, default: int, maximum: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    if parsed < 1:
+        return default
+    return min(parsed, maximum)
+
+
+def _coerce_per_page(value: str | None) -> int:
+    parsed = _parse_positive_int(value, REPORT_DEFAULT_PER_PAGE, max(REPORT_PER_PAGE_OPTIONS))
+    if parsed in REPORT_PER_PAGE_OPTIONS:
+        return parsed
+    return REPORT_DEFAULT_PER_PAGE
+
+
+def _paginate_sequence(rows: list, page: str | None, per_page: int):
+    paginator = Paginator(rows, per_page)
+    try:
+        page_number = int(page) if page else 1
+    except (TypeError, ValueError):
+        page_number = 1
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages or 1)
+    return paginator, page_obj
+
+
+def _build_preserved_params(
+    flat_params: dict[str, str],
+    *,
+    own_prefix: str,
+    other_prefix: str,
+    exclude: set[str] | None = None,
+    include_own: bool = False,
+) -> dict[str, str]:
+    exclude = exclude or set()
+    preserved: dict[str, str] = {}
+    for key, value in flat_params.items():
+        if key in exclude:
+            continue
+        if key.startswith(other_prefix):
+            preserved[key] = value
+        elif include_own and key.startswith(own_prefix):
+            preserved[key] = value
+    return preserved
+
+
+def _build_report_url(
+    flat_params: dict[str, str],
+    updates: dict[str, str | None],
+    *,
+    anchor: str = "",
+) -> str:
+    merged = dict(flat_params)
+    for key, value in updates.items():
+        if value in (None, ""):
+            merged.pop(key, None)
+        else:
+            merged[key] = value
+    query = urlencode(merged)
+    if not query:
+        return f"#{anchor}" if anchor else ""
+    base = f"{query}"
+    return f"{base}#{anchor}" if anchor else base
+
+
+def _filter_label(options: tuple[ReportFilterOption, ...], value: str) -> str:
+    for option in options:
+        if option.value == value:
+            return option.label
+    return value
+
+
+def _active_filters_for_report(
+    *,
+    search_param: str,
+    search_value: str,
+    filter_param: str,
+    filter_value: str,
+    filter_options: tuple[ReportFilterOption, ...],
+) -> tuple[ReportActiveFilter, ...]:
+    chips: list[ReportActiveFilter] = []
+    if search_value.strip():
+        chips.append(
+            ReportActiveFilter(
+                param=search_param,
+                value=search_value.strip(),
+                label=f'Search: "{search_value.strip()}"',
+            )
+        )
+    if filter_value and filter_value != "all":
+        chips.append(
+            ReportActiveFilter(
+                param=filter_param,
+                value=filter_value,
+                label=f"Filter: {_filter_label(filter_options, filter_value)}",
+            )
+        )
+    return tuple(chips)
+
+
+def _filter_source_rows(
+    rows: list[SourceROIRow],
+    *,
+    search: str,
+    filter_value: str,
+) -> list[SourceROIRow]:
+    filtered = rows
+    query = search.strip().lower()
+    if query:
+        filtered = [
+            row
+            for row in filtered
+            if query in row.source_label.lower() or query in row.source.lower()
+        ]
+    if filter_value == "has_responses":
+        filtered = [row for row in filtered if row.responses > 0]
+    elif filter_value == "no_responses":
+        filtered = [row for row in filtered if row.responses == 0]
+    elif filter_value == "has_interviews":
+        filtered = [row for row in filtered if row.interviews > 0]
+    elif filter_value == "has_offers":
+        filtered = [row for row in filtered if row.offers > 0]
+    return filtered
+
+
+def _filter_cv_rows(
+    rows: list[CVVersionPerformanceRow],
+    *,
+    search: str,
+    filter_value: str,
+) -> list[CVVersionPerformanceRow]:
+    filtered = rows
+    query = search.strip().lower()
+    if query:
+        filtered = [row for row in filtered if query in row.cv_version.lower()]
+    if filter_value == "has_responses":
+        filtered = [row for row in filtered if row.responses > 0]
+    elif filter_value == "no_responses":
+        filtered = [row for row in filtered if row.responses == 0]
+    elif filter_value == "unspecified":
+        filtered = [row for row in filtered if row.cv_version == "Unspecified"]
+    elif filter_value == "has_rejections":
+        filtered = [row for row in filtered if row.rejections > 0]
+    return filtered
+
+
+def _rate_badge_class(rate: float) -> str:
+    if rate >= 30:
+        return "cf-report-data-badge--high"
+    if rate >= 10:
+        return "cf-report-data-badge--medium"
+    if rate > 0:
+        return "cf-report-data-badge--low"
+    return "cf-report-data-badge--none"
+
+
+def _rows_to_table(
+    rows_data: list[tuple[tuple[ReportTableCell, ...], tuple[ReportTableColumn, ...]]],
+) -> tuple[ReportTableRow, ...]:
+    table_rows: list[ReportTableRow] = []
+    for cells, columns in rows_data:
+        labeled = tuple((col.label, cell) for col, cell in zip(columns, cells, strict=True))
+        table_rows.append(ReportTableRow(cells=cells, labeled_cells=labeled))
+    return tuple(table_rows)
+
+
+def _source_rows_to_table(
+    rows: list[SourceROIRow],
+) -> tuple[ReportTableRow, ...]:
+    rows_data: list[tuple[tuple[ReportTableCell, ...], tuple[ReportTableColumn, ...]]] = []
+    columns = _SOURCE_TABLE_COLUMNS
+    for row in rows:
+        cells = (
+            ReportTableCell(row.source_label),
+            ReportTableCell(str(row.total_applications)),
+            ReportTableCell(str(row.responses)),
+            ReportTableCell(
+                f"{row.response_rate}%",
+                badge_class=_rate_badge_class(row.response_rate),
+            ),
+            ReportTableCell(str(row.interviews)),
+            ReportTableCell(
+                f"{row.interview_rate}%",
+                badge_class=_rate_badge_class(row.interview_rate),
+            ),
+            ReportTableCell(str(row.offers)),
+            ReportTableCell(
+                f"{row.offer_rate}%",
+                badge_class=_rate_badge_class(row.offer_rate),
+            ),
+        )
+        rows_data.append((cells, columns))
+    return _rows_to_table(rows_data)
+
+
+def _cv_rows_to_table(rows: list[CVVersionPerformanceRow]) -> tuple[ReportTableRow, ...]:
+    rows_data: list[tuple[tuple[ReportTableCell, ...], tuple[ReportTableColumn, ...]]] = []
+    columns = _cv_table_columns()
+    for row in rows:
+        cells = (
+            ReportTableCell(row.cv_version),
+            ReportTableCell(str(row.total_applications)),
+            ReportTableCell(str(row.responses)),
+            ReportTableCell(
+                f"{row.response_rate}%",
+                badge_class=_rate_badge_class(row.response_rate),
+            ),
+            ReportTableCell(str(row.interviews)),
+            ReportTableCell(
+                f"{row.interview_rate}%",
+                badge_class=_rate_badge_class(row.interview_rate),
+            ),
+            ReportTableCell(str(row.offers)),
+            ReportTableCell(
+                f"{row.offer_rate}%",
+                badge_class=_rate_badge_class(row.offer_rate),
+            ),
+        )
+        rows_data.append((cells, columns))
+    return _rows_to_table(rows_data)
+
+
+_SOURCE_TABLE_COLUMNS = (
+    ReportTableColumn("source", "Source"),
+    ReportTableColumn("applications", "Applications"),
+    ReportTableColumn("responses", "Responses"),
+    ReportTableColumn("response_rate", "Response rate"),
+    ReportTableColumn("interviews", "Interviews"),
+    ReportTableColumn("interview_rate", "Interview rate"),
+    ReportTableColumn("offers", "Offers"),
+    ReportTableColumn("offer_rate", "Offer rate"),
+)
+
+def _cv_table_columns():
+    return (
+        ReportTableColumn("cv_version", "CV version"),
+        ReportTableColumn("applications", "Applications"),
+        ReportTableColumn("responses", "Responses"),
+        ReportTableColumn("response_rate", "Response rate"),
+        ReportTableColumn("interviews", "Interviews"),
+        ReportTableColumn("interview_rate", "Interview rate"),
+        ReportTableColumn("offers", "Offers"),
+        ReportTableColumn("offer_rate", "Offer rate"),
+    )
+
+
+def _build_pagination_state(
+    *,
+    flat_params: dict[str, str],
+    own_prefix: str,
+    other_prefix: str,
+    anchor: str,
+    paginator: Paginator,
+    page_obj,
+) -> ReportPaginationState | None:
+    if paginator.count == 0:
+        return None
+    page_param = f"{own_prefix}page"
+    per_page_param = f"{own_prefix}pp"
+    per_page = paginator.per_page
+    preserved = _build_preserved_params(
+        flat_params,
+        own_prefix=own_prefix,
+        other_prefix=other_prefix,
+        exclude={page_param},
+        include_own=True,
+    )
+    current = page_obj.number
+
+    def page_url(target_page: int) -> str:
+        return _build_report_url(
+            preserved,
+            {page_param: str(target_page), per_page_param: str(per_page)},
+            anchor=anchor,
+        )
+
+    return ReportPaginationState(
+        page_param=page_param,
+        per_page_param=per_page_param,
+        current_page=current,
+        per_page=per_page,
+        total_results=paginator.count,
+        total_pages=paginator.num_pages,
+        has_previous=page_obj.has_previous(),
+        has_next=page_obj.has_next(),
+        previous_url=page_url(page_obj.previous_page_number())
+        if page_obj.has_previous()
+        else "",
+        next_url=page_url(page_obj.next_page_number()) if page_obj.has_next() else "",
+        start_index=page_obj.start_index(),
+        end_index=page_obj.end_index(),
+    )
+
+
+def _build_filter_bar(
+    *,
+    flat_params: dict[str, str],
+    form_id: str,
+    anchor: str,
+    own_prefix: str,
+    other_prefix: str,
+    search_placeholder: str,
+    filter_options: tuple[ReportFilterOption, ...],
+) -> ReportFilterBarState:
+    search_param = f"{own_prefix}q"
+    filter_param = f"{own_prefix}filter"
+    per_page_param = f"{own_prefix}pp"
+    page_param = f"{own_prefix}page"
+
+    search_value = flat_params.get(search_param, "")
+    filter_value = flat_params.get(filter_param, "all") or "all"
+    per_page_value = _coerce_per_page(flat_params.get(per_page_param))
+
+    preserved_other = _build_preserved_params(
+        flat_params, own_prefix=own_prefix, other_prefix=other_prefix
+    )
+    preserved_hidden = tuple(
+        (key, value)
+        for key, value in preserved_other.items()
+        if key not in {search_param, filter_param, per_page_param, page_param}
+    )
+
+    reset_params = _build_preserved_params(
+        flat_params, own_prefix=own_prefix, other_prefix=other_prefix
+    )
+    reset_url = _build_report_url(reset_params, {}, anchor=anchor)
+
+    return ReportFilterBarState(
+        form_id=form_id,
+        anchor=anchor,
+        search_param=search_param,
+        search_value=search_value,
+        search_placeholder=search_placeholder,
+        filter_param=filter_param,
+        filter_value=filter_value,
+        filter_options=filter_options,
+        per_page_param=per_page_param,
+        per_page_value=per_page_value,
+        per_page_options=REPORT_PER_PAGE_OPTIONS,
+        active_filters=_active_filters_for_report(
+            search_param=search_param,
+            search_value=search_value,
+            filter_param=filter_param,
+            filter_value=filter_value,
+            filter_options=filter_options,
+        ),
+        reset_url=reset_url,
+        preserved_hidden_fields=preserved_hidden,
+    )
+
+
+def _source_performance_interpretation(rows: list[SourceROIRow]) -> str:
+    if not rows:
+        return (
+            "No source performance data yet. Log applications with precise sources "
+            "before comparing channel outcomes manually."
+        )
+    leader = rows[0]
+    if leader.responses == 0:
+        return (
+            f"{leader.source_label} has the highest logged volume but no responses yet. "
+            "Treat this as a targeting or CV evidence signal, not a final channel verdict."
+        )
+    return (
+        f"{leader.source_label} currently leads on response rate ({leader.response_rate}%) "
+        f"with {leader.total_applications} applications. Use this as directional evidence "
+        "when deciding where to focus manual outreach next."
+    )
+
+
+def _cv_performance_interpretation(rows: list[CVVersionPerformanceRow]) -> str:
+    if not rows:
+        return (
+            "No CV version performance data yet. Assign CV versions on applications "
+            "before comparing outcomes manually."
+        )
+    leader = rows[0]
+    if leader.cv_version == "Unspecified":
+        return (
+            "Several applications still use an unspecified CV version. Clean up CV "
+            "version fields before trusting version-level performance comparisons."
+        )
+    if leader.responses == 0:
+        return (
+            f"{leader.cv_version} has logged volume but no responses yet. Review role "
+            "fit and evidence strength before changing CV strategy."
+        )
+    return (
+        f"{leader.cv_version} currently leads on response rate ({leader.response_rate}%) "
+        f"across {leader.total_applications} applications. This is directional tracking, "
+        "not automated A/B testing."
+    )
+
+
+def build_source_performance_report(
+    user,
+    query_params=None,
+) -> SourcePerformanceReport:
+    flat = _query_dict_to_flat(query_params)
+    all_rows = build_source_roi(user)
+    search = flat.get(f"{SOURCE_PARAM_PREFIX}q", "")
+    filter_value = flat.get(f"{SOURCE_PARAM_PREFIX}filter", "all") or "all"
+    per_page = _coerce_per_page(flat.get(f"{SOURCE_PARAM_PREFIX}pp"))
+    page = flat.get(f"{SOURCE_PARAM_PREFIX}page")
+
+    filtered_rows = _filter_source_rows(
+        all_rows, search=search, filter_value=filter_value
+    )
+    paginator, page_obj = _paginate_sequence(filtered_rows, page, per_page)
+    page_rows = list(page_obj.object_list)
+
+    filter_bar = _build_filter_bar(
+        flat_params=flat,
+        form_id="source-performance-filters",
+        anchor="source-performance",
+        own_prefix=SOURCE_PARAM_PREFIX,
+        other_prefix=CV_PARAM_PREFIX,
+        search_placeholder="Search source name",
+        filter_options=_SOURCE_FILTER_OPTIONS,
+    )
+
+    pagination = _build_pagination_state(
+        flat_params=flat,
+        own_prefix=SOURCE_PARAM_PREFIX,
+        other_prefix=CV_PARAM_PREFIX,
+        anchor="source-performance",
+        paginator=paginator,
+        page_obj=page_obj,
+    )
+
+    table = ReportTableView(
+        columns=_SOURCE_TABLE_COLUMNS,
+        rows=_source_rows_to_table(page_rows),
+        pagination=pagination,
+        result_count=len(page_rows),
+        filtered_total=paginator.count,
+        unfiltered_total=len(all_rows),
+        show_filtered_empty=paginator.count == 0 and len(all_rows) > 0,
+        show_unfiltered_empty=len(all_rows) == 0,
+    )
+
+    manual_actions = _reporting_manual_actions(
+        ("Log application manually", "applications:application_create"),
+        ("Review application list", "applications:application_list"),
+    )
+    return SourcePerformanceReport(
+        table=table,
+        interpretation=_source_performance_interpretation(all_rows),
+        filter_bar=filter_bar,
+        manual_actions=manual_actions,
+        advisory_copy=_REPORTING_ADVISORY_COPY,
+    )
+
+
+def build_cv_version_performance_report(
+    user,
+    query_params=None,
+) -> CVVersionPerformanceReport:
+    flat = _query_dict_to_flat(query_params)
+    all_rows = build_cv_version_performance(user)
+    search = flat.get(f"{CV_PARAM_PREFIX}q", "")
+    filter_value = flat.get(f"{CV_PARAM_PREFIX}filter", "all") or "all"
+    per_page = _coerce_per_page(flat.get(f"{CV_PARAM_PREFIX}pp"))
+    page = flat.get(f"{CV_PARAM_PREFIX}page")
+
+    filtered_rows = _filter_cv_rows(all_rows, search=search, filter_value=filter_value)
+    paginator, page_obj = _paginate_sequence(filtered_rows, page, per_page)
+    page_rows = list(page_obj.object_list)
+
+    filter_bar = _build_filter_bar(
+        flat_params=flat,
+        form_id="cv-performance-filters",
+        anchor="cv-version-performance",
+        own_prefix=CV_PARAM_PREFIX,
+        other_prefix=SOURCE_PARAM_PREFIX,
+        search_placeholder="Search CV version",
+        filter_options=_CV_FILTER_OPTIONS,
+    )
+
+    pagination = _build_pagination_state(
+        flat_params=flat,
+        own_prefix=CV_PARAM_PREFIX,
+        other_prefix=SOURCE_PARAM_PREFIX,
+        anchor="cv-version-performance",
+        paginator=paginator,
+        page_obj=page_obj,
+    )
+
+    table = ReportTableView(
+        columns=_cv_table_columns(),
+        rows=_cv_rows_to_table(page_rows),
+        pagination=pagination,
+        result_count=len(page_rows),
+        filtered_total=paginator.count,
+        unfiltered_total=len(all_rows),
+        show_filtered_empty=paginator.count == 0 and len(all_rows) > 0,
+        show_unfiltered_empty=len(all_rows) == 0,
+    )
+
+    manual_actions = _reporting_manual_actions(
+        ("Review applications manually", "applications:application_list"),
+        ("Open evaluation queue", "applications:evaluation_queue"),
+    )
+    return CVVersionPerformanceReport(
+        table=table,
+        interpretation=_cv_performance_interpretation(all_rows),
+        filter_bar=filter_bar,
+        manual_actions=manual_actions,
+        advisory_copy=_REPORTING_ADVISORY_COPY,
+    )
+
+
+def build_reporting_foundation_context(user, query_params=None) -> dict:
     """Assemble Sprint 40A reporting foundation plus legacy metrics context."""
     metrics = build_funnel_metrics(user)
     diagnosis = diagnose_funnel(metrics)
@@ -1648,11 +2299,14 @@ def build_reporting_foundation_context(user) -> dict:
         app_report=application_quality_report,
         data_quality=data_quality_report,
     )
+    source_performance = build_source_performance_report(user, query_params)
+    cv_version_performance = build_cv_version_performance_report(user, query_params)
     return {
         "report_title": "Premium Reporting Foundation",
         "report_subtitle": (
-            "Funnel performance, data quality, and application quality - "
-            "built from stored records for manual, evidence-based review."
+            "Funnel performance, data quality, application quality, source performance, "
+            "and CV version performance - built from stored records for manual, "
+            "evidence-based review."
         ),
         "report_trust_note": (
             "Reporting GET requests are read-only. All workflow links open "
@@ -1662,6 +2316,8 @@ def build_reporting_foundation_context(user) -> dict:
         "funnel_performance": funnel_performance,
         "data_quality_foundation": data_quality_foundation,
         "application_quality_foundation": application_quality_foundation,
+        "source_performance": source_performance,
+        "cv_version_performance": cv_version_performance,
         "metrics": metrics,
         "diagnosis": diagnosis,
         "funnel_stage_rows": list(funnel_performance.stage_rows),

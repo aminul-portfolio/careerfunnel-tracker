@@ -35,7 +35,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 39 (feature branch `sprint-39-premium-dashboard-command-centre`):** Premium Dashboard Command Centre - nine dashboard modules, read-only service helpers, **28** dashboard tests; evidence doc `docs/evidence/sprint_39_premium_dashboard_command_centre.md`. Dashboard-only sprint: no forms/reporting/model changes.
 
-**Sprint 40A (feature branch `sprint-40a-premium-reporting-foundation`):** Premium Reporting Foundation - funnel performance, data quality, and application quality reports with shared reporting components; **10** new `PremiumReportingFoundationTests`; **97** metrics tests passing; evidence doc `docs/evidence/sprint_40a_premium_reporting_foundation.md`. Reporting-only sprint: no dashboard/forms/model/migration changes; Sprint 40B/40C not implemented.
+**Sprint 40A (feature branch `sprint-40a-premium-reporting-foundation`):** Premium Reporting Foundation - funnel performance, data quality, and application quality reports with shared reporting components; **10** new `PremiumReportingFoundationTests`; evidence doc `docs/evidence/sprint_40a_premium_reporting_foundation.md`. Reporting-only sprint: no dashboard/forms/model/migration changes.
+
+**Sprint 40B (feature branch `sprint-40b-source-cv-reports-search-filter-pagination`):** Source Performance + CV Version Performance with reusable search/filter/pagination; **15** new `PremiumReportingSourceCvTests`; **112** metrics tests passing; evidence doc `docs/evidence/sprint_40b_source_cv_reports_search_filter_pagination.md`. Uses Django `Paginator` for portfolio-scale pagination. Sprint 40C not implemented.
 
 ---
 
@@ -1029,7 +1031,7 @@ The project does not claim:
 - No production SaaS scale claim.
 - Live AI automation.
 - Gmail inbox automation.
-- Scientific CV A/B testing.
+- No scientific CV A/B testing claim.
 - Financial ROI calculation.
 - Enterprise data warehouse architecture.
 - Fully deployed commercial platform unless deployment is added later.

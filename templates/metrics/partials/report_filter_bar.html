@@ -1,0 +1,43 @@
+<form id="{{ filter_bar.form_id }}" class="cf-report-filter-bar" method="get" action="#{{ filter_bar.anchor }}">
+    {% for field_name, field_value in filter_bar.preserved_hidden_fields %}
+    <input type="hidden" name="{{ field_name }}" value="{{ field_value }}">
+    {% endfor %}
+    <div class="cf-report-filter-row">
+        <label class="cf-report-filter-label" for="{{ filter_bar.form_id }}-search">Search</label>
+        <input
+            id="{{ filter_bar.form_id }}-search"
+            type="search"
+            name="{{ filter_bar.search_param }}"
+            value="{{ filter_bar.search_value }}"
+            placeholder="{{ filter_bar.search_placeholder }}"
+            class="cf-report-filter-input"
+        >
+    </div>
+    <div class="cf-report-filter-row">
+        <label class="cf-report-filter-label" for="{{ filter_bar.form_id }}-filter">Filter</label>
+        <select id="{{ filter_bar.form_id }}-filter" name="{{ filter_bar.filter_param }}" class="cf-report-filter-select">
+            {% for option in filter_bar.filter_options %}
+            <option value="{{ option.value }}"{% if option.value == filter_bar.filter_value %} selected{% endif %}>{{ option.label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="cf-report-filter-row">
+        <label class="cf-report-filter-label" for="{{ filter_bar.form_id }}-per-page">Rows per page</label>
+        <select id="{{ filter_bar.form_id }}-per-page" name="{{ filter_bar.per_page_param }}" class="cf-report-filter-select">
+            {% for option in filter_bar.per_page_options %}
+            <option value="{{ option }}"{% if option == filter_bar.per_page_value %} selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="cf-report-filter-actions">
+        <button type="submit" class="btn btn-primary">Apply filters</button>
+        <a href="{{ filter_bar.reset_url }}" class="cf-report-reset-link">Reset filters</a>
+    </div>
+</form>
+{% if filter_bar.active_filters %}
+<div class="cf-report-active-filters" aria-label="Active filters">
+    {% for chip in filter_bar.active_filters %}
+    <span class="cf-report-filter-chip">{{ chip.label }}</span>
+    {% endfor %}
+</div>
+{% endif %}
