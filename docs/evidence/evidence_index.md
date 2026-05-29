@@ -67,7 +67,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 52 Phase 3 (same branch):** Funnel Metrics visual analytics completion - funnel conversion, outcome breakdown, source performance, and CV version local SVG charts via extended `funnel-charts.js`; **8** new `Sprint52Phase3VisualAnalyticsTests`; tables and Phase 2 weekly trend retained. No Plotly/vendor/deps.
 
-**Sprint 53 (feature branch `sprint-53-pptx-ai-capability-framework`):** PPTX AI Capability Framework - manual advisory framework service (`apps/skills/services/ai_capability_framework.py`), read-only page `/skills/ai-capability-framework/`, **16** tests in `apps.skills`; evidence doc `docs/evidence/sprint_53_pptx_ai_capability_framework.md`. No models/migrations, scoring, matching, recommendations, external AI calls, or automation. Sprint 54 not started.
+**Sprint 53 (feature branch `sprint-53-pptx-ai-capability-framework`):** PPTX AI Capability Framework - manual advisory framework service (`apps/skills/services/ai_capability_framework.py`), read-only page `/skills/ai-capability-framework/`, **16** tests in `apps.skills`; evidence doc `docs/evidence/sprint_53_pptx_ai_capability_framework.md`. No models/migrations, scoring, matching, recommendations, external AI calls, or automation.
+
+**Sprint 54 (feature branch `sprint-54-ai-readiness-scoring-engine`):** AI Readiness Scoring Engine - rule-based scoring service (`apps/skills/services/ai_readiness_scoring.py`), read-only report `/skills/ai-readiness-report/`, **36** tests in `apps.skills`; evidence doc `docs/evidence/sprint_54_ai_readiness_scoring_engine.md`. Phase 2 exposes portfolio baseline readiness report; no models/migrations, external AI calls, job matching, recommendations, or automation.
 
 ---
 

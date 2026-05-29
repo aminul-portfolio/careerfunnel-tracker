@@ -10,4 +10,9 @@ urlpatterns = [
         views.ai_capability_framework,
         name="ai_capability_framework",
     ),
+    path(
+        "ai-readiness-report/",
+        views.ai_readiness_report,
+        name="ai_readiness_report",
+    ),
 ]
