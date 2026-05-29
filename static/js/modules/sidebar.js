@@ -2,6 +2,7 @@
     "use strict";
 
     var STORAGE_KEY = "cf-sidebar-collapsed";
+    var DESKTOP_MEDIA = "(min-width: 901px)";
 
     function readCollapsedPreference() {
         try {
@@ -19,6 +20,10 @@
         }
     }
 
+    function isDesktopViewport() {
+        return window.matchMedia(DESKTOP_MEDIA).matches;
+    }
+
     function setDrawerOpen(docEl, toggle, overlay, sidebar, isOpen) {
         docEl.classList.toggle("cf-sidebar-open", isOpen);
         if (toggle) {
@@ -33,7 +38,7 @@
             overlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
         }
         if (sidebar) {
-            var isMobile = window.matchMedia("(max-width: 900px)").matches;
+            var isMobile = !isDesktopViewport();
             if (isMobile && !isOpen) {
                 sidebar.setAttribute("aria-hidden", "true");
             } else {
@@ -42,8 +47,18 @@
         }
     }
 
-    function setCollapsed(docEl, collapseToggle, isCollapsed) {
+    function updateReopenButton(reopenBtn, isCollapsed) {
+        if (!reopenBtn) {
+            return;
+        }
+        reopenBtn.hidden = !isCollapsed || !isDesktopViewport();
+    }
+
+    function setCollapsed(docEl, sidebar, collapseToggle, reopenBtn, isCollapsed) {
         docEl.classList.toggle("cf-sidebar-collapsed", isCollapsed);
+        if (sidebar) {
+            sidebar.classList.toggle("is-collapsed", isCollapsed);
+        }
         if (collapseToggle) {
             collapseToggle.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
             collapseToggle.setAttribute(
@@ -51,7 +66,13 @@
                 isCollapsed ? "Expand sidebar" : "Collapse sidebar"
             );
         }
+        updateReopenButton(reopenBtn, isCollapsed);
         writeCollapsedPreference(isCollapsed);
+    }
+
+    function handleCollapseToggle(docEl, sidebar, collapseToggle, reopenBtn) {
+        var isCollapsed = !docEl.classList.contains("cf-sidebar-collapsed");
+        setCollapsed(docEl, sidebar, collapseToggle, reopenBtn, isCollapsed);
     }
 
     function initActiveNav(path) {
@@ -85,6 +106,7 @@
         var overlay = document.getElementById("sidebar-overlay");
         var sidebar = document.getElementById("app-sidebar");
         var collapseToggle = document.getElementById("sidebar-collapse-toggle");
+        var reopenBtn = document.getElementById("sidebar-reopen-btn");
 
         initActiveNav(path);
 
@@ -116,21 +138,40 @@
             }
         });
 
-        if (sidebar && window.matchMedia("(max-width: 900px)").matches) {
+        if (sidebar && !isDesktopViewport()) {
             sidebar.setAttribute("aria-hidden", "true");
         }
 
         if (collapseToggle) {
-            setCollapsed(docEl, collapseToggle, readCollapsedPreference());
+            setCollapsed(
+                docEl,
+                sidebar,
+                collapseToggle,
+                reopenBtn,
+                readCollapsedPreference()
+            );
             collapseToggle.addEventListener("click", function () {
-                var isCollapsed = !docEl.classList.contains("cf-sidebar-collapsed");
-                setCollapsed(docEl, collapseToggle, isCollapsed);
+                handleCollapseToggle(docEl, sidebar, collapseToggle, reopenBtn);
+            });
+        }
+
+        if (reopenBtn) {
+            reopenBtn.addEventListener("click", function () {
+                if (docEl.classList.contains("cf-sidebar-collapsed")) {
+                    handleCollapseToggle(docEl, sidebar, collapseToggle, reopenBtn);
+                }
             });
         }
 
         window.addEventListener("resize", function () {
-            if (!window.matchMedia("(max-width: 900px)").matches) {
+            if (!isDesktopViewport()) {
                 closeDrawer();
+            }
+            if (collapseToggle) {
+                updateReopenButton(
+                    reopenBtn,
+                    docEl.classList.contains("cf-sidebar-collapsed")
+                );
             }
         });
     }

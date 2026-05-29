@@ -30,6 +30,13 @@ SIDEBAR_URL_NAMES = (
     "job_intelligence:smart_review",
     "job_intelligence:skill_intelligence",
     "ai_agents:agent_dashboard",
+    "skills:ai_capability_framework",
+    "skills:ai_readiness_report",
+    "skills:job_ai_capability_match_report",
+    "skills:learning_recommendations_report",
+    "skills:career_readiness_dashboard",
+    "skills:career_strategy_action_plan",
+    "skills:final_career_intelligence_workflow",
     "metrics:funnel_metrics",
     "exports:export_center",
     "dashboard:career_evidence_index",
@@ -42,8 +49,31 @@ PRODUCT_NAV_GROUPS = (
     "Intelligence",
     "Reporting Suite",
     "Evidence",
-    "Account",
 )
+
+SIDEBAR_NAV_SUBGROUP_LABELS = ("Career Intelligence",)
+
+SIDEBAR_NAV_LINK_LABELS = (
+    "Dashboard",
+    "Applications",
+    "Evaluation Queue",
+    "Follow-ups",
+    "Interview Prep",
+    "Daily Log",
+    "Weekly Review",
+    "Notes &amp; Decisions",
+    "Smart Review",
+    "Skill Intelligence",
+    "AI Capability Framework",
+    "AI Readiness Report",
+    "Job AI Capability Match",
+    "Learning Recommendations",
+    "Career Readiness Dashboard",
+    "Career Strategy Action Plan",
+    "Final Career Intelligence Workflow",
+)
+
+SIDEBAR_FAKE_ACCOUNT_GROUP_MARKER = 'cf-nav-group-label">Account</div>'
 
 QUICK_ADD_URL_NAMES = (
     "applications:application_create",
@@ -248,9 +278,21 @@ class Sprint38PremiumShellTests(Sprint37AShellFoundationAuditMixin, TestCase):
     def test_sidebar_contains_product_navigation_groups(self):
         response = self.client.get(reverse("dashboard:overview"))
         self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
         for group_label in PRODUCT_NAV_GROUPS:
             with self.subTest(group_label=group_label):
                 self.assertContains(response, group_label)
+        for subgroup_label in SIDEBAR_NAV_SUBGROUP_LABELS:
+            with self.subTest(subgroup_label=subgroup_label):
+                self.assertContains(response, subgroup_label)
+        for link_label in SIDEBAR_NAV_LINK_LABELS:
+            with self.subTest(link_label=link_label):
+                self.assertContains(response, link_label)
+        self.assertNotIn(
+            SIDEBAR_FAKE_ACCOUNT_GROUP_MARKER,
+            content,
+            msg="Sidebar must not include a misleading Account navigation group",
+        )
 
     def test_sidebar_links_resolve_to_valid_urls(self):
         response = self.client.get(reverse("dashboard:overview"))
