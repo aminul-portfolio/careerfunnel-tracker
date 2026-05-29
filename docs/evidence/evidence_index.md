@@ -71,6 +71,8 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 54 (feature branch `sprint-54-ai-readiness-scoring-engine`):** AI Readiness Scoring Engine - rule-based scoring service (`apps/skills/services/ai_readiness_scoring.py`), read-only report `/skills/ai-readiness-report/`, **36** tests in `apps.skills`; evidence doc `docs/evidence/sprint_54_ai_readiness_scoring_engine.md`. Phase 2 exposes portfolio baseline readiness report; no models/migrations, external AI calls, job matching, recommendations, or automation.
 
+**Sprint 55 (feature branch `sprint-55-job-to-ai-capability-matching`):** Job-to-AI Capability Matching - deterministic keyword matching service (`apps/skills/services/job_ai_capability_matching.py`), read-only demo report `/skills/job-ai-capability-match/`, **58** tests in `apps.skills`; evidence doc `docs/evidence/sprint_55_job_to_ai_capability_matching.md`. Phase 2 uses sample JD text only; no persistence, models/migrations, external AI calls, or automation.
+
 ---
 
 ## Evidence Principles
