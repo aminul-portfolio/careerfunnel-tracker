@@ -21,6 +21,15 @@ from .ai_readiness_scoring import (
     calculate_ai_readiness_score,
     evidence_strength_from_tier,
 )
+from .job_ai_capability_matching import (
+    MATCH_LABEL_BANDS,
+    MATCHING_CLAIM_SAFETY_NOTES,
+    JobAICapabilityMatchResult,
+    MatchedAICapability,
+    MissingAICapability,
+    assign_match_label,
+    match_job_description_to_ai_capabilities,
+)
 
 __all__ = [
     "AI_CAPABILITY_FRAMEWORK",
@@ -31,10 +40,16 @@ __all__ = [
     "CapabilityReadinessLine",
     "EVIDENCE_STRENGTH_POINTS",
     "FRAMEWORK_CLAIM_SAFETY_NOTE",
+    "JobAICapabilityMatchResult",
     "LEVEL_WEIGHTS",
+    "MATCHING_CLAIM_SAFETY_NOTES",
+    "MATCH_LABEL_BANDS",
+    "MatchedAICapability",
+    "MissingAICapability",
     "READINESS_LABEL_BANDS",
     "READINESS_SCORING_CLAIM_SAFETY_NOTES",
     "TOOL_EXAMPLES_DISCLAIMER",
+    "assign_match_label",
     "assign_readiness_label",
     "build_careerfunnel_portfolio_evidence_baseline",
     "build_empty_ai_readiness_score",
@@ -42,4 +57,5 @@ __all__ = [
     "calculate_ai_readiness_score",
     "evidence_strength_from_tier",
     "get_ai_capability_framework",
+    "match_job_description_to_ai_capabilities",
 ]
