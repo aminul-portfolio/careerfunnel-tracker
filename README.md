@@ -8,41 +8,47 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 ## Current Sprint Position
 
-Sprints 25 through 32 (32A-32E) are complete on `main`.
-Sprint **34** (34A-34D) — CV Tailoring Claude Enhancement — is complete on `main`.
-Sprint **35** (35A-35D) — Interview + Email Workflow Polish — is complete on `main`.
-Sprint **36** (36A-36D) — Weekly Risk / Final Operating System Polish — is complete on feature branch `sprint-36-weekly-risk-final-os-polish` (implementation commits through `66e0e84` Sprint 36C; 36D documentation closure).
-Current validation baseline: **441 tests passing**.
+Sprints **52-59** are complete on `main`.
 
-Sprint 36 adds:
+Current verified baseline: **771 tests passing**.
 
-- **Weekly Review manual workflow clarity** (36A) — manual workflow steps, trust copy, lessons learned on detail, cross-links to Dashboard and AI Weekly Coach
-- **AI Weekly Coach advisory/risk guidance** (36B) — rule-based weekly coach trust copy, latest saved Weekly Review context (read-only), claim-safe optional Claude wording on Agent Hub
-- **Dashboard / Today Action operating rhythm** (36C) — weekly operating rhythm strip, manual weekly review prompt on week end, diagnosis links to Weekly Review and AI Weekly Coach
-- **Claim-safe, approval-based operating-system guidance** — no auto-send, auto-apply, automatic submission, automatic status updates, or automatic interview prep creation
+Latest completed tag: `sprint-59-final-career-intelligence-workflow-complete`.
 
-Evidence: `docs/evidence/sprint_36_weekly_risk_os_polish.md`.
+Earlier sprint families (25-51) remain merged on `main`, including CV Tailoring Claude Enhancement (34), Interview + Email Workflow Polish (35), Weekly Risk / Final Operating System Polish (36), premium SaaS shell and reporting (37-40), Skill Intelligence Dashboard (41-51), and premium component polish (52 Phase 2-3). Evidence for each sprint family is indexed in `docs/evidence/evidence_index.md`.
 
-Sprint 35 adds:
-
-- **Interview prep handoff polish** (35A) — application pre-fill on create, manual workflow copy, cross-links from interview prep to application and AI Pack
-- **Recruiter email manual workflow polish** (35B) — numbered manual import/reply steps, interview-prep advisory link from email detail
-- **Application Detail / AI Pack cross-link polish** (35C) — workflow map, prefilled interview prep links, AI Pack links to recruiter emails and saved prep records
-- **Claim-safe manual workflow copy** throughout — no auto-send, auto-apply, automatic submission, automatic status updates, or automatic interview prep creation
-
-Evidence: `docs/evidence/sprint_35_interview_email_workflow_polish.md`.
-
-Sprint 34 adds:
-
-- **Evidence bank foundation** (`apps/ai_agents/evidence_bank.py`) — tiered, claim-safe skill and project catalog
-- **Claude CV tailoring semantic provider** — JSON-only semantic contract and parser (Sprint 34B)
-- **Optional semantic enhancement** for the CV Tailoring Advisor when `ANTHROPIC_API_KEY` is configured
-- **Rule-based fallback** — rule-based output remains authoritative when the provider is missing or fails
-- **Claim-safe advisory-only output** — themes and talking points only; no final CV or cover letter body generation
-
-Claude usage is accurate: semantic enhancement runs **only when configured**; **rule-based fallback remains active**; **manual review is required**; the test suite uses **mocks only** (no real Claude/API calls in tests).
+GitHub Actions should be checked manually before external publishing if required.
 
 This README does not claim Gmail API integration, OAuth, web scraping, auto-apply workflows, automatic saving, calendar integration, a live SaaS deployment, production users, automatic email sending, automatic application status updates, automatic interview prep creation, final CV generation, or cover letter body generation.
+
+## Career Intelligence Pipeline (Sprints 52-59)
+
+Sprints 52-59 deliver a completed, read-only Career Intelligence pipeline on `main`. The flow is:
+
+```text
+PPTX / AI Capability Framework
+-> AI Readiness Scoring
+-> Job-to-AI Capability Matching
+-> Learning Recommendations
+-> Career Readiness Dashboard
+-> Career Strategy Action Plan / Progress Tracking
+-> Final Career Intelligence Workflow
+```
+
+Key local platform routes (login required):
+
+| Stage | Route |
+| --- | --- |
+| PPTX / AI Capability Framework | `/skills/ai-capability-framework/` |
+| AI Readiness Scoring | `/skills/ai-readiness-report/` |
+| Job-to-AI Capability Matching | `/skills/job-ai-capability-match/` |
+| Learning Recommendations | `/skills/learning-recommendations/` |
+| Career Readiness Dashboard | `/skills/career-readiness-dashboard/` |
+| Career Strategy Action Plan | `/skills/career-strategy-action-plan/` |
+| Final Career Intelligence Workflow | `/skills/final-career-intelligence-workflow/` |
+
+The Sprint 53-59 intelligence pipeline is **deterministic, rule-based, manual, advisory, and evidence-based**. It uses portfolio baseline and sample inputs. It does **not** use external AI APIs. It does **not** call OpenAI or Claude. It does **not** scrape jobs. It does **not** auto-apply. It does **not** send emails. It does **not** integrate with Gmail or Calendar. It does **not** claim live SaaS users, customers, billing, subscriptions, or production deployment.
+
+Evidence: `docs/evidence/final_release_review_sprint_52_59.md`, plus per-sprint docs under `docs/evidence/sprint_5*.md`.
 
 ## Business Problem
 
@@ -92,6 +98,7 @@ CareerFunnel Tracker is a **local Django portfolio project** for one job seeker.
 - Funnel metrics, exports, and data-quality reporting from authenticated records.
 - Rule-based decision support (fit review, follow-ups, interview prep handoffs) without automatic submission.
 - Skill Intelligence Dashboard at `/skill-gaps/` with saved skill gaps plus read-only advisory sections: action plan, learning plan, evidence readiness, portfolio evidence mapping, interview story mapping, and CV bullet mapping.
+- Career Intelligence pipeline (Sprints 53-59) at `/skills/` routes: AI Capability Framework, AI Readiness Report, Job-to-AI Capability Match, Learning Recommendations, Career Readiness Dashboard, Career Strategy Action Plan, and Final Career Intelligence Workflow.
 - Career Evidence OS (markdown + dashboard viewer) for portfolio and recruiter review.
 
 **Claim safety - deliberately not implemented:**
@@ -102,7 +109,7 @@ CareerFunnel Tracker is a **local Django portfolio project** for one job seeker.
 - No fake AI/ML prediction claims; optional Claude paths are advisory and fall back to rule-based logic when not configured.
 - No live SaaS users, production deployment claims, billing, or subscription claims.
 
-Evidence index: `docs/evidence/evidence_index.md`. Sprint 51 reviewer polish: `docs/evidence/sprint_51_final_reviewer_walkthrough_polish.md`.
+Evidence index: `docs/evidence/evidence_index.md`. Final release review: `docs/evidence/final_release_review_sprint_52_59.md`. Sprint 51 reviewer polish: `docs/evidence/sprint_51_final_reviewer_walkthrough_polish.md`.
 
 ## Five-Minute Reviewer Path
 
@@ -110,9 +117,10 @@ Evidence index: `docs/evidence/evidence_index.md`. Sprint 51 reviewer polish: `d
 2. Review the Evaluation Queue for opportunities that need fit checks or conversion into applications.
 3. Open Funnel Metrics and inspect weekly trend, source performance, CV version performance, and rejection patterns.
 4. Open **Skill Intelligence Dashboard** at `/skill-gaps/` and walk the manual action plan through CV bullet mapping sections (all read-only).
-5. Create or edit an application and observe the save-quality warnings for analytics-critical gaps.
-6. Open the Data Quality Report and connect the warnings back to reporting impact.
-7. Review `docs/analytics/metric_definitions.md`, `docs/analytics/analytics_lineage.md`, and `docs/evidence/evidence_index.md` for the supporting evidence trail.
+5. Walk the **Career Intelligence pipeline** (Sprints 53-59) in order: `/skills/ai-capability-framework/` -> `/skills/ai-readiness-report/` -> `/skills/job-ai-capability-match/` -> `/skills/learning-recommendations/` -> `/skills/career-readiness-dashboard/` -> `/skills/career-strategy-action-plan/` -> `/skills/final-career-intelligence-workflow/`.
+6. Create or edit an application and observe the save-quality warnings for analytics-critical gaps.
+7. Open the Data Quality Report and connect the warnings back to reporting impact.
+8. Review `docs/analytics/metric_definitions.md`, `docs/analytics/analytics_lineage.md`, and `docs/evidence/evidence_index.md` for the supporting evidence trail.
 
 ### Career Evidence reviewer path (Sprint 23)
 
@@ -230,13 +238,15 @@ For a portfolio-level evidence map across the user's major GitHub projects, see 
 
 For recruiter-facing portfolio presentation materials, see `docs/career_evidence/portfolio_presentation_pack.md`.
 
-Current verified test count: **441 passing**.
+Current verified test count: **771 passing**.
 
 Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/`. The main supporting documentation is:
 
 - `docs/analytics/metric_definitions.md`
 - `docs/analytics/analytics_lineage.md`
 - `docs/evidence/evidence_index.md`
+- `docs/evidence/final_release_review_sprint_52_59.md`
+- `docs/evidence/sprint_59_final_career_intelligence_workflow.md`
 - `docs/evidence/sprint_36_weekly_risk_os_polish.md`
 - `docs/evidence/sprint_35_interview_email_workflow_polish.md`
 - `docs/evidence/sprint_34_cv_tailoring_claude_enhancement.md`
@@ -313,6 +323,7 @@ http://127.0.0.1:8000/
 - `apps/applications/` contains application tracking workflows and save-quality warning integration.
 - `apps/metrics/` contains funnel, source, CV, rejection, quality, weekly trend, and data-quality reporting logic.
 - `apps/job_intelligence/` contains rule-based role-fit and job-posting review workflows.
+- `apps/skills/` contains the Sprint 53-59 Career Intelligence pipeline services and read-only report pages.
 - `apps/exports/` contains workbook export flows.
 - `docs/analytics/` contains metric definitions and analytics lineage.
 - `docs/evidence/` contains sprint evidence and historical screenshots.
