@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}AI Capability Framework | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}AI Capability Framework{% endblock %}
+{% block content %}
+<div class="dashboard-grid cf-ai-capability-framework">
+    <section class="hero-panel">
+        <p class="eyebrow">AI Capability Framework</p>
+        <h1>Manual, advisory employability skill mapping for AI-related capabilities.</h1>
+        <p>
+            This read-only page displays capability categories from the Sprint 53 framework.
+            Use it for self-review and portfolio planning. No AI output is generated automatically
+            on this page.
+        </p>
+        <p class="trust-note">
+            The framework is manual and advisory. Tool names shown below are examples only.
+            CareerFunnel Tracker does not integrate with those tools in this sprint.
+            No job application, email, calendar, web data collection, payment workflow,
+            or hosted workflow is automated here.
+        </p>
+        <ul class="workflow-list cf-skill-trust-list">
+            <li>Read-only reference - no scoring, matching, or recommendations.</li>
+            <li>Data comes from the internal framework service, not external AI providers.</li>
+            <li>Review each capability manually before citing it in applications or interviews.</li>
+        </ul>
+    </section>
+
+    {% for capability in capabilities %}
+    <section class="content-card cf-ai-capability-card" id="{{ capability.slug }}">
+        <div class="card-header">
+            <p class="eyebrow">
+                {% if capability.level == "foundation" %}
+                    Foundation
+                {% elif capability.level == "applied" %}
+                    Applied
+                {% elif capability.level == "agent_portfolio_ready" %}
+                    Agent / portfolio-ready
+                {% else %}
+                    {{ capability.level }}
+                {% endif %}
+            </p>
+            <h2>{{ capability.title }}</h2>
+            <p class="section-note">{{ capability.description }}</p>
+        </div>
+
+        <div class="cf-skill-evidence-grid">
+            <article class="cf-skill-evidence-card">
+                <h3>Evidence examples</h3>
+                <ul class="workflow-list">
+                    {% for example in capability.evidence_examples %}
+                    <li>{{ example }}</li>
+                    {% endfor %}
+                </ul>
+            </article>
+            <article class="cf-skill-evidence-card">
+                <h3>Career relevance</h3>
+                <p>{{ capability.career_relevance }}</p>
+            </article>
+            <article class="cf-skill-evidence-card">
+                <h3>Tool examples</h3>
+                <p class="table-context">{{ tool_examples_disclaimer }}</p>
+                <ul class="workflow-list">
+                    {% for tool in capability.tool_examples %}
+                    {% if tool != tool_examples_disclaimer %}
+                    <li>{{ tool }}</li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+            </article>
+            <article class="cf-skill-evidence-card">
+                <h3>Claim-safety note</h3>
+                <p>{{ capability.claim_safety_note }}</p>
+            </article>
+        </div>
+    </section>
+    {% endfor %}
+
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Framework boundary</p>
+            <h2>Manual review reminder</h2>
+            <p class="section-note">{{ framework_claim_safety_note }}</p>
+        </div>
+    </section>
+</div>
+{% endblock %}

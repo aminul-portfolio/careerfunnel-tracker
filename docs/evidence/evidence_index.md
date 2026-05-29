@@ -65,7 +65,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 52 Phase 2 (feature branch `sprint-52-final-saas-premium-components-plotly-metrics`):** Premium SaaS component CSS foundation + Funnel Metrics local weekly trend SVG chart; remote chart script removed; **8** new `Sprint52Phase2FoundationTests`; evidence doc `docs/evidence/sprint_52_final_saas_premium_components_plotly_metrics.md`. No models/migrations/routes; no Plotly dependency.
 
-**Sprint 52 Phase 3 (same branch):** Funnel Metrics visual analytics completion - funnel conversion, outcome breakdown, source performance, and CV version local SVG charts via extended `funnel-charts.js`; **8** new `Sprint52Phase3VisualAnalyticsTests`; tables and Phase 2 weekly trend retained. No Plotly/vendor/deps. Sprint 53 not started.
+**Sprint 52 Phase 3 (same branch):** Funnel Metrics visual analytics completion - funnel conversion, outcome breakdown, source performance, and CV version local SVG charts via extended `funnel-charts.js`; **8** new `Sprint52Phase3VisualAnalyticsTests`; tables and Phase 2 weekly trend retained. No Plotly/vendor/deps.
+
+**Sprint 53 (feature branch `sprint-53-pptx-ai-capability-framework`):** PPTX AI Capability Framework - manual advisory framework service (`apps/skills/services/ai_capability_framework.py`), read-only page `/skills/ai-capability-framework/`, **16** tests in `apps.skills`; evidence doc `docs/evidence/sprint_53_pptx_ai_capability_framework.md`. No models/migrations, scoring, matching, recommendations, external AI calls, or automation. Sprint 54 not started.
 
 ---
 
