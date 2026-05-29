@@ -15,4 +15,9 @@ urlpatterns = [
         views.ai_readiness_report,
         name="ai_readiness_report",
     ),
+    path(
+        "job-ai-capability-match/",
+        views.job_ai_capability_match_report,
+        name="job_ai_capability_match_report",
+    ),
 ]

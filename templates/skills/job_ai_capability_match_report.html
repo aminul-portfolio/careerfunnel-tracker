@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Job AI Capability Match | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Job AI Capability Match{% endblock %}
+{% block content %}
+<div class="dashboard-grid cf-job-ai-capability-match">
+    <section class="hero-panel">
+        <p class="eyebrow">Job AI Capability Match</p>
+        <h1>Rule-based keyword matching report for manual review.</h1>
+        <p>
+            This page shows how demo job description text maps to Sprint 53 AI capability
+            categories through deterministic keyword detection. Phase 2 uses sample text only.
+        </p>
+        <p class="trust-note">
+            This is a rule-based keyword matching report for manual review.
+            It is not predictive hiring AI.
+            It does not use external AI APIs.
+            It does not scrape jobs.
+            It does not automate applications.
+        </p>
+        <ul class="workflow-list cf-skill-trust-list">
+            <li>Job description text - keyword detection - matched categories - missing signals.</li>
+            <li>Demo/sample job text only; not a saved application record.</li>
+            <li>Verify keyword hits manually before using in applications or interviews.</li>
+        </ul>
+        <div class="cf-report-manual-actions">
+            <a href="{% url 'skills:ai_capability_framework' %}" class="cf-report-manual-link">
+                Open AI Capability Framework
+            </a>
+            <a href="{% url 'skills:ai_readiness_report' %}" class="cf-report-manual-link">
+                Open AI Readiness Report
+            </a>
+        </div>
+    </section>
+
+    <section class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Demo sample job description</p>
+            <h2>Phase 2 sample text (not a real application)</h2>
+            <p class="section-note">{{ demo_job_description }}</p>
+        </div>
+    </section>
+
+    <section class="kpi-grid">
+        <div class="kpi-card">
+            <p>Match Score</p>
+            <h2>{{ match_result.match_score }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Match Label</p>
+            <h2 class="small-kpi-text">{{ match_result.match_label }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Matched Categories</p>
+            <h2>{{ match_result.matched_capabilities|length }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Missing / Weak Signals</p>
+            <h2>{{ match_result.missing_capabilities|length }}</h2>
+        </div>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Detected terms</p>
+            <h2>Keyword hits from sample job text</h2>
+        </div>
+        {% if match_result.detected_terms %}
+        <ul class="workflow-list">
+            {% for term in match_result.detected_terms %}
+            <li>{{ term }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="section-note">No AI capability keywords detected in the sample text.</p>
+        {% endif %}
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Matched capabilities</p>
+            <h2>Framework categories with keyword signal</h2>
+        </div>
+        {% if match_result.matched_capabilities %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Capability</th>
+                        <th>Matched terms</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for capability in match_result.matched_capabilities %}
+                    <tr>
+                        <td>{{ capability.title }}</td>
+                        <td>{{ capability.matched_terms|join:", " }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="section-note">No matched capabilities for this sample text.</p>
+        {% endif %}
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Missing / weak capabilities</p>
+            <h2>Categories without keyword signal</h2>
+            <p class="section-note">Listed for manual review; absence of keywords is not a hiring decision.</p>
+        </div>
+        {% if match_result.missing_capabilities %}
+        <ul class="workflow-list">
+            {% for capability in match_result.missing_capabilities %}
+            <li><strong>{{ capability.title }}</strong> - {{ capability.signal_note }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="section-note">All framework categories had keyword signal in the sample text.</p>
+        {% endif %}
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Explanation points</p>
+            <h2>How this match was calculated</h2>
+        </div>
+        <ul class="workflow-list">
+            {% for point in match_result.explanation_points %}
+            <li>{{ point }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Claim-safety notes</p>
+            <h2>Manual review boundaries</h2>
+        </div>
+        <ul class="workflow-list">
+            {% for note in match_result.claim_safety_notes %}
+            <li>{{ note }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+</div>
+{% endblock %}
