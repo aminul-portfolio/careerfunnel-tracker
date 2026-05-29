@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}AI Readiness Report | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}AI Readiness Report{% endblock %}
+{% block content %}
+<div class="dashboard-grid cf-ai-readiness-report">
+    <section class="hero-panel">
+        <p class="eyebrow">AI Readiness Report</p>
+        <h1>Rule-based advisory readiness report for manual review.</h1>
+        <p>
+            This page shows how Sprint 53 AI capability coverage and evidence strength
+            combine into a deterministic readiness score and label. The result uses the
+            CareerFunnel Tracker portfolio evidence baseline from the Phase 1 scoring service.
+        </p>
+        <p class="trust-note">
+            This is a rule-based advisory readiness report for manual review.
+            It is not predictive hiring AI.
+            It does not use external AI APIs.
+            It does not automate applications, email, calendar workflows, or hosted operations.
+        </p>
+        <ul class="workflow-list cf-skill-trust-list">
+            <li>AI Capability Framework - evidence strength - readiness score - label - explanations.</li>
+            <li>Scoring is deterministic, explainable, and intended for self-review only.</li>
+            <li>Verify every capability line manually before portfolio or interview claims.</li>
+        </ul>
+        <div class="cf-report-manual-actions">
+            <a href="{% url 'skills:ai_capability_framework' %}" class="cf-report-manual-link">
+                Open AI Capability Framework
+            </a>
+        </div>
+    </section>
+
+    <section class="kpi-grid">
+        <div class="kpi-card">
+            <p>AI Readiness Score</p>
+            <h2>{{ readiness.readiness_score }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Readiness Label</p>
+            <h2 class="small-kpi-text">{{ readiness.readiness_label }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Capability Coverage</p>
+            <h2>{{ readiness.capabilities_with_evidence }}/{{ readiness.capabilities_total }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Foundation / Applied / Agent</p>
+            <h2 class="small-kpi-text">
+                {{ readiness.foundation_evidence_count }} /
+                {{ readiness.applied_evidence_count }} /
+                {{ readiness.agent_portfolio_evidence_count }}
+            </h2>
+        </div>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Explanation points</p>
+            <h2>How this score was calculated</h2>
+            <p class="section-note">
+                Rule-based weighting from evidence strength and framework level.
+                Not job matching, recommendations, or external AI output.
+            </p>
+        </div>
+        <ul class="workflow-list">
+            {% for point in readiness.explanation_points %}
+            <li>{{ point }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Claim-safety notes</p>
+            <h2>Manual review boundaries</h2>
+        </div>
+        <ul class="workflow-list">
+            {% for note in readiness.claim_safety_notes %}
+            <li>{{ note }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Capability readiness lines</p>
+            <h2>Per-capability evidence and points</h2>
+            <p class="section-note">Read-only breakdown from the scoring service.</p>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Capability</th>
+                        <th>Framework level</th>
+                        <th>Evidence strength</th>
+                        <th>Points</th>
+                        <th>Explanation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for line in readiness.capability_lines %}
+                    <tr>
+                        <td>{{ line.title }}</td>
+                        <td>
+                            {% if line.framework_level == "foundation" %}
+                                Foundation
+                            {% elif line.framework_level == "applied" %}
+                                Applied
+                            {% elif line.framework_level == "agent_portfolio_ready" %}
+                                Agent / portfolio-ready
+                            {% else %}
+                                {{ line.framework_level }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if line.evidence_strength == "gap_learning" %}
+                                Gap learning
+                            {% elif line.evidence_strength == "partial" %}
+                                Partial
+                            {% elif line.evidence_strength == "strong" %}
+                                Strong
+                            {% else %}
+                                None
+                            {% endif %}
+                        </td>
+                        <td>{{ line.points_earned }}/{{ line.points_possible }}</td>
+                        <td>{{ line.explanation }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}
