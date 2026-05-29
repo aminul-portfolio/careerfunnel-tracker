@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Career Readiness Dashboard | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Career Readiness Dashboard{% endblock %}
+{% block content %}
+<div class="dashboard-grid cf-career-readiness-dashboard">
+    <section class="hero-panel">
+        <p class="eyebrow">Career Readiness Dashboard</p>
+        <h1>Rule-based career readiness dashboard for manual review.</h1>
+        <p>
+            This page combines portfolio baseline AI readiness, sample job-to-capability matching,
+            and learning recommendation outputs into one reviewer-friendly readiness summary.
+            Phase 2 uses baseline and sample inputs only.
+        </p>
+        <p class="trust-note">
+            This is a rule-based career readiness dashboard for manual review.
+            It is not predictive hiring AI.
+            It does not use external AI APIs.
+            It does not automate applications.
+            It does not replace human judgement.
+        </p>
+        <ul class="workflow-list cf-skill-trust-list">
+            <li>AI readiness + job match + recommendations - KPIs - summary - next best action.</li>
+            <li>Portfolio baseline and sample job-match inputs only; not saved application data.</li>
+            <li>Verify every KPI and summary point manually before portfolio or interview use.</li>
+        </ul>
+        <div class="cf-report-manual-actions">
+            <a href="{% url 'skills:ai_readiness_report' %}" class="cf-report-manual-link">
+                Open AI Readiness Report
+            </a>
+            <a href="{% url 'skills:job_ai_capability_match_report' %}" class="cf-report-manual-link">
+                Open Job AI Capability Match
+            </a>
+            <a href="{% url 'skills:learning_recommendations_report' %}" class="cf-report-manual-link">
+                Open Learning Recommendations
+            </a>
+            <a href="{% url 'skills:ai_capability_framework' %}" class="cf-report-manual-link">
+                Open AI Capability Framework
+            </a>
+        </div>
+    </section>
+
+    <section class="kpi-grid">
+        {% for card in dashboard.kpi_cards %}
+        <div class="kpi-card">
+            <p>{{ card.label }}</p>
+            <h2{% if card.label == "Overall Priority" or card.label == "Capability Coverage" %} class="small-kpi-text"{% endif %}>{{ card.value }}</h2>
+            <p class="section-note">{{ card.supporting_text }} ({{ card.status }})</p>
+        </div>
+        {% endfor %}
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Readiness overview</p>
+            <h2>Career readiness KPIs</h2>
+        </div>
+        <div class="cf-skill-evidence-grid">
+            <article class="cf-skill-evidence-card">
+                <h3>AI Readiness</h3>
+                <p>Score: {{ dashboard.readiness_score }}/100 ({{ dashboard.readiness_label }})</p>
+            </article>
+            <article class="cf-skill-evidence-card">
+                <h3>Job AI Match</h3>
+                <p>Score: {{ dashboard.job_match_score }}/100 ({{ dashboard.job_match_label }})</p>
+            </article>
+            <article class="cf-skill-evidence-card">
+                <h3>Overall Priority</h3>
+                <p>{{ dashboard.overall_priority }}</p>
+            </article>
+            <article class="cf-skill-evidence-card">
+                <h3>Capability counts</h3>
+                <p>
+                    Framework: {{ dashboard.capability_count }} |
+                    Matched: {{ dashboard.matched_capability_count }} |
+                    Missing / weak: {{ dashboard.missing_capability_count }}
+                </p>
+            </article>
+            <article class="cf-skill-evidence-card">
+                <h3>Recommendations</h3>
+                <p>
+                    Total: {{ dashboard.recommendation_count }} |
+                    High priority: {{ dashboard.high_priority_recommendation_count }}
+                </p>
+            </article>
+        </div>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Next best action</p>
+            <h2>Manual review starting point</h2>
+            <p class="section-note">{{ dashboard.next_best_action }}</p>
+        </div>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Summary points</p>
+            <h2>Readiness summary</h2>
+            <p class="section-note">Rule-based aggregation from Sprint 53-56 services.</p>
+        </div>
+        <ul class="workflow-list">
+            {% for point in dashboard.summary_points %}
+            <li>{{ point }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Dashboard sections</p>
+            <h2>Section summaries</h2>
+        </div>
+        <div class="cf-skill-evidence-grid">
+            {% for section in dashboard.dashboard_sections %}
+            <article class="cf-skill-evidence-card">
+                <h3>{{ section.title }}</h3>
+                <p>{{ section.summary }}</p>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Claim-safety notes</p>
+            <h2>Manual review boundaries</h2>
+        </div>
+        <ul class="workflow-list">
+            {% for note in dashboard.claim_safety_notes %}
+            <li>{{ note }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+</div>
+{% endblock %}
