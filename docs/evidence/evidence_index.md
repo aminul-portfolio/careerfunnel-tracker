@@ -79,6 +79,8 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 58 (feature branch `sprint-58-career-strategy-action-progress`):** Career Strategy Action Plan / Progress Tracking - deterministic service (`apps/skills/services/career_strategy_action_plan.py`), read-only report `/skills/career-strategy-action-plan/`, **133** tests in `apps.skills`; evidence doc `docs/evidence/sprint_58_career_strategy_action_progress.md`. Phase 2 uses Sprint 57 dashboard baseline inputs only; no persistence, models/migrations, external AI calls, or automation.
 
+**Sprint 59 Phase 1 (feature branch `sprint-59-final-career-intelligence-workflow`):** Final Career Intelligence Workflow - deterministic aggregation service (`apps/skills/services/final_career_intelligence_workflow.py`); evidence doc `docs/evidence/sprint_59_final_career_intelligence_workflow.md`. Phase 1 integrates Sprint 53-58 outputs into workflow stages, action sequence, and claim-safe summary data only; no UI, persistence, models/migrations, external AI calls, or automation.
+
 ---
 
 ## Evidence Principles
