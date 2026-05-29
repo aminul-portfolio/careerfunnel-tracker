@@ -50,6 +50,29 @@ The Sprint 53-59 intelligence pipeline is **deterministic, rule-based, manual, a
 
 Evidence: `docs/evidence/final_release_review_sprint_52_59.md`, plus per-sprint docs under `docs/evidence/sprint_5*.md`.
 
+## Career Intelligence Screenshot Evidence
+
+Final screenshot evidence for the Sprint 53-59 Career Intelligence pipeline is stored in:
+
+```text
+docs/screenshots/intelligence/
+```
+
+The screenshot set covers:
+
+| Screenshot | Page |
+| --- | --- |
+| `01-ai-capability-framework.png` | AI Capability Framework |
+| `02-ai-readiness-report.png` | AI Readiness Report |
+| `03-job-ai-capability-match.png` | Job-to-AI Capability Match |
+| `04-learning-recommendations.png` | Learning Recommendations |
+| `05-career-readiness-dashboard.png` | Career Readiness Dashboard |
+| `06-career-strategy-action-plan.png` | Career Strategy Action Plan |
+| `07-final-career-intelligence-workflow.png` | Final Career Intelligence Workflow |
+
+These screenshots are local reviewer evidence only. They do not claim a live hosted demo, production deployment, customers, SaaS usage, external AI API calls, scraping, auto-apply, Gmail integration, Calendar integration, or automated job-search actions.
+
+
 ## Business Problem
 
 Job-search activity quickly becomes fragmented across job boards, spreadsheets, CV versions, follow-up reminders, and interview notes. That makes it hard to answer basic reporting questions:
@@ -240,7 +263,7 @@ For recruiter-facing portfolio presentation materials, see `docs/career_evidence
 
 Current verified test count: **771 passing**.
 
-Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/`. The main supporting documentation is:
+Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/` and Sprint 53-59 intelligence screenshots stored in `docs/screenshots/intelligence/`. The main supporting documentation is:
 
 - `docs/analytics/metric_definitions.md`
 - `docs/analytics/analytics_lineage.md`
@@ -330,6 +353,7 @@ http://127.0.0.1:8000/
 - `docs/career_evidence/` contains V1-V3 Career Evidence markdown generated from the repository.
 - `docs/screenshots/career_evidence/` contains Career Evidence dashboard screenshot evidence (Sprint 23E).
 - `docs/screenshots/curated/` contains the recruiter-facing screenshot set used by this README.
+- `docs/screenshots/intelligence/` contains final Sprint 53-59 Career Intelligence screenshot evidence.
 - `docs/notion/README.md` documents optional V6 Notion metadata sync (Sprint 23F).
 - `DEVELOPMENT.md` preserves the previous internal/development README.
 
