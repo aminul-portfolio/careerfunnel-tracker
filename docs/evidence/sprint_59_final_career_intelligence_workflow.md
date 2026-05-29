@@ -91,3 +91,44 @@ AI capability framework
 ## Phase 2 (not started)
 
 - Read-only final career intelligence workflow page surface
+
+---
+
+## Sprint 59 Phase 2
+
+Sprint 59 Phase 2 exposes the deterministic Final Career Intelligence Workflow service in a read-only platform surface.
+
+It integrates Sprint 53-58 outputs into workflow stages, action sequence items, evidence targets, and claim-safe summary data for manual review.
+
+It does not persist results, connect to saved applications, call external AI providers, scrape jobs, automate applications, or replace human judgement.
+
+### Report page
+
+- **Route:** `/skills/final-career-intelligence-workflow/`
+- **View:** `final_career_intelligence_workflow`
+- **Template:** `templates/skills/final_career_intelligence_workflow.html`
+- **Navigation:** Intelligence sidebar link - Final Career Intelligence Workflow
+- **Service:** `build_final_career_intelligence_workflow()`
+
+### Phase 2 display
+
+- Workflow label and overall status
+- Readiness score and job-match score
+- Strategy status and next best action
+- Workflow stages table (stage number, title, source, status, summary, output reference)
+- Action sequence table (step, title, priority, status, reason, manual next step, source stage, evidence target)
+- Integration summary, evidence targets, and claim-safety notes
+
+### Phase 2 tests
+
+- **File:** `apps/skills/tests/test_final_career_intelligence_workflow_view.py`
+- **15** view tests for login, render, workflow content, claim safety, and service context
+
+### Combined apps.skills tests after Phase 2
+
+- **162** tests (147 Phase 1 baseline + 15 Phase 2 view tests)
+
+### Phase 2 boundaries
+
+- No forms, saved application wiring, persistence, models, or migrations
+- No external AI provider calls or automation
