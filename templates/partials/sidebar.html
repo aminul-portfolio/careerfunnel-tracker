@@ -1,26 +1,31 @@
 <aside class="sidebar cf-sidebar" id="app-sidebar" aria-label="Primary product navigation">
     <div class="sidebar-brand cf-sidebar-brand">
-        <div class="brand-mark cf-brand-mark" aria-hidden="true">CF</div>
-        <div class="cf-brand-copy">
-            <p class="cf-brand-title">CareerFunnel</p>
-            <p class="cf-brand-tagline">Job Search Operating System</p>
-            <div class="cf-trust-badges" aria-label="Operating principles">
-                <span class="cf-trust-badge">Manual</span>
-                <span class="cf-trust-badge">Advisory</span>
-                <span class="cf-trust-badge">Evidence-based</span>
+        <div class="cf-sidebar-brand-top">
+            <div class="brand-mark cf-brand-mark" aria-hidden="true">CF</div>
+
+            <div class="cf-brand-copy">
+                <p class="cf-brand-title">CareerFunnel</p>
+                <p class="cf-brand-tagline">Job Search Operating System</p>
+
+                <div class="cf-trust-badges" aria-label="Operating principles">
+                    <span class="cf-trust-badge">Manual</span>
+                    <span class="cf-trust-badge">Advisory</span>
+                    <span class="cf-trust-badge">Evidence-based</span>
+                </div>
             </div>
+
+            <button
+                type="button"
+                class="cf-sidebar-collapse-toggle"
+                id="sidebar-collapse-toggle"
+                aria-controls="app-sidebar"
+                aria-expanded="true"
+                aria-label="Collapse sidebar"
+                data-cf-sidebar-collapse
+            >
+                <span class="cf-sidebar-collapse-icon" aria-hidden="true"></span>
+            </button>
         </div>
-        <button
-            type="button"
-            class="cf-sidebar-collapse-toggle"
-            id="sidebar-collapse-toggle"
-            aria-controls="app-sidebar"
-            aria-expanded="true"
-            aria-label="Collapse sidebar"
-            data-cf-sidebar-collapse
-        >
-            <span aria-hidden="true"></span>
-        </button>
     </div>
     <nav class="sidebar-nav cf-sidebar-nav" aria-label="Product workflow">
         <div class="sidebar-section-label cf-nav-group-label">Command</div>
@@ -40,6 +45,9 @@
         <div class="sidebar-section-label cf-nav-group-label">Intelligence</div>
         <a href="{% url 'job_intelligence:smart_review' %}" class="sidebar-link cf-nav-link">Smart Review</a>
         <a href="{% url 'job_intelligence:skill_intelligence' %}" class="sidebar-link cf-nav-link">Skill Intelligence</a>
+        <a href="{% url 'ai_agents:agent_dashboard' %}" class="sidebar-link cf-nav-link">AI Agents</a>
+
+        <div class="sidebar-section-label cf-nav-subgroup-label">Career Intelligence</div>
         <a href="{% url 'skills:ai_capability_framework' %}" class="sidebar-link cf-nav-link">AI Capability Framework</a>
         <a href="{% url 'skills:ai_readiness_report' %}" class="sidebar-link cf-nav-link">AI Readiness Report</a>
         <a href="{% url 'skills:job_ai_capability_match_report' %}" class="sidebar-link cf-nav-link">Job AI Capability Match</a>
@@ -47,7 +55,6 @@
         <a href="{% url 'skills:career_readiness_dashboard' %}" class="sidebar-link cf-nav-link">Career Readiness Dashboard</a>
         <a href="{% url 'skills:career_strategy_action_plan' %}" class="sidebar-link cf-nav-link">Career Strategy Action Plan</a>
         <a href="{% url 'skills:final_career_intelligence_workflow' %}" class="sidebar-link cf-nav-link">Final Career Intelligence Workflow</a>
-        <a href="{% url 'ai_agents:agent_dashboard' %}" class="sidebar-link cf-nav-link">AI Agents</a>
 
         <div class="sidebar-section-label cf-nav-group-label">Reporting Suite</div>
         <a href="{% url 'metrics:funnel_metrics' %}" class="sidebar-link cf-nav-link">Funnel Metrics</a>
@@ -55,9 +62,5 @@
 
         <div class="sidebar-section-label cf-nav-group-label">Evidence</div>
         <a href="{% url 'dashboard:career_evidence_index' %}" class="sidebar-link cf-nav-link">Career Evidence</a>
-
-        <div class="sidebar-section-label cf-nav-group-label">Account</div>
-        <a href="{% url 'dashboard:overview' %}" class="sidebar-link cf-nav-link">Profile</a>
-        <a href="{% url 'notes:note_list' %}" class="sidebar-link cf-nav-link">Settings</a>
     </nav>
 </aside>

@@ -195,21 +195,26 @@
 .cf-trust-badges {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 6px;
-    margin-top: 12px;
+    margin-top: 6px;
+    padding-left: 0;
 }
 
 .cf-trust-badge,
 .cf-env-badge {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    min-height: 24px;
     border-radius: 999px;
-    padding: 5px 10px;
-    font-size: 11px;
+    padding: 4px 9px;
+    font-size: 10px;
     font-weight: 800;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     white-space: nowrap;
+    line-height: 1;
 }
 
 .cf-trust-badge {
@@ -334,8 +339,10 @@
 .cf-quick-add[open] .cf-menu-trigger,
 .cf-user-menu[open] .cf-menu-trigger,
 .cf-mobile-nav-toggle:focus-visible,
+.cf-sidebar-reopen-btn:focus-visible,
 .sidebar-link:focus-visible,
 .cf-nav-link:focus-visible,
+.cf-sidebar-collapse-toggle:focus-visible,
 .cf-menu-panel a:focus-visible,
 .cf-logout-button:focus-visible,
 .btn:focus-visible,
@@ -822,32 +829,84 @@ summary:focus-visible {
 
 /* Sprint 42 - JavaScript Dynamic UX Foundation */
 .cf-sidebar-collapse-toggle {
-    margin-left: auto;
     display: none;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    border: 1px solid rgba(148, 163, 184, 0.35);
-    background: rgba(30, 41, 59, 0.65);
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    margin-top: 2px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.42);
+    background: rgba(15, 23, 42, 0.72);
     color: #e2e8f0;
     cursor: pointer;
-    flex-shrink: 0;
+    transition:
+        background var(--motion-fast),
+        border-color var(--motion-fast),
+        box-shadow var(--motion-fast),
+        transform var(--motion-fast);
 }
 
-.cf-sidebar-collapse-toggle span {
-    display: inline-block;
+.cf-sidebar-collapse-toggle:hover {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: rgba(191, 219, 254, 0.45);
+    color: #f8fafc;
+}
+
+.cf-sidebar-collapse-toggle:active {
+    transform: scale(0.96);
+}
+
+.cf-sidebar-collapse-icon {
+    display: block;
+    width: 8px;
+    height: 8px;
+    border-left: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
     transition: transform var(--motion-fast);
 }
 
 @media (min-width: 901px) {
-    .cf-sidebar-brand {
-        align-items: center;
+    .cf-sidebar-brand-top {
+        align-items: flex-start;
     }
 
     .cf-sidebar-collapse-toggle {
         display: inline-flex;
+    }
+}
+
+.cf-sidebar-reopen-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    margin-top: 2px;
+    border-radius: 10px;
+    border: 1px solid var(--border-soft);
+    background: #ffffff;
+    color: var(--color-text);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition:
+        border-color var(--motion-fast),
+        box-shadow var(--motion-fast);
+}
+
+.cf-sidebar-reopen-btn:hover {
+    border-color: #cbd5e1;
+}
+
+.cf-sidebar-reopen-btn:not([hidden]) {
+    display: inline-flex;
+}
+
+@media (max-width: 900px) {
+    .cf-sidebar-reopen-btn {
+        display: none !important;
     }
 }
 
