@@ -2404,7 +2404,7 @@ def _weekly_trend_interpretation(
     return (
         f"Latest active week ({latest.week_start}) shows {latest.applications} "
         f"applications and {latest.responses} responses ({latest.response_rate}% "
-        "response rate). Use this as manual, advisory context - not a forecast."
+        "response rate). Use this as manual, advisory context only."
     )
 
 
@@ -2436,8 +2436,9 @@ def build_weekly_trend_report(user, weeks: int = 10) -> WeeklyTrendReport:
         manual_actions=manual_actions,
         advisory_copy=_REPORTING_ADVISORY_COPY,
         chart_evidence_note=(
-            "Chart.js line chart built from stored application dates in this tracker. "
-            "No external analytics platform or live dashboard is used."
+            "Local weekly trend visual built from stored application dates in this tracker. "
+            "Calculated from saved tracker records. Manual review only. "
+            "No external analytics calls."
         ),
     )
 
@@ -2467,6 +2468,93 @@ def build_visual_analytics_evidence() -> VisualAnalyticsEvidence:
         ),
         manual_actions=manual_actions,
     )
+
+
+_CHART_TOP_SOURCES = 8
+
+
+def build_funnel_conversion_chart_data(funnel: FunnelPerformanceReport) -> dict:
+    if funnel.applications == 0:
+        return {"has_data": False, "stages": []}
+    return {
+        "has_data": True,
+        "stages": [
+            {
+                "label": "Applications",
+                "count": funnel.applications,
+                "rate": "100%",
+            },
+            {
+                "label": "Responses",
+                "count": funnel.responses,
+                "rate": f"{funnel.response_rate}%",
+            },
+            {
+                "label": "Interviews",
+                "count": funnel.interviews,
+                "rate": f"{funnel.interview_rate}%",
+            },
+            {
+                "label": "Offers",
+                "count": funnel.offers,
+                "rate": f"{funnel.offer_rate}%",
+            },
+        ],
+    }
+
+
+def build_outcome_breakdown_chart_data(metrics: FunnelMetrics) -> dict:
+    if metrics.total_applications == 0:
+        return {"has_data": False, "segments": []}
+    candidates = (
+        ("Submitted", metrics.submitted_count),
+        ("No response", metrics.no_response_count),
+        ("Acknowledged", metrics.acknowledged_count),
+        ("Screening stages", metrics.screening_call_count + metrics.technical_screen_count),
+        ("Interview", metrics.interview_count),
+        ("Offer", metrics.offer_count),
+        ("Rejected", metrics.rejected_count),
+        ("Auto-rejected", metrics.auto_rejected_count),
+    )
+    segments = [
+        {"label": label, "count": count}
+        for label, count in candidates
+        if count > 0
+    ]
+    return {"has_data": bool(segments), "segments": segments}
+
+
+def build_source_performance_chart_data(user) -> dict:
+    rows = build_source_roi(user)
+    if not rows:
+        return {"has_data": False, "labels": [], "applications": [], "responses": []}
+    top = sorted(rows, key=lambda r: (-r.total_applications, r.source_label))[:_CHART_TOP_SOURCES]
+    return {
+        "has_data": True,
+        "labels": [row.source_label for row in top],
+        "applications": [row.total_applications for row in top],
+        "responses": [row.responses for row in top],
+    }
+
+
+def build_cv_performance_chart_data(user) -> dict:
+    rows = build_cv_version_performance(user)
+    if not rows:
+        return {
+            "has_data": False,
+            "labels": [],
+            "applications": [],
+            "responses": [],
+            "interviews": [],
+        }
+    top = sorted(rows, key=lambda r: (-r.total_applications, r.cv_version))[:_CHART_TOP_SOURCES]
+    return {
+        "has_data": True,
+        "labels": [row.cv_version for row in top],
+        "applications": [row.total_applications for row in top],
+        "responses": [row.responses for row in top],
+        "interviews": [row.interviews for row in top],
+    }
 
 
 def build_reporting_foundation_context(user, query_params=None) -> dict:
@@ -2526,4 +2614,10 @@ def build_reporting_foundation_context(user, query_params=None) -> dict:
         "weekly_trend_rows": list(weekly_trend_report.rows),
         "weekly_trend_has_data": weekly_trend_report.has_enough_weeks,
         "weekly_trend_chart_data": weekly_trend_report.chart_data,
+        "funnel_conversion_chart_data": build_funnel_conversion_chart_data(
+            funnel_performance
+        ),
+        "outcome_breakdown_chart_data": build_outcome_breakdown_chart_data(metrics),
+        "source_performance_chart_data": build_source_performance_chart_data(user),
+        "cv_performance_chart_data": build_cv_performance_chart_data(user),
     }

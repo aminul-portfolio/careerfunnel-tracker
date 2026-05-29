@@ -7,6 +7,37 @@
     </div>
     {% include "metrics/partials/advisory_note.html" with copy=funnel_performance.advisory_copy only %}
     {% include "metrics/partials/report_kpi_strip.html" with kpis=funnel_performance.kpis only %}
+    <ul class="cf-chart-claim-notes">
+        <li>Calculated from saved tracker records.</li>
+        <li>Manual review only.</li>
+        <li>No projection or external analytics calls.</li>
+    </ul>
+    <div class="cf-chart-grid">
+        <article class="cf-chart-card">
+            <div class="cf-chart-card-header">
+                <h3 class="cf-chart-card-title">Funnel conversion visual</h3>
+                <p class="cf-chart-card-subtitle">Applications through responses, interviews, and offers.</p>
+            </div>
+            <div class="cf-chart-shell">
+                <div
+                    class="cf-chart-canvas"
+                    data-cf-funnel-conversion-chart
+                    data-chart-source="funnel-conversion-data"
+                    role="img"
+                    aria-label="Funnel conversion chart from saved tracker records"
+                >
+                    <p class="cf-chart-fallback-note">Visual loads from saved funnel counts when JavaScript is enabled.</p>
+                </div>
+            </div>
+            {% if funnel_performance.applications == 0 %}
+            <div class="cf-empty-state cf-chart-empty-state">
+                <h3>No funnel conversion data yet</h3>
+                <p>Log applications to populate the conversion visual. The stage table below remains available.</p>
+            </div>
+            {% endif %}
+        </article>
+    </div>
+    {{ funnel_conversion_chart_data|json_script:"funnel-conversion-data" }}
     <section id="current-diagnosis" class="diagnosis-panel {{ diagnosis_panel_class }}">
         <div>
             <p class="eyebrow">Current Diagnosis</p>
@@ -27,7 +58,7 @@
         {% if funnel_performance.applications == 0 %}
         {% include "metrics/partials/report_empty_state.html" with title="No funnel data yet" message="Log your first application to start building funnel performance metrics. After 10 to 15 applications, conversion interpretation becomes more reliable." manual_actions=funnel_performance.manual_actions only %}
         {% else %}
-        <div class="funnel-stack">
+        <div class="funnel-stack cf-table-card">
             {% for row in funnel_performance.stage_rows %}
             <div class="funnel-row">
                 <div>

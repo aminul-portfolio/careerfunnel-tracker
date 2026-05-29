@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Funnel Metrics | CareerFunnel Tracker{% endblock %}
 {% block page_heading %}Funnel Metrics{% endblock %}
 {% block content %}
@@ -52,57 +53,5 @@
 </div>
 {% endblock %}
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    (function () {
-        const dataElement = document.getElementById("weekly-trend-data");
-        const canvas = document.getElementById("weekly-trend-chart");
-
-        if (!dataElement || !canvas || typeof Chart === "undefined") {
-            return;
-        }
-
-        const chartData = JSON.parse(dataElement.textContent);
-
-        new Chart(canvas, {
-            type: "line",
-            data: {
-                labels: chartData.labels || [],
-                datasets: [
-                    {
-                        label: "Applications",
-                        data: chartData.applications || [],
-                        borderColor: "#2563eb",
-                        backgroundColor: "rgba(37, 99, 235, 0.12)",
-                        tension: 0.3,
-                    },
-                    {
-                        label: "Responses",
-                        data: chartData.responses || [],
-                        borderColor: "#16a34a",
-                        backgroundColor: "rgba(22, 163, 74, 0.12)",
-                        tension: 0.3,
-                    },
-                ],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: "bottom",
-                    },
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            precision: 0,
-                        },
-                    },
-                },
-            },
-        });
-    }());
-</script>
+<script src="{% static 'js/modules/funnel-charts.js' %}"></script>
 {% endblock %}

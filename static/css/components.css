@@ -918,3 +918,343 @@ html.cf-js-ready [data-cf-collapsible-card].cf-section-collapsed .cf-collapsible
 .card-header {
     position: relative;
 }
+
+/* Sprint 52 - premium SaaS component foundation (backwards compatible) */
+.cf-page-hero,
+.hero-panel.cf-page-hero,
+.hero-panel {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 55%, #eef2ff 100%);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem 2rem;
+    box-shadow: var(--shadow-soft);
+}
+
+.cf-page-hero--compact {
+    padding: 1.25rem 1.5rem;
+}
+
+.cf-page-hero h1,
+.hero-panel h1 {
+    margin: 0.35rem 0 0;
+}
+
+.cf-kpi-grid,
+.kpi-grid.cf-kpi-grid,
+.kpi-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.cf-kpi-card,
+.kpi-card.cf-kpi-card,
+.kpi-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.cf-kpi-label,
+.kpi-card > p:first-child {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-muted);
+}
+
+.cf-kpi-value,
+.kpi-card > h2 {
+    margin: 0;
+    font-size: 2rem;
+    line-height: 1.1;
+    color: var(--color-text);
+}
+
+.cf-kpi-context,
+.kpi-note,
+.cf-kpi-card .kpi-note {
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    line-height: 1.4;
+}
+
+.cf-table-card,
+.content-card.cf-table-card {
+    border-radius: var(--radius-lg);
+}
+
+.cf-data-table,
+.data-table.cf-data-table,
+.data-table {
+    width: 100%;
+}
+
+.cf-status-pill,
+.badge.cf-status-pill,
+.badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.cf-filter-bar,
+.filter-bar.cf-filter-bar,
+.filter-bar {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.cf-empty-state,
+.empty-state.cf-empty-state,
+.empty-state {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.cf-empty-state--compact {
+    padding: 1rem;
+    margin-top: 0.75rem;
+}
+
+.cf-action-link,
+.table-link.cf-action-link,
+.table-link,
+.cf-report-manual-link {
+    color: var(--color-primary);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.cf-action-link:hover,
+.table-link:hover,
+.cf-report-manual-link:hover {
+    text-decoration: underline;
+}
+
+.cf-form-card,
+.form-card.cf-form-card,
+.form-card {
+    max-width: 1080px;
+}
+
+.cf-reviewer-note,
+.reviewer-note.cf-reviewer-note,
+.reviewer-note {
+    margin: 1rem 0 0;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.cf-chart-grid {
+    display: grid;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.cf-chart-card {
+    background: #ffffff;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    box-shadow: var(--shadow-soft);
+}
+
+.cf-chart-card-header {
+    margin-bottom: 0.75rem;
+}
+
+.cf-chart-card-title {
+    margin: 0;
+    font-size: 1.05rem;
+}
+
+.cf-chart-card-subtitle {
+    margin: 0.35rem 0 0;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+}
+
+.cf-chart-claim-notes {
+    margin: 0.5rem 0 1rem;
+    padding-left: 1.2rem;
+    color: var(--color-muted);
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.cf-chart-shell {
+    position: relative;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    border: 1px solid var(--border-soft);
+    padding: 0.75rem;
+}
+
+.cf-chart-canvas {
+    min-height: 220px;
+    width: 100%;
+}
+
+.cf-chart-canvas--ready .cf-chart-fallback-note {
+    display: none;
+}
+
+.cf-chart-fallback-note {
+    margin: 0;
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+}
+
+.cf-chart-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-width: 280px;
+    max-height: 320px;
+}
+
+.cf-chart-plot-bg {
+    fill: #ffffff;
+    stroke: #e2e8f0;
+    stroke-width: 1;
+}
+
+.cf-chart-grid-line {
+    stroke: #e2e8f0;
+    stroke-width: 1;
+}
+
+.cf-chart-axis-label {
+    fill: #64748b;
+    font-size: 11px;
+    font-family: var(--font-main);
+}
+
+.cf-chart-line {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.cf-chart-line--applications {
+    stroke: #2563eb;
+}
+
+.cf-chart-line--responses {
+    stroke: #16a34a;
+}
+
+.cf-chart-area {
+    stroke: none;
+}
+
+.cf-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 0.65rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-muted);
+}
+
+.cf-chart-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.cf-chart-legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+.cf-chart-legend-swatch--applications {
+    background: #2563eb;
+}
+
+.cf-chart-legend-swatch--responses {
+    background: #16a34a;
+}
+
+.cf-chart-empty-state {
+    margin-top: 0.75rem;
+}
+
+.cf-chart-bar-track {
+    fill: #e2e8f0;
+}
+
+.cf-chart-bar-fill {
+    opacity: 0.95;
+}
+
+.cf-chart-bar-fill--primary,
+.cf-chart-bar-fill--applications {
+    fill: #2563eb;
+}
+
+.cf-chart-bar-fill--responses {
+    fill: #16a34a;
+}
+
+.cf-chart-bar-fill--interviews {
+    fill: #7c3aed;
+}
+
+.cf-chart-bar-label {
+    font-weight: 700;
+}
+
+.cf-chart-bar-value {
+    fill: #64748b;
+    font-size: 11px;
+    font-family: var(--font-main);
+}
+
+.cf-chart-legend-swatch--interviews {
+    background: #7c3aed;
+}
+
+.cf-chart-svg--bars,
+.cf-chart-svg--grouped {
+    min-height: 200px;
+}
+
+.cf-chart-card--compact {
+    padding: 1rem 1.15rem;
+}
+
+.cf-visual-analytics-summary {
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 900px) {
+    .cf-page-hero,
+    .hero-panel {
+        padding: 1.25rem 1.25rem;
+    }
+
+    .cf-chart-shell {
+        padding: 0.5rem;
+    }
+
+    .cf-chart-canvas {
+        min-height: 200px;
+    }
+}

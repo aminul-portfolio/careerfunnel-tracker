@@ -5,6 +5,17 @@
         <p class="section-note">{{ visual_analytics_evidence.summary }}</p>
     </div>
     <p class="trust-note">{{ visual_analytics_evidence.data_source_note }}</p>
+    <div class="cf-chart-grid cf-visual-analytics-summary">
+        <article class="cf-chart-card cf-chart-card--compact">
+            <h3 class="cf-chart-card-title">Local visual suite on this page</h3>
+            <p class="cf-chart-card-subtitle">Weekly trend, funnel conversion, outcome breakdown, source performance, and CV version visuals render as local SVG from saved tracker records. Tables remain the evidence anchor.</p>
+            <ul class="cf-chart-claim-notes">
+                <li>Calculated from saved tracker records.</li>
+                <li>Manual review only.</li>
+                <li>No projection or external analytics calls.</li>
+            </ul>
+        </article>
+    </div>
     <h3>How to interpret charts and tables</h3>
     <ul class="agent-list">
         {% for point in visual_analytics_evidence.interpretation_points %}

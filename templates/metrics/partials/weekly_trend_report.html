@@ -1,4 +1,4 @@
-<section id="weekly-trend" class="content-card cf-report-section">
+<section id="weekly-trend" class="content-card cf-report-section cf-table-card">
     <div class="card-header">
         <p class="eyebrow">Weekly Trend</p>
         <h2>Applications and responses by week</h2>
@@ -7,25 +7,49 @@
     {% include "metrics/partials/advisory_note.html" with copy=weekly_trend_report.advisory_copy only %}
     <p class="cf-report-interpretation">{{ weekly_trend_report.interpretation }}</p>
     <p class="cf-report-chart-evidence trust-note">{{ weekly_trend_report.chart_evidence_note }}</p>
+    <ul class="cf-chart-claim-notes">
+        <li>Calculated from saved tracker records.</li>
+        <li>Manual review only.</li>
+        <li>No projection or external analytics calls.</li>
+    </ul>
     <div class="diagnosis-action cf-report-manual-next">
         <strong>Recommended manual next action</strong>
         <p>{{ weekly_trend_report.manual_next_action }}</p>
     </div>
-    <div class="chart-card">
-        <canvas id="weekly-trend-chart" aria-label="Weekly trend chart from stored tracker data" role="img"></canvas>
+    <div class="cf-chart-grid">
+        <article class="cf-chart-card">
+            <div class="cf-chart-card-header">
+                <h3 class="cf-chart-card-title">Weekly activity visual</h3>
+                <p class="cf-chart-card-subtitle">Applications and responses across the rolling ten-week window.</p>
+            </div>
+            <div class="cf-chart-shell">
+                <div
+                    id="weekly-trend-chart-root"
+                    class="cf-chart-canvas"
+                    data-cf-weekly-trend-chart
+                    data-chart-source="weekly-trend-data"
+                    role="img"
+                    aria-label="Weekly trend chart from saved tracker records"
+                >
+                    <p class="cf-chart-fallback-note">Chart loads from saved weekly totals when JavaScript is enabled.</p>
+                </div>
+            </div>
+            {% if weekly_trend_report.active_week_count == 0 %}
+            <div class="cf-empty-state cf-chart-empty-state">
+                <h3>No weekly activity logged yet</h3>
+                <p>Axes show the rolling ten-week window. Lines stay at zero until applications are logged.</p>
+            </div>
+            {% elif not weekly_trend_report.has_enough_weeks %}
+            <div class="cf-empty-state cf-chart-empty-state cf-empty-state--compact">
+                <p>{{ weekly_trend_report.sparse_data_message }}</p>
+                <p>Active weeks logged: {{ weekly_trend_report.active_week_count }}.</p>
+            </div>
+            {% endif %}
+        </article>
     </div>
     {{ weekly_trend_report.chart_data|json_script:"weekly-trend-data" }}
-    {% if not weekly_trend_report.has_enough_weeks %}
-    <div class="cf-report-sample-note empty-state small-empty-state">
-        <p>{{ weekly_trend_report.sparse_data_message }}</p>
-        <p>Active weeks logged: {{ weekly_trend_report.active_week_count }}.</p>
-    </div>
-    {% endif %}
-    {% if weekly_trend_report.active_week_count == 0 %}
-    <p class="section-note">Chart axes show the rolling ten-week window. Lines stay at zero until applications are logged.</p>
-    {% endif %}
-    <div class="table-wrap">
-        <table class="data-table">
+    <div class="table-wrap cf-table-card">
+        <table class="data-table cf-data-table">
             <thead>
                 <tr>
                     <th>Week starting</th>
