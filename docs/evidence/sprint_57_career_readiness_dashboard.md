@@ -64,3 +64,45 @@ AI capability framework
 ## Phase 2 (not started)
 
 - Read-only dashboard page surface
+
+---
+
+## Sprint 57 Phase 2
+
+Sprint 57 Phase 2 exposes the deterministic Career Readiness Dashboard service in a read-only platform surface.
+
+It uses portfolio baseline readiness, sample job-match, and recommendation outputs.
+
+It does not persist results, connect to saved applications, call external AI providers, scrape jobs, automate applications, or replace human judgement.
+
+### Dashboard page
+
+- **Route:** `/skills/career-readiness-dashboard/`
+- **View:** `career_readiness_dashboard`
+- **Template:** `templates/skills/career_readiness_dashboard.html`
+- **Navigation:** Intelligence sidebar link - Career Readiness Dashboard
+- **Service:** `build_career_readiness_dashboard()`
+
+### Phase 2 display
+
+- Readiness score and label
+- Job-match score and label
+- Overall priority and next best action
+- Capability, matched, missing, and recommendation counts
+- KPI cards with status labels
+- Summary points and dashboard sections
+- Claim-safety notes
+
+### Phase 2 tests
+
+- **File:** `apps/skills/tests/test_career_readiness_dashboard_view.py`
+- **12** view tests for login, render, KPIs, summaries, sections, claim safety, and service context
+
+### Combined apps.skills tests after Phase 2
+
+- **107** tests (95 Phase 1 baseline + 12 Phase 2 view tests)
+
+### Phase 2 boundaries
+
+- No forms, saved application wiring, persistence, models, or migrations
+- No external AI provider calls or automation

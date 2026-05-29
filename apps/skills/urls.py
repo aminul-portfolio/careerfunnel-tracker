@@ -25,4 +25,9 @@ urlpatterns = [
         views.learning_recommendations_report,
         name="learning_recommendations_report",
     ),
+    path(
+        "career-readiness-dashboard/",
+        views.career_readiness_dashboard,
+        name="career_readiness_dashboard",
+    ),
 ]

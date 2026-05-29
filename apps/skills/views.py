@@ -8,6 +8,7 @@ from .services.ai_capability_framework import (
     get_ai_capability_framework,
 )
 from .services.ai_readiness_scoring import build_portfolio_baseline_ai_readiness_score
+from .services.career_readiness_dashboard import build_career_readiness_dashboard
 from .services.job_ai_capability_matching import match_job_description_to_ai_capabilities
 from .services.learning_recommendations import build_portfolio_baseline_learning_recommendations
 
@@ -64,5 +65,17 @@ def learning_recommendations_report(request):
         "skills/learning_recommendations_report.html",
         {
             "recommendations": build_portfolio_baseline_learning_recommendations(),
+        },
+    )
+
+
+@login_required
+@require_http_methods(["GET"])
+def career_readiness_dashboard(request):
+    return render(
+        request,
+        "skills/career_readiness_dashboard.html",
+        {
+            "dashboard": build_career_readiness_dashboard(),
         },
     )
