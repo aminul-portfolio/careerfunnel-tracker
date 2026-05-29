@@ -35,4 +35,9 @@ urlpatterns = [
         views.career_strategy_action_plan,
         name="career_strategy_action_plan",
     ),
+    path(
+        "final-career-intelligence-workflow/",
+        views.final_career_intelligence_workflow,
+        name="final_career_intelligence_workflow",
+    ),
 ]
