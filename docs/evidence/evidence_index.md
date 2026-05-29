@@ -77,7 +77,7 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 57 (feature branch `sprint-57-career-readiness-dashboard`):** Career Readiness Dashboard - deterministic aggregation service (`apps/skills/services/career_readiness_dashboard.py`), read-only dashboard `/skills/career-readiness-dashboard/`, **107** tests in `apps.skills`; evidence doc `docs/evidence/sprint_57_career_readiness_dashboard.md`. Phase 2 uses portfolio baseline and sample job-match inputs only; no persistence, models/migrations, external AI calls, or automation.
 
-**Sprint 58 (feature branch `sprint-58-career-strategy-action-progress`):** Career Strategy Action Plan / Progress Tracking - deterministic service (`apps/skills/services/career_strategy_action_plan.py`) converting Sprint 57 dashboard output into action items and progress indicators, **14** new service tests; evidence doc `docs/evidence/sprint_58_career_strategy_action_progress.md`. Phase 1 service only; no UI, models/migrations, external AI calls, or automation.
+**Sprint 58 (feature branch `sprint-58-career-strategy-action-progress`):** Career Strategy Action Plan / Progress Tracking - deterministic service (`apps/skills/services/career_strategy_action_plan.py`), read-only report `/skills/career-strategy-action-plan/`, **133** tests in `apps.skills`; evidence doc `docs/evidence/sprint_58_career_strategy_action_progress.md`. Phase 2 uses Sprint 57 dashboard baseline inputs only; no persistence, models/migrations, external AI calls, or automation.
 
 ---
 

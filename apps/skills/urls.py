@@ -30,4 +30,9 @@ urlpatterns = [
         views.career_readiness_dashboard,
         name="career_readiness_dashboard",
     ),
+    path(
+        "career-strategy-action-plan/",
+        views.career_strategy_action_plan,
+        name="career_strategy_action_plan",
+    ),
 ]

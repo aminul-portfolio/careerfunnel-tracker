@@ -89,3 +89,44 @@ career readiness dashboard
 ## Phase 2 (not started)
 
 - Read-only action plan / progress page surface
+
+---
+
+## Sprint 58 Phase 2
+
+Sprint 58 Phase 2 exposes the deterministic Career Strategy Action Plan service in a read-only platform surface.
+
+It uses the Sprint 57 Career Readiness Dashboard output to show manual action items, progress indicators, and evidence targets.
+
+It does not persist results, connect to saved applications, call external AI providers, scrape jobs, automate applications, or replace human judgement.
+
+### Report page
+
+- **Route:** `/skills/career-strategy-action-plan/`
+- **View:** `career_strategy_action_plan`
+- **Template:** `templates/skills/career_strategy_action_plan.html`
+- **Navigation:** Intelligence sidebar link - Career Strategy Action Plan
+- **Service:** `build_career_strategy_action_plan()`
+
+### Phase 2 display
+
+- Strategy label and overall status
+- Next best action
+- Action items table (category, priority, status, reason, suggested next step, evidence target, dashboard section)
+- Progress indicators table (current, target, status, supporting text)
+- Evidence targets list
+- Summary points and claim-safety notes
+
+### Phase 2 tests
+
+- **File:** `apps/skills/tests/test_career_strategy_action_plan_view.py`
+- **12** view tests for login, render, action items, progress indicators, claim safety, and service context
+
+### Combined apps.skills tests after Phase 2
+
+- **133** tests (121 Phase 1 baseline + 12 Phase 2 view tests)
+
+### Phase 2 boundaries
+
+- No forms, saved application wiring, persistence, models, or migrations
+- No external AI provider calls or automation

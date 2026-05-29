@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Career Strategy Action Plan | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Career Strategy Action Plan{% endblock %}
+{% block content %}
+<div class="dashboard-grid cf-career-strategy-action-plan">
+    <section class="hero-panel">
+        <p class="eyebrow">Career Strategy Action Plan</p>
+        <h1>Rule-based career strategy action plan for manual review.</h1>
+        <p>
+            This page converts Sprint 57 career readiness dashboard signals into manual action items,
+            progress indicators, and evidence targets. Phase 2 uses portfolio baseline dashboard
+            inputs only.
+        </p>
+        <p class="trust-note">
+            This is a rule-based career strategy action plan for manual review.
+            It is not predictive hiring AI.
+            It does not use external AI APIs.
+            It does not automate applications.
+            It does not replace human judgement.
+            Progress indicators are advisory snapshots, not persisted tracking records.
+        </p>
+        <ul class="workflow-list cf-skill-trust-list">
+            <li>Dashboard + recommendations + gaps - action plan - progress - evidence targets.</li>
+            <li>Portfolio baseline dashboard inputs only; not saved application data.</li>
+            <li>Verify every action item and progress indicator manually before acting.</li>
+        </ul>
+        <div class="cf-report-manual-actions">
+            <a href="{% url 'skills:career_readiness_dashboard' %}" class="cf-report-manual-link">
+                Open Career Readiness Dashboard
+            </a>
+            <a href="{% url 'skills:learning_recommendations_report' %}" class="cf-report-manual-link">
+                Open Learning Recommendations
+            </a>
+            <a href="{% url 'skills:ai_readiness_report' %}" class="cf-report-manual-link">
+                Open AI Readiness Report
+            </a>
+            <a href="{% url 'skills:job_ai_capability_match_report' %}" class="cf-report-manual-link">
+                Open Job AI Capability Match
+            </a>
+        </div>
+    </section>
+
+    <section class="kpi-grid">
+        <div class="kpi-card">
+            <p>Strategy Label</p>
+            <h2 class="small-kpi-text">{{ action_plan.strategy_label }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Overall Status</p>
+            <h2 class="small-kpi-text">{{ action_plan.overall_status }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Action Items</p>
+            <h2>{{ action_plan.action_items|length }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Evidence Targets</p>
+            <h2>{{ action_plan.evidence_targets|length }}</h2>
+        </div>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Next best action</p>
+            <h2>Manual review starting point</h2>
+            <p class="section-note">{{ action_plan.next_best_action }}</p>
+        </div>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Progress indicators</p>
+            <h2>Advisory progress snapshots</h2>
+            <p class="section-note">Not persisted tracking records. Verify manually.</p>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Label</th>
+                        <th>Current</th>
+                        <th>Target</th>
+                        <th>Status</th>
+                        <th>Supporting text</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for indicator in action_plan.progress_indicators %}
+                    <tr>
+                        <td>{{ indicator.label }}</td>
+                        <td>{{ indicator.current_value }}</td>
+                        <td>{{ indicator.target_value }}</td>
+                        <td>{{ indicator.status }}</td>
+                        <td>{{ indicator.supporting_text }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Action items</p>
+            <h2>Manual strategy actions</h2>
+            <p class="section-note">Advisory only. Verify before acting on any item.</p>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Reason</th>
+                        <th>Suggested next step</th>
+                        <th>Evidence target</th>
+                        <th>Dashboard section</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in action_plan.action_items %}
+                    <tr>
+                        <td>{{ item.title }}</td>
+                        <td>{{ item.category }}</td>
+                        <td>{{ item.priority }}</td>
+                        <td>{{ item.status }}</td>
+                        <td>{{ item.reason }}</td>
+                        <td>{{ item.suggested_next_step }}</td>
+                        <td>{{ item.evidence_target }}</td>
+                        <td>{{ item.linked_dashboard_section }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Evidence targets</p>
+            <h2>Manual evidence focus areas</h2>
+        </div>
+        <ul class="workflow-list">
+            {% for target in action_plan.evidence_targets %}
+            <li>{{ target }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Summary points</p>
+            <h2>Action plan summary</h2>
+        </div>
+        <ul class="workflow-list">
+            {% for point in action_plan.summary_points %}
+            <li>{{ point }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Claim-safety notes</p>
+            <h2>Manual review boundaries</h2>
+        </div>
+        <ul class="workflow-list">
+            {% for note in action_plan.claim_safety_notes %}
+            <li>{{ note }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+</div>
+{% endblock %}

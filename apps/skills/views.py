@@ -9,6 +9,7 @@ from .services.ai_capability_framework import (
 )
 from .services.ai_readiness_scoring import build_portfolio_baseline_ai_readiness_score
 from .services.career_readiness_dashboard import build_career_readiness_dashboard
+from .services.career_strategy_action_plan import build_career_strategy_action_plan
 from .services.job_ai_capability_matching import match_job_description_to_ai_capabilities
 from .services.learning_recommendations import build_portfolio_baseline_learning_recommendations
 
@@ -77,5 +78,17 @@ def career_readiness_dashboard(request):
         "skills/career_readiness_dashboard.html",
         {
             "dashboard": build_career_readiness_dashboard(),
+        },
+    )
+
+
+@login_required
+@require_http_methods(["GET"])
+def career_strategy_action_plan(request):
+    return render(
+        request,
+        "skills/career_strategy_action_plan.html",
+        {
+            "action_plan": build_career_strategy_action_plan(),
         },
     )
