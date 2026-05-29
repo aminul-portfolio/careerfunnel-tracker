@@ -20,4 +20,9 @@ urlpatterns = [
         views.job_ai_capability_match_report,
         name="job_ai_capability_match_report",
     ),
+    path(
+        "learning-recommendations/",
+        views.learning_recommendations_report,
+        name="learning_recommendations_report",
+    ),
 ]

@@ -9,6 +9,7 @@ from .services.ai_capability_framework import (
 )
 from .services.ai_readiness_scoring import build_portfolio_baseline_ai_readiness_score
 from .services.job_ai_capability_matching import match_job_description_to_ai_capabilities
+from .services.learning_recommendations import build_portfolio_baseline_learning_recommendations
 
 DEMO_JOB_DESCRIPTION = (
     "Business analyst role using generative AI, prompt engineering, workflow automation, "
@@ -51,5 +52,17 @@ def job_ai_capability_match_report(request):
         {
             "demo_job_description": DEMO_JOB_DESCRIPTION,
             "match_result": match_job_description_to_ai_capabilities(DEMO_JOB_DESCRIPTION),
+        },
+    )
+
+
+@login_required
+@require_http_methods(["GET"])
+def learning_recommendations_report(request):
+    return render(
+        request,
+        "skills/learning_recommendations_report.html",
+        {
+            "recommendations": build_portfolio_baseline_learning_recommendations(),
         },
     )

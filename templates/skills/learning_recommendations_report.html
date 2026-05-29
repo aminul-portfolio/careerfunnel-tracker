@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Learning Recommendations | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Learning Recommendations{% endblock %}
+{% block content %}
+<div class="dashboard-grid cf-learning-recommendations-report">
+    <section class="hero-panel">
+        <p class="eyebrow">Learning Recommendations</p>
+        <h1>Rule-based advisory recommendation report for manual review.</h1>
+        <p>
+            This page combines portfolio baseline AI readiness, sample job-to-capability matching,
+            and missing or weak capability signals into deterministic learning and improvement
+            suggestions. Phase 2 uses baseline outputs only.
+        </p>
+        <p class="trust-note">
+            This is a rule-based advisory recommendation report for manual review.
+            It is not predictive hiring AI.
+            It does not use external AI APIs.
+            It does not automate applications.
+            It does not replace human judgement.
+        </p>
+        <ul class="workflow-list cf-skill-trust-list">
+            <li>Readiness + job match + weak signals - recommendations - next best action.</li>
+            <li>Portfolio baseline and sample job-match inputs only; not saved application data.</li>
+            <li>Reject any suggestion you cannot support with verified evidence.</li>
+        </ul>
+        <div class="cf-report-manual-actions">
+            <a href="{% url 'skills:ai_readiness_report' %}" class="cf-report-manual-link">
+                Open AI Readiness Report
+            </a>
+            <a href="{% url 'skills:job_ai_capability_match_report' %}" class="cf-report-manual-link">
+                Open Job AI Capability Match
+            </a>
+            <a href="{% url 'skills:ai_capability_framework' %}" class="cf-report-manual-link">
+                Open AI Capability Framework
+            </a>
+        </div>
+    </section>
+
+    <section class="kpi-grid">
+        <div class="kpi-card">
+            <p>Overall Priority</p>
+            <h2 class="small-kpi-text">{{ recommendations.overall_priority }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Readiness Score</p>
+            <h2>{{ recommendations.readiness_summary.readiness_score }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Job Match Score</p>
+            <h2>{{ recommendations.job_match_summary.match_score }}</h2>
+        </div>
+        <div class="kpi-card">
+            <p>Recommendations</p>
+            <h2>{{ recommendations.recommendations|length }}</h2>
+        </div>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Next best action</p>
+            <h2>Manual review starting point</h2>
+            <p class="section-note">{{ recommendations.next_best_action }}</p>
+        </div>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Input summaries</p>
+            <h2>Readiness and job-match context</h2>
+        </div>
+        <div class="cf-skill-evidence-grid">
+            <article class="cf-skill-evidence-card">
+                <h3>Readiness summary</h3>
+                <p>
+                    Score: {{ recommendations.readiness_summary.readiness_score }}/100
+                    ({{ recommendations.readiness_summary.readiness_label }})
+                </p>
+                <p>
+                    Capability coverage:
+                    {{ recommendations.readiness_summary.capabilities_with_evidence }}/
+                    {{ recommendations.readiness_summary.capabilities_total }}
+                </p>
+            </article>
+            <article class="cf-skill-evidence-card">
+                <h3>Job-match summary</h3>
+                <p>
+                    Score: {{ recommendations.job_match_summary.match_score }}/100
+                    ({{ recommendations.job_match_summary.match_label }})
+                </p>
+                <p>
+                    Matched: {{ recommendations.job_match_summary.matched_count }} |
+                    Missing / weak: {{ recommendations.job_match_summary.missing_count }}
+                </p>
+            </article>
+        </div>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Recommendations</p>
+            <h2>Learning and improvement suggestions</h2>
+            <p class="section-note">Advisory only. Verify before acting on any item.</p>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Priority</th>
+                        <th>Title</th>
+                        <th>Reason</th>
+                        <th>Suggested action</th>
+                        <th>Capability slug</th>
+                        <th>Evidence target</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in recommendations.recommendations %}
+                    <tr>
+                        <td>{{ item.category }}</td>
+                        <td>{{ item.priority }}</td>
+                        <td>{{ item.title }}</td>
+                        <td>{{ item.reason }}</td>
+                        <td>{{ item.suggested_action }}</td>
+                        <td>{% if item.linked_capability_slug %}{{ item.linked_capability_slug }}{% else %}-{% endif %}</td>
+                        <td>{{ item.evidence_target }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section">
+        <div class="card-header">
+            <p class="eyebrow">Claim-safety notes</p>
+            <h2>Manual review boundaries</h2>
+        </div>
+        <ul class="workflow-list">
+            {% for note in recommendations.claim_safety_notes %}
+            <li>{{ note }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+</div>
+{% endblock %}

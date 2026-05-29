@@ -52,7 +52,7 @@ AI readiness score
 | Strong readiness + strong job match | Interview story preparation |
 | Always | Manual review reminder |
 
-## Tests
+## Phase 1 tests
 
 - **File:** `apps/skills/tests/test_learning_recommendations.py`
 - **12** service tests covering low/strong readiness, missing capabilities, evidence gaps, priorities, determinism, and claim safety.
@@ -62,6 +62,45 @@ AI readiness score
 - No UI, forms, dashboard widgets, models, or migrations
 - No external AI provider calls or persistence
 
-## Phase 2 (not started)
+---
 
-- Read-only platform surface to display recommendations
+## Sprint 56 Phase 2
+
+Sprint 56 Phase 2 exposes the deterministic learning recommendation service in a read-only review surface.
+
+It uses portfolio baseline readiness and sample job-match outputs.
+
+It does not persist results, connect to saved applications, call external AI providers, scrape jobs, automate applications, or replace human judgement.
+
+### Report page
+
+- **Route:** `/skills/learning-recommendations/`
+- **View:** `learning_recommendations_report`
+- **Template:** `templates/skills/learning_recommendations_report.html`
+- **Navigation:** Intelligence sidebar link - Learning Recommendations
+- **Service:** `build_portfolio_baseline_learning_recommendations()`
+
+### Phase 2 display
+
+- Overall priority and next best action
+- Readiness summary and job-match summary
+- Recommendation table (category, priority, title, reason, suggested action, capability slug, evidence target)
+- Claim-safety notes
+
+### Phase 2 tests
+
+- **File:** `apps/skills/tests/test_learning_recommendations_report_view.py`
+- **10** view tests for login, render, summaries, recommendations, claim safety, and service context
+
+### Combined apps.skills tests after Phase 2
+
+- **80** tests (70 Phase 1 baseline + 10 Phase 2 view tests)
+
+### Phase 2 boundaries
+
+- No forms, saved application wiring, persistence, models, or migrations
+- No external AI provider calls or automation
+
+## Phase 3 (not started)
+
+- Manual paste form or saved application integration for custom inputs
