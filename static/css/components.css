@@ -1196,6 +1196,54 @@ html.cf-js-ready [data-cf-collapsible-card].cf-section-collapsed .cf-collapsible
     margin-top: 0.75rem;
 }
 
+.cf-chart-bar-track {
+    fill: #e2e8f0;
+}
+
+.cf-chart-bar-fill {
+    opacity: 0.95;
+}
+
+.cf-chart-bar-fill--primary,
+.cf-chart-bar-fill--applications {
+    fill: #2563eb;
+}
+
+.cf-chart-bar-fill--responses {
+    fill: #16a34a;
+}
+
+.cf-chart-bar-fill--interviews {
+    fill: #7c3aed;
+}
+
+.cf-chart-bar-label {
+    font-weight: 700;
+}
+
+.cf-chart-bar-value {
+    fill: #64748b;
+    font-size: 11px;
+    font-family: var(--font-main);
+}
+
+.cf-chart-legend-swatch--interviews {
+    background: #7c3aed;
+}
+
+.cf-chart-svg--bars,
+.cf-chart-svg--grouped {
+    min-height: 200px;
+}
+
+.cf-chart-card--compact {
+    padding: 1rem 1.15rem;
+}
+
+.cf-visual-analytics-summary {
+    margin-bottom: 1rem;
+}
+
 @media (max-width: 900px) {
     .cf-page-hero,
     .hero-panel {

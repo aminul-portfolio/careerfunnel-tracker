@@ -14,6 +14,37 @@
         <strong>Recommended manual next action</strong>
         <p>{{ rejection_patterns.manual_next_action }}</p>
     </div>
+    <ul class="cf-chart-claim-notes">
+        <li>Calculated from saved tracker records.</li>
+        <li>Manual review only.</li>
+        <li>No projection or external analytics calls.</li>
+    </ul>
+    <div class="cf-chart-grid">
+        <article class="cf-chart-card">
+            <div class="cf-chart-card-header">
+                <h3 class="cf-chart-card-title">Outcome breakdown visual</h3>
+                <p class="cf-chart-card-subtitle">Status counts from logged application records (mutually exclusive statuses).</p>
+            </div>
+            <div class="cf-chart-shell">
+                <div
+                    class="cf-chart-canvas"
+                    data-cf-outcome-breakdown-chart
+                    data-chart-source="outcome-breakdown-data"
+                    role="img"
+                    aria-label="Outcome breakdown chart from saved tracker records"
+                >
+                    <p class="cf-chart-fallback-note">Visual loads from saved status counts when JavaScript is enabled.</p>
+                </div>
+            </div>
+            {% if rejection_patterns.underlying.total_applications == 0 %}
+            <div class="cf-empty-state cf-chart-empty-state">
+                <h3>No outcome data yet</h3>
+                <p>Log applications with final statuses to review outcome distribution.</p>
+            </div>
+            {% endif %}
+        </article>
+    </div>
+    {{ outcome_breakdown_chart_data|json_script:"outcome-breakdown-data" }}
     <div class="detail-grid">
         <div class="detail-item">
             <span>Total applications</span>

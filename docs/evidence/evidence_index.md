@@ -63,7 +63,9 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 51 (feature branch `sprint-51-final-reviewer-walkthrough-polish`):** Final Reviewer Walkthrough Polish - README "How to review", dashboard reviewer note (`templates/dashboard/overview.html`), skill-gaps reviewer workflow note; **4** dashboard + **3** skill-gaps reviewer tests; evidence doc `docs/evidence/sprint_51_final_reviewer_walkthrough_polish.md`. Copy/UX only; no view wiring changes; no models/migrations.
 
-**Sprint 52 Phase 2 (feature branch `sprint-52-final-saas-premium-components-plotly-metrics`):** Premium SaaS component CSS foundation + Funnel Metrics local weekly trend SVG chart; remote chart script removed; **8** new `Sprint52Phase2FoundationTests`; evidence doc `docs/evidence/sprint_52_final_saas_premium_components_plotly_metrics.md`. No models/migrations/routes; no Plotly dependency in Phase 2. Sprint 53 not started.
+**Sprint 52 Phase 2 (feature branch `sprint-52-final-saas-premium-components-plotly-metrics`):** Premium SaaS component CSS foundation + Funnel Metrics local weekly trend SVG chart; remote chart script removed; **8** new `Sprint52Phase2FoundationTests`; evidence doc `docs/evidence/sprint_52_final_saas_premium_components_plotly_metrics.md`. No models/migrations/routes; no Plotly dependency.
+
+**Sprint 52 Phase 3 (same branch):** Funnel Metrics visual analytics completion - funnel conversion, outcome breakdown, source performance, and CV version local SVG charts via extended `funnel-charts.js`; **8** new `Sprint52Phase3VisualAnalyticsTests`; tables and Phase 2 weekly trend retained. No Plotly/vendor/deps. Sprint 53 not started.
 
 ---
 

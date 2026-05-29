@@ -25,7 +25,7 @@ Polish CareerFunnel Tracker into a consistent premium SaaS portfolio product: sh
 - `funnel-charts.js` follows Sprint 42 constraints: no fetch, XHR, polling, intervals, or external script URLs.
 - Delivers a premium line/area visual with legend, grid, and responsive SVG scaling.
 
-Plotly local vendor remains an option for Phase 3+ multi-chart expansion if needed.
+Plotly was not used in Sprint 52 Phase 2 or Phase 3.
 
 ## Files changed
 
@@ -86,8 +86,69 @@ Legacy aliases (`hero-panel`, `kpi-card`, `badge`, `content-card`, etc.) remain 
 - Dashboard views/templates
 - GitHub workflows
 - Plotly vendor or `requirements.txt`
-- Other pipeline page templates (Phase 3)
-- Sprint 53 scope
+- Other pipeline page templates (outside metrics reporting)
+- Any later sprint scope
+
+## Phase 3 objective
+
+Complete Funnel Metrics as a premium visual analytics proof page using the Phase 2 local SVG/CSS chart foundation across funnel, outcome, source, and CV sections while keeping all evidence tables visible.
+
+## Phase 3 visual analytics added
+
+| Visual | Hook | Data source |
+| --- | --- | --- |
+| Weekly trend (Phase 2) | `data-cf-weekly-trend-chart` | `build_weekly_trend_report` / 10-week aggregates |
+| Funnel conversion | `data-cf-funnel-conversion-chart` | `build_funnel_conversion_chart_data` from funnel performance counts |
+| Outcome breakdown | `data-cf-outcome-breakdown-chart` | `build_outcome_breakdown_chart_data` from status counts |
+| Source performance | `data-cf-source-performance-chart` | `build_source_performance_chart_data` from `build_source_roi` |
+| CV version performance | `data-cf-cv-performance-chart` | `build_cv_performance_chart_data` from `build_cv_version_performance` |
+
+## Phase 3 summaries
+
+### Funnel conversion visual
+
+Horizontal SVG bars for Applications, Responses, Interviews, and Offers with counts and conversion rates. Empty state when no applications logged. Stage stack table retained below.
+
+### Outcome breakdown visual
+
+Horizontal SVG bars for mutually exclusive application statuses (submitted, no response, acknowledged, screening, interview, offer, rejected, auto-rejected) where counts are greater than zero.
+
+### Source performance visual
+
+Grouped SVG bars for top sources (up to eight): applications and responses per source. Filterable source table retained below.
+
+### CV / evidence visual
+
+Grouped SVG bars for top CV versions: applications, responses, and interviews. CV version table retained below.
+
+## Phase 3 files changed
+
+| File | Change |
+| --- | --- |
+| `apps/metrics/services.py` | Chart payload builders + context keys |
+| `static/js/modules/funnel-charts.js` | Multi-chart SVG renderers |
+| `static/css/components.css` | Bar chart and compact card styles |
+| `templates/metrics/partials/funnel_performance_report.html` | Funnel conversion chart card |
+| `templates/metrics/partials/rejection_patterns_report.html` | Outcome breakdown chart card |
+| `templates/metrics/partials/source_performance_report.html` | Source chart card |
+| `templates/metrics/partials/cv_version_performance_report.html` | CV chart card |
+| `templates/metrics/partials/visual_analytics_evidence.html` | Local visual suite summary |
+| `apps/metrics/tests.py` | `Sprint52Phase3VisualAnalyticsTests` (8 tests) |
+
+## Saved-record-only confirmation
+
+All chart payloads are built in `apps/metrics/services.py` from authenticated `JobApplication` aggregates and existing reporting helpers. No external analytics APIs, no background jobs, no mock users.
+
+## Local SVG/CSS confirmation
+
+Single local module `static/js/modules/funnel-charts.js` renders all visuals. No Plotly, no vendor bundles, no remote script tags.
+
+## Phase 3 validation commands
+
+```powershell
+cd G:\final_polish\careerfunnel-tracker
+python manage.py test apps.metrics.tests.Sprint52Phase3VisualAnalyticsTests apps.metrics.tests.Sprint52Phase2FoundationTests apps.metrics.tests.WeeklyTrendAnalyticsTests apps.metrics.tests.PremiumReportingFoundationTests apps.metrics.tests.PremiumReportingSprint40cTests --verbosity=2
+```
 
 ## Validation commands
 
@@ -97,6 +158,6 @@ python manage.py test apps.metrics.tests.Sprint52Phase2FoundationTests apps.metr
 python manage.py test tests.test_sprint_42_javascript_dynamic_ux_foundation --verbosity=2
 ```
 
-## Sprint 53 not started
+## Future sprint not started
 
-No Sprint 53 references, routes, or features were added in Phase 2.
+No next-sprint references, routes, or features were added in Sprint 52 Phase 2 or Phase 3.
