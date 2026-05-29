@@ -21,6 +21,7 @@ urlpatterns = [
     path("smart-review/", include("apps.job_intelligence.urls")),
     path("ai-agents/", include("apps.ai_agents.urls")),
     path("skill-gaps/", include("apps.skill_gaps.urls")),
+    path("skills/", include("apps.skills.urls")),
 ]
 
 if settings.DEBUG:
