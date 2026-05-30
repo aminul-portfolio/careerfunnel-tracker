@@ -322,14 +322,180 @@ class ApplicationDocumentSelectionTests(TestCase):
         self.application.refresh_from_db()
         self.assertIsNone(self.application.selected_cv_document)
 
-    def test_no_docx_pdf_download_or_upload_behaviour_added(self):
+    def test_no_file_upload_behaviour_added(self):
         self.client.login(username="aminul", password="StrongPass12345")
         response = self.client.get(self.detail_url)
         content = response.content.decode().lower()
-        self.assertIn("no docx/pdf download in this phase", content)
-        self.assertNotIn("download docx", content)
-        self.assertNotIn("download pdf", content)
+        self.assertContains(response, "Download DOCX")
+        self.assertContains(response, "Download PDF")
         self.assertNotIn('type="file"', content)
+
+
+class ApplicationDocumentDownloadTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+        self.other_user = User.objects.create_user(username="other", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Howden",
+            job_title="Junior Data Analyst",
+            date_applied=date(2026, 5, 9),
+        )
+        self.other_application = JobApplication.objects.create(
+            user=self.other_user,
+            company_name="Other Co",
+            job_title="Analyst",
+            date_applied=date(2026, 5, 10),
+        )
+        self.cv_document = ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.CV,
+            name="Aminul_Islam_Data_Analyst_CV_Howden_Junior_Data_Analyst",
+            content="Draft CV tailoring notes content.",
+            tailoring_notes="Profile angle notes.",
+            project_evidence="BakeOps Intelligence evidence.",
+            claim_safety_notes="Review manually before use.",
+            quick_call_notes="Quick call prep notes.",
+        )
+        self.cover_letter_document = ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.COVER_LETTER,
+            name="Aminul_Islam_Cover_Letter_Howden_Junior_Data_Analyst",
+            content="Draft cover letter content.",
+        )
+        self.other_document = ApplicationDocument.objects.create(
+            application=self.other_application,
+            document_type=DocumentType.CV,
+            name="Aminul_Islam_Data_Analyst_CV_Other_Co_Analyst",
+            content="Other application content.",
+        )
+
+    def _download_url(self, application, document, file_format):
+        return reverse(
+            "applications:application_document_download",
+            kwargs={
+                "pk": application.pk,
+                "document_pk": document.pk,
+                "file_format": file_format,
+            },
+        )
+
+    def test_docx_download_returns_200(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(self._download_url(self.application, self.cv_document, "docx"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_docx_download_has_correct_content_type(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(self._download_url(self.application, self.cv_document, "docx"))
+        self.assertEqual(
+            response["Content-Type"],
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+
+    def test_docx_download_has_attachment_filename_ending_docx(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(self._download_url(self.application, self.cv_document, "docx"))
+        self.assertIn(
+            'filename="Aminul_Islam_Data_Analyst_CV_Howden_Junior_Data_Analyst.docx"',
+            response["Content-Disposition"],
+        )
+
+    def test_docx_download_starts_with_zip_header(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(self._download_url(self.application, self.cv_document, "docx"))
+        self.assertTrue(response.content.startswith(b"PK"))
+
+    def test_pdf_download_returns_200(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(
+            self._download_url(self.application, self.cover_letter_document, "pdf")
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_pdf_download_has_correct_content_type(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(
+            self._download_url(self.application, self.cover_letter_document, "pdf")
+        )
+        self.assertEqual(response["Content-Type"], "application/pdf")
+
+    def test_pdf_download_has_attachment_filename_ending_pdf(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(
+            self._download_url(self.application, self.cover_letter_document, "pdf")
+        )
+        self.assertIn(
+            'filename="Aminul_Islam_Cover_Letter_Howden_Junior_Data_Analyst.pdf"',
+            response["Content-Disposition"],
+        )
+
+    def test_pdf_download_starts_with_pdf_header(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(
+            self._download_url(self.application, self.cover_letter_document, "pdf")
+        )
+        self.assertTrue(response.content.startswith(b"%PDF"))
+
+    def test_download_requires_login(self):
+        response = self.client.get(self._download_url(self.application, self.cv_document, "docx"))
+        self.assertEqual(response.status_code, 302)
+
+    def test_user_cannot_download_another_users_document(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(
+            self._download_url(self.other_application, self.other_document, "docx")
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_document_must_belong_to_application_in_url(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(
+            reverse(
+                "applications:application_document_download",
+                kwargs={
+                    "pk": self.application.pk,
+                    "document_pk": self.other_document.pk,
+                    "file_format": "docx",
+                },
+            )
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_unsupported_format_is_rejected(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(self._download_url(self.application, self.cv_document, "txt"))
+        self.assertEqual(response.status_code, 404)
+
+    def test_application_detail_page_shows_download_links(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": self.application.pk})
+        )
+        self.assertContains(response, "Download DOCX")
+        self.assertContains(response, "Download PDF")
+        self.assertContains(
+            response,
+            "Downloads are generated from saved draft records.",
+        )
+
+    def test_downloaded_docx_and_pdf_include_non_empty_bytes(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        docx_response = self.client.get(
+            self._download_url(self.application, self.cv_document, "docx")
+        )
+        pdf_response = self.client.get(
+            self._download_url(self.application, self.cv_document, "pdf")
+        )
+        self.assertGreater(len(docx_response.content), 100)
+        self.assertGreater(len(pdf_response.content), 100)
+
+    def test_no_file_upload_behaviour_added(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": self.application.pk})
+        )
+        self.assertNotIn('type="file"', response.content.decode().lower())
 
 
 class JobApplicationViewTests(TestCase):
