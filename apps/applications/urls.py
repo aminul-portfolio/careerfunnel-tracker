@@ -10,6 +10,11 @@ urlpatterns = [
     path("evaluation/", views.evaluation_queue, name="evaluation_queue"),
     path("<int:pk>/", views.application_detail, name="application_detail"),
     path(
+        "<int:pk>/documents/<int:document_pk>/download/<str:file_format>/",
+        views.application_document_download,
+        name="application_document_download",
+    ),
+    path(
         "<int:pk>/mark-followup-sent/",
         views.application_mark_followup_sent,
         name="application_mark_followup_sent",

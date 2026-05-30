@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -8,8 +9,15 @@ from apps.followups.services import build_followup_email_draft, mark_followup_se
 from apps.job_intelligence.services import build_smart_review
 
 from .choices import PipelineStage, RoleFit
+from .document_exports import (
+    DOCX_CONTENT_TYPE,
+    PDF_CONTENT_TYPE,
+    build_application_document_download_filename,
+    render_application_document_docx,
+    render_application_document_pdf,
+)
 from .forms import ApplicationDocumentSelectionForm, JobApplicationForm
-from .models import JobApplication
+from .models import ApplicationDocument, JobApplication
 from .selectors import get_user_applications
 from .services import (
     build_application_evidence_readiness,
@@ -135,6 +143,29 @@ def _build_quick_call_review_notes(application: JobApplication) -> str:
     if notes:
         return "\n\n".join(notes)
     return "No quick call notes saved on selected documents yet."
+
+
+@login_required
+def application_document_download(request, pk, document_pk, file_format):
+    application = get_object_or_404(JobApplication, pk=pk, user=request.user)
+    document = get_object_or_404(
+        ApplicationDocument.objects.select_related("application"),
+        pk=document_pk,
+        application=application,
+    )
+    normalized_format = file_format.lower()
+    if normalized_format == "docx":
+        content = render_application_document_docx(document)
+        content_type = DOCX_CONTENT_TYPE
+    elif normalized_format == "pdf":
+        content = render_application_document_pdf(document)
+        content_type = PDF_CONTENT_TYPE
+    else:
+        raise Http404("Unsupported download format.")
+    filename = build_application_document_download_filename(document, normalized_format)
+    response = HttpResponse(content, content_type=content_type)
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 @login_required
