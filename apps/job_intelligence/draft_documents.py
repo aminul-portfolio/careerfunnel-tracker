@@ -4,7 +4,8 @@ import re
 from dataclasses import dataclass
 
 from apps.ai_agents.services import analyze_job_posting, normalise_text
-from apps.applications.models import JobApplication
+from apps.applications.choices import DocumentSource, DocumentStatus, DocumentType
+from apps.applications.models import ApplicationDocument, JobApplication
 from apps.job_intelligence.constants import GOOD_SKILLS, LEARNING_TARGETS, TARGET_TITLES_AE_STRETCH
 from apps.job_intelligence.services import LOCKED_CV, SmartApplicationReview, build_smart_review
 
@@ -52,8 +53,13 @@ PROJECT_EVIDENCE = {
 }
 
 DRAFT_HELPER_TEXT = (
-    "Draft only. Review manually before using in an application. Saving to the "
-    "Application Document Pack is planned for Sprint 60 Phase 3."
+    "Draft only. Review manually before using in an application. "
+    "Saved records remain draft text only - review manually before use."
+)
+
+JOB_POSTING_SAVE_HELPER_TEXT = (
+    "To save these drafts, first create or open an application record, "
+    "then use Application Smart Review."
 )
 
 COVER_LETTER_DISCLAIMER = (
@@ -432,3 +438,124 @@ def build_application_document_drafts(
         recommended_projects=list(review.recommended_projects),
         readiness_missing=list(review.readiness_missing_items),
     )
+
+
+def _join_text_lines(lines: tuple[str, ...] | list[str]) -> str:
+    return "\n".join(line for line in lines if line)
+
+
+def _build_cover_letter_filename(company_name: str, job_title: str) -> str:
+    company_part = _sanitize_filename_part(company_name)
+    if not (company_name or "").strip():
+        company_part = "Not_Specified"
+    role_part = _sanitize_filename_part(job_title)
+    return f"Aminul_Islam_Cover_Letter_{company_part}_{role_part}"
+
+
+def _render_cv_content(drafts: ApplicationDocumentDrafts) -> str:
+    cv = drafts.cv_tailoring
+    return _join_text_lines(
+        [
+            "Draft CV Tailoring Notes",
+            f"Headline / positioning: {cv.headline}",
+            f"Recommended CV title / file name: {cv.recommended_cv_filename}",
+            f"Master CV baseline: {cv.master_cv_baseline}",
+            "",
+            f"Profile angle: {cv.profile_angle}",
+            "",
+            "Skills to prioritise:",
+            *[f"- {skill}" for skill in cv.skills_to_prioritise],
+            "",
+            "Project evidence to emphasise:",
+            *[f"- {item}" for item in cv.project_evidence],
+            "",
+            f"Work experience angle: {cv.work_experience_angle}",
+            "",
+            "Learning gaps to mention carefully:",
+            *[f"- {gap}" for gap in cv.learning_gaps],
+        ]
+    )
+
+
+def _render_cv_tailoring_notes(drafts: ApplicationDocumentDrafts) -> str:
+    cv = drafts.cv_tailoring
+    return _join_text_lines(
+        [
+            f"Profile angle: {cv.profile_angle}",
+            "",
+            "Skills to prioritise:",
+            *[f"- {skill}" for skill in cv.skills_to_prioritise],
+            "",
+            f"Work experience angle: {cv.work_experience_angle}",
+            "",
+            "Learning gaps to mention carefully:",
+            *[f"- {gap}" for gap in cv.learning_gaps],
+        ]
+    )
+
+
+def _render_claim_safety_notes(drafts: ApplicationDocumentDrafts) -> str:
+    combined = list(drafts.cv_tailoring.claim_safety_warnings) + list(drafts.claim_safety_notes)
+    return _join_text_lines(combined)
+
+
+def _render_project_evidence(drafts: ApplicationDocumentDrafts) -> str:
+    return _join_text_lines(drafts.recommended_project_evidence)
+
+
+def _render_quick_call_notes(
+    application: JobApplication,
+    drafts: ApplicationDocumentDrafts,
+) -> str:
+    cover_letter_name = _build_cover_letter_filename(
+        application.company_name,
+        application.job_title,
+    )
+    return _join_text_lines(
+        [
+            f"Company: {_display_or_fallback(application.company_name)}",
+            f"Role: {_display_or_fallback(application.job_title)}",
+            f"CV draft name: {drafts.cv_tailoring.recommended_cv_filename}",
+            f"Cover letter draft name: {cover_letter_name}",
+            "Review saved draft records manually before any company call.",
+        ]
+    )
+
+
+def save_application_document_drafts(
+    application: JobApplication,
+    drafts: ApplicationDocumentDrafts,
+) -> tuple[ApplicationDocument, ApplicationDocument]:
+    """Persist generated draft text as two ApplicationDocument records."""
+    cv_document = ApplicationDocument.objects.create(
+        application=application,
+        document_type=DocumentType.CV,
+        name=drafts.cv_tailoring.recommended_cv_filename,
+        status=DocumentStatus.DRAFT,
+        source=DocumentSource.JOB_ANALYZER,
+        content=_render_cv_content(drafts),
+        tailoring_notes=_render_cv_tailoring_notes(drafts),
+        project_evidence=_render_project_evidence(drafts),
+        claim_safety_notes=_render_claim_safety_notes(drafts),
+        quick_call_notes=_render_quick_call_notes(application, drafts),
+        cv_baseline_name=drafts.cv_tailoring.master_cv_baseline,
+    )
+    cover_letter_document = ApplicationDocument.objects.create(
+        application=application,
+        document_type=DocumentType.COVER_LETTER,
+        name=_build_cover_letter_filename(application.company_name, application.job_title),
+        status=DocumentStatus.DRAFT,
+        source=DocumentSource.JOB_ANALYZER,
+        content=drafts.cover_letter_draft,
+        tailoring_notes=_join_text_lines(
+            [
+                drafts.cover_letter_disclaimer,
+                "Draft only - review manually before use.",
+            ]
+        ),
+        project_evidence=_render_project_evidence(drafts),
+        claim_safety_notes=_render_claim_safety_notes(drafts),
+        quick_call_notes=_render_quick_call_notes(application, drafts),
+        cv_baseline_name=drafts.cv_tailoring.master_cv_baseline,
+    )
+    return cv_document, cover_letter_document
