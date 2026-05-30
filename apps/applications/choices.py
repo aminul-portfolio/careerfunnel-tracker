@@ -53,6 +53,27 @@ class RoleFit(models.TextChoices):
     UNKNOWN = "unknown", "Unknown"
 
 
+class DocumentType(models.TextChoices):
+    CV = "cv", "CV"
+    COVER_LETTER = "cover_letter", "Cover letter"
+
+
+class DocumentStatus(models.TextChoices):
+    DRAFT = "draft", "Draft"
+    REVIEWED = "reviewed", "Reviewed"
+    SUBMITTED = "submitted", "Submitted"
+    ARCHIVED = "archived", "Archived"
+
+
+class DocumentSource(models.TextChoices):
+    MANUAL = "manual", "Manual"
+    JOB_ANALYZER = "job_analyzer", "Job analyzer"
+    MASTER_CV_BASELINE = "master_cv_baseline", "Master CV baseline"
+
+
+DEFAULT_CV_BASELINE_NAME = "Aminul_Islam_Data_Analyst_CV"
+
+
 class ApplicationSource(models.TextChoices):
     REED = "reed", "Reed.co.uk"
     LINKEDIN = "linkedin", "LinkedIn"

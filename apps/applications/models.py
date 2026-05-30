@@ -4,8 +4,12 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .choices import (
+    DEFAULT_CV_BASELINE_NAME,
     ApplicationSource,
     ApplicationStatus,
+    DocumentSource,
+    DocumentStatus,
+    DocumentType,
     FollowUpStatus,
     PipelineStage,
     RoleFit,
@@ -129,3 +133,46 @@ class JobApplication(models.Model):
         }:
             return False
         return self.follow_up_date <= timezone.localdate()
+
+
+class ApplicationDocument(models.Model):
+    application = models.ForeignKey(
+        JobApplication,
+        on_delete=models.CASCADE,
+        related_name="documents",
+    )
+    document_type = models.CharField(
+        max_length=20,
+        choices=DocumentType.choices,
+    )
+    name = models.CharField(max_length=255)
+    status = models.CharField(
+        max_length=20,
+        choices=DocumentStatus.choices,
+        default=DocumentStatus.DRAFT,
+    )
+    source = models.CharField(
+        max_length=30,
+        choices=DocumentSource.choices,
+        default=DocumentSource.MANUAL,
+    )
+    content = models.TextField(blank=True)
+    tailoring_notes = models.TextField(blank=True)
+    project_evidence = models.TextField(blank=True)
+    claim_safety_notes = models.TextField(blank=True)
+    quick_call_notes = models.TextField(blank=True)
+    cv_baseline_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default=DEFAULT_CV_BASELINE_NAME,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["application", "document_type", "name"]
+        verbose_name = "Application document"
+        verbose_name_plural = "Application documents"
+
+    def __str__(self):
+        return f"{self.get_document_type_display()} - {self.name}"
