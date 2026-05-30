@@ -1,6 +1,7 @@
 from django import forms
 
-from .models import JobApplication
+from .choices import DocumentType
+from .models import ApplicationDocument, JobApplication
 
 
 class JobApplicationForm(forms.ModelForm):
@@ -133,4 +134,60 @@ class JobApplicationForm(forms.ModelForm):
                 "Follow-up date cannot be before the application date.",
             )
 
+        return cleaned_data
+
+
+class ApplicationDocumentSelectionForm(forms.Form):
+    selected_cv_document = forms.ModelChoiceField(
+        queryset=ApplicationDocument.objects.none(),
+        required=False,
+        empty_label="No CV selected",
+        label="CV document",
+    )
+    selected_cover_letter_document = forms.ModelChoiceField(
+        queryset=ApplicationDocument.objects.none(),
+        required=False,
+        empty_label="No cover letter selected",
+        label="Cover-letter document",
+    )
+
+    def __init__(self, *args, application=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.application = application
+        if application is not None:
+            self.fields["selected_cv_document"].queryset = ApplicationDocument.objects.filter(
+                application=application,
+                document_type=DocumentType.CV,
+            )
+            self.fields["selected_cover_letter_document"].queryset = (
+                ApplicationDocument.objects.filter(
+                    application=application,
+                    document_type=DocumentType.COVER_LETTER,
+                )
+            )
+        for field_name in ("selected_cv_document", "selected_cover_letter_document"):
+            self.fields[field_name].widget.attrs["class"] = "form-control"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.application is None:
+            return cleaned_data
+
+        cv_document = cleaned_data.get("selected_cv_document")
+        cover_letter_document = cleaned_data.get("selected_cover_letter_document")
+        validations = (
+            (cv_document, DocumentType.CV, "selected_cv_document"),
+            (
+                cover_letter_document,
+                DocumentType.COVER_LETTER,
+                "selected_cover_letter_document",
+            ),
+        )
+        for document, expected_type, field_name in validations:
+            if document is None:
+                continue
+            if document.application_id != self.application.pk:
+                self.add_error(field_name, "Document must belong to this application.")
+            elif document.document_type != expected_type:
+                self.add_error(field_name, "Invalid document type for this field.")
         return cleaned_data
