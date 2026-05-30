@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import JobApplication
+from .models import ApplicationDocument, JobApplication
 
 
 @admin.register(JobApplication)
@@ -24,5 +24,26 @@ class JobApplicationAdmin(admin.ModelAdmin):
         "notes",
         "contact_name",
         "contact_email",
+    ]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(ApplicationDocument)
+class ApplicationDocumentAdmin(admin.ModelAdmin):
+    list_display = [
+        "name",
+        "document_type",
+        "status",
+        "source",
+        "application",
+        "updated_at",
+    ]
+    list_filter = ["document_type", "status", "source"]
+    search_fields = [
+        "name",
+        "application__company_name",
+        "application__job_title",
+        "content",
+        "tailoring_notes",
     ]
     readonly_fields = ["created_at", "updated_at"]

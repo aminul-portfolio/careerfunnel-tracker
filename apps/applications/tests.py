@@ -15,14 +15,18 @@ from apps.recruiter_emails.choices import EmailType, ReplyStatus
 from apps.recruiter_emails.models import RecruiterEmail
 
 from .choices import (
+    DEFAULT_CV_BASELINE_NAME,
     ApplicationSource,
     ApplicationStatus,
+    DocumentSource,
+    DocumentStatus,
+    DocumentType,
     FollowUpStatus,
     PipelineStage,
     RoleFit,
     WorkType,
 )
-from .models import JobApplication
+from .models import ApplicationDocument, JobApplication
 from .services import (
     ITEM_COMPANY_RESEARCHED,
     ITEM_CONTACT_EMAIL,
@@ -73,6 +77,100 @@ class JobApplicationModelTests(TestCase):
             status=ApplicationStatus.SUBMITTED,
         )
         self.assertIsNone(application.days_to_response)
+
+
+class ApplicationDocumentModelTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Howden",
+            job_title="Junior Data Analyst",
+            date_applied=date(2026, 5, 9),
+        )
+
+    def test_application_document_can_be_created_for_application(self):
+        document = ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.CV,
+            name="Aminul_Islam_Data_Analyst_CV_Howden_Junior_Data_Analyst",
+            status=DocumentStatus.DRAFT,
+            source=DocumentSource.MASTER_CV_BASELINE,
+        )
+        self.assertEqual(document.application, self.application)
+        self.assertEqual(self.application.documents.count(), 1)
+
+    def test_cv_document_type_is_valid(self):
+        document = ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.CV,
+            name="Aminul_Islam_Data_Analyst_CV_Howden_Junior_Data_Analyst",
+        )
+        self.assertEqual(document.document_type, DocumentType.CV)
+        self.assertEqual(document.get_document_type_display(), "CV")
+        self.assertEqual(document.cv_baseline_name, DEFAULT_CV_BASELINE_NAME)
+
+    def test_cover_letter_document_type_is_valid(self):
+        document = ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.COVER_LETTER,
+            name="Cover_Letter_Howden_Junior_Data_Analyst",
+        )
+        self.assertEqual(document.document_type, DocumentType.COVER_LETTER)
+        self.assertEqual(document.get_document_type_display(), "Cover letter")
+
+
+class ApplicationDocumentViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Howden",
+            job_title="Junior Data Analyst",
+            date_applied=date(2026, 5, 9),
+        )
+        self.detail_url = reverse(
+            "applications:application_detail",
+            kwargs={"pk": self.application.pk},
+        )
+
+    def test_application_detail_displays_document_pack_section(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Application Document Pack")
+
+    def test_application_detail_displays_saved_document_names(self):
+        ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.CV,
+            name="Aminul_Islam_Data_Analyst_CV_Howden_Junior_Data_Analyst",
+            status=DocumentStatus.SUBMITTED,
+            source=DocumentSource.MASTER_CV_BASELINE,
+        )
+        ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.COVER_LETTER,
+            name="Cover_Letter_Howden_Junior_Data_Analyst",
+            status=DocumentStatus.REVIEWED,
+            source=DocumentSource.MANUAL,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Aminul_Islam_Data_Analyst_CV_Howden_Junior_Data_Analyst")
+        self.assertContains(response, "Cover_Letter_Howden_Junior_Data_Analyst")
+        self.assertContains(response, "Submitted")
+        self.assertContains(response, "Reviewed")
+
+    def test_application_detail_shows_empty_state_when_no_documents_exist(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "No CV or cover letter documents have been saved for this application yet.",
+        )
 
 
 class JobApplicationViewTests(TestCase):
