@@ -23,9 +23,51 @@ FORBIDDEN_PHRASES = (
     "deployed platform",
 )
 
+POSITIONING_SUMMARY = (
+    "CareerFunnel Tracker is a Django/Python analytics workflow project that structures "
+    "job-search activity into application records, funnel-stage metrics, source-performance "
+    "reporting, data-quality warnings, manual job-post review, skill-gap tracking, and "
+    "application readiness checks."
+)
+
+POSITIONING_CLAIM_SAFETY = (
+    "Claim-safe boundaries: manual and advisory workflows only (rule-based job-post review, "
+    "field audit, decision-evidence logging, application readiness checks). No auto-apply, "
+    "external AI/LLM integration, Gmail/Calendar automation, scraping, live SaaS deployment, "
+    "production users, or commercial product claims."
+)
+
+POSITIONING_BOUNDARIES = (
+    "Deployment is conditional and not yet verified per README. This pack describes "
+    "**portfolio evidence** suitable for recruiter and hiring-manager review, not a "
+    "commercial product launch."
+)
+
+VALIDATION_SUMMARY = (
+    "Validated with 771 automated tests, Ruff checks, Django system checks, migration "
+    "dry-run discipline, and documented sprint-based delivery."
+)
+
+LINKEDIN_SUMMARY = (
+    "CareerFunnel Tracker - Django | Python | analytics workflow | test discipline. "
+    "Portfolio job-search analytics with structured application records, funnel-stage "
+    "metrics, source-performance reporting, data-quality warnings, and a manual intake "
+    "workflow (rule-based review, field audit, decision-evidence logging, skill-gap "
+    "tracking, application readiness checks). "
+    + VALIDATION_SUMMARY
+    + " Not a live SaaS product; no external AI, Gmail/Calendar, scraping, or auto-apply."
+)
+
+LOCKED_CV_BULLETS = (
+    "Built a job-search analytics tracker with structured application records, "
+    "funnel-stage metrics, source-performance reporting, and data-quality warnings.",
+    "Delivered manual intake workflow with rule-based review, field audit, "
+    "decision-evidence logging, skill-gap tracking, and application readiness checks.",
+    VALIDATION_SUMMARY,
+)
+
 TARGET_ROLES_DEFAULT = (
-    "Data Analyst, BI Analyst, Reporting Analyst, Analytics Engineer, "
-    "Junior Data Engineer, and FinTech analytics roles"
+    "Data Analyst, BI Analyst, Reporting Analyst, and FinTech and FX operations analytics roles"
 )
 
 
@@ -66,11 +108,8 @@ def load_sources() -> EvidenceSources:
 
 
 def _extract_first_paragraph(readme: str) -> str:
-    for line in readme.splitlines():
-        stripped = line.strip()
-        if stripped and not stripped.startswith("#"):
-            return stripped
-    return "CareerFunnel Tracker (see README.md)."
+    _ = readme
+    return POSITIONING_SUMMARY
 
 
 def _extract_target_roles(readme: str) -> str:
@@ -87,19 +126,8 @@ def _extract_target_roles(readme: str) -> str:
 
 
 def _extend_target_roles(roles: str) -> str:
-    """Ensure recruiter-facing role labels include Reporting and Insights Analyst."""
-    normalized = roles.rstrip(".")
-    if "reporting analyst" not in normalized.lower():
-        normalized = f"{normalized}, Reporting Analyst"
-    if "insights analyst" not in normalized.lower():
-        if "and FinTech analytics roles" in normalized:
-            normalized = normalized.replace(
-                "and FinTech analytics roles",
-                "and FinTech analytics roles, and Insights Analyst",
-            )
-        else:
-            normalized = f"{normalized}, and Insights Analyst"
-    return normalized
+    _ = roles
+    return TARGET_ROLES_DEFAULT
 
 
 def _extract_test_count(readme: str) -> str | None:
@@ -193,47 +221,12 @@ def _bullet_lines(items: list[str]) -> str:
 
 
 def _cv_bullets(parsed: ParsedEvidence) -> list[str]:
-    _ = parsed  # bullets use stable wording; counts may change over time
-    test_note = "automated tests documented in README"
-    modules_note = "multiple app test modules in repository evidence"
-    return [
-        (
-            "Built a Python and Django portfolio analytics application that demonstrates "
-            "service-layer reporting over structured job-search records "
-            "(repository evidence: `apps/`, `manage.py`, `requirements.txt`)."
-        ),
-        (
-            "Shows evidence of funnel KPI reporting (response rate, pipeline stages, weekly "
-            "trends) through `apps/metrics/` and documented metric definitions in "
-            "`docs/analytics/metric_definitions.md`."
-        ),
-        (
-            "Supports data-quality governance with readiness rules, save-time warnings, and a "
-            "Data Quality Report (`templates/metrics/data_quality_report.html`; README "
-            "governance callout)."
-        ),
-        (
-            "Delivers reviewer-ready exports via workbook and CSV paths in `apps/exports/` "
-            "and dashboard demo CSV tooling (`apps/exports/management/commands/"
-            "export_for_dashboards.py`)."
-        ),
-        (
-            f"Documents analytics lineage, sprint evidence, and workflow discipline with "
-            f"{test_note}, {modules_note}, and `.github/workflows/django-ci.yml`."
-        ),
-    ]
-
+    _ = parsed
+    return list(LOCKED_CV_BULLETS)
 
 def _linkedin_summary(parsed: ParsedEvidence) -> str:
-    return (
-        "CareerFunnel Tracker is a Django analytics portfolio project that turns job-search "
-        "activity into explainable funnel metrics, data-quality signals, and reviewer-ready "
-        "evidence. Repository evidence supports Python/Django development, KPI reporting, "
-        "dashboards, exports, and governed metric documentation. This is portfolio work with "
-        "honest scope limits: deployment is not verified, and external AI, Gmail/Calendar, "
-        "scraping, and auto-apply are not implemented."
-    )
-
+    _ = parsed
+    return LINKEDIN_SUMMARY
 
 def _interview_talking_points() -> list[tuple[str, str, str, str]]:
     return [
@@ -353,11 +346,11 @@ def render_pack(sources: EvidenceSources, parsed: ParsedEvidence) -> str:
         "",
         "## Project Positioning Summary",
         "",
-        parsed.positioning_line,
+        POSITIONING_SUMMARY,
         "",
-        "Deployment is conditional and not yet verified per README. This pack describes "
-        "**portfolio evidence** suitable for recruiter and hiring-manager review, not a "
-        "commercial product launch.",
+        POSITIONING_CLAIM_SAFETY,
+        "",
+        VALIDATION_SUMMARY,
         "",
         "## Target Roles",
         "",
@@ -372,8 +365,8 @@ def render_pack(sources: EvidenceSources, parsed: ParsedEvidence) -> str:
                 "Django project structure: `manage.py`, `config/`, installed apps "
                 "(V2 matrix: Strong).",
                 (
-                    "Automated tests: multiple passing tests documented in README; "
-                    "multiple app test modules in V1 inventory."
+                    "Automated tests: 771 automated tests documented in README; "
+                    "app test modules in V1 inventory."
                 ),
                 "CI workflow: `.github/workflows/django-ci.yml` (V2 matrix: Strong Git/GitHub).",
                 (

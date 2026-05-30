@@ -429,7 +429,7 @@ Mention these technical strengths:
 - Application Detail section navigation
 - OpenPyXL workbook export generation
 - Dashboard-ready CSV export evidence
-- Local Tableau workbook and screenshot evidence
+- Local Tableau workbook and documented sprint-based delivery
 - Chart.js weekly trend visualization
 - Interview Evidence Workspace
 - Regression tests for analytics and exports
@@ -591,7 +591,7 @@ Expected current result:
 ```text
 System check identified no issues
 No changes detected
-249 tests passing
+771 automated tests passing
 ```
 
 Use this to prove repository stability.

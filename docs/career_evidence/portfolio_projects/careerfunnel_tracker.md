@@ -50,7 +50,7 @@ Django-based job-search intelligence and analytics platform that turns applicati
 - Career Evidence OS V1-V6
 - Playwright screenshot automation
 - Optional Notion metadata/status sync
-- 320 documented passing tests
+- 771 automated tests documented
 - GitHub Actions Django CI
 
 ## Planned / Not Implemented / Not Proven
@@ -74,14 +74,14 @@ Django-based job-search intelligence and analytics platform that turns applicati
 | Career Evidence V1-V3 | `docs/career_evidence/01_project_evidence_report.md`, `02_job_fit_matrix.md`, `03_recruiter_evidence_pack.md` | Repository-derived evidence packs |
 | Career Evidence tools | `tools/career_evidence_audit.py`, `tools/career_job_fit_matrix.py`, `tools/career_recruiter_pack.py` | Evidence generation from repo paths |
 | Dashboard UI | `/dashboard/career-evidence/` | V4 browser review surfaces |
-| Screenshot evidence | `docs/screenshots/career_evidence/` | V5 Playwright captures |
+| Reviewer-verifiable outputs | `docs/evidence/`, sprint closure docs | Documented sprint-based delivery |
 | Notion sync (optional) | `docs/notion/README.md` | V6 metadata-only sync boundary |
-| Automated tests | `tests/` | 320 passing tests (verified locally) |
+| Automated tests | `tests/` | 771 automated tests (verified locally) |
 | CI | `.github/workflows/` | Django CI workflow configuration |
 
 ## Signature Evidence
 
-Career Evidence OS V1-V6 plus Sprint 29 recruiter-email workflow evidence on Application Detail: repository-derived project evidence, job-fit mapping, recruiter pack, manual rule-based recruiter action context, dashboard review, screenshot evidence, and optional metadata-only Notion sync -- all traceable to local files and tests without external AI, inbox automation, or live deployment claims.
+Career Evidence OS V1-V6 plus Sprint 29 recruiter-email workflow evidence on Application Detail: repository-derived project evidence, job-fit mapping, recruiter pack, manual rule-based recruiter action context, dashboard review, documented sprint-based delivery, and optional metadata-only Notion sync -- all traceable to local files and tests without external AI, inbox automation, or live deployment claims.
 
 ## Validation Proof Needed
 
@@ -98,7 +98,7 @@ python manage.py test
 ## Safe Claims
 
 - Built a Django job-search analytics platform with governed metrics, quality checks, evidence reports, exports, and recruiter-facing documentation.
-- Implemented Career Evidence OS V1-V6 with repository-derived evidence, job-fit mapping, recruiter evidence, dashboard review, screenshot evidence, and optional metadata-only Notion sync.
+- Implemented Career Evidence OS V1-V6 with repository-derived evidence, job-fit mapping, recruiter evidence, dashboard review, documented sprint-based delivery, and optional metadata-only Notion sync.
 
 ## Claims To Avoid
 
@@ -112,13 +112,13 @@ python manage.py test
 
 ## CV Bullets
 
-- Built a Django job-search analytics platform converting application activity into funnel metrics, source/CV performance reporting, and data-quality signals.
-- Delivered governed reporting, workbook exports, and a Career Evidence OS (V1-V6) with repository-derived recruiter documentation and optional Notion metadata sync.
-- Verified 320 automated tests and GitHub Actions CI for a portfolio-grade data-product codebase.
+- Built a job-search analytics tracker with structured application records, funnel-stage metrics, source-performance reporting, and data-quality warnings.
+- Delivered manual intake workflow with rule-based review, field audit, decision-evidence logging, skill-gap tracking, and application readiness checks.
+- Validated with 771 automated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery.
 
 ## LinkedIn Wording
 
-Portfolio project: Django job-search intelligence platform with explainable funnel metrics, source and CV performance reporting, data-quality checks, workbook exports, manual recruiter-email workflow context (rule-based), and a Career Evidence OS for recruiter-ready proof -- validated locally with 320 passing tests. Not a live SaaS product; no external AI or email/calendar automation.
+CareerFunnel Tracker - Django | Python | analytics workflow | test discipline. Portfolio job-search analytics with funnel metrics, source-performance reporting, data-quality warnings, skill-gap tracking, and manual intake workflow evidence. Validated with 771 automated tests. Not a live SaaS product; no external AI or email/calendar automation.
 
 ## Interview Talking Points
 
@@ -144,4 +144,4 @@ Sprint name: Portfolio readiness alignment (Sprint 30)
 Goal: Keep README, portfolio project review, and pinned-repo strategy aligned with the Sprint 29 baseline without overstating product maturity.
 Allowed scope: `README.md`, `docs/career_evidence/portfolio_*`, `docs/evidence/` cross-links
 Do not add: Fake deployment, Gmail/OAuth/inbox sync, automatic sending, automatic status mutation, automatic interview prep creation, or external AI claims
-Validation plan: Re-run full `python manage.py test` (320 tests) and `ruff check .` after material repo changes
+Validation plan: Re-run full `python manage.py test` (771 automated tests) and `ruff check .` after material repo changes

@@ -7,22 +7,23 @@ Evidence-backed bullets derived from [portfolio_projects/](portfolio_projects/).
 - **Heading:** `Selected Portfolio Projects (Python / Django / Analytics)`
 - **Lead line (optional):** Nine Django portfolio projects covering job-search analytics, operational KPIs, market ingestion, FinTech monitoring, risk planning, commerce reporting, and BI exports. Evidence available on GitHub.
 - **Format:** Project name | 2-3 bullets | GitHub URL
-- **Put CareerFunnel first** -- it has verified tests and complete local validation in this repository.
+- **Lead with BakeOps Intelligence, then CareerFunnel Tracker** for recruiter-facing packs (verified tests in this repository).
 
 ## 4-project short CV version
 
 Use for one-page CVs or early-career applications.
 
-1. CareerFunnel Tracker (2 bullets)
-2. BakeOps Intelligence OR DataBridge Market API (pick by role)
+1. BakeOps Intelligence (2 bullets)
+2. CareerFunnel Tracker
 3. RiskWise Planner OR MarketVista Dashboard (pick for FinTech)
 4. One supporting project only if space allows (PureLaka or GoalTracker for BI)
 
 ## 6-project extended CV version
 
-1. CareerFunnel Tracker
-2. BakeOps Intelligence
-3. DataBridge Market API
+1. BakeOps Intelligence
+2. CareerFunnel Tracker
+3. TradeIntel 360
+4. DataBridge Market API
 4. RiskWise Planner
 5. MarketVista Dashboard
 6. PureLaka Commerce Platform OR GoalTracker KPI Reporting (BI roles)
@@ -35,9 +36,9 @@ Omit TradeIntel and CineScope from the main six until tests/cleanup are complete
 
 **GitHub:** https://github.com/aminul-portfolio/careerfunnel-tracker
 
-- Built a Django job-search analytics platform converting application activity into funnel metrics, source/CV performance reporting, and data-quality signals.
-- Delivered governed reporting, workbook exports, and a Career Evidence OS (V1-V6) with repository-derived recruiter documentation and optional Notion metadata sync.
-- Verified 249 automated tests and GitHub Actions CI for a portfolio-grade data-product codebase.
+- Built a job-search analytics tracker with structured application records, funnel-stage metrics, source-performance reporting, and data-quality warnings.
+- Delivered manual intake workflow with rule-based review, field audit, decision-evidence logging, skill-gap tracking, and application readiness checks.
+- Validated with 771 automated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery.
 
 *Internal note: local validation complete in this repository.*
 

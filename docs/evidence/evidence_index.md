@@ -18,7 +18,7 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 | Latest completed sprint family | Sprint 23 -- Career Evidence OS (23A-23F) |
 | Latest sprint tags (23) | `sprint-23a-career-evidence-v1` through `sprint-23f-complete` |
 | Current documentation sprint | Sprint 24A -- Portfolio Front Door Evidence Alignment (`sprint-24a-portfolio-front-door`) |
-| Current verified test count | 249 tests passing |
+| Current verified test count | 771 automated tests |
 | Sprint 21-22 evidence status | Complete (`sprint-21-complete`, `sprint-22-complete`) |
 | Main evidence folder | `docs/evidence/screenshots/` |
 | Career Evidence markdown | `docs/career_evidence/` |
