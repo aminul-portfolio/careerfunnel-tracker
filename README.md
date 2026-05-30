@@ -8,11 +8,11 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 ## Current Sprint Position
 
-Sprints **52-59** are complete on `main`.
+Sprints **52-59** are complete on `main`. Sprint **60** (Application Document Pack workflow) is complete on branch `sprint-60-phase-6-final-validation-docs-closure`.
 
-Current verified baseline: **771 tests passing**.
+Current verified baseline: **828 tests passing** (includes Sprint 60 Application Document Pack tests).
 
-Latest completed tag: `sprint-59-final-career-intelligence-workflow-complete`.
+Latest completed tag: `sprint-59-final-career-intelligence-workflow-complete` (Sprint 60 tag pending merge).
 
 Earlier sprint families (25-51) remain merged on `main`, including CV Tailoring Claude Enhancement (34), Interview + Email Workflow Polish (35), Weekly Risk / Final Operating System Polish (36), premium SaaS shell and reporting (37-40), Skill Intelligence Dashboard (41-51), and premium component polish (52 Phase 2-3). Evidence for each sprint family is indexed in `docs/evidence/evidence_index.md`.
 
@@ -109,7 +109,17 @@ Implemented surfaces:
 
 This remains manual, rule-based, and advisory only. The repository does not implement or claim Gmail, OAuth, inbox sync, automatic email sending, automatic application status mutation, automatic interview prep creation, or external AI integration. Evidence: `docs/evidence/sprint_29_recruiter_email_workflow_enhancements.md`.
 
-Sprint **35** extends this path with clearer cross-links between Application Detail, recruiter email import/detail, interview prep (including `?application=` pre-fill), and the Application AI Pack — still manual and advisory only. Evidence: `docs/evidence/sprint_35_interview_email_workflow_polish.md`.
+Sprint **35** extends this path with clearer cross-links between Application Detail, recruiter email import/detail, interview prep (including `?application=` pre-fill), and the Application AI Pack - still manual and advisory only. Evidence: `docs/evidence/sprint_35_interview_email_workflow_polish.md`.
+
+### Application Document Pack (Sprint 60)
+
+**Application Document Pack:** generated draft CV and cover-letter records can be saved to each application, selected for call review, and downloaded as DOCX/PDF from saved database text. The workflow remains manual-review only and does not perform automatic submission, upload files, or connect to Gmail/Calendar/OAuth.
+
+```text
+Smart Review / job analysis -> draft documents -> save to document pack -> select documents -> download DOCX/PDF -> manual review before use
+```
+
+Evidence: `docs/evidence/sprint_60_application_document_pack_closure.md`.
 
 ## How to review this project
 
@@ -120,6 +130,7 @@ CareerFunnel Tracker is a **local Django portfolio project** for one job seeker.
 - Job and application tracking with statuses, sources, CV versions, and save-quality warnings.
 - Funnel metrics, exports, and data-quality reporting from authenticated records.
 - Rule-based decision support (fit review, follow-ups, interview prep handoffs) without automatic submission.
+- Application Document Pack on Application Detail: save rule-based draft CV/cover-letter records, select documents for Quick Call Review, download DOCX/PDF from saved text (manual review before employer use).
 - Skill Intelligence Dashboard at `/skill-gaps/` with saved skill gaps plus read-only advisory sections: action plan, learning plan, evidence readiness, portfolio evidence mapping, interview story mapping, and CV bullet mapping.
 - Career Intelligence pipeline (Sprints 53-59) at `/skills/` routes: AI Capability Framework, AI Readiness Report, Job-to-AI Capability Match, Learning Recommendations, Career Readiness Dashboard, Career Strategy Action Plan, and Final Career Intelligence Workflow.
 - Career Evidence OS (markdown + dashboard viewer) for portfolio and recruiter review.
@@ -261,7 +272,7 @@ For a portfolio-level evidence map across the user's major GitHub projects, see 
 
 For recruiter-facing portfolio presentation materials, see `docs/career_evidence/portfolio_presentation_pack.md`.
 
-Current verified test count: **771 passing**.
+Current verified test count: **828 passing**.
 
 Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/` and Sprint 53-59 intelligence screenshots stored in `docs/screenshots/intelligence/`. The main supporting documentation is:
 
@@ -381,7 +392,7 @@ http://127.0.0.1:8000/
 - No Gmail integration, Calendar integration, or OAuth integration is claimed.
 - No auto-send, auto-apply, or automatic submission workflows are claimed.
 - No auto-apply workflow is claimed.
-- Claude semantic enhancement is not claimed to run on every request — it is optional when configured, with rule-based fallback otherwise.
+- Claude semantic enhancement is not claimed to run on every request - it is optional when configured, with rule-based fallback otherwise.
 - No interview automation or external AI/API interview assistant is claimed.
 - No email, calendar, scraping, auto-apply, background polling, or background automation is claimed.
 - No scientific CV A/B testing is claimed; CV Version Performance is directional reporting.
