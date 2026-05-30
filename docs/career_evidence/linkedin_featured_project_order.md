@@ -6,29 +6,18 @@ Presentation order and wording for LinkedIn Featured section, posts, and project
 
 | Order | Project | Pin on GitHub? |
 |---:|---|:---:|
-| 1 | CareerFunnel Tracker | Yes |
-| 2 | BakeOps Intelligence | Yes |
-| 3 | DataBridge Market API | Yes |
-| 4 | RiskWise Planner | Yes |
-| 5 | MarketVista Dashboard | Yes |
-| 6 | PureLaka Commerce Platform | Yes (after public repo confirmed) |
-| 7+ | GoalTracker, TradeIntel, CineScope | No (supporting; link in About or posts) |
+| 1 | BakeOps Intelligence | Yes |
+| 2 | CareerFunnel Tracker | Yes |
+| 3 | TradeIntel 360 | Yes |
+| 4 | DataBridge Market API / MarketVista Dashboard | Yes |
+| 5 | RiskWise Planner | Optional |
+| 6+ | PureLaka, GoalTracker, CineScope | No (supporting; link in About or posts) |
 
 ---
 
-## Featured project cards
 
-### 1. CareerFunnel Tracker
 
-| Field | Content |
-|---|---|
-| Short title | CareerFunnel Tracker -- Job Search Analytics (Django) |
-| Description | Django portfolio project that turns job-search activity into funnel metrics, source/CV performance, and data-quality reporting, with workbook exports and a Career Evidence OS for reviewer-ready proof. Validated with 249 passing tests in the repository. Not a live SaaS product. |
-| Best role signal | Data Analyst, BI Analyst, Analytics Engineer, Python/Django data product |
-| Screenshot angle | Dashboard funnel metrics; Career Evidence overview; data-quality report |
-| Link | https://github.com/aminul-portfolio/careerfunnel-tracker |
-
-### 2. BakeOps Intelligence
+### 1. BakeOps Intelligence
 
 | Field | Content |
 |---|---|
@@ -37,6 +26,16 @@ Presentation order and wording for LinkedIn Featured section, posts, and project
 | Best role signal | Data Analyst, BI Analyst, Reporting Analyst |
 | Screenshot angle | KPI dashboard; product ranking showing revenue vs waste-adjusted margin |
 | Link | https://github.com/aminul-portfolio/bakeops-intelligence |
+
+### 2. CareerFunnel Tracker
+
+| Field | Content |
+|---|---|
+| Short title | CareerFunnel Tracker -- Job Search Analytics (Django) |
+| Description | CareerFunnel Tracker is a Django/Python analytics workflow project that structures job-search activity into application records, funnel-stage metrics, source-performance reporting, data-quality warnings, manual job-post review, skill-gap tracking, and application readiness checks. Validated with 771 automated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery. Not a live SaaS product. |
+| Best role signal | Data Analyst, BI Analyst, Analytics Engineer, Python/Django data product |
+| Screenshot angle | Dashboard funnel metrics; Career Evidence overview; data-quality report |
+| Link | https://github.com/aminul-portfolio/careerfunnel-tracker |
 
 ### 3. DataBridge Market API
 
@@ -119,7 +118,7 @@ Same card content as above. Use when BI/commerce breadth is the story.
 
 ### CareerFunnel Tracker
 
-Built CareerFunnel Tracker -- a Django job-search analytics project that turns application activity into explainable funnel metrics, source/CV performance, and data-quality signals, plus workbook exports and a Career Evidence OS for portfolio review. Evidence-first build with 249 passing tests. Portfolio project only -- not a live SaaS. #DataAnalytics #Django #Python #PortfolioProject
+Built CareerFunnel Tracker -- a Django job-search analytics project that turns application activity into explainable funnel metrics, source/CV performance, and data-quality signals, plus workbook exports and a Career Evidence OS for portfolio review. Evidence-first build with 771 automated tests. Portfolio project only -- not a live SaaS. #DataAnalytics #Django #Python #PortfolioProject
 
 ### BakeOps Intelligence
 

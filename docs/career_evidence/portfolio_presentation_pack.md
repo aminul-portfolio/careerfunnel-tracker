@@ -6,7 +6,7 @@ Recruiter-facing overview of the GitHub portfolio. Evidence source: [portfolio_p
 
 **Analytics Engineer | Data Analyst | BI Analyst | Python & Django | ETL, KPI Dashboards, FinTech & BI**
 
-Nine Django-based portfolio projects show how operational and market data can be ingested, modelled, governed, and reported for analyst and data-product roles. CareerFunnel Tracker is the anchor project with verified repository evidence and complete local validation. Other strong projects are reviewed from GitHub and/or archive; local validation remains pending unless stated.
+Nine Django-based portfolio projects show how operational and market data can be ingested, modelled, governed, and reported for analyst and data-product roles. BakeOps Intelligence and CareerFunnel Tracker lead recruiter-facing packs; CareerFunnel has verified repository evidence and complete local validation in this repository. Other strong projects are reviewed from GitHub and/or archive; local validation remains pending unless stated.
 
 ## Portfolio summary
 
@@ -16,21 +16,20 @@ Nine Django-based portfolio projects show how operational and market data can be
 | Reporting & BI | Dashboards, KPI suites, CSV/Excel exports, Power BI-ready outputs |
 | ETL & data products | Ingestion runs, gold-layer snapshots, daily ETL, read-only APIs |
 | FinTech analytics | Market data, monitoring signals, pre-trade risk, post-trade KPIs |
-| Portfolio proof | Screenshot evidence, walkthroughs, evidence packs -- not live SaaS |
+| Portfolio proof | Documented sprint-based delivery, walkthroughs, evidence packs -- not live SaaS |
 
 ## Project priority table
 
 | Priority | Project | Strength | Validation |
 |---:|---|---|---|
-| 1 | CareerFunnel Tracker | Strong (featured) | Complete (this repo) |
-| 2 | BakeOps Intelligence | Strong | Pending |
-| 3 | DataBridge Market API | Strong | Pending |
-| 4 | RiskWise Planner | Strong | Pending |
-| 5 | MarketVista Dashboard | Strong | Pending |
+| 1 | BakeOps Intelligence | Strong (featured) | Pending |
+| 2 | CareerFunnel Tracker | Strong (featured) | Complete (this repo) |
+| 3 | TradeIntel 360 | Good; tests need improvement | Pending |
+| 4 | DataBridge Market API / MarketVista Dashboard | Strong | Pending |
+| 5 | RiskWise Planner | Strong | Pending |
 | 6 | PureLaka Commerce Platform | Strong supporting | Pending; public GitHub unconfirmed at review |
-| 7 | TradeIntel 360 | Good; tests need improvement | Pending |
-| 8 | GoalTracker KPI Reporting | Good supporting BI | Pending; test/CI gaps |
-| 9 | CineScope Analytics | Supporting; cleanup needed | Pending |
+| 7 | GoalTracker KPI Reporting | Good supporting BI | Pending; test/CI gaps |
+| 8 | CineScope Analytics | Supporting; cleanup needed | Pending |
 
 ## Role-based project map
 
@@ -106,7 +105,7 @@ Nine Django-based portfolio projects show how operational and market data can be
 
 ## Strongest 5 projects to feature first
 
-1. **CareerFunnel Tracker** -- Verified anchor: job-search analytics, Career Evidence OS, 249 passing tests.
+1. **CareerFunnel Tracker** -- Verified anchor: job-search analytics, Career Evidence OS, 771 automated tests.
 2. **BakeOps Intelligence** -- Operational KPIs, waste-adjusted margin insight, BI CSV exports.
 3. **DataBridge Market API** -- Market ingestion, ETL observability, read-only API, Streamlit.
 4. **RiskWise Planner** -- Pre-trade risk, Monte Carlo, stress tests, 64 test functions in repo.
@@ -124,7 +123,7 @@ Nine Django-based portfolio projects show how operational and market data can be
 ## Claims safety summary
 
 - **Do not claim:** live SaaS, real users/customers, production deployment, external AI, Gmail/Calendar automation, auto-apply, live cross-project integrations, CI passed (unless verified), local validation complete (unless terminal proof exists).
-- **CareerFunnel only:** say "249 passing tests" and "local validation complete" for this repository.
+- **CareerFunnel only:** say "771 automated tests" and "local validation complete" for this repository.
 - **Other repos:** say "portfolio evidence from GitHub/archive review" unless you have run and saved validation commands locally.
 - **FinTech suite:** DataBridge, RiskWise, MarketVista, and TradeIntel are separate portfolio demos -- not a connected production platform.
 
