@@ -86,6 +86,20 @@
     </section>
     <section class="content-card"><div class="card-header"><p class="eyebrow">Next Actions</p><h2>Application readiness steps</h2></div><ol class="agent-list">{% for action in analysis.next_actions %}<li>{{ action }}</li>{% endfor %}</ol></section>
     <section class="content-card">
+        <div class="card-header"><p class="eyebrow">Rule-Based Drafts</p><h2>Application Document Drafts</h2></div>
+        <p class="muted-text">Generate deterministic draft CV tailoring notes and a draft cover letter from this job analysis. Draft only - review manually before use.</p>
+        <form method="post" class="form-actions">
+            {% csrf_token %}
+            <input type="hidden" name="company_name" value="{{ form.company_name.value|default:'' }}">
+            <input type="hidden" name="job_title" value="{{ form.job_title.value|default:'' }}">
+            <input type="hidden" name="location" value="{{ form.location.value|default:'' }}">
+            <textarea name="job_posting" hidden>{{ form.job_posting.value|default:'' }}</textarea>
+            <input type="hidden" name="generate_drafts" value="1">
+            <button type="submit" class="btn btn-primary">Generate Draft Application Documents</button>
+        </form>
+    </section>
+    {% include "job_intelligence/_application_document_drafts.html" %}
+    <section class="content-card">
         <div class="card-header"><p class="eyebrow">Save to pipeline</p><h2>Review & Pre-fill Application</h2></div>
         <p>This opens a pre-filled Add Application form. Nothing is saved until you review and submit the form.</p>
         <a class="btn btn-primary" href="{% url 'applications:application_create' %}?company_name={{ form.company_name.value|urlencode }}&amp;job_title={{ form.job_title.value|urlencode }}&amp;location={{ form.location.value|urlencode }}&amp;fit_score={{ analysis.fit_score }}">Review & Pre-fill Application</a>

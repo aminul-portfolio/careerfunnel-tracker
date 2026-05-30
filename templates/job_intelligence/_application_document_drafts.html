@@ -1,0 +1,38 @@
+{% if document_drafts %}
+<section class="content-card" id="application-document-drafts">
+    <div class="card-header">
+        <p class="eyebrow">Manual Review | Claim-Safe</p>
+        <h2>Application Document Drafts</h2>
+    </div>
+    <p class="muted-text">{{ document_drafts.helper_text }}</p>
+    <p class="note-text"><strong>Draft CV Tailoring Notes and Draft Cover Letter - review before use.</strong></p>
+
+    <h3>Draft CV Tailoring Notes</h3>
+    <div class="detail-grid">
+        <div class="detail-item"><span>Recommended CV title / file name</span><strong>{{ document_drafts.cv_tailoring.recommended_cv_filename }}</strong></div>
+        <div class="detail-item"><span>Master CV baseline</span><strong>{{ document_drafts.cv_tailoring.master_cv_baseline }}</strong></div>
+        <div class="detail-item"><span>Headline / positioning</span><strong>{{ document_drafts.cv_tailoring.headline }}</strong></div>
+        <div class="detail-item"><span>Profile angle</span><strong>{{ document_drafts.cv_tailoring.profile_angle }}</strong></div>
+    </div>
+    <h4>Skills to prioritise</h4>
+    <div class="tag-row">{% for skill in document_drafts.cv_tailoring.skills_to_prioritise %}<span>{{ skill }}</span>{% empty %}<span>Not enough evidence from the job analysis</span>{% endfor %}</div>
+    <h4>Project evidence to emphasise</h4>
+    <ul class="workflow-list">{% for item in document_drafts.cv_tailoring.project_evidence %}<li>{{ item }}</li>{% endfor %}</ul>
+    <h4>Work experience angle</h4>
+    <p class="note-text">{{ document_drafts.cv_tailoring.work_experience_angle }}</p>
+    <h4>Learning gaps to mention carefully</h4>
+    <ul class="workflow-list">{% for gap in document_drafts.cv_tailoring.learning_gaps %}<li>{{ gap }}</li>{% endfor %}</ul>
+    <h4>Claim-safety warnings</h4>
+    <ul class="workflow-list">{% for warning in document_drafts.cv_tailoring.claim_safety_warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
+
+    <h3>Draft Cover Letter</h3>
+    <p class="muted-text">{{ document_drafts.cover_letter_disclaimer }}</p>
+    <div class="diagnosis-box note-text">{{ document_drafts.cover_letter_draft|linebreaks }}</div>
+
+    <h3>Claim-Safety Notes</h3>
+    <ul class="workflow-list">{% for note in document_drafts.claim_safety_notes %}<li>{{ note }}</li>{% endfor %}</ul>
+
+    <h3>Recommended Project Evidence</h3>
+    <ul class="workflow-list">{% for item in document_drafts.recommended_project_evidence %}<li>{{ item }}</li>{% endfor %}</ul>
+</section>
+{% endif %}

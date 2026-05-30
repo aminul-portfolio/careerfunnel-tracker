@@ -5,9 +5,14 @@ from django.test import TestCase
 from django.urls import reverse
 
 from apps.applications.choices import RoleFit, WorkType
-from apps.applications.models import JobApplication
+from apps.applications.models import ApplicationDocument, JobApplication
 
 from . import constants
+from .draft_documents import (
+    MASTER_CV_BASELINE,
+    build_application_document_drafts,
+    build_application_document_drafts_from_fields,
+)
 from .services import LOCKED_CV, build_skill_intelligence_context, build_smart_review
 
 PHANTOM_CV_NAMES = (
@@ -114,6 +119,129 @@ class JobIntelligenceTests(TestCase):
     def test_smart_review_page_requires_login(self):
         response = self.client.get(reverse("job_intelligence:smart_review"))
         self.assertEqual(response.status_code, 302)
+
+
+class ApplicationDocumentDraftGenerationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Howden",
+            job_title="Junior Data Analyst",
+            location="London hybrid",
+            required_skills="Python SQL Excel reporting dashboards",
+            job_description="Junior BI reporting role with KPI dashboards.",
+            date_applied=date(2026, 5, 10),
+        )
+
+    def test_cv_draft_generation_returns_final_master_cv_baseline_name(self):
+        drafts = build_application_document_drafts(self.application)
+        self.assertEqual(drafts.cv_tailoring.master_cv_baseline, MASTER_CV_BASELINE)
+        self.assertTrue(
+            drafts.cv_tailoring.recommended_cv_filename.startswith(
+                "Aminul_Islam_Data_Analyst_CV_Howden_"
+            )
+        )
+
+    def test_cv_draft_generation_uses_data_analyst_bi_analyst_positioning(self):
+        drafts = build_application_document_drafts(self.application)
+        combined = " ".join(
+            [
+                drafts.cv_tailoring.headline,
+                drafts.cv_tailoring.profile_angle,
+            ]
+        ).lower()
+        self.assertIn("data analyst", combined)
+        self.assertIn("bi analyst", combined)
+
+    def test_cv_draft_generation_prioritises_bakeops_and_careerfunnel_by_default(self):
+        drafts = build_application_document_drafts(
+            JobApplication.objects.create(
+                user=self.user,
+                company_name="General Co",
+                job_title="Junior Data Analyst",
+                required_skills="Python SQL Excel",
+                date_applied=date(2026, 5, 11),
+            )
+        )
+        evidence_text = " ".join(drafts.recommended_project_evidence)
+        bakeops_index = evidence_text.index("BakeOps Intelligence")
+        careerfunnel_index = evidence_text.index("CareerFunnel Tracker")
+        self.assertLess(bakeops_index, careerfunnel_index)
+
+    def test_careerfunnel_wording_uses_skill_gap_tracking_not_skill_intelligence(self):
+        drafts = build_application_document_drafts(self.application)
+        evidence_text = " ".join(drafts.recommended_project_evidence).lower()
+        self.assertIn("skill-gap tracking", evidence_text)
+        self.assertNotIn("skill intelligence", evidence_text)
+
+    def test_careerfunnel_wording_avoids_screenshot_and_saas_style_wording(self):
+        drafts = build_application_document_drafts(self.application)
+        combined = " ".join(
+            [
+                drafts.cover_letter_draft,
+                " ".join(drafts.recommended_project_evidence),
+                " ".join(drafts.claim_safety_notes),
+            ]
+        ).lower()
+        self.assertNotIn("screenshot evidence", combined)
+        self.assertNotIn("saas-style", combined)
+        self.assertNotIn("live saas", combined)
+
+    def test_cover_letter_draft_includes_company_and_role_title_when_available(self):
+        drafts = build_application_document_drafts(self.application)
+        self.assertIn("Howden", drafts.cover_letter_draft)
+        self.assertIn("Junior Data Analyst", drafts.cover_letter_draft)
+
+    def test_cover_letter_draft_is_labelled_as_draft_manual_review(self):
+        drafts = build_application_document_drafts(self.application)
+        self.assertIn("Draft Cover Letter", drafts.cover_letter_disclaimer)
+        self.assertIn("review before use", drafts.cover_letter_disclaimer.lower())
+        self.assertIn("Review before use", drafts.cover_letter_draft)
+
+    def test_claim_safety_notes_warn_against_unsupported_claims(self):
+        drafts = build_application_document_drafts_from_fields(
+            job_title="Junior Analytics Engineer",
+            job_description="dbt airflow pipeline required",
+            required_skills="dbt airflow",
+        )
+        notes = " ".join(drafts.claim_safety_notes).lower()
+        self.assertIn("review manually", notes)
+        self.assertIn("unsupported", notes)
+
+    def test_missing_job_data_is_handled_safely(self):
+        drafts = build_application_document_drafts_from_fields()
+        self.assertIn("Not enough evidence", " ".join(drafts.cv_tailoring.learning_gaps))
+        self.assertIn("Review", drafts.cover_letter_draft)
+
+    def test_no_application_document_record_is_created_in_phase_2(self):
+        before = ApplicationDocument.objects.count()
+        build_application_document_drafts(self.application)
+        self.client.login(username="aminul", password="StrongPass12345")
+        self.client.post(
+            reverse(
+                "job_intelligence:application_smart_review",
+                kwargs={"pk": self.application.pk},
+            ),
+        )
+        self.assertEqual(ApplicationDocument.objects.count(), before)
+
+    def test_application_smart_review_displays_document_drafts_after_post(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.post(
+            reverse(
+                "job_intelligence:application_smart_review",
+                kwargs={"pk": self.application.pk},
+            ),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Application Document Drafts")
+        self.assertContains(response, "Draft CV Tailoring Notes")
+        self.assertContains(response, "Draft Cover Letter")
+        self.assertContains(
+            response,
+            "Saving to the Application Document Pack is planned for Sprint 60 Phase 3",
+        )
 
 
 class SkillIntelligenceFoundationTests(TestCase):
