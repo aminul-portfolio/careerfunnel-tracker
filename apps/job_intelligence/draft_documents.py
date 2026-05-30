@@ -25,7 +25,7 @@ CAREERFUNNEL_EVIDENCE = (
     "CareerFunnel Tracker demonstrates a Django/Python analytics workflow with "
     "structured application records, funnel-stage metrics, source-performance reporting, "
     "data-quality warnings, manual intake workflow, skill-gap tracking, application "
-    "readiness checks, and 777 automated tests after Sprint 60 Phase 1."
+    "readiness checks, validated with 828 automated tests after Sprint 60 Phase 5."
 )
 
 BAKEOPS_EVIDENCE = (
