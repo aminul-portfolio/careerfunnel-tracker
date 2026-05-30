@@ -26,6 +26,7 @@ from .choices import (
     RoleFit,
     WorkType,
 )
+from .forms import ApplicationDocumentSelectionForm
 from .models import ApplicationDocument, JobApplication
 from .services import (
     ITEM_COMPANY_RESEARCHED,
@@ -171,6 +172,164 @@ class ApplicationDocumentViewTests(TestCase):
             response,
             "No CV or cover letter documents have been saved for this application yet.",
         )
+
+
+class ApplicationDocumentSelectionTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+        self.other_user = User.objects.create_user(username="other", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Howden",
+            job_title="Junior Data Analyst",
+            date_applied=date(2026, 5, 9),
+        )
+        self.other_application = JobApplication.objects.create(
+            user=self.other_user,
+            company_name="Other Co",
+            job_title="Analyst",
+            date_applied=date(2026, 5, 10),
+        )
+        self.cv_document = ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.CV,
+            name="Aminul_Islam_Data_Analyst_CV_Howden_Junior_Data_Analyst",
+            quick_call_notes="CV quick call prep notes.",
+        )
+        self.cover_letter_document = ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.COVER_LETTER,
+            name="Aminul_Islam_Cover_Letter_Howden_Junior_Data_Analyst",
+            quick_call_notes="Cover letter quick call prep notes.",
+        )
+        self.other_cv_document = ApplicationDocument.objects.create(
+            application=self.other_application,
+            document_type=DocumentType.CV,
+            name="Aminul_Islam_Data_Analyst_CV_Other_Co_Analyst",
+        )
+        self.detail_url = reverse(
+            "applications:application_detail",
+            kwargs={"pk": self.application.pk},
+        )
+
+    def test_job_application_can_store_selected_cv_document(self):
+        self.application.selected_cv_document = self.cv_document
+        self.application.save(update_fields=["selected_cv_document"])
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.selected_cv_document, self.cv_document)
+
+    def test_job_application_can_store_selected_cover_letter_document(self):
+        self.application.selected_cover_letter_document = self.cover_letter_document
+        self.application.save(update_fields=["selected_cover_letter_document"])
+        self.application.refresh_from_db()
+        self.assertEqual(
+            self.application.selected_cover_letter_document,
+            self.cover_letter_document,
+        )
+
+    def test_selection_form_only_lists_cv_documents_for_cv_field(self):
+        form = ApplicationDocumentSelectionForm(application=self.application)
+        cv_ids = set(form.fields["selected_cv_document"].queryset.values_list("pk", flat=True))
+        self.assertEqual(cv_ids, {self.cv_document.pk})
+
+    def test_selection_form_only_lists_cover_letter_documents_for_cover_letter_field(self):
+        form = ApplicationDocumentSelectionForm(application=self.application)
+        cover_letter_ids = set(
+            form.fields["selected_cover_letter_document"].queryset.values_list("pk", flat=True)
+        )
+        self.assertEqual(cover_letter_ids, {self.cover_letter_document.pk})
+
+    def test_selection_form_does_not_list_documents_from_another_application(self):
+        form = ApplicationDocumentSelectionForm(application=self.application)
+        all_ids = set(
+            form.fields["selected_cv_document"].queryset.values_list("pk", flat=True)
+        ) | set(
+            form.fields["selected_cover_letter_document"].queryset.values_list("pk", flat=True)
+        )
+        self.assertNotIn(self.other_cv_document.pk, all_ids)
+
+    def test_application_detail_page_displays_selected_cv_document_name(self):
+        self.application.selected_cv_document = self.cv_document
+        self.application.save(update_fields=["selected_cv_document"])
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(self.detail_url)
+        self.assertContains(response, "Selected CV")
+        self.assertContains(response, self.cv_document.name)
+
+    def test_application_detail_page_displays_selected_cover_letter_document_name(self):
+        self.application.selected_cover_letter_document = self.cover_letter_document
+        self.application.save(update_fields=["selected_cover_letter_document"])
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(self.detail_url)
+        self.assertContains(response, "Selected cover letter")
+        self.assertContains(response, self.cover_letter_document.name)
+
+    def test_application_detail_page_shows_no_selected_document_fallback(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(self.detail_url)
+        self.assertContains(response, "No CV selected yet.")
+        self.assertContains(response, "No cover letter selected yet.")
+
+    def test_post_select_documents_updates_selected_documents(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.post(
+            self.detail_url,
+            {
+                "action": "select_documents",
+                "selected_cv_document": self.cv_document.pk,
+                "selected_cover_letter_document": self.cover_letter_document.pk,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.selected_cv_document, self.cv_document)
+        self.assertEqual(
+            self.application.selected_cover_letter_document,
+            self.cover_letter_document,
+        )
+
+    def test_post_select_documents_rejects_wrong_document_type(self):
+        form = ApplicationDocumentSelectionForm(
+            application=self.application,
+            data={
+                "selected_cv_document": self.cover_letter_document.pk,
+                "selected_cover_letter_document": "",
+            },
+        )
+        self.assertFalse(form.is_valid())
+
+    def test_post_select_documents_rejects_document_from_another_application(self):
+        form = ApplicationDocumentSelectionForm(
+            application=self.application,
+            data={
+                "selected_cv_document": self.other_cv_document.pk,
+                "selected_cover_letter_document": "",
+            },
+        )
+        self.assertFalse(form.is_valid())
+
+    def test_post_select_documents_view_rejects_invalid_selection(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.post(
+            self.detail_url,
+            {
+                "action": "select_documents",
+                "selected_cv_document": self.other_cv_document.pk,
+                "selected_cover_letter_document": "",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.application.refresh_from_db()
+        self.assertIsNone(self.application.selected_cv_document)
+
+    def test_no_docx_pdf_download_or_upload_behaviour_added(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(self.detail_url)
+        content = response.content.decode().lower()
+        self.assertIn("no docx/pdf download in this phase", content)
+        self.assertNotIn("download docx", content)
+        self.assertNotIn("download pdf", content)
+        self.assertNotIn('type="file"', content)
 
 
 class JobApplicationViewTests(TestCase):

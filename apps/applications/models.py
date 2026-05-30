@@ -89,6 +89,20 @@ class JobApplication(models.Model):
     contact_name = models.CharField(max_length=160, blank=True)
     contact_email = models.EmailField(blank=True)
     notes = models.TextField(blank=True)
+    selected_cv_document = models.ForeignKey(
+        "ApplicationDocument",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="selected_as_cv_for_applications",
+    )
+    selected_cover_letter_document = models.ForeignKey(
+        "ApplicationDocument",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="selected_as_cover_letter_for_applications",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

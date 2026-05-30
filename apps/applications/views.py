@@ -8,7 +8,7 @@ from apps.followups.services import build_followup_email_draft, mark_followup_se
 from apps.job_intelligence.services import build_smart_review
 
 from .choices import PipelineStage, RoleFit
-from .forms import JobApplicationForm
+from .forms import ApplicationDocumentSelectionForm, JobApplicationForm
 from .models import JobApplication
 from .selectors import get_user_applications
 from .services import (
@@ -67,7 +67,46 @@ def evaluation_queue(request):
 
 @login_required
 def application_detail(request, pk):
-    application = get_object_or_404(JobApplication, pk=pk, user=request.user)
+    application = get_object_or_404(
+        JobApplication.objects.select_related(
+            "selected_cv_document",
+            "selected_cover_letter_document",
+        ),
+        pk=pk,
+        user=request.user,
+    )
+    document_selection_form = ApplicationDocumentSelectionForm(
+        application=application,
+        initial={
+            "selected_cv_document": application.selected_cv_document_id,
+            "selected_cover_letter_document": application.selected_cover_letter_document_id,
+        },
+    )
+    if request.method == "POST" and request.POST.get("action") == "select_documents":
+        document_selection_form = ApplicationDocumentSelectionForm(
+            request.POST,
+            application=application,
+        )
+        if document_selection_form.is_valid():
+            application.selected_cv_document = document_selection_form.cleaned_data[
+                "selected_cv_document"
+            ]
+            application.selected_cover_letter_document = document_selection_form.cleaned_data[
+                "selected_cover_letter_document"
+            ]
+            application.save(
+                update_fields=[
+                    "selected_cv_document",
+                    "selected_cover_letter_document",
+                    "updated_at",
+                ]
+            )
+            messages.success(
+                request,
+                "Selected CV and cover letter updated for this application.",
+            )
+            return redirect(f"{application.get_absolute_url()}#document-pack")
+    quick_call_notes = _build_quick_call_review_notes(application)
     return render(
         request,
         "applications/application_detail.html",
@@ -77,8 +116,25 @@ def application_detail(request, pk):
             "followup_email_draft": build_followup_email_draft(application),
             "evidence_readiness": build_application_evidence_readiness(application),
             "smart_review": build_smart_review(application),
+            "document_selection_form": document_selection_form,
+            "quick_call_notes": quick_call_notes,
         },
     )
+
+
+def _build_quick_call_review_notes(application: JobApplication) -> str:
+    notes: list[str] = []
+    if application.selected_cv_document and application.selected_cv_document.quick_call_notes:
+        notes.append(application.selected_cv_document.quick_call_notes)
+    if (
+        application.selected_cover_letter_document
+        and application.selected_cover_letter_document.quick_call_notes
+        and application.selected_cover_letter_document != application.selected_cv_document
+    ):
+        notes.append(application.selected_cover_letter_document.quick_call_notes)
+    if notes:
+        return "\n\n".join(notes)
+    return "No quick call notes saved on selected documents yet."
 
 
 @login_required
