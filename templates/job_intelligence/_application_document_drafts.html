@@ -34,5 +34,12 @@
 
     <h3>Recommended Project Evidence</h3>
     <ul class="workflow-list">{% for item in document_drafts.recommended_project_evidence %}<li>{{ item }}</li>{% endfor %}</ul>
+    {% if show_save_drafts_action %}
+    <form method="post" class="form-actions">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_drafts">
+        <button type="submit" class="btn btn-secondary">Save Drafts to Application Document Pack</button>
+    </form>
+    {% endif %}
 </section>
 {% endif %}

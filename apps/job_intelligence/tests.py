@@ -4,7 +4,13 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.applications.choices import RoleFit, WorkType
+from apps.applications.choices import (
+    DocumentSource,
+    DocumentStatus,
+    DocumentType,
+    RoleFit,
+    WorkType,
+)
 from apps.applications.models import ApplicationDocument, JobApplication
 
 from . import constants
@@ -12,6 +18,7 @@ from .draft_documents import (
     MASTER_CV_BASELINE,
     build_application_document_drafts,
     build_application_document_drafts_from_fields,
+    save_application_document_drafts,
 )
 from .services import LOCKED_CV, build_skill_intelligence_context, build_smart_review
 
@@ -214,7 +221,7 @@ class ApplicationDocumentDraftGenerationTests(TestCase):
         self.assertIn("Not enough evidence", " ".join(drafts.cv_tailoring.learning_gaps))
         self.assertIn("Review", drafts.cover_letter_draft)
 
-    def test_no_application_document_record_is_created_in_phase_2(self):
+    def test_generate_post_does_not_save_application_documents(self):
         before = ApplicationDocument.objects.count()
         build_application_document_drafts(self.application)
         self.client.login(username="aminul", password="StrongPass12345")
@@ -223,25 +230,171 @@ class ApplicationDocumentDraftGenerationTests(TestCase):
                 "job_intelligence:application_smart_review",
                 kwargs={"pk": self.application.pk},
             ),
+            {"action": "generate_drafts"},
         )
         self.assertEqual(ApplicationDocument.objects.count(), before)
 
-    def test_application_smart_review_displays_document_drafts_after_post(self):
+    def test_application_smart_review_displays_document_drafts_after_generate_post(self):
         self.client.login(username="aminul", password="StrongPass12345")
         response = self.client.post(
             reverse(
                 "job_intelligence:application_smart_review",
                 kwargs={"pk": self.application.pk},
             ),
+            {"action": "generate_drafts"},
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Application Document Drafts")
         self.assertContains(response, "Draft CV Tailoring Notes")
         self.assertContains(response, "Draft Cover Letter")
+        self.assertContains(response, "Save Drafts to Application Document Pack")
+
+
+class ApplicationDocumentDraftSaveTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Howden",
+            job_title="Junior Data Analyst",
+            location="London hybrid",
+            required_skills="Python SQL Excel reporting dashboards",
+            job_description="Junior BI reporting role with KPI dashboards.",
+            date_applied=date(2026, 5, 10),
+        )
+        self.smart_review_url = reverse(
+            "job_intelligence:application_smart_review",
+            kwargs={"pk": self.application.pk},
+        )
+        self.detail_url = reverse(
+            "applications:application_detail",
+            kwargs={"pk": self.application.pk},
+        )
+
+    def test_save_application_document_drafts_creates_exactly_two_records(self):
+        drafts = build_application_document_drafts(self.application)
+        before = ApplicationDocument.objects.count()
+        cv_document, cover_letter_document = save_application_document_drafts(
+            self.application,
+            drafts,
+        )
+        self.assertEqual(ApplicationDocument.objects.count(), before + 2)
+        self.assertEqual(cv_document.application, self.application)
+        self.assertEqual(cover_letter_document.application, self.application)
+
+    def test_cv_draft_record_uses_document_type_cv(self):
+        drafts = build_application_document_drafts(self.application)
+        cv_document, _cover_letter_document = save_application_document_drafts(
+            self.application,
+            drafts,
+        )
+        self.assertEqual(cv_document.document_type, DocumentType.CV)
+
+    def test_cover_letter_draft_record_uses_document_type_cover_letter(self):
+        drafts = build_application_document_drafts(self.application)
+        _cv_document, cover_letter_document = save_application_document_drafts(
+            self.application,
+            drafts,
+        )
+        self.assertEqual(cover_letter_document.document_type, DocumentType.COVER_LETTER)
+
+    def test_saved_records_use_status_draft_and_source_job_analyzer(self):
+        drafts = build_application_document_drafts(self.application)
+        cv_document, cover_letter_document = save_application_document_drafts(
+            self.application,
+            drafts,
+        )
+        for document in (cv_document, cover_letter_document):
+            self.assertEqual(document.status, DocumentStatus.DRAFT)
+            self.assertEqual(document.source, DocumentSource.JOB_ANALYZER)
+
+    def test_cv_record_uses_master_cv_baseline(self):
+        drafts = build_application_document_drafts(self.application)
+        cv_document, _cover_letter_document = save_application_document_drafts(
+            self.application,
+            drafts,
+        )
+        self.assertEqual(cv_document.cv_baseline_name, MASTER_CV_BASELINE)
+        self.assertEqual(cv_document.name, drafts.cv_tailoring.recommended_cv_filename)
+
+    def test_cv_record_content_includes_structured_tailoring_notes(self):
+        drafts = build_application_document_drafts(self.application)
+        cv_document, _cover_letter_document = save_application_document_drafts(
+            self.application,
+            drafts,
+        )
+        self.assertIn("Draft CV Tailoring Notes", cv_document.content)
+        self.assertIn("Profile angle:", cv_document.content)
+        self.assertIn("Skills to prioritise:", cv_document.tailoring_notes)
+
+    def test_cover_letter_record_content_includes_company_and_role(self):
+        drafts = build_application_document_drafts(self.application)
+        _cv_document, cover_letter_document = save_application_document_drafts(
+            self.application,
+            drafts,
+        )
+        self.assertIn("Howden", cover_letter_document.content)
+        self.assertIn("Junior Data Analyst", cover_letter_document.content)
+        self.assertTrue(
+            cover_letter_document.name.startswith("Aminul_Islam_Cover_Letter_Howden_")
+        )
+
+    def test_project_evidence_and_claim_safety_notes_are_saved(self):
+        drafts = build_application_document_drafts(self.application)
+        cv_document, cover_letter_document = save_application_document_drafts(
+            self.application,
+            drafts,
+        )
+        self.assertIn("BakeOps Intelligence", cv_document.project_evidence)
+        self.assertIn("skill-gap tracking", cv_document.project_evidence)
+        self.assertIn("Review manually", cv_document.claim_safety_notes)
+        self.assertIn("Review manually", cover_letter_document.claim_safety_notes)
+
+    def test_application_smart_review_save_post_creates_two_records(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        before = ApplicationDocument.objects.count()
+        response = self.client.post(self.smart_review_url, {"action": "save_drafts"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ApplicationDocument.objects.count(), before + 2)
         self.assertContains(
             response,
-            "Saving to the Application Document Pack is planned for Sprint 60 Phase 3",
+            "Draft CV and cover letter saved to the Application Document Pack.",
         )
+        self.assertContains(response, "View Application Document Pack")
+
+    def test_application_smart_review_generate_post_does_not_save_records(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        before = ApplicationDocument.objects.count()
+        response = self.client.post(self.smart_review_url, {"action": "generate_drafts"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ApplicationDocument.objects.count(), before)
+
+    def test_application_detail_page_displays_saved_document_names(self):
+        drafts = build_application_document_drafts(self.application)
+        save_application_document_drafts(self.application, drafts)
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Application Document Pack")
+        self.assertContains(response, drafts.cv_tailoring.recommended_cv_filename)
+        self.assertContains(response, "Aminul_Islam_Cover_Letter_Howden_")
+
+    def test_no_docx_pdf_or_upload_behaviour_added(self):
+        drafts = build_application_document_drafts(self.application)
+        cv_document, cover_letter_document = save_application_document_drafts(
+            self.application,
+            drafts,
+        )
+        combined = " ".join(
+            [
+                cv_document.content,
+                cover_letter_document.content,
+                cv_document.claim_safety_notes,
+            ]
+        ).lower()
+        self.assertNotIn(".docx", combined)
+        self.assertNotIn(".pdf", combined)
+        self.assertNotIn("upload", combined)
 
 
 class SkillIntelligenceFoundationTests(TestCase):

@@ -88,6 +88,7 @@
     <section class="content-card">
         <div class="card-header"><p class="eyebrow">Rule-Based Drafts</p><h2>Application Document Drafts</h2></div>
         <p class="muted-text">Generate deterministic draft CV tailoring notes and a draft cover letter from this job analysis. Draft only - review manually before use.</p>
+        <p class="muted-text">To save these drafts, first create or open an application record, then use Application Smart Review.</p>
         <form method="post" class="form-actions">
             {% csrf_token %}
             <input type="hidden" name="company_name" value="{{ form.company_name.value|default:'' }}">
