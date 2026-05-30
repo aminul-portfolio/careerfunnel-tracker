@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 
 from apps.applications.models import JobApplication
+from apps.job_intelligence.draft_documents import build_application_document_drafts_from_fields
 
 from .claude_provider import make_claude_cv_tailoring_provider, make_claude_provider
 from .forms import (
@@ -56,6 +57,7 @@ def job_posting_analyzer(request):
     tailoring_advisor = None
     ai_wrapper_result = None
     ai_score_comparison = None
+    document_drafts = None
     if request.method == "POST":
         form = JobPostingAnalyzerForm(request.POST)
         if form.is_valid():
@@ -69,6 +71,17 @@ def job_posting_analyzer(request):
                 location=location,
                 job_posting=job_posting,
             )
+            if request.POST.get("generate_drafts"):
+                document_drafts = build_application_document_drafts_from_fields(
+                    company_name=company_name,
+                    job_title=job_title,
+                    location=location,
+                    job_description=job_posting,
+                    fit_score=analysis.fit_score,
+                    fit_label=analysis.recommendation,
+                    recommended_cv=analysis.recommended_cv,
+                    recommended_projects=analysis.recommended_projects,
+                )
             api_key = getattr(settings, "ANTHROPIC_API_KEY", "")
             provider = make_claude_provider(api_key) if api_key else None
             ai_wrapper_result = build_openai_fit_scoring_with_fallback(
@@ -105,6 +118,7 @@ def job_posting_analyzer(request):
             "tailoring_advisor": tailoring_advisor,
             "ai_wrapper_result": ai_wrapper_result,
             "ai_score_comparison": ai_score_comparison,
+            "document_drafts": document_drafts,
         },
     )
 

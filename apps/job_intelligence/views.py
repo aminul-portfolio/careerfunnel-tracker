@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404, render
 
 from apps.applications.models import JobApplication
 
+from .draft_documents import build_application_document_drafts
 from .services import build_skill_intelligence_context, build_smart_review, build_smart_review_rows
 
 
@@ -27,8 +28,16 @@ def skill_intelligence(request):
 @login_required
 def application_smart_review(request, pk):
     application = get_object_or_404(JobApplication, pk=pk, user=request.user)
+    review = build_smart_review(application)
+    document_drafts = None
+    if request.method == "POST":
+        document_drafts = build_application_document_drafts(application, review)
     return render(
         request,
         "job_intelligence/application_smart_review.html",
-        {"application": application, "review": build_smart_review(application)},
+        {
+            "application": application,
+            "review": review,
+            "document_drafts": document_drafts,
+        },
     )
