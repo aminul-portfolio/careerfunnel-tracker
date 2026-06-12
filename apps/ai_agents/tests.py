@@ -1,13 +1,22 @@
 import json
+import zipfile
 from datetime import date, timedelta
+from io import BytesIO
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from pypdf import PdfWriter
+from pypdf.generic import DictionaryObject, NameObject, NumberObject, StreamObject
 
 from apps.applications.choices import FollowUpStatus, WorkType
+from apps.applications.document_text_extraction import (
+    PDF_EXTRACTION_SUCCESS_MESSAGE,
+    PDF_NO_EXTRACTABLE_TEXT_MESSAGE,
+)
 from apps.applications.models import JobApplication
 from apps.job_intelligence import constants as role_fit_constants
 from apps.weekly_review.choices import FunnelDiagnosis, WeeklyMood
@@ -1749,3 +1758,260 @@ class TestCvTailoringAdvisorSemanticFallback(TestCase):
         mock_make_provider.assert_not_called()
         self.assertContains(response, "CV Tailoring Advisor")
         self.assertContains(response, "Rule-based fallback remains active")
+
+
+def _upload_docx_bytes(*paragraphs: str) -> bytes:
+    body = "".join(f"<w:p><w:r><w:t>{text}</w:t></w:r></w:p>" for text in paragraphs)
+    document_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        f"<w:body>{body}</w:body></w:document>"
+    )
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("word/document.xml", document_xml)
+    return buffer.getvalue()
+
+
+def _upload_text_pdf_bytes(text: str) -> bytes:
+    writer = PdfWriter()
+    writer.add_blank_page(width=612, height=792)
+    page = writer.pages[0]
+    safe_text = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+    stream_data = f"BT /F1 12 Tf 72 720 Td ({safe_text}) Tj ET".encode("latin-1")
+    content = StreamObject()
+    content._data = stream_data
+    content.update({NameObject("/Length"): NumberObject(len(stream_data))})
+    font = DictionaryObject(
+        {
+            NameObject("/Type"): NameObject("/Font"),
+            NameObject("/Subtype"): NameObject("/Type1"),
+            NameObject("/BaseFont"): NameObject("/Helvetica"),
+        }
+    )
+    resources = DictionaryObject(
+        {NameObject("/Font"): DictionaryObject({NameObject("/F1"): font})}
+    )
+    page[NameObject("/Contents")] = content
+    page[NameObject("/Resources")] = resources
+    buffer = BytesIO()
+    writer.write(buffer)
+    return buffer.getvalue()
+
+
+def _upload_blank_pdf_bytes() -> bytes:
+    writer = PdfWriter()
+    writer.add_blank_page(width=612, height=792)
+    buffer = BytesIO()
+    writer.write(buffer)
+    return buffer.getvalue()
+
+
+class CvGapCoverLetterUploadViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="upload-ui", password="StrongPass12345")
+        self.client.login(username="upload-ui", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Howden",
+            job_title="Junior Data Analyst",
+            date_applied=date(2026, 5, 31),
+        )
+        self.cv_gap_url = reverse("ai_agents:cv_gap_analyzer")
+        self.cover_letter_url = reverse("ai_agents:cover_letter_quality_checker")
+
+    def test_cv_gap_page_shows_upload_field(self):
+        response = self.client.get(self.cv_gap_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Upload CV file")
+        self.assertContains(response, "Run CV Gap Analysis")
+        self.assertContains(response, "Text-based PDFs can be extracted")
+
+    def test_cv_gap_txt_upload_supports_analysis(self):
+        uploaded = SimpleUploadedFile(
+            "cv.txt",
+            b"Python SQL Excel stakeholder reporting",
+            content_type="text/plain",
+        )
+        response = self.client.post(
+            self.cv_gap_url,
+            {
+                "job_description": "Python SQL Excel stakeholder reporting",
+                "action": "analyze",
+                "cv_file": uploaded,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "CV Match Score")
+
+    def test_cv_gap_docx_extract_populates_textarea(self):
+        uploaded = SimpleUploadedFile(
+            "cv.docx",
+            _upload_docx_bytes("Python SQL reporting"),
+            content_type=(
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            ),
+        )
+        response = self.client.post(
+            self.cv_gap_url,
+            {
+                "job_description": "Python SQL reporting",
+                "action": "extract_cv_file",
+                "cv_file": uploaded,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Text extracted from DOCX")
+        self.assertContains(response, "Python SQL reporting")
+
+    def test_cv_gap_pdf_upload_supports_analysis(self):
+        uploaded = SimpleUploadedFile(
+            "cv.pdf",
+            _upload_text_pdf_bytes("Python SQL Excel stakeholder reporting"),
+            content_type="application/pdf",
+        )
+        response = self.client.post(
+            self.cv_gap_url,
+            {
+                "job_description": "Python SQL Excel stakeholder reporting",
+                "action": "analyze",
+                "cv_file": uploaded,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "CV Match Score")
+        self.assertContains(response, PDF_EXTRACTION_SUCCESS_MESSAGE)
+
+    def test_cv_gap_textarea_fallback_still_works(self):
+        response = self.client.post(
+            self.cv_gap_url,
+            {
+                "job_description": "Python SQL Excel dashboard reporting",
+                "cv_evidence": "Python Excel dashboard reporting",
+                "action": "analyze",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "CV Match Score")
+
+    def test_cover_letter_page_shows_upload_field(self):
+        response = self.client.get(self.cover_letter_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Upload cover letter file")
+        self.assertContains(response, "Check Cover Letter")
+        self.assertContains(response, "No external AI/API generation")
+
+    def test_cover_letter_txt_upload_supports_check(self):
+        uploaded = SimpleUploadedFile(
+            "letter.txt",
+            (
+                b"Dear Howden, I am applying for the Junior Data Analyst role. "
+                b"BakeOps Intelligence shows KPI reporting experience."
+            ),
+            content_type="text/plain",
+        )
+        response = self.client.post(
+            self.cover_letter_url,
+            {
+                "company_name": "Howden",
+                "job_title": "Junior Data Analyst",
+                "job_description": "KPI dashboard reporting stakeholder analysis",
+                "action": "check",
+                "cover_letter_file": uploaded,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Quality Score")
+        self.assertContains(response, "BakeOps Intelligence shows KPI reporting experience.")
+
+    def test_cover_letter_docx_extract_populates_textarea(self):
+        uploaded = SimpleUploadedFile(
+            "letter.docx",
+            _upload_docx_bytes("Dear Howden, BakeOps KPI reporting experience."),
+            content_type=(
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            ),
+        )
+        response = self.client.post(
+            self.cover_letter_url,
+            {
+                "company_name": "Howden",
+                "job_title": "Junior Data Analyst",
+                "job_description": "KPI reporting",
+                "action": "extract_cover_letter_file",
+                "cover_letter_file": uploaded,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Text extracted from DOCX")
+        self.assertContains(response, "BakeOps KPI reporting experience.")
+
+    def test_cover_letter_textarea_fallback_still_works(self):
+        response = self.client.post(
+            self.cover_letter_url,
+            {
+                "company_name": "Howden",
+                "job_title": "Junior Data Analyst",
+                "job_description": "KPI dashboard reporting",
+                "action": "check",
+                "cover_letter": (
+                    "Dear Howden, I am applying for the Junior Data Analyst role. "
+                    "BakeOps Intelligence shows KPI reporting experience."
+                ),
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Quality Score")
+
+    def test_invalid_upload_extension_shows_validation_error(self):
+        uploaded = SimpleUploadedFile(
+            "letter.exe",
+            b"bad",
+            content_type="application/octet-stream",
+        )
+        response = self.client.post(
+            self.cover_letter_url,
+            {
+                "company_name": "Howden",
+                "job_title": "Junior Data Analyst",
+                "action": "extract_cover_letter_file",
+                "cover_letter_file": uploaded,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Unsupported file type")
+
+    def test_blank_pdf_shows_no_extractable_text_message(self):
+        uploaded = SimpleUploadedFile(
+            "letter.pdf",
+            _upload_blank_pdf_bytes(),
+            content_type="application/pdf",
+        )
+        response = self.client.post(
+            self.cover_letter_url,
+            {
+                "company_name": "Howden",
+                "job_title": "Junior Data Analyst",
+                "job_description": "KPI reporting",
+                "action": "check",
+                "cover_letter_file": uploaded,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, PDF_NO_EXTRACTABLE_TEXT_MESSAGE)
+        self.assertNotContains(response, "Quality Score")
+
+    def test_upload_pages_avoid_oauth_auto_apply_and_automatic_submission_claims(self):
+        cv_gap_response = self.client.get(self.cv_gap_url)
+        cv_gap_content = cv_gap_response.content.decode().lower()
+        self.assertNotIn("oauth", cv_gap_content)
+        self.assertNotIn("auto-apply", cv_gap_content)
+        self.assertNotIn("automatic submission", cv_gap_content)
+
+        cover_letter_response = self.client.get(self.cover_letter_url)
+        cover_letter_content = cover_letter_response.content.decode().lower()
+        self.assertNotIn("oauth", cover_letter_content)
+        self.assertNotIn("auto-apply", cover_letter_content)
+        self.assertNotIn("automatic submission", cover_letter_content)
+        self.assertContains(cover_letter_response, "No external AI/API generation")
+        self.assertContains(cover_letter_response, "Manual review required")

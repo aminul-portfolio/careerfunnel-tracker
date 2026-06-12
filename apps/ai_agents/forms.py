@@ -1,5 +1,6 @@
 from django import forms
 
+from apps.applications.document_uploads import validate_uploaded_file
 from apps.applications.models import JobApplication
 
 
@@ -83,6 +84,34 @@ class CVGapAnalyzerForm(forms.Form):
             }
         ),
     )
+    cv_file = forms.FileField(
+        required=False,
+        widget=forms.ClearableFileInput(
+            attrs={
+                "class": "form-control cf-upload-input",
+                "accept": ".pdf,.docx,.txt",
+            }
+        ),
+    )
+    application = forms.ModelChoiceField(
+        queryset=JobApplication.objects.none(),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user is not None:
+            self.fields["application"].queryset = JobApplication.objects.filter(
+                user=user
+            ).order_by("-date_applied", "-created_at")
+
+    def clean_cv_file(self):
+        uploaded = self.cleaned_data.get("cv_file")
+        if uploaded is not None:
+            validate_uploaded_file(uploaded)
+        return uploaded
 
 
 class CoverLetterQualityForm(forms.Form):
@@ -105,11 +134,40 @@ class CoverLetterQualityForm(forms.Form):
         ),
     )
     cover_letter = forms.CharField(
+        required=False,
         widget=forms.Textarea(
             attrs={
                 "class": "form-control",
                 "rows": 12,
                 "placeholder": "Paste your cover letter draft here...",
             }
-        )
+        ),
     )
+    cover_letter_file = forms.FileField(
+        required=False,
+        widget=forms.ClearableFileInput(
+            attrs={
+                "class": "form-control cf-upload-input",
+                "accept": ".pdf,.docx,.txt",
+            }
+        ),
+    )
+    application = forms.ModelChoiceField(
+        queryset=JobApplication.objects.none(),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user is not None:
+            self.fields["application"].queryset = JobApplication.objects.filter(
+                user=user
+            ).order_by("-date_applied", "-created_at")
+
+    def clean_cover_letter_file(self):
+        uploaded = self.cleaned_data.get("cover_letter_file")
+        if uploaded is not None:
+            validate_uploaded_file(uploaded)
+        return uploaded

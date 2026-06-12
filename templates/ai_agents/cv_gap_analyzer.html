@@ -1,10 +1,61 @@
 {% extends "base.html" %}
-{% block title %}AI CV Gap Analyzer | CareerFunnel Tracker{% endblock %}
-{% block page_heading %}AI CV Gap Analyzer{% endblock %}
+{% block title %}CV Gap Analyzer | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}CV Gap Analyzer{% endblock %}
 {% block content %}
 <div class="dashboard-grid">
-    <section class="hero-panel"><p class="eyebrow">AI Evidence Match</p><h1>Compare a job description against your CV evidence.</h1><p>Find matched skills, partial matches, gaps, safe keywords, and claims to avoid.</p>{% include "ai_agents/_agent_nav.html" %}</section>
-    <section class="content-card"><form method="post" class="form-stack">{% csrf_token %}<div class="form-group"><label>Job Description</label>{{ form.job_description }}</div><div class="form-group"><label>Your CV / Evidence Text</label>{{ form.cv_evidence }}</div><button class="btn btn-primary" type="submit">Analyze CV Gap</button></form></section>
+    <section class="hero-panel premium-card premium-card--hero">
+        <p class="eyebrow premium-card__eyebrow">Evidence Match</p>
+        <h1>Compare a job description against your CV evidence.</h1>
+        <p>Upload your CV or paste evidence text, then run the gap analysis.</p>
+        {% include "ai_agents/_agent_nav.html" %}
+    </section>
+    <section class="content-card form-card form-shell premium-card">
+        <div class="card-header">
+            <p class="eyebrow">Evidence match</p>
+            <h2>Compare job text against CV evidence</h2>
+        </div>
+        <form method="post" enctype="multipart/form-data" class="form-stack">
+            {% csrf_token %}
+            <div class="form-grid">
+                <div class="form-field form-group form-wide">
+                    <label class="form-label">Job Description</label>
+                    {{ form.job_description }}
+                </div>
+                <div class="form-field form-group form-wide cf-upload-card cf-upload-dropzone">
+                    <label class="form-label" for="{{ form.cv_file.id_for_label }}">Upload CV file</label>
+                    <p class="form-helper muted-text">Supported: DOCX, PDF, TXT. Text-based PDFs can be extracted; scanned PDFs may require manual paste.</p>
+                    {{ form.cv_file }}
+                    {% if form.cv_file.errors %}
+                    <p class="note-text cf-upload-status">{{ form.cv_file.errors.0 }}</p>
+                    {% endif %}
+                    {% if uploaded_filename %}
+                    <p class="cf-upload-filename"><strong>Uploaded file:</strong> {{ uploaded_filename }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field form-group form-wide">
+                    <label class="form-label">Your CV / Evidence Text</label>
+                    <p class="form-helper muted-text">Paste manually or review extracted text here before analysis.</p>
+                    {{ form.cv_evidence }}
+                </div>
+                <div class="form-field form-group form-wide">
+                    <label class="form-label">Attach to Application (optional)</label>
+                    {{ form.application }}
+                </div>
+            </div>
+            <div class="form-actions cf-upload-actions">
+                <button class="btn btn-secondary" type="submit" name="action" value="extract_cv_file">Use uploaded file</button>
+                <button class="btn btn-primary" type="submit" name="action" value="analyze">Run CV Gap Analysis</button>
+            </div>
+        </form>
+        {% if upload_message %}
+        <p class="note-text cf-upload-status">{{ upload_message }}</p>
+        {% endif %}
+        {% if form.application.value %}
+        <div class="hero-actions">
+            <a class="btn btn-secondary" href="{% url 'applications:application_detail' form.application.value %}#document-pack">View Application Documents</a>
+        </div>
+        {% endif %}
+    </section>
     {% if analysis %}
     <section class="diagnosis-panel diagnosis-primary"><div><p class="eyebrow">CV Match Score</p><h2>{{ analysis.score }} / 100</h2><p>{{ analysis.recommendation }}</p></div><div class="diagnosis-action"><strong>Evidence Rule</strong><p>Use honest evidence only. Do not add tools or experience you cannot explain in interview.</p></div></section>
     <section class="dashboard-two-column">
