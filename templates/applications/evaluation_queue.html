@@ -19,6 +19,7 @@
                 <h2>Roles at Job Found or Fit Checked</h2>
             </div>
         </div>
+        <p class="muted-text">CV and cover letter exports use saved draft records with employer-facing formatting. Application Pack exports remain manual-review drafts only.</p>
         {% if table_rows %}
         <div class="table-wrap">
             <table class="data-table">
@@ -29,7 +30,9 @@
                         <th>Source</th>
                         <th>Role Fit</th>
                         <th>Pipeline Stage</th>
-                        <th></th>
+                        <th>CV Version</th>
+                        <th>Cover Letter</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -40,7 +43,32 @@
                         <td>{{ row.application.get_source_display }}</td>
                         <td>{{ row.application.get_role_fit_display }}</td>
                         <td>{{ row.application.get_pipeline_stage_display }}</td>
-                        <td><a href="{{ row.application.get_absolute_url }}" class="table-link">View</a></td>
+                        <td>{{ row.downloads.cv_version_display }}</td>
+                        <td>{{ row.downloads.cover_letter_version_display }}</td>
+                        <td>
+                            <a href="{{ row.application.get_absolute_url }}" class="table-link">View</a>
+                            {% if row.downloads.cv_urls %}
+                            <span class="table-subtext">CV:</span>
+                            {% if row.downloads.cv_urls.pdf %}
+                            <a href="{{ row.downloads.cv_urls.pdf }}" class="table-link">PDF</a>
+                            {% endif %}
+                            {% if row.downloads.cv_urls.docx %}
+                            <a href="{{ row.downloads.cv_urls.docx }}" class="table-link">DOCX</a>
+                            {% endif %}
+                            {% else %}
+                            <span class="table-subtext">{{ row.downloads.cv_missing_message }}</span>
+                            {% endif %}
+                            {% if row.downloads.cover_letter_urls %}
+                            <span class="table-subtext">Cover letter:</span>
+                            <a href="{{ row.downloads.cover_letter_urls.pdf }}" class="table-link">PDF</a>
+                            <a href="{{ row.downloads.cover_letter_urls.docx }}" class="table-link">DOCX</a>
+                            {% else %}
+                            <span class="table-subtext">{{ row.downloads.cover_letter_missing_message }}</span>
+                            {% endif %}
+                            <span class="table-subtext">Pack:</span>
+                            <a href="{{ row.downloads.application_pack_urls.pdf }}" class="table-link">PDF</a>
+                            <a href="{{ row.downloads.application_pack_urls.docx }}" class="table-link">DOCX</a>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

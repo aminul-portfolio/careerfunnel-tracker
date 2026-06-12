@@ -8,6 +8,21 @@ urlpatterns = [
     path("", views.application_list, name="application_list"),
     path("add/", views.application_create, name="application_create"),
     path("evaluation/", views.evaluation_queue, name="evaluation_queue"),
+    path(
+        "<int:pk>/evaluation/download/cv/<str:file_format>/",
+        views.evaluation_cv_download,
+        name="evaluation_cv_download",
+    ),
+    path(
+        "<int:pk>/evaluation/download/cover-letter/<str:file_format>/",
+        views.evaluation_cover_letter_download,
+        name="evaluation_cover_letter_download",
+    ),
+    path(
+        "<int:pk>/evaluation/download/application-pack/<str:file_format>/",
+        views.evaluation_application_pack_download,
+        name="evaluation_application_pack_download",
+    ),
     path("<int:pk>/", views.application_detail, name="application_detail"),
     path(
         "<int:pk>/documents/<int:document_pk>/download/<str:file_format>/",

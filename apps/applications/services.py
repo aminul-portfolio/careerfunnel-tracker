@@ -4,8 +4,128 @@ from dataclasses import dataclass
 
 from django.db.models import Count
 
-from .choices import ApplicationSource, ApplicationStatus, FollowUpStatus
+from .choices import (
+    DEFAULT_COVER_LETTER_DRAFT_LABEL,
+    DEFAULT_CV_BASELINE_NAME,
+    LEGACY_COVER_LETTER_VERSION_LABELS,
+    LEGACY_CV_VERSION_LABELS,
+    ApplicationSource,
+    ApplicationStatus,
+    FollowUpStatus,
+)
+from .file_storage import build_professional_cv_basename
+from .file_storage import sanitize_filename_part as _sanitize_filename_part
+from .models import JobApplication
 from .selectors import get_user_applications
+
+
+def export_cv_version_label(cv_version: str) -> str:
+    cleaned = (cv_version or "").strip()
+    if not cleaned:
+        return ""
+    return DEFAULT_CV_BASELINE_NAME
+
+
+def resolve_application_cv_reference_date(application: JobApplication):
+    return application.date_applied
+
+
+def display_application_cv_version(
+    *,
+    company_name: str = "",
+    job_title: str = "",
+    reference_date=None,
+) -> str:
+    return build_professional_cv_basename(
+        company_name,
+        job_title,
+        reference_date=reference_date,
+    )
+
+
+def display_application_cv_version_for_application(application: JobApplication) -> str:
+    return build_professional_cv_basename(
+        application.company_name,
+        application.job_title,
+        reference_date=resolve_application_cv_reference_date(application),
+    )
+
+
+def display_internal_cv_baseline(cv_version: str) -> str | None:
+    cleaned = (cv_version or "").strip()
+    if not cleaned:
+        return None
+    if cleaned in LEGACY_CV_VERSION_LABELS:
+        return cleaned
+    if cleaned == DEFAULT_CV_BASELINE_NAME:
+        return cleaned
+    return None
+
+
+@dataclass(frozen=True)
+class ApplicationCvVersionDisplay:
+    professional_basename: str
+    internal_baseline: str | None
+
+
+def build_application_cv_version_display(
+    application: JobApplication,
+) -> ApplicationCvVersionDisplay:
+    return ApplicationCvVersionDisplay(
+        professional_basename=display_application_cv_version_for_application(application),
+        internal_baseline=display_internal_cv_baseline(application.cv_version),
+    )
+
+
+def build_analyzer_cv_version_display(
+    *,
+    company_name: str = "",
+    job_title: str = "",
+    internal_cv: str = "",
+) -> ApplicationCvVersionDisplay:
+    return ApplicationCvVersionDisplay(
+        professional_basename=display_application_cv_version(
+            company_name=company_name,
+            job_title=job_title,
+        ),
+        internal_baseline=display_internal_cv_baseline(internal_cv or DEFAULT_CV_BASELINE_NAME),
+    )
+
+
+def build_prefill_cover_letter_version_label(
+    company_name: str,
+    job_title: str,
+) -> str:
+    company = (company_name or "").strip()
+    role = (job_title or "").strip()
+    if company and role:
+        company_part = _sanitize_filename_part(company)
+        role_part = _sanitize_filename_part(role)
+        return f"Aminul_Islam_Cover_Letter_{company_part}_{role_part}"
+    return DEFAULT_COVER_LETTER_DRAFT_LABEL
+
+
+def export_cover_letter_version_label(
+    cover_letter_version: str,
+    company_name: str = "",
+    job_title: str = "",
+) -> str:
+    cleaned = (cover_letter_version or "").strip()
+    if not cleaned:
+        return ""
+    if cleaned in LEGACY_COVER_LETTER_VERSION_LABELS:
+        return build_prefill_cover_letter_version_label(company_name, job_title)
+    return cleaned
+
+
+def display_evaluation_cv_label(
+    *,
+    application: JobApplication,
+    cv_document_available: bool,
+) -> str:
+    if not cv_document_available and not (application.cv_version or "").strip():
+        return "No CV draft available yet"
+    return display_application_cv_version_for_application(application)
 
 
 @dataclass(frozen=True)
@@ -264,7 +384,7 @@ def build_save_quality_warnings(application) -> list[SaveQualityWarning]:
             SaveQualityWarning(
                 field_name="source",
                 message=(
-                    "Source is set to the generic 'Other' — Source ROI cannot attribute "
+                    "Source is set to the generic 'Other' - Source ROI cannot attribute "
                     "this application to a specific job board or channel. It will be "
                     "grouped under Other."
                 ),
@@ -281,7 +401,7 @@ def build_save_quality_warnings(application) -> list[SaveQualityWarning]:
             SaveQualityWarning(
                 field_name="cv_version",
                 message=(
-                    "CV version is missing — CV Version Performance analytics cannot "
+                    "CV version is missing - CV Version Performance analytics cannot "
                     "track which CV was used for this application."
                 ),
                 analytics_impact="CV Version Performance cannot group/track this application.",

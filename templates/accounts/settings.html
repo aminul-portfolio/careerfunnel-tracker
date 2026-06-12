@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Settings | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Settings{% endblock %}
+{% block content %}
+<div class="dashboard-grid account-page">
+    <section class="hero-panel premium-card premium-card--hero account-hero account-hero--compact">
+        <p class="eyebrow premium-card__eyebrow">Account settings</p>
+        <h1>Workspace preferences</h1>
+        <p>Update profile details for your authenticated portfolio workspace. Changes apply to this local tracker only.</p>
+    </section>
+
+    <div class="page-grid">
+        <section class="content-card premium-card form-card account-card">
+            <div class="card-header">
+                <p class="eyebrow">Profile settings</p>
+                <h2>Personal details</h2>
+            </div>
+            <form method="post" class="form-stack premium-form-shell">
+                {% csrf_token %}
+                <div class="form-grid">
+                    <div class="form-field form-group">
+                        <label class="form-label" for="{{ form.first_name.id_for_label }}">First name</label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}<p class="form-error-inline">{{ form.first_name.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="form-field form-group">
+                        <label class="form-label" for="{{ form.last_name.id_for_label }}">Last name</label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}<p class="form-error-inline">{{ form.last_name.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="form-field form-group form-wide">
+                        <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}<p class="form-error-inline">{{ form.email.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save settings</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="content-card premium-card account-card">
+            <div class="card-header">
+                <p class="eyebrow">Workspace preferences</p>
+                <h2>Career search defaults</h2>
+            </div>
+            <div class="detail-grid">
+                <div class="detail-item"><span>Locked CV reference</span><strong>{{ settings_context.locked_cv_reference }}</strong></div>
+                <div class="detail-item"><span>Preferred role focus</span><strong>{{ settings_context.preferred_role_focus }}</strong></div>
+            </div>
+            <p class="section-note">Reference values are shown for manual workflow guidance. No automatic CV switching is applied.</p>
+        </section>
+
+        <section class="content-card premium-card account-card">
+            <div class="card-header">
+                <p class="eyebrow">Security / account</p>
+                <h2>Session and password</h2>
+            </div>
+            <div class="detail-grid">
+                <div class="detail-item"><span>Last login</span><strong>{{ settings_context.last_login_display }}</strong></div>
+            </div>
+            <div class="hero-actions">
+                <a href="{% url 'accounts:password_change' %}" class="btn btn-secondary">Change password</a>
+                <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">View profile</a>
+            </div>
+        </section>
+
+        <section class="content-card premium-card account-card">
+            <div class="card-header">
+                <p class="eyebrow">Manual workflow</p>
+                <h2>Claim-safe reminder</h2>
+            </div>
+            <p class="trust-note">{{ settings_context.claim_safe_note }}</p>
+        </section>
+    </div>
+</div>
+{% endblock %}

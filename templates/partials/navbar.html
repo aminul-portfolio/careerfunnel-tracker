@@ -1,78 +1,120 @@
 <header class="topbar cf-topbar">
-    <div class="cf-topbar-start">
-        <button
-            type="button"
-            class="cf-sidebar-reopen-btn"
-            id="sidebar-reopen-btn"
-            aria-label="Expand sidebar"
-            aria-controls="app-sidebar"
-            hidden
-        >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path
-                    d="M6 4l4 4-4 4"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                />
-            </svg>
-        </button>
-        <button
-            type="button"
-            class="cf-mobile-nav-toggle"
-            id="mobile-nav-toggle"
-            aria-controls="app-sidebar"
-            aria-expanded="false"
-            aria-label="Open navigation menu"
-        >
-            <span class="cf-mobile-nav-toggle-bar" aria-hidden="true"></span>
-            <span class="cf-mobile-nav-toggle-bar" aria-hidden="true"></span>
-            <span class="cf-mobile-nav-toggle-bar" aria-hidden="true"></span>
-        </button>
-        <div class="cf-topbar-heading">
-            <nav class="cf-breadcrumb" aria-label="Breadcrumb">
-                <ol class="cf-breadcrumb-list">
-                    <li class="cf-breadcrumb-item">CareerFunnel</li>
-                    <li class="cf-breadcrumb-item cf-breadcrumb-item-current" aria-current="page">
-                        {% block page_heading %}CareerFunnel Tracker{% endblock %}
-                    </li>
-                </ol>
-            </nav>
-            {% block topbar_subtitle %}
-            <p class="cf-topbar-subtitle">Manual, advisory, evidence-based job-search operating workflow</p>
-            {% endblock %}
-            {% block topbar_actions %}{% endblock %}
+    <div class="topbar__inner">
+        <div class="cf-topbar-start topbar__identity">
+            <button
+                type="button"
+                class="cf-sidebar-reopen-btn"
+                id="sidebar-reopen-btn"
+                aria-label="Expand sidebar"
+                aria-controls="app-sidebar"
+                hidden
+            >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path
+                        d="M6 4l4 4-4 4"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    />
+                </svg>
+            </button>
+            <button
+                type="button"
+                class="cf-mobile-nav-toggle"
+                id="mobile-nav-toggle"
+                aria-controls="app-sidebar"
+                aria-expanded="false"
+                aria-label="Open navigation menu"
+            >
+                <span class="cf-mobile-nav-toggle-bar" aria-hidden="true"></span>
+                <span class="cf-mobile-nav-toggle-bar" aria-hidden="true"></span>
+                <span class="cf-mobile-nav-toggle-bar" aria-hidden="true"></span>
+            </button>
+            <div class="cf-topbar-heading topbar__heading topbar__identity-block">
+                <nav class="cf-breadcrumb topbar__breadcrumb" aria-label="Breadcrumb">
+                    <ol class="cf-breadcrumb-list">
+                        <li class="cf-breadcrumb-item">CareerFunnel</li>
+                        <li class="cf-breadcrumb-item cf-breadcrumb-item-current topbar__title" aria-current="page">
+                            {% block page_heading %}CareerFunnel Tracker{% endblock %}
+                        </li>
+                    </ol>
+                </nav>
+                {% block topbar_subtitle %}
+                <p class="cf-topbar-subtitle topbar__subtitle">Evidence-led job-search intelligence for role-fit decisions, CV evidence, follow-ups, and reporting confidence.</p>
+                {% endblock %}
+                {% block topbar_actions %}{% endblock %}
+            </div>
         </div>
-    </div>
-    <div class="topbar-actions cf-topbar-actions">
-        <span class="cf-env-badge">Local Portfolio Demo</span>
-        {% if request.user.is_authenticated %}
-            <details class="cf-quick-add">
-                <summary class="cf-menu-trigger btn btn-primary">Quick Add</summary>
-                <ul class="cf-menu-panel" role="list">
-                    <li><a href="{% url 'applications:application_create' %}">Add Application</a></li>
-                    <li><a href="{% url 'daily_log:daily_log_create' %}">Add Daily Log</a></li>
-                    <li><a href="{% url 'weekly_review:weekly_review_create' %}">Add Weekly Review</a></li>
-                    <li><a href="{% url 'notes:note_create' %}">Add Note</a></li>
-                </ul>
-            </details>
-            <details class="cf-user-menu">
-                <summary class="cf-menu-trigger user-pill">{{ request.user.username }}</summary>
-                <ul class="cf-menu-panel" role="list">
-                    <li><a href="{% url 'dashboard:overview' %}">Profile</a></li>
-                    <li><a href="{% url 'notes:note_list' %}">Settings</a></li>
-                    <li>
-                        <form method="post" action="{% url 'accounts:logout' %}" class="cf-logout-form">
-                            {% csrf_token %}
-                            <button type="submit" class="cf-logout-button">Logout</button>
-                        </form>
-                    </li>
-                </ul>
-            </details>
-        {% else %}
-            <a href="{% url 'accounts:login' %}" class="btn btn-secondary">Login</a>
-            <a href="{% url 'accounts:register' %}" class="btn btn-primary">Register</a>
-        {% endif %}
+        <div class="topbar-actions cf-topbar-actions topbar__actions">
+            <div class="topbar__actions-cluster">
+                <span class="topbar__environment cf-env-badge topbar__badge">
+                    <span class="topbar__environment-dot" aria-hidden="true"></span>
+                    Local Portfolio Demo
+                </span>
+                {% if request.user.is_authenticated %}
+                    <div
+                        class="topbar__menu topbar__menu--quick-add cf-quick-add topbar__quick-add"
+                        data-topbar-menu
+                    >
+                        <button
+                            type="button"
+                            class="topbar__button cf-menu-trigger btn btn-primary topbar__quick-add-trigger"
+                            data-topbar-menu-trigger
+                            aria-expanded="false"
+                            aria-haspopup="true"
+                        >
+                            <span class="topbar__quick-add-icon" aria-hidden="true">+</span>
+                            Quick Add
+                            <svg class="topbar__menu-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                                <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <ul class="topbar__menu-panel cf-menu-panel" role="menu" hidden>
+                            <li role="none"><a href="{% url 'applications:application_create' %}" role="menuitem">Add Application</a></li>
+                            <li role="none"><a href="{% url 'daily_log:daily_log_create' %}" role="menuitem">Add Daily Log</a></li>
+                            <li role="none"><a href="{% url 'weekly_review:weekly_review_create' %}" role="menuitem">Add Weekly Review</a></li>
+                            <li role="none"><a href="{% url 'notes:note_create' %}" role="menuitem">Add Note</a></li>
+                        </ul>
+                    </div>
+                    <div class="topbar__menu topbar__menu--user cf-user-menu topbar__user topbar__account" data-topbar-menu>
+                        <button
+                            type="button"
+                            class="topbar__button cf-menu-trigger user-pill topbar__user-pill account-pill"
+                            data-topbar-menu-trigger
+                            aria-expanded="false"
+                            aria-haspopup="true"
+                            aria-label="Account menu for {{ account_display_name }}"
+                        >
+                            <span class="account-pill__avatar" aria-hidden="true">{{ account_initials }}</span>
+                            <span class="account-pill__text">
+                                <span class="account-pill__name">{{ account_display_name }}</span>
+                                <span class="account-pill__meta">Account</span>
+                            </span>
+                            <svg class="topbar__menu-chevron account-pill__chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                                <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <ul class="topbar__menu-panel cf-menu-panel account-menu-panel" role="menu" hidden>
+                            <li class="account-menu-header" role="none">
+                                <span class="account-menu-header__label">Signed in as</span>
+                                <strong class="account-menu-header__name">{{ account_display_name }}</strong>
+                            </li>
+                            <li role="none"><a href="{% url 'accounts:profile' %}" role="menuitem">Profile</a></li>
+                            <li role="none"><a href="{% url 'accounts:settings' %}" role="menuitem">Settings</a></li>
+                            <li role="none">
+                                <form method="post" action="{% url 'accounts:logout' %}" class="cf-logout-form">
+                                    {% csrf_token %}
+                                    <button type="submit" class="cf-logout-button" role="menuitem">Logout</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                {% else %}
+                    <a href="{% url 'accounts:login' %}" class="btn btn-secondary topbar__button topbar__auth-link">Sign in</a>
+                    <a href="{% url 'accounts:register' %}" class="btn btn-primary topbar__button topbar__auth-link">Create account</a>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </header>

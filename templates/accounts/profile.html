@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Profile | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Profile{% endblock %}
+{% block content %}
+<div class="dashboard-grid account-page">
+    <section class="hero-panel premium-card premium-card--hero account-hero">
+        <div class="account-hero__layout">
+            <div class="account-avatar" aria-hidden="true">{{ account_initials }}</div>
+            <div>
+                <p class="eyebrow premium-card__eyebrow">Account</p>
+                <h1>{{ profile.display_name }}</h1>
+                <p>Signed in to your authenticated portfolio workspace. Manual review and evidence-led reporting only.</p>
+                <div class="hero-actions">
+                    <a href="{% url 'accounts:settings' %}" class="btn btn-secondary">Settings</a>
+                    <a href="{% url 'dashboard:overview' %}" class="btn btn-primary">Open dashboard</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="page-grid page-grid--with-aside">
+        <section class="content-card premium-card account-card">
+            <div class="card-header">
+                <p class="eyebrow">Account details</p>
+                <h2>Profile information</h2>
+            </div>
+            <div class="detail-grid">
+                <div class="detail-item"><span>Display name</span><strong>{{ profile.display_name }}</strong></div>
+                <div class="detail-item"><span>Username</span><strong>{{ profile.username }}</strong></div>
+                <div class="detail-item"><span>Email</span><strong>{{ profile.email }}</strong></div>
+                <div class="detail-item"><span>Role</span><strong>{{ profile.role_label }}</strong></div>
+                <div class="detail-item"><span>Account status</span><strong>{{ profile.account_status }}</strong></div>
+                <div class="detail-item"><span>Last login</span><strong>{{ profile.last_login_display }}</strong></div>
+                <div class="detail-item"><span>Member since</span><strong>{{ profile.date_joined_display }}</strong></div>
+            </div>
+        </section>
+
+        <aside class="content-card premium-card account-card account-card--aside">
+            <div class="card-header">
+                <p class="eyebrow">Workspace summary</p>
+                <h2>Portfolio workspace</h2>
+            </div>
+            <ul class="account-summary-list">
+                {% for item in profile.workspace_summary %}
+                <li class="account-summary-item">
+                    <span>{{ item.label }}</span>
+                    <strong>{{ item.value }}</strong>
+                </li>
+                {% endfor %}
+            </ul>
+            <p class="trust-note">{{ profile.claim_safe_note }}</p>
+        </aside>
+    </div>
+</div>
+{% endblock %}

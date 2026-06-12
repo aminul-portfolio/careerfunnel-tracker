@@ -1,14 +1,124 @@
 {% extends "base.html" %}
-{% block title %}AI Cover Letter Quality Checker | CareerFunnel Tracker{% endblock %}
-{% block page_heading %}AI Cover Letter Quality Checker{% endblock %}
+{% block title %}Cover Letter Quality Checker | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Cover Letter Quality Checker{% endblock %}
 {% block content %}
 <div class="dashboard-grid">
-    <section class="hero-panel"><p class="eyebrow">AI Application Quality</p><h1>Check whether your cover letter is specific, evidence-based, and role-aligned.</h1><p>The checker scores company relevance, role fit, project evidence, business value, length, and exaggeration risk.</p>{% include "ai_agents/_agent_nav.html" %}</section>
-    <section class="content-card"><form method="post" class="form-stack">{% csrf_token %}<div class="form-grid"><div class="form-group"><label>Company</label>{{ form.company_name }}</div><div class="form-group"><label>Job Title</label>{{ form.job_title }}</div></div><div class="form-group"><label>Job Description</label>{{ form.job_description }}</div><div class="form-group"><label>Cover Letter Draft</label>{{ form.cover_letter }}</div><button class="btn btn-primary" type="submit">Check Cover Letter</button></form></section>
+    <section class="hero-panel premium-card premium-card--hero">
+        <p class="eyebrow premium-card__eyebrow">Application Quality</p>
+        <h1>Check cover letters with evidence-based discipline.</h1>
+        <p>Upload a file or paste text, review extracted content, then run the rule-based checker.</p>
+        <p class="muted-text">Advisory only. Manual review required. No external AI/API generation.</p>
+        {% include "ai_agents/_agent_nav.html" %}
+    </section>
+
+    <section class="content-card form-card form-shell premium-card">
+        <div class="card-header">
+            <p class="eyebrow">Cover letter review</p>
+            <h2>Paste role and draft details</h2>
+        </div>
+        <form method="post" enctype="multipart/form-data" class="form-stack" id="cover-letter-checker-form">
+            {% csrf_token %}
+            <div class="form-grid">
+                <div class="form-field form-group">
+                    <label class="form-label">Company</label>
+                    {{ form.company_name }}
+                </div>
+                <div class="form-field form-group">
+                    <label class="form-label">Job Title</label>
+                    {{ form.job_title }}
+                </div>
+                <div class="form-field form-group form-wide">
+                    <label class="form-label">Job Description</label>
+                    {{ form.job_description }}
+                </div>
+                <div class="form-field form-group form-wide cf-upload-card cf-upload-dropzone">
+                    <label class="form-label" for="{{ form.cover_letter_file.id_for_label }}">Upload cover letter file</label>
+                    <p class="form-helper muted-text">Supported: DOCX, PDF, TXT. Text-based PDFs can be extracted; scanned PDFs may require manual paste.</p>
+                    {{ form.cover_letter_file }}
+                    {% if form.cover_letter_file.errors %}
+                    <p class="note-text cf-upload-status">{{ form.cover_letter_file.errors.0 }}</p>
+                    {% endif %}
+                    {% if uploaded_filename %}
+                    <p class="cf-upload-filename"><strong>Uploaded file:</strong> {{ uploaded_filename }}</p>
+                    {% endif %}
+                </div>
+                <div class="form-field form-group form-wide">
+                    <label class="form-label">Cover Letter Draft</label>
+                    <p class="form-helper muted-text">Paste manually or use extracted text below. Edit before checking.</p>
+                    {{ form.cover_letter }}
+                </div>
+                <div class="form-field form-group form-wide">
+                    <label class="form-label">Attach to Application (optional)</label>
+                    {{ form.application }}
+                </div>
+            </div>
+            <div class="form-actions cf-upload-actions">
+                <button class="btn btn-secondary" type="submit" name="action" value="extract_cover_letter_file">Use uploaded file</button>
+                <button class="btn btn-primary" type="submit" name="action" value="check">Check Cover Letter</button>
+                <button class="btn btn-secondary" type="submit" name="action" value="upload_cover_letter_file">Save file to application</button>
+            </div>
+        </form>
+        {% if upload_message %}
+        <p class="note-text cf-upload-status">{{ upload_message }}</p>
+        {% endif %}
+    </section>
+
     {% if result %}
-    <section class="diagnosis-panel diagnosis-primary"><div><p class="eyebrow">Quality Score</p><h2>{{ result.score }} / 100 — {{ result.quality_label }}</h2><p>{{ result.evidence_warning }}</p></div><div class="diagnosis-action"><strong>Best Fix</strong><p>{% if result.recommended_fixes %}{{ result.recommended_fixes.0 }}{% else %}This draft is already in reasonable shape.{% endif %}</p></div></section>
-    <section class="dashboard-two-column"><div class="content-card"><div class="card-header"><p class="eyebrow">Strengths</p><h2>What Works</h2></div><ul class="workflow-list">{% for item in result.strengths %}<li>{{ item }}</li>{% empty %}<li>No clear strengths detected yet.</li>{% endfor %}</ul></div><div class="content-card"><div class="card-header"><p class="eyebrow">Weaknesses</p><h2>What to Improve</h2></div><ul class="workflow-list">{% for item in result.weaknesses %}<li>{{ item }}</li>{% empty %}<li>No major weakness detected.</li>{% endfor %}</ul></div></section>
-    <section class="content-card"><div class="card-header"><p class="eyebrow">Recommended Fixes</p><h2>Before Sending</h2></div><ul class="workflow-list">{% for item in result.recommended_fixes %}<li>{{ item }}</li>{% empty %}<li>Only final proofread needed.</li>{% endfor %}</ul></section>
+    <section class="diagnosis-panel diagnosis-primary">
+        <div>
+            <p class="eyebrow">Quality Score</p>
+            <h2>{{ result.score }} / 100 - {{ result.quality_label }}</h2>
+            <p>{{ result.evidence_warning }}</p>
+        </div>
+        <div class="diagnosis-action">
+            <strong>Best Fix</strong>
+            <p>{% if result.recommended_fixes %}{{ result.recommended_fixes.0 }}{% else %}This draft is already in reasonable shape.{% endif %}</p>
+        </div>
+    </section>
+    <section class="dashboard-two-column">
+        <div class="content-card premium-card">
+            <div class="card-header"><p class="eyebrow">Strengths</p><h2>What Works</h2></div>
+            <ul class="workflow-list">{% for item in result.strengths %}<li>{{ item }}</li>{% empty %}<li>No clear strengths detected yet.</li>{% endfor %}</ul>
+        </div>
+        <div class="content-card premium-card">
+            <div class="card-header"><p class="eyebrow">Weaknesses</p><h2>What to Improve</h2></div>
+            <ul class="workflow-list">{% for item in result.weaknesses %}<li>{{ item }}</li>{% empty %}<li>No major weakness detected.</li>{% endfor %}</ul>
+        </div>
+    </section>
+    <section class="content-card premium-card">
+        <div class="card-header"><p class="eyebrow">Recommended Fixes</p><h2>Before Sending</h2></div>
+        <ul class="workflow-list">{% for item in result.recommended_fixes %}<li>{{ item }}</li>{% empty %}<li>Only final proofread needed.</li>{% endfor %}</ul>
+        <div class="form-actions">
+            <button class="btn btn-primary" type="submit" form="cover-letter-checker-form" name="action" value="apply_recommended_fixes">Apply Recommended Fixes</button>
+        </div>
+        <p class="muted-text">Deterministic local adjustment only. Manual review required before use.</p>
+    </section>
+    {% endif %}
+
+    {% if adjusted %}
+    <section class="content-card premium-card">
+        <div class="card-header">
+            <p class="eyebrow">Adjusted Draft</p>
+            <h2>Review before download</h2>
+        </div>
+        <p class="note-text"><strong>Manual review required before use.</strong></p>
+        <p class="muted-text">No external AI/API generation. No automatic submission.</p>
+        <label class="form-label" for="adjusted-cover-letter-preview">Adjusted cover letter preview</label>
+        <textarea id="adjusted-cover-letter-preview" class="form-control" rows="14" readonly>{{ adjusted.body }}</textarea>
+        {% if adjusted.changes_applied %}
+        <p class="muted-text">Changes applied: {{ adjusted.changes_applied|join:" " }}</p>
+        {% endif %}
+        <div class="form-actions">
+            <form method="post" class="inline-form">
+                {% csrf_token %}
+                <input type="hidden" name="company_name" value="{{ form.company_name.value|default:'' }}">
+                <input type="hidden" name="job_title" value="{{ form.job_title.value|default:'' }}">
+                <textarea name="adjusted_cover_letter" hidden>{{ adjusted.body }}</textarea>
+                <button class="btn btn-secondary" type="submit" name="action" value="download_adjusted_docx">Download Adjusted DOCX</button>
+                <button class="btn btn-secondary" type="submit" name="action" value="download_adjusted_pdf">Download Adjusted PDF</button>
+            </form>
+        </div>
+    </section>
     {% endif %}
 </div>
 {% endblock %}

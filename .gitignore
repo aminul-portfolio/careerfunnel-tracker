@@ -35,3 +35,22 @@ htmlcov/
 
 # Excel exports
 exports/*.xlsx
+
+# Generated runtime storage (never commit)
+storage/
+storage/application_documents/
+
+# Explicit generated-document paths under media (MEDIA_ROOT is already ignored)
+media/generated_documents/
+media/application_documents/
+
+# Personal master CV reference files kept outside the repo
+data/master_cv/
+
+# Generated document artifacts (scoped to runtime folders only)
+storage/**/*.docx
+storage/**/*.pdf
+storage/application_documents/**/*
+media/generated_documents/**/*.docx
+media/generated_documents/**/*.pdf
+media/application_documents/**/*

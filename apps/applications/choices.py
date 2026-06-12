@@ -2,6 +2,7 @@ from django.db import models
 
 
 class ApplicationStatus(models.TextChoices):
+    SAVED_FOR_LATER = "saved_for_later", "Saved for later"
     SUBMITTED = "submitted", "Submitted"
     AUTO_REJECTED = "auto_rejected", "Auto-rejected"
     NO_RESPONSE = "no_response", "No response"
@@ -15,6 +16,7 @@ class ApplicationStatus(models.TextChoices):
 
 
 class PipelineStage(models.TextChoices):
+    SAVED_FOR_LATER = "saved_for_later", "Saved for later"
     JOB_FOUND = "job_found", "Job found"
     FIT_CHECKED = "fit_checked", "Fit checked"
     CV_SELECTED = "cv_selected", "CV selected"
@@ -61,6 +63,10 @@ class DocumentType(models.TextChoices):
 class DocumentStatus(models.TextChoices):
     DRAFT = "draft", "Draft"
     REVIEWED = "reviewed", "Reviewed"
+    READY_FOR_MANUAL_SUBMISSION = (
+        "ready_for_manual_submission",
+        "Ready for manual submission",
+    )
     SUBMITTED = "submitted", "Submitted"
     ARCHIVED = "archived", "Archived"
 
@@ -69,9 +75,37 @@ class DocumentSource(models.TextChoices):
     MANUAL = "manual", "Manual"
     JOB_ANALYZER = "job_analyzer", "Job analyzer"
     MASTER_CV_BASELINE = "master_cv_baseline", "Master CV baseline"
+    USER_UPLOAD = "user_upload", "User uploaded"
+
+
+UPLOADED_CV_DOCUMENT_NAME = "Uploaded Final CV"
+UPLOADED_COVER_LETTER_DOCUMENT_NAME = "Uploaded Final Cover Letter"
+
+ALLOWED_UPLOAD_EXTENSIONS = frozenset({"pdf", "docx", "txt"})
+MAX_UPLOAD_FILE_SIZE_BYTES = 5 * 1024 * 1024
 
 
 DEFAULT_CV_BASELINE_NAME = "Aminul_Islam_Data_Analyst_CV"
+
+LEGACY_CV_VERSION_LABELS = frozenset(
+    {
+        "Finance_DA_CV_v1",
+        "BI_Reporting_CV_v1",
+        "DA_CV_v1",
+        "DA_CV_v2",
+    }
+)
+
+LEGACY_COVER_LETTER_VERSION_LABELS = frozenset(
+    {
+        "Tailored_CL_v1",
+        "Tailored_CL_v2",
+    }
+)
+
+DEFAULT_COVER_LETTER_DRAFT_LABEL = "Aminul_Islam_Cover_Letter_Draft"
+
+GENERIC_COVER_LETTER_DRAFT_LABEL = "Draft cover letter"
 
 
 class ApplicationSource(models.TextChoices):

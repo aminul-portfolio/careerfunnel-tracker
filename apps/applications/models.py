@@ -15,6 +15,7 @@ from .choices import (
     RoleFit,
     WorkType,
 )
+from .storage import uploaded_application_document_storage
 
 
 class JobApplication(models.Model):
@@ -112,7 +113,7 @@ class JobApplication(models.Model):
         verbose_name_plural = "Job applications"
 
     def __str__(self):
-        return f"{self.company_name} — {self.job_title}"
+        return f"{self.company_name} - {self.job_title}"
 
     def get_absolute_url(self):
         return reverse("applications:application_detail", kwargs={"pk": self.pk})
@@ -149,6 +150,16 @@ class JobApplication(models.Model):
         return self.follow_up_date <= timezone.localdate()
 
 
+def application_document_upload_to(instance, filename: str) -> str:
+    from .file_storage import build_upload_storage_relative_path
+
+    return build_upload_storage_relative_path(
+        application_id=instance.application_id,
+        document_type=instance.document_type,
+        original_filename=filename,
+    )
+
+
 class ApplicationDocument(models.Model):
     application = models.ForeignKey(
         JobApplication,
@@ -161,7 +172,7 @@ class ApplicationDocument(models.Model):
     )
     name = models.CharField(max_length=255)
     status = models.CharField(
-        max_length=20,
+        max_length=40,
         choices=DocumentStatus.choices,
         default=DocumentStatus.DRAFT,
     )
@@ -180,6 +191,14 @@ class ApplicationDocument(models.Model):
         blank=True,
         default=DEFAULT_CV_BASELINE_NAME,
     )
+    uploaded_file = models.FileField(
+        upload_to=application_document_upload_to,
+        storage=uploaded_application_document_storage,
+        blank=True,
+    )
+    original_filename = models.CharField(max_length=255, blank=True)
+    file_size = models.PositiveIntegerField(default=0)
+    uploaded_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

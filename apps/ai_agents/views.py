@@ -1,11 +1,35 @@
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, render
+from django.core.exceptions import ValidationError
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
 
+from apps.applications.choices import DocumentType
+from apps.applications.document_text_extraction import (
+    resolve_cover_letter_for_check,
+    resolve_cv_evidence_for_analysis,
+)
+from apps.applications.document_uploads import (
+    attach_uploaded_document,
+    extract_uploaded_document_text,
+)
+from apps.applications.file_storage import build_professional_cover_letter_download_filename
+from apps.applications.master_cv import (
+    COVER_LETTER_BODY_MISSING_MESSAGE,
+    extract_cover_letter_body_for_export,
+    validate_cover_letter_export_body,
+)
 from apps.applications.models import JobApplication
+from apps.applications.professional_exports import (
+    DOCX_CONTENT_TYPE,
+    PDF_CONTENT_TYPE,
+    render_cover_letter_bytes_from_fields,
+)
 from apps.job_intelligence.draft_documents import build_application_document_drafts_from_fields
 
 from .claude_provider import make_claude_cv_tailoring_provider, make_claude_provider
+from .cover_letter_adjustment import apply_cover_letter_recommended_fixes
 from .forms import (
     ApplicationChoiceForm,
     CoverLetterQualityForm,
@@ -43,6 +67,61 @@ def _application_has_interview_recruiter_signal(application) -> bool:
         if _recruiter_email_has_interview_screening_signal(recruiter_email):
             return True
     return False
+
+
+def _download_adjusted_cover_letter_response(
+    request,
+    *,
+    company_name: str,
+    job_title: str,
+    adjusted_body: str,
+    file_format: str,
+):
+    export_body = extract_cover_letter_body_for_export(
+        adjusted_body,
+        company_name=company_name,
+        job_title=job_title,
+    )
+    validation_error = validate_cover_letter_export_body(
+        export_body,
+        company_name=company_name,
+        job_title=job_title,
+    )
+    if validation_error:
+        messages.error(request, validation_error)
+        return redirect("ai_agents:cover_letter_quality_checker")
+
+    normalized_format = file_format.lower()
+    if normalized_format == "docx":
+        content = render_cover_letter_bytes_from_fields(
+            company_name=company_name,
+            job_title=job_title,
+            body=export_body,
+            file_format="docx",
+        )
+        content_type = DOCX_CONTENT_TYPE
+        extension = "docx"
+    elif normalized_format == "pdf":
+        content = render_cover_letter_bytes_from_fields(
+            company_name=company_name,
+            job_title=job_title,
+            body=export_body,
+            file_format="pdf",
+        )
+        content_type = PDF_CONTENT_TYPE
+        extension = "pdf"
+    else:
+        messages.error(request, COVER_LETTER_BODY_MISSING_MESSAGE)
+        return redirect("ai_agents:cover_letter_quality_checker")
+
+    filename = build_professional_cover_letter_download_filename(
+        company_name,
+        job_title,
+        extension,
+    )
+    response = HttpResponse(content, content_type=content_type)
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 @login_required
@@ -229,36 +308,233 @@ def application_agent_pack(request, pk):
 @login_required
 def cv_gap_analyzer(request):
     analysis = None
+    upload_message = None
+    uploaded_filename = None
     if request.method == "POST":
-        form = CVGapAnalyzerForm(request.POST)
+        action = request.POST.get("action", "analyze")
+        form = CVGapAnalyzerForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
-            analysis = analyze_cv_gap(
-                job_description=form.cleaned_data["job_description"],
-                cv_evidence=form.cleaned_data.get("cv_evidence", ""),
-            )
+            cv_file = form.cleaned_data.get("cv_file")
+            application = form.cleaned_data.get("application")
+            cv_evidence = form.cleaned_data.get("cv_evidence", "")
+
+            if cv_file is not None:
+                uploaded_filename = cv_file.name
+
+            if action == "extract_cv_file" and cv_file is not None:
+                extraction = extract_uploaded_document_text(cv_file)
+                upload_message = extraction.status_message
+                post_data = request.POST.copy()
+                if extraction.extracted:
+                    post_data["cv_evidence"] = extraction.text
+                    cv_evidence = extraction.text
+                form = CVGapAnalyzerForm(post_data, request.FILES, user=request.user)
+                if application is not None:
+                    try:
+                        attach_uploaded_document(
+                            application=application,
+                            document_type=DocumentType.CV,
+                            uploaded_file=cv_file,
+                            content=extraction.text if extraction.extracted else "",
+                        )
+                        messages.success(
+                            request,
+                            "Uploaded Final CV saved to the application document pack.",
+                        )
+                    except ValidationError as exc:
+                        messages.error(request, exc.messages[0])
+
+            elif action == "analyze":
+                resolution = resolve_cv_evidence_for_analysis(
+                    pasted_text=cv_evidence,
+                    uploaded_file=cv_file,
+                )
+                cv_evidence = resolution.text
+                if resolution.status_message:
+                    upload_message = resolution.status_message
+                if resolution.validation_error:
+                    messages.error(request, resolution.validation_error)
+                elif cv_evidence:
+                    analysis = analyze_cv_gap(
+                        job_description=form.cleaned_data["job_description"],
+                        cv_evidence=cv_evidence,
+                    )
+                if cv_file is not None and application is not None:
+                    try:
+                        extraction = extract_uploaded_document_text(cv_file)
+                        attach_uploaded_document(
+                            application=application,
+                            document_type=DocumentType.CV,
+                            uploaded_file=cv_file,
+                            content=extraction.text if extraction.extracted else "",
+                        )
+                    except ValidationError as exc:
+                        messages.error(request, exc.messages[0])
+                post_data = request.POST.copy()
+                post_data["cv_evidence"] = cv_evidence
+                form = CVGapAnalyzerForm(post_data, request.FILES, user=request.user)
     else:
-        form = CVGapAnalyzerForm()
-    return render(request, "ai_agents/cv_gap_analyzer.html", {"form": form, "analysis": analysis})
+        form = CVGapAnalyzerForm(user=request.user)
+    return render(
+        request,
+        "ai_agents/cv_gap_analyzer.html",
+        {
+            "form": form,
+            "analysis": analysis,
+            "upload_message": upload_message,
+            "uploaded_filename": uploaded_filename,
+        },
+    )
 
 
 @login_required
 def cover_letter_quality_checker(request):
     result = None
+    adjusted = None
+    upload_message = None
+    uploaded_filename = None
     if request.method == "POST":
-        form = CoverLetterQualityForm(request.POST)
-        if form.is_valid():
-            result = check_cover_letter_quality(
-                company_name=form.cleaned_data.get("company_name", ""),
-                job_title=form.cleaned_data.get("job_title", ""),
-                job_description=form.cleaned_data.get("job_description", ""),
-                cover_letter=form.cleaned_data["cover_letter"],
+        action = request.POST.get("action", "check")
+
+        if action == "download_adjusted_docx":
+            return _download_adjusted_cover_letter_response(
+                request,
+                company_name=request.POST.get("company_name", ""),
+                job_title=request.POST.get("job_title", ""),
+                adjusted_body=request.POST.get("adjusted_cover_letter", ""),
+                file_format="docx",
             )
+        if action == "download_adjusted_pdf":
+            return _download_adjusted_cover_letter_response(
+                request,
+                company_name=request.POST.get("company_name", ""),
+                job_title=request.POST.get("job_title", ""),
+                adjusted_body=request.POST.get("adjusted_cover_letter", ""),
+                file_format="pdf",
+            )
+
+        form = CoverLetterQualityForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            company_name = form.cleaned_data.get("company_name", "")
+            job_title = form.cleaned_data.get("job_title", "")
+            job_description = form.cleaned_data.get("job_description", "")
+            cover_letter = form.cleaned_data.get("cover_letter", "")
+            cover_letter_file = form.cleaned_data.get("cover_letter_file")
+            application = form.cleaned_data.get("application")
+
+            if cover_letter_file is not None:
+                uploaded_filename = cover_letter_file.name
+
+            if action == "extract_cover_letter_file" and cover_letter_file is not None:
+                extraction = extract_uploaded_document_text(cover_letter_file)
+                upload_message = extraction.status_message
+                post_data = request.POST.copy()
+                if extraction.extracted:
+                    post_data["cover_letter"] = extraction.text
+                    cover_letter = extraction.text
+                form = CoverLetterQualityForm(post_data, request.FILES, user=request.user)
+                if application is not None:
+                    try:
+                        attach_uploaded_document(
+                            application=application,
+                            document_type=DocumentType.COVER_LETTER,
+                            uploaded_file=cover_letter_file,
+                            content=extraction.text if extraction.extracted else "",
+                        )
+                        messages.success(
+                            request,
+                            "Uploaded Final Cover Letter saved to the application document pack.",
+                        )
+                    except ValidationError as exc:
+                        messages.error(request, exc.messages[0])
+
+            elif action == "upload_cover_letter_file" and cover_letter_file is not None:
+                if application is None:
+                    messages.error(
+                        request,
+                        "Select an application before uploading a cover letter file.",
+                    )
+                else:
+                    try:
+                        extraction = extract_uploaded_document_text(cover_letter_file)
+                        upload_result = attach_uploaded_document(
+                            application=application,
+                            document_type=DocumentType.COVER_LETTER,
+                            uploaded_file=cover_letter_file,
+                            content=extraction.text if extraction.extracted else "",
+                        )
+                        upload_message = upload_result.message
+                        messages.success(
+                            request,
+                            "Uploaded document saved for manual review. No check was run.",
+                        )
+                    except ValidationError as exc:
+                        messages.error(request, exc.messages[0])
+
+            elif action == "check":
+                resolution = resolve_cover_letter_for_check(
+                    pasted_text=cover_letter,
+                    uploaded_file=cover_letter_file,
+                )
+                cover_letter = resolution.text
+                if resolution.status_message and not upload_message:
+                    upload_message = resolution.status_message
+                post_data = request.POST.copy()
+                post_data["cover_letter"] = cover_letter
+                form = CoverLetterQualityForm(post_data, request.FILES, user=request.user)
+
+                if resolution.validation_error:
+                    messages.error(request, resolution.validation_error)
+                else:
+                    result = check_cover_letter_quality(
+                        company_name=company_name,
+                        job_title=job_title,
+                        job_description=job_description,
+                        cover_letter=cover_letter,
+                    )
+
+            elif action == "apply_recommended_fixes":
+                resolution = resolve_cover_letter_for_check(
+                    pasted_text=cover_letter,
+                    uploaded_file=cover_letter_file,
+                )
+                cover_letter = resolution.text
+                if resolution.status_message and not upload_message:
+                    upload_message = resolution.status_message
+                post_data = request.POST.copy()
+                post_data["cover_letter"] = cover_letter
+                form = CoverLetterQualityForm(post_data, request.FILES, user=request.user)
+
+                if resolution.validation_error:
+                    messages.error(request, resolution.validation_error)
+                elif not cover_letter.strip():
+                    messages.error(request, "Paste a cover letter draft before applying fixes.")
+                else:
+                    result = check_cover_letter_quality(
+                        company_name=company_name,
+                        job_title=job_title,
+                        job_description=job_description,
+                        cover_letter=cover_letter,
+                    )
+                    adjusted = apply_cover_letter_recommended_fixes(
+                        company_name=company_name,
+                        job_title=job_title,
+                        job_description=job_description,
+                        cover_letter=cover_letter,
+                        quality_result=result,
+                    )
     else:
-        form = CoverLetterQualityForm()
+        form = CoverLetterQualityForm(user=request.user)
     return render(
         request,
         "ai_agents/cover_letter_quality_checker.html",
-        {"form": form, "result": result},
+        {
+            "form": form,
+            "result": result,
+            "adjusted": adjusted,
+            "upload_message": upload_message,
+            "uploaded_filename": uploaded_filename,
+        },
     )
 
 

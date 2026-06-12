@@ -5,7 +5,7 @@ from urllib.parse import quote
 
 from django.contrib.auth.models import User
 from django.core import mail
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
@@ -397,7 +397,7 @@ class ApplicationDocumentDownloadTests(TestCase):
         self.client.login(username="aminul", password="StrongPass12345")
         response = self.client.get(self._download_url(self.application, self.cv_document, "docx"))
         self.assertIn(
-            'filename="Aminul_Islam_Data_Analyst_CV_Howden_Junior_Data_Analyst.docx"',
+            'filename="Aminul_Islam_CV_Howden_Junior_Data_Analyst_20260509.docx"',
             response["Content-Disposition"],
         )
 
@@ -426,7 +426,7 @@ class ApplicationDocumentDownloadTests(TestCase):
             self._download_url(self.application, self.cover_letter_document, "pdf")
         )
         self.assertIn(
-            'filename="Aminul_Islam_Cover_Letter_Howden_Junior_Data_Analyst.pdf"',
+            'filename="Aminul_Islam_Cover_Letter_Howden_Junior_Data_Analyst_20260509.pdf"',
             response["Content-Disposition"],
         )
 
@@ -531,7 +531,7 @@ class JobApplicationViewTests(TestCase):
                 "job_url": "https://example.com/job",
                 "location": "London",
                 "work_type": WorkType.HYBRID,
-                "salary_range": "£30,000 - £35,000",
+                "salary_range": "GBP 30,000 - GBP 35,000",
                 "source": ApplicationSource.LINKEDIN,
                 "role_fit": RoleFit.STRONG,
                 "date_applied": "2026-05-09",
@@ -1805,7 +1805,7 @@ class ApplicationCreatePrefillTests(TestCase):
                 "job_url": "https://example.com/job",
                 "location": "London",
                 "work_type": WorkType.HYBRID,
-                "salary_range": "£30,000 - £35,000",
+                "salary_range": "GBP 30,000 - GBP 35,000",
                 "source": ApplicationSource.LINKEDIN,
                 "role_fit": RoleFit.STRONG,
                 "date_applied": "2026-05-09",
@@ -1831,7 +1831,7 @@ class JobPostingAnalyzerPrefillBridgeTests(TestCase):
     def test_save_as_application_not_shown_before_analysis(self):
         response = self.client.get(self.analyzer_url)
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "Review & Pre-fill Application")
+        self.assertNotContains(response, "Review & Pre-fill Application", html=True)
 
     def test_save_as_application_shown_after_analysis(self):
         response = self.client.post(
@@ -1844,12 +1844,8 @@ class JobPostingAnalyzerPrefillBridgeTests(TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Review & Pre-fill Application")
-        self.assertContains(response, "pre-filled Add Application form")
-        self.assertContains(
-            response,
-            "Nothing is saved until you review and submit the form.",
-        )
+        self.assertContains(response, "Review & Pre-fill Application", html=True)
+        self.assertContains(response, "Nothing is submitted automatically")
 
     def test_save_as_application_link_contains_encoded_get_params(self):
         job_title = "Junior Finance Data Analyst"
@@ -1949,3 +1945,18 @@ class EvaluationQueueTests(TestCase):
         response = self.client.get(self.queue_url)
         self.assertContains(response, "Evaluation Queue")
         self.assertContains(response, self.queue_url)
+
+
+class MasterCvLockedClaimWordingTests(SimpleTestCase):
+    def test_baseline_and_portfolio_use_locked_master_cv_claims(self):
+        from apps.applications.master_cv import (
+            BASELINE_PROFILE_PARAGRAPH,
+            EXPERIENCE_MONEY_TRANSFER_FX_BULLETS,
+            PORTFOLIO_PROJECT_BULLETS,
+        )
+
+        careerfunnel = PORTFOLIO_PROJECT_BULLETS["CareerFunnel Tracker"]
+        self.assertIn("771 automated tests", careerfunnel[2])
+        self.assertNotIn("828 automated tests", careerfunnel[2])
+        self.assertIn("GBP 30,000", BASELINE_PROFILE_PARAGRAPH)
+        self.assertIn("GBP 30,000", EXPERIENCE_MONEY_TRANSFER_FX_BULLETS[2])

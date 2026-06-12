@@ -28,7 +28,15 @@
             <div class="form-group"><label>Response Date</label>{{ form.response_date }}{{ form.response_date.errors }}</div>
         </div></div>
         <div class="form-section"><h2>Application Readiness</h2><div class="form-grid">
-            <div class="form-group"><label>CV Version</label>{{ form.cv_version }}{{ form.cv_version.errors }}</div>
+            <div class="form-group form-wide">
+                <label>CV Version</label>
+                <p><strong>{{ cv_version_display.professional_basename }}</strong></p>
+                {% if cv_version_display.internal_baseline %}
+                <p class="muted-text">Internal baseline: {{ cv_version_display.internal_baseline }}</p>
+                {% endif %}
+                {{ form.cv_version.as_hidden }}
+                {{ form.cv_version.errors }}
+            </div>
             <div class="form-group"><label>Cover Letter Version</label>{{ form.cover_letter_version }}{{ form.cover_letter_version.errors }}</div>
             <div class="checkbox-group form-wide">{{ form.is_cv_tailored }} <label>CV tailored for this role</label></div>
             <div class="checkbox-group form-wide">{{ form.is_cover_letter_tailored }} <label>Cover letter tailored</label></div>

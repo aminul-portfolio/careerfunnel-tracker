@@ -5,28 +5,28 @@
     docEl.classList.remove("no-js");
     docEl.classList.add("cf-js-ready");
 
+    function safeInit(moduleName, initFn) {
+        if (typeof initFn !== "function") {
+            return;
+        }
+        try {
+            initFn();
+        } catch (error) {
+            /* One module failure must not block other UI enhancements. */
+        }
+    }
+
     function initModules() {
-        if (window.CF && window.CF.sidebar) {
-            window.CF.sidebar.init();
-        }
-        if (window.CF && window.CF.tableControls) {
-            window.CF.tableControls.init();
-        }
-        if (window.CF && window.CF.filters) {
-            window.CF.filters.init();
-        }
-        if (window.CF && window.CF.forms) {
-            window.CF.forms.init();
-        }
-        if (window.CF && window.CF.confirmations) {
-            window.CF.confirmations.init();
-        }
-        if (window.CF && window.CF.copyEvidence) {
-            window.CF.copyEvidence.init();
-        }
-        if (window.CF && window.CF.reportAccordions) {
-            window.CF.reportAccordions.init();
-        }
+        var cf = window.CF || {};
+        safeInit("sidebar", cf.sidebar && cf.sidebar.init);
+        safeInit("tableControls", cf.tableControls && cf.tableControls.init);
+        safeInit("filters", cf.filters && cf.filters.init);
+        safeInit("forms", cf.forms && cf.forms.init);
+        safeInit("confirmations", cf.confirmations && cf.confirmations.init);
+        safeInit("copyEvidence", cf.copyEvidence && cf.copyEvidence.init);
+        safeInit("reportAccordions", cf.reportAccordions && cf.reportAccordions.init);
+        safeInit("downloadDropdowns", cf.downloadDropdowns && cf.downloadDropdowns.init);
+        safeInit("topbarMenus", cf.topbarMenus && cf.topbarMenus.init);
     }
 
     if (document.readyState === "loading") {

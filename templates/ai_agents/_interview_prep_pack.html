@@ -1,0 +1,167 @@
+{% if prep and selected_application %}
+<section class="content-card">
+    <div class="card-header">
+        <p class="eyebrow">Application-specific preparation guide</p>
+        <h2>Interview preparation pack</h2>
+        <p class="muted-text">{{ selected_application.company_name }} - {{ selected_application.job_title }}</p>
+    </div>
+    <p class="muted-text">
+        Evidence-based, advisory preparation only. Manual review required. No external AI/API generation.
+    </p>
+    <div class="detail-grid">
+        <div class="detail-item">
+            <span>CV version</span>
+            <strong>{% if cv_version_display %}{{ cv_version_display.professional_basename }}{% else %}{{ prep.cv_version_label }}{% endif %}</strong>
+        </div>
+        <div class="detail-item">
+            <span>Preparation status</span>
+            <strong>{{ prep.preparation_status }}</strong>
+        </div>
+        {% if selected_application.get_role_fit_display %}
+        <div class="detail-item">
+            <span>Role fit</span>
+            <strong>{{ selected_application.get_role_fit_display }}</strong>
+        </div>
+        {% endif %}
+        {% if selected_application.get_source_display %}
+        <div class="detail-item">
+            <span>Source</span>
+            <strong>{{ selected_application.get_source_display }}</strong>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<section class="content-card">
+    <div class="card-header">
+        <p class="eyebrow">Profile Angle</p>
+        <h2>How to position yourself</h2>
+    </div>
+    <p class="note-text">{{ prep.profile_angle }}</p>
+    <div class="tag-row">
+        {% for project in prep.projects_to_use %}
+        <span>{{ project }}</span>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="content-card">
+    <div class="card-header">
+        <p class="eyebrow">Project Evidence Set</p>
+        <h2>Selected project evidence for this application</h2>
+    </div>
+    <p class="muted-text">The same project list is reused across every section below.</p>
+    {% for project in prep.project_evidence %}
+    <div class="detail-item">
+        <h3>{{ project.name }}</h3>
+        <p><strong>Best for:</strong> {{ project.interview_purpose }}</p>
+        <p><strong>Technical evidence:</strong> {{ project.best_technical_evidence }}</p>
+        <p><strong>Business value:</strong> {{ project.business_value }}</p>
+        <p class="muted-text"><strong>Use when asked about:</strong></p>
+        <div class="tag-row">
+            {% for tag in project.question_types %}
+            <span>{{ tag }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</section>
+
+<section class="content-card">
+    <div class="card-header">
+        <p class="eyebrow">Technical Topics to Revise</p>
+        <h2>Role-linked revision focus</h2>
+    </div>
+    {% for topic in prep.technical_topics %}
+    <div class="detail-item">
+        <h3>{{ topic.topic }}</h3>
+        <p><strong>Why it matters:</strong> {{ topic.why_it_matters }}</p>
+        <p><strong>Evidence to mention:</strong> {{ topic.project_evidence }}</p>
+        <p><strong>Revision focus:</strong> {{ topic.revision_focus }}</p>
+    </div>
+    {% endfor %}
+</section>
+
+<section class="content-card">
+    <div class="card-header">
+        <p class="eyebrow">Likely Interview Questions</p>
+        <h2>Prepare practical answers</h2>
+    </div>
+    {% for group in prep.likely_questions %}
+    <div class="detail-item">
+        <h3>{{ group.group_name }}</h3>
+        <ul class="agent-list">
+            {% for question in group.questions %}
+            <li>{{ question }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endfor %}
+</section>
+
+<section class="content-card">
+    <div class="card-header">
+        <p class="eyebrow">STAR Answer Bank</p>
+        <h2>Structured answer preparation</h2>
+    </div>
+    {% for star in prep.star_examples %}
+    <div class="detail-item">
+        <h3>{{ star.title }}</h3>
+        <p><strong>Situation:</strong> {{ star.situation }}</p>
+        <p><strong>Task:</strong> {{ star.task }}</p>
+        <p><strong>Action:</strong> {{ star.action }}</p>
+        <p><strong>Result:</strong> {{ star.result }}</p>
+        <p><strong>Project or work evidence:</strong> {{ star.project_evidence }}</p>
+        <p><strong>Best question fit:</strong> {{ star.best_question_fit }}</p>
+    </div>
+    {% endfor %}
+</section>
+
+<section class="content-card">
+    <div class="card-header">
+        <p class="eyebrow">Evidence Stories to Prepare</p>
+        <h2>60-second project explanations</h2>
+    </div>
+    {% for story in prep.evidence_stories %}
+    <div class="detail-item">
+        <h3>{{ story.project_name }}</h3>
+        <p><strong>Context:</strong> {{ story.context }}</p>
+        <p><strong>Problem solved:</strong> {{ story.problem }}</p>
+        <p><strong>Tools used:</strong> {{ story.tools_used }}</p>
+        <p><strong>Output produced:</strong> {{ story.output }}</p>
+        <p><strong>Business value:</strong> {{ story.business_value }}</p>
+        <p class="note-text"><strong>60-second pitch:</strong> {{ story.sixty_second_pitch }}</p>
+    </div>
+    {% endfor %}
+</section>
+
+<section class="dashboard-two-column">
+    <div class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Employer Questions to Ask</p>
+            <h2>Professional questions by theme</h2>
+        </div>
+        {% for group in prep.questions_to_ask %}
+        <div class="detail-item">
+            <h3>{{ group.theme }}</h3>
+            <ul class="agent-list">
+                {% for question in group.questions %}
+                <li>{{ question }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="content-card">
+        <div class="card-header">
+            <p class="eyebrow">Final Interview Checklist</p>
+            <h2>Follow before the interview</h2>
+        </div>
+        <ul class="agent-list">
+            {% for task in prep.preparation_tasks %}
+            <li>{{ task }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</section>
+{% endif %}

@@ -1,8 +1,40 @@
 {% extends "base.html" %}
-{% block title %}Login | CareerFunnel Tracker{% endblock %}
-{% block page_heading %}Login{% endblock %}
+{% block title %}Sign in | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Sign in{% endblock %}
+{% block topbar_subtitle %}{% endblock %}
 {% block content %}
-<div class="auth-card"><div class="card-header"><p class="eyebrow">Welcome back</p><h1>Log in to your tracker</h1><p>Continue tracking your job-search activity, outcomes, and funnel diagnosis.</p></div>
-<form method="post" class="form-stack">{% csrf_token %}{% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}<div class="form-group"><label>Username</label>{{ form.username }}</div><div class="form-group"><label>Password</label>{{ form.password }}</div><button type="submit" class="btn btn-primary btn-full">Login</button></form>
-<p class="auth-footer">No account yet? <a href="{% url 'accounts:register' %}">Create one</a></p></div>
+<div class="auth-shell">
+    <section class="auth-card premium-card form-card">
+        <div class="card-header">
+            <p class="eyebrow">Authenticated workspace</p>
+            <h1>Sign in to CareerFunnel</h1>
+            <p>Access your manual, evidence-led job-search workspace. Track applications, funnel metrics, and weekly review records.</p>
+        </div>
+        <form method="post" class="form-stack premium-form-shell">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="form-alert form-alert--error" role="alert">
+                {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="form-field form-group">
+                <label class="form-label" for="{{ form.username.id_for_label }}">Username</label>
+                {{ form.username }}
+                {% if form.username.errors %}<p class="form-error-inline">{{ form.username.errors.0 }}</p>{% endif %}
+            </div>
+            <div class="form-field form-group">
+                <label class="form-label" for="{{ form.password.id_for_label }}">Password</label>
+                {{ form.password }}
+                {% if form.password.errors %}<p class="form-error-inline">{{ form.password.errors.0 }}</p>{% endif %}
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-full">Sign in</button>
+            </div>
+        </form>
+        <p class="auth-footer">No account yet? <a href="{% url 'accounts:register' %}">Create account</a></p>
+        <p class="auth-note trust-note">Local portfolio workspace only. No OAuth, auto-apply, or live SaaS customer claims.</p>
+    </section>
+</div>
 {% endblock %}

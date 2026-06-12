@@ -8,18 +8,29 @@ from django.views.decorators.http import require_POST
 from apps.followups.services import build_followup_email_draft, mark_followup_sent
 from apps.job_intelligence.services import build_smart_review
 
-from .choices import PipelineStage, RoleFit
+from .choices import DEFAULT_CV_BASELINE_NAME, PipelineStage, RoleFit
 from .document_exports import (
     DOCX_CONTENT_TYPE,
     PDF_CONTENT_TYPE,
     build_application_document_download_filename,
-    render_application_document_docx,
-    render_application_document_pdf,
+    render_application_document_download_bytes,
+)
+from .evaluation_downloads import (
+    build_evaluation_download_filename,
+    build_evaluation_queue_rows,
+    render_evaluation_application_pack_docx,
+    render_evaluation_application_pack_pdf,
+    render_evaluation_cover_letter_docx,
+    render_evaluation_cover_letter_pdf,
+    render_evaluation_cv_docx,
+    render_evaluation_cv_pdf,
 )
 from .forms import ApplicationDocumentSelectionForm, JobApplicationForm
 from .models import ApplicationDocument, JobApplication
 from .selectors import get_user_applications
 from .services import (
+    build_analyzer_cv_version_display,
+    build_application_cv_version_display,
     build_application_evidence_readiness,
     build_application_summary,
     build_application_table_rows,
@@ -60,17 +71,97 @@ def application_list(request):
 
 @login_required
 def evaluation_queue(request):
-    applications = get_user_applications(request.user).filter(
-        pipeline_stage__in=[PipelineStage.JOB_FOUND, PipelineStage.FIT_CHECKED],
+    applications = (
+        get_user_applications(request.user)
+        .filter(
+            pipeline_stage__in=[PipelineStage.JOB_FOUND, PipelineStage.FIT_CHECKED],
+        )
+        .select_related(
+            "selected_cv_document",
+            "selected_cover_letter_document",
+        )
+        .order_by("-date_applied", "-pk")
     )
     return render(
         request,
         "applications/evaluation_queue.html",
         {
             "applications": applications,
-            "table_rows": build_application_table_rows(applications),
+            "table_rows": build_evaluation_queue_rows(applications),
         },
     )
+
+
+@login_required
+def evaluation_cv_download(request, pk, file_format):
+    application = get_object_or_404(JobApplication, pk=pk, user=request.user)
+    normalized_format = file_format.lower()
+    try:
+        if normalized_format == "pdf":
+            content = render_evaluation_cv_pdf(application)
+            content_type = PDF_CONTENT_TYPE
+        elif normalized_format == "docx":
+            content = render_evaluation_cv_docx(application)
+            content_type = DOCX_CONTENT_TYPE
+        else:
+            raise Http404("Unsupported download format.")
+    except ValueError as exc:
+        raise Http404(str(exc)) from exc
+    filename = build_evaluation_download_filename(
+        "cv",
+        application,
+        normalized_format,
+    )
+    response = HttpResponse(content, content_type=content_type)
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
+def evaluation_cover_letter_download(request, pk, file_format):
+    application = get_object_or_404(JobApplication, pk=pk, user=request.user)
+    normalized_format = file_format.lower()
+    try:
+        if normalized_format == "pdf":
+            content = render_evaluation_cover_letter_pdf(application)
+            content_type = PDF_CONTENT_TYPE
+        elif normalized_format == "docx":
+            content = render_evaluation_cover_letter_docx(application)
+            content_type = DOCX_CONTENT_TYPE
+        else:
+            raise Http404("Unsupported download format.")
+    except ValueError as exc:
+        raise Http404(str(exc)) from exc
+    filename = build_evaluation_download_filename(
+        "cover_letter",
+        application,
+        normalized_format,
+    )
+    response = HttpResponse(content, content_type=content_type)
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
+def evaluation_application_pack_download(request, pk, file_format):
+    application = get_object_or_404(JobApplication, pk=pk, user=request.user)
+    normalized_format = file_format.lower()
+    if normalized_format == "pdf":
+        content = render_evaluation_application_pack_pdf(application)
+        content_type = PDF_CONTENT_TYPE
+    elif normalized_format == "docx":
+        content = render_evaluation_application_pack_docx(application)
+        content_type = DOCX_CONTENT_TYPE
+    else:
+        raise Http404("Unsupported download format.")
+    filename = build_evaluation_download_filename(
+        "application_pack",
+        application,
+        normalized_format,
+    )
+    response = HttpResponse(content, content_type=content_type)
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 @login_required
@@ -124,6 +215,7 @@ def application_detail(request, pk):
             "followup_email_draft": build_followup_email_draft(application),
             "evidence_readiness": build_application_evidence_readiness(application),
             "smart_review": build_smart_review(application),
+            "cv_version_display": build_application_cv_version_display(application),
             "document_selection_form": document_selection_form,
             "quick_call_notes": quick_call_notes,
         },
@@ -154,14 +246,16 @@ def application_document_download(request, pk, document_pk, file_format):
         application=application,
     )
     normalized_format = file_format.lower()
-    if normalized_format == "docx":
-        content = render_application_document_docx(document)
-        content_type = DOCX_CONTENT_TYPE
-    elif normalized_format == "pdf":
-        content = render_application_document_pdf(document)
-        content_type = PDF_CONTENT_TYPE
-    else:
-        raise Http404("Unsupported download format.")
+    try:
+        content = render_application_document_download_bytes(document, normalized_format)
+        if normalized_format == "docx":
+            content_type = DOCX_CONTENT_TYPE
+        elif normalized_format == "pdf":
+            content_type = PDF_CONTENT_TYPE
+        else:
+            raise Http404("Unsupported download format.")
+    except ValueError as exc:
+        raise Http404(str(exc)) from exc
     filename = build_application_document_download_filename(document, normalized_format)
     response = HttpResponse(content, content_type=content_type)
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
@@ -192,7 +286,6 @@ def _build_application_create_initial(request):
         initial["job_title"] = request.GET.get("job_title", "")
     if "location" in request.GET:
         initial["location"] = request.GET.get("location", "")
-
     if "fit_score" in request.GET:
         fit_score_raw = request.GET.get("fit_score", "")
         if fit_score_raw != "":
@@ -210,6 +303,7 @@ def _build_application_create_initial(request):
 
     if has_prefill:
         initial["pipeline_stage"] = PipelineStage.FIT_CHECKED
+        initial["cv_version"] = DEFAULT_CV_BASELINE_NAME
 
     return initial
 
@@ -235,6 +329,10 @@ def application_create(request):
             "form": form,
             "page_title": "Add Application",
             "submit_label": "Save Application",
+            "cv_version_display": build_analyzer_cv_version_display(
+                company_name=form["company_name"].value() or "",
+                job_title=form["job_title"].value() or "",
+            ),
         },
     )
 
@@ -260,6 +358,7 @@ def application_update(request, pk):
             "page_title": "Edit Application",
             "submit_label": "Update Application",
             "application": application,
+            "cv_version_display": build_application_cv_version_display(application),
         },
     )
 
