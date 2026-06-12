@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from datetime import date
+from unittest.mock import patch
 
-from django.test import SimpleTestCase
+from django.contrib.auth.models import User
+from django.test import SimpleTestCase, TestCase
+from django.urls import reverse
 
 from apps.applications.file_storage import (
     build_professional_application_pack_download_filename,
@@ -10,6 +13,15 @@ from apps.applications.file_storage import (
     build_professional_cv_download_filename,
     sanitize_filename_part,
 )
+from apps.applications.test_master_cv_fixtures import mock_read_master_cv_file
+from apps.job_intelligence.draft_documents import (
+    build_application_document_drafts,
+    build_clean_cover_letter_content,
+    build_complete_cv_content,
+)
+
+from .choices import DocumentType, PipelineStage
+from .models import ApplicationDocument, JobApplication
 
 FIXED_DOWNLOAD_DATE = date(2026, 5, 9)
 EXPECTED_CV_PDF = "Aminul_Islam_CV_Howden_Junior_Data_Analyst_20260509.pdf"
@@ -104,3 +116,122 @@ class ProfessionalDownloadFilenameBuilderTests(SimpleTestCase):
 
     def test_sanitize_filename_part_collapses_repeated_underscores(self):
         self.assertEqual(sanitize_filename_part("Acme   Corp"), "Acme_Corp")
+
+
+class ProfessionalDownloadFilenameViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="filename-user", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Howden",
+            job_title="Junior Data Analyst",
+            date_applied=FIXED_DOWNLOAD_DATE,
+            pipeline_stage=PipelineStage.FIT_CHECKED,
+        )
+        drafts = build_application_document_drafts(self.application)
+        self.cv_document = ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.CV,
+            name="Aminul_Islam_Data_Analyst_CV_Howden_Junior_Data_Analyst",
+            content=build_complete_cv_content(self.application, drafts),
+        )
+        self.cover_letter_document = ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.COVER_LETTER,
+            name="Aminul_Islam_Cover_Letter_Howden_Junior_Data_Analyst",
+            content=build_clean_cover_letter_content(
+                company_name=self.application.company_name,
+                job_title=self.application.job_title,
+                body=drafts.cover_letter_draft,
+            ),
+        )
+        self.client.login(username="filename-user", password="StrongPass12345")
+
+    @patch(
+        "apps.applications.master_cv.read_master_cv_file_if_available",
+        side_effect=mock_read_master_cv_file,
+    )
+    def test_application_cv_download_content_disposition(self, _mock_read):
+        response = self.client.get(
+            reverse(
+                "applications:application_document_download",
+                kwargs={
+                    "pk": self.application.pk,
+                    "document_pk": self.cv_document.pk,
+                    "file_format": "pdf",
+                },
+            )
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(f'filename="{EXPECTED_CV_PDF}"', response["Content-Disposition"])
+        self.assertTrue(response.content.startswith(b"%PDF"))
+
+    @patch(
+        "apps.applications.master_cv.read_master_cv_file_if_available",
+        side_effect=mock_read_master_cv_file,
+    )
+    def test_application_cover_letter_download_content_disposition(self, _mock_read):
+        response = self.client.get(
+            reverse(
+                "applications:application_document_download",
+                kwargs={
+                    "pk": self.application.pk,
+                    "document_pk": self.cover_letter_document.pk,
+                    "file_format": "pdf",
+                },
+            )
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            f'filename="{EXPECTED_COVER_LETTER_PDF}"',
+            response["Content-Disposition"],
+        )
+        self.assertTrue(response.content.startswith(b"%PDF"))
+
+    @patch(
+        "apps.applications.master_cv.read_master_cv_file_if_available",
+        side_effect=mock_read_master_cv_file,
+    )
+    def test_evaluation_cv_download_content_disposition(self, _mock_read):
+        response = self.client.get(
+            reverse(
+                "applications:evaluation_cv_download",
+                kwargs={"pk": self.application.pk, "file_format": "docx"},
+            )
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(f'filename="{EXPECTED_CV_DOCX}"', response["Content-Disposition"])
+        self.assertTrue(response.content.startswith(b"PK"))
+
+    @patch(
+        "apps.applications.master_cv.read_master_cv_file_if_available",
+        side_effect=mock_read_master_cv_file,
+    )
+    def test_evaluation_cover_letter_download_content_disposition(self, _mock_read):
+        response = self.client.get(
+            reverse(
+                "applications:evaluation_cover_letter_download",
+                kwargs={"pk": self.application.pk, "file_format": "pdf"},
+            )
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            f'filename="{EXPECTED_COVER_LETTER_PDF}"',
+            response["Content-Disposition"],
+        )
+        self.assertTrue(response.content.startswith(b"%PDF"))
+
+    def test_evaluation_application_pack_download_content_disposition(self):
+        response = self.client.get(
+            reverse(
+                "applications:evaluation_application_pack_download",
+                kwargs={"pk": self.application.pk, "file_format": "pdf"},
+            )
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            f'filename="{EXPECTED_APPLICATION_PACK_PDF}"',
+            response["Content-Disposition"],
+        )
+        self.assertTrue(response.content.startswith(b"%PDF"))
+
