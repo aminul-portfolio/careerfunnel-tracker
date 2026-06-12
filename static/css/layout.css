@@ -142,24 +142,31 @@ a {
 
 .topbar,
 .cf-topbar {
-    min-height: 88px;
-    background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border-soft);
-    padding: 16px 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    background: var(--topbar-surface);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--topbar-border-soft);
+    box-shadow: var(--topbar-shadow);
+    padding: 0;
     position: sticky;
     top: 0;
     z-index: var(--z-topbar);
 }
 
+.topbar__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    width: 100%;
+    min-height: 88px;
+    padding: 18px 32px;
+}
+
 .topbar h2,
 .cf-topbar-heading h2 {
     margin: 0;
-    font-size: 24px;
+    font-size: var(--topbar-title-size);
 }
 
 .topbar-actions,
@@ -168,6 +175,14 @@ a {
     align-items: center;
     gap: 12px;
     flex-wrap: wrap;
+    flex-shrink: 0;
+}
+
+.topbar__actions-cluster {
+    display: flex;
+    align-items: center;
+    gap: var(--topbar-action-gap);
+    flex-wrap: wrap;
 }
 
 .cf-topbar-start {
@@ -175,10 +190,12 @@ a {
     align-items: flex-start;
     gap: 14px;
     min-width: 0;
+    flex: 1;
 }
 
 .cf-topbar-heading {
     min-width: 0;
+    padding-top: 2px;
 }
 
 .cf-sidebar-overlay {
@@ -286,14 +303,25 @@ html.cf-sidebar-open {
     .topbar,
     .cf-topbar {
         height: auto;
-        align-items: flex-start;
+    }
+
+    .topbar__inner {
         flex-direction: column;
+        align-items: stretch;
+        min-height: auto;
+        padding: 16px 20px;
+        gap: 14px;
     }
 
     .topbar-actions,
     .cf-topbar-actions {
-        margin-top: 12px;
+        margin-top: 0;
         width: 100%;
+    }
+
+    .topbar__actions-cluster {
+        width: 100%;
+        justify-content: flex-start;
     }
 }
 
