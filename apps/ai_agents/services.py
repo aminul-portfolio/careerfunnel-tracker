@@ -7,6 +7,10 @@ from datetime import timedelta
 
 from django.utils import timezone
 
+from apps.ai_agents.interview_prep_pack import (
+    InterviewPrepPack,
+    generate_interview_prep,
+)
 from apps.applications.choices import ApplicationStatus, FollowUpStatus
 from apps.applications.models import JobApplication
 from apps.daily_log.models import DailyLog
@@ -22,6 +26,11 @@ from apps.job_intelligence.constants import (
 )
 from apps.metrics.services import build_funnel_metrics, diagnose_funnel, safe_percentage
 from apps.weekly_review.models import WeeklyReview
+
+__all__ = [
+    "InterviewPrepPack",
+    "generate_interview_prep",
+]
 
 LOCKED_CV = "Aminul_Islam_Data_Analyst_CV"
 
@@ -55,17 +64,6 @@ class FollowUpDraft:
     subject: str
     body: str
     reason: str
-
-
-@dataclass(frozen=True)
-class InterviewPrepPack:
-    profile_angle: str
-    projects_to_use: list[str]
-    likely_questions: list[str]
-    technical_topics: list[str]
-    star_examples: list[str]
-    questions_to_ask: list[str]
-    preparation_tasks: list[str]
 
 
 @dataclass(frozen=True)
@@ -334,72 +332,6 @@ def generate_followup_message(application: JobApplication) -> FollowUpDraft:
         "sounding pushy."
     )
     return FollowUpDraft(subject=subject, body=body, reason=reason)
-
-
-def generate_interview_prep(application: JobApplication) -> InterviewPrepPack:
-    text = normalise_text(
-        application.job_title,
-        application.required_skills,
-        application.job_description,
-        application.notes,
-    )
-    projects = recommend_projects_from_text(text)
-    cv = recommend_cv_from_text(text)
-    profile_angle = (
-        "Position yourself as a finance/operations professional moving into analytics, "
-        f"using {cv} and evidence from "
-        f"{projects[0]} to show practical KPI, reporting, and decision-support capability."
-    )
-    likely_questions = [
-        "Tell me about yourself and your move into data analytics.",
-        (
-            f"Why are you interested in the {application.job_title} role at "
-            f"{application.company_name}?"
-        ),
-        "Walk me through one analytics project from problem to business output.",
-        "How do you handle messy or incomplete data?",
-        "How have you used Excel, Python, SQL, or dashboards in practical work?",
-        "What would you do if a stakeholder challenged your analysis?",
-    ]
-    technical_topics = [
-        "Excel lookups/pivots",
-        "SQL filtering and joins",
-        "Python/pandas data cleaning",
-        "KPI definitions",
-        "Dashboard interpretation",
-    ]
-    if "power bi" in text:
-        technical_topics.append("Power BI dashboard concepts")
-    if "api" in text or "etl" in text:
-        technical_topics.extend(["API ingestion", "ETL workflow explanation"])
-    star_examples = [
-        "A time you improved or organised a reporting process.",
-        "A time you handled accuracy under pressure in finance/operations work.",
-        "A time you learned a technical skill and applied it in a project.",
-        "A time you explained something complex to a non-technical person.",
-    ]
-    questions_to_ask = [
-        "What are the most important reports or metrics this role owns?",
-        "What tools does the team use for analysis and reporting?",
-        "What would success look like in the first three months?",
-        "How does the team handle data quality or unclear requirements?",
-    ]
-    preparation_tasks = [
-        "Prepare a 60-second profile answer.",
-        f"Prepare a 2-minute walkthrough of {projects[0]}.",
-        "Prepare one STAR example from finance/operations work.",
-        "Review SQL basics and one Python/pandas example.",
-        "Write three questions to ask the interviewer.",
-    ]
-    return InterviewPrepPack(
-        profile_angle=profile_angle,
-        projects_to_use=projects,
-        likely_questions=likely_questions,
-        technical_topics=technical_topics,
-        star_examples=star_examples,
-        questions_to_ask=questions_to_ask,
-        preparation_tasks=preparation_tasks,
-    )
 
 
 def build_weekly_coach_report(user) -> WeeklyCoachReport:
