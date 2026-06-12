@@ -25,7 +25,8 @@ CAREERFUNNEL_EVIDENCE = (
     "CareerFunnel Tracker demonstrates a Django/Python analytics workflow with "
     "structured application records, funnel-stage metrics, source-performance reporting, "
     "data-quality warnings, manual intake workflow, skill-gap tracking, application "
-    "readiness checks, validated with 828 automated tests after Sprint 60 Phase 5."
+    "readiness checks, and Application Document Pack workflow, validated with "
+    "771 automated tests."
 )
 
 BAKEOPS_EVIDENCE = (
@@ -520,6 +521,77 @@ def _render_quick_call_notes(
             "Review saved draft records manually before any company call.",
         ]
     )
+
+
+def _sanitize_employer_cover_letter_body(
+    body: str,
+    *,
+    company_name: str = "",
+    job_title: str = "",
+) -> str:
+    from apps.applications.master_cv import sanitize_cover_letter_body
+
+    cleaned = sanitize_cover_letter_body(
+        body,
+        company_name=company_name,
+        job_title=job_title,
+    )
+    paragraphs: list[str] = []
+    for part in cleaned.split("\n\n"):
+        text = part.strip()
+        if not text:
+            continue
+        lowered = text.lower()
+        if "828 automated tests" in lowered:
+            continue
+        text = re.sub(r"\s*review before use\.?\s*", "", text, flags=re.IGNORECASE).strip()
+        if text and "828 automated tests" not in text.lower():
+            paragraphs.append(text)
+    return "\n\n".join(paragraphs)
+
+
+def build_complete_cv_content(
+    application: JobApplication,
+    drafts: ApplicationDocumentDrafts,
+) -> str:
+    """Return employer-facing master CV plain text for professional export."""
+    del application
+    from apps.applications.master_cv import (
+        build_structured_master_cv,
+        structured_document_to_plain_text,
+    )
+
+    cv = drafts.cv_tailoring
+    structured = build_structured_master_cv(
+        profile_angle=cv.profile_angle,
+        skills_to_prioritise=cv.skills_to_prioritise,
+    )
+    return structured_document_to_plain_text(structured)
+
+
+def build_clean_cover_letter_content(
+    *,
+    company_name: str,
+    job_title: str,
+    body: str,
+) -> str:
+    """Return employer-facing cover letter plain text with standard letter structure."""
+    from apps.applications.master_cv import (
+        build_structured_cover_letter,
+        structured_document_to_plain_text,
+    )
+
+    cleaned_body = _sanitize_employer_cover_letter_body(
+        body,
+        company_name=company_name,
+        job_title=job_title,
+    )
+    structured = build_structured_cover_letter(
+        company_name=company_name,
+        job_title=job_title,
+        body=cleaned_body,
+    )
+    return structured_document_to_plain_text(structured)
 
 
 def save_application_document_drafts(

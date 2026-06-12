@@ -180,7 +180,8 @@ class ApplicationDocumentDraftGenerationTests(TestCase):
         drafts = build_application_document_drafts(self.application)
         evidence_text = " ".join(drafts.recommended_project_evidence).lower()
         self.assertIn("skill-gap tracking", evidence_text)
-        self.assertIn("828 automated tests after sprint 60 phase 5", evidence_text)
+        self.assertIn("771 automated tests", evidence_text)
+        self.assertNotIn("828 automated tests", evidence_text)
         self.assertNotIn("skill intelligence", evidence_text)
 
     def test_careerfunnel_wording_avoids_screenshot_and_saas_style_wording(self):
