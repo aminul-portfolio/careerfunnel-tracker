@@ -3,9 +3,12 @@ from __future__ import annotations
 import zipfile
 from io import BytesIO
 
-from django.test import SimpleTestCase
+from django.contrib.auth.models import User
+from django.test import SimpleTestCase, TestCase
+from django.urls import reverse
 
 from apps.ai_agents.cover_letter_adjustment import apply_cover_letter_recommended_fixes
+from apps.ai_agents.services import check_cover_letter_quality
 from apps.applications.file_storage import build_professional_cover_letter_download_filename
 from apps.applications.master_cv import (
     COVER_LETTER_BODY_MISSING_MESSAGE,
@@ -487,3 +490,117 @@ class CoverLetterDuplicateCleanupTests(SimpleTestCase):
         for paragraph in paragraphs:
             self.assertNotEqual(paragraph.strip(), "Howden")
             self.assertNotEqual(paragraph.strip(), "Junior Data Analyst")
+
+
+class AdjustedCoverLetterViewIntegrationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="cl-export", password="StrongPass12345")
+        self.url = reverse("ai_agents:cover_letter_quality_checker")
+        self.client.login(username="cl-export", password="StrongPass12345")
+        self.draft = (
+            "Dear Howden,\n\nI am applying for the Junior Data Analyst role. "
+            "BakeOps Intelligence shows KPI reporting experience.\n\n"
+            "Kind regards,\nAminul Islam"
+        )
+        self.form_payload = {
+            "company_name": "Howden",
+            "job_title": "Junior Data Analyst",
+            "job_description": "KPI reporting",
+            "cover_letter": self.draft,
+        }
+
+    def test_apply_recommended_fixes_returns_adjusted_preview(self):
+        response = self.client.post(
+            self.url,
+            {**self.form_payload, "action": "apply_recommended_fixes"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Adjusted cover letter preview")
+        self.assertContains(response, "Howden")
+        self.assertContains(response, "Junior Data Analyst")
+        self.assertContains(response, "BakeOps Intelligence")
+        self.assertContains(response, "Manual review required before use.")
+        self.assertContains(response, "No external AI/API generation.")
+        self.assertContains(response, "No automatic submission.")
+
+    def test_page_copy_avoids_auto_submit_and_external_ai_claims(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Manual review required")
+        self.assertContains(response, "No external AI/API generation")
+        self.assertNotContains(response, "auto-submit")
+        self.assertNotContains(response, "auto apply")
+        self.assertNotContains(response, "OAuth")
+        self.assertNotContains(response, "Gmail")
+        self.assertNotContains(response, "Outlook")
+
+    def test_download_adjusted_docx_uses_professional_renderer(self):
+        quality = check_cover_letter_quality(
+            company_name="Howden",
+            job_title="Junior Data Analyst",
+            job_description="KPI reporting",
+            cover_letter=self.draft,
+        )
+        adjusted = apply_cover_letter_recommended_fixes(
+            company_name="Howden",
+            job_title="Junior Data Analyst",
+            job_description="KPI reporting",
+            cover_letter=self.draft,
+            quality_result=quality,
+        )
+        response = self.client.post(
+            self.url,
+            {
+                "action": "download_adjusted_docx",
+                "company_name": "Howden",
+                "job_title": "Junior Data Analyst",
+                "adjusted_cover_letter": adjusted.body,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.content.startswith(b"PK"))
+        with zipfile.ZipFile(BytesIO(response.content)) as docx:
+            document_xml = docx.read("word/document.xml").decode("utf-8")
+        self.assertIn("Aminul Islam", document_xml)
+        self.assertIn("Dear Hiring Team", document_xml)
+        self.assertIn("Howden", document_xml)
+        self.assertIn("BakeOps Intelligence", document_xml)
+        self.assertNotIn("Quality Score", document_xml)
+
+    def test_download_adjusted_pdf_uses_professional_renderer(self):
+        adjusted = apply_cover_letter_recommended_fixes(
+            company_name="Howden",
+            job_title="Junior Data Analyst",
+            job_description="KPI reporting",
+            cover_letter=self.draft,
+        )
+        response = self.client.post(
+            self.url,
+            {
+                "action": "download_adjusted_pdf",
+                "company_name": "Howden",
+                "job_title": "Junior Data Analyst",
+                "adjusted_cover_letter": adjusted.body,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.content.startswith(b"%PDF"))
+        self.assertIn(b"Dear Hiring Team", response.content)
+        self.assertIn(b"Howden", response.content)
+        self.assertIn(b"BakeOps Intelligence", response.content)
+        disposition = response["Content-Disposition"]
+        self.assertIn("Aminul_Islam_Cover_Letter_Howden_", disposition)
+
+    def test_download_blocks_blank_body_with_message(self):
+        response = self.client.post(
+            self.url,
+            {
+                "action": "download_adjusted_pdf",
+                "company_name": "Howden",
+                "job_title": "Junior Data Analyst",
+                "adjusted_cover_letter": "Kind regards,\nAminul Islam",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        follow = self.client.get(response.url)
+        self.assertContains(follow, COVER_LETTER_BODY_MISSING_MESSAGE)

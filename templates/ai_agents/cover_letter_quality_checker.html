@@ -16,7 +16,7 @@
             <p class="eyebrow">Cover letter review</p>
             <h2>Paste role and draft details</h2>
         </div>
-        <form method="post" enctype="multipart/form-data" class="form-stack">
+        <form method="post" enctype="multipart/form-data" class="form-stack" id="cover-letter-checker-form">
             {% csrf_token %}
             <div class="form-grid">
                 <div class="form-field form-group">
@@ -88,6 +88,36 @@
     <section class="content-card premium-card">
         <div class="card-header"><p class="eyebrow">Recommended Fixes</p><h2>Before Sending</h2></div>
         <ul class="workflow-list">{% for item in result.recommended_fixes %}<li>{{ item }}</li>{% empty %}<li>Only final proofread needed.</li>{% endfor %}</ul>
+        <div class="form-actions">
+            <button class="btn btn-primary" type="submit" form="cover-letter-checker-form" name="action" value="apply_recommended_fixes">Apply Recommended Fixes</button>
+        </div>
+        <p class="muted-text">Deterministic local adjustment only. Manual review required before use.</p>
+    </section>
+    {% endif %}
+
+    {% if adjusted %}
+    <section class="content-card premium-card">
+        <div class="card-header">
+            <p class="eyebrow">Adjusted Draft</p>
+            <h2>Review before download</h2>
+        </div>
+        <p class="note-text"><strong>Manual review required before use.</strong></p>
+        <p class="muted-text">No external AI/API generation. No automatic submission.</p>
+        <label class="form-label" for="adjusted-cover-letter-preview">Adjusted cover letter preview</label>
+        <textarea id="adjusted-cover-letter-preview" class="form-control" rows="14" readonly>{{ adjusted.body }}</textarea>
+        {% if adjusted.changes_applied %}
+        <p class="muted-text">Changes applied: {{ adjusted.changes_applied|join:" " }}</p>
+        {% endif %}
+        <div class="form-actions">
+            <form method="post" class="inline-form">
+                {% csrf_token %}
+                <input type="hidden" name="company_name" value="{{ form.company_name.value|default:'' }}">
+                <input type="hidden" name="job_title" value="{{ form.job_title.value|default:'' }}">
+                <textarea name="adjusted_cover_letter" hidden>{{ adjusted.body }}</textarea>
+                <button class="btn btn-secondary" type="submit" name="action" value="download_adjusted_docx">Download Adjusted DOCX</button>
+                <button class="btn btn-secondary" type="submit" name="action" value="download_adjusted_pdf">Download Adjusted PDF</button>
+            </form>
+        </div>
     </section>
     {% endif %}
 </div>
