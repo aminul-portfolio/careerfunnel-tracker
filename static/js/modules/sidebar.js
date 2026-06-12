@@ -2,7 +2,69 @@
     "use strict";
 
     var STORAGE_KEY = "cf-sidebar-collapsed";
+    var SCROLL_STORAGE_KEY = "cf-sidebar-scroll-top";
     var DESKTOP_MEDIA = "(min-width: 901px)";
+
+    function readStoredScrollTop() {
+        try {
+            var value = window.sessionStorage.getItem(SCROLL_STORAGE_KEY);
+            if (value === null) {
+                return null;
+            }
+            var parsed = parseInt(value, 10);
+            return Number.isFinite(parsed) ? Math.max(0, parsed) : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function writeStoredScrollTop(scrollTop) {
+        try {
+            window.sessionStorage.setItem(
+                SCROLL_STORAGE_KEY,
+                String(Math.max(0, Math.round(scrollTop)))
+            );
+        } catch (error) {
+            /* UI preference only - ignore storage errors */
+        }
+    }
+
+    function restoreSidebarScroll(sidebar) {
+        if (!sidebar) {
+            return;
+        }
+        var stored = readStoredScrollTop();
+        if (stored === null) {
+            return;
+        }
+        sidebar.scrollTop = stored;
+    }
+
+    function initSidebarScrollPersistence(sidebar) {
+        if (!sidebar) {
+            return;
+        }
+
+        restoreSidebarScroll(sidebar);
+        window.requestAnimationFrame(function () {
+            restoreSidebarScroll(sidebar);
+        });
+
+        sidebar.addEventListener(
+            "scroll",
+            function () {
+                writeStoredScrollTop(sidebar.scrollTop);
+            },
+            { passive: true }
+        );
+
+        sidebar.addEventListener("click", function (event) {
+            var link = event.target.closest(".sidebar-link, .cf-nav-link");
+            if (link) {
+                writeStoredScrollTop(sidebar.scrollTop);
+            }
+        });
+    }
 
     function readCollapsedPreference() {
         try {
@@ -108,6 +170,7 @@
         var collapseToggle = document.getElementById("sidebar-collapse-toggle");
         var reopenBtn = document.getElementById("sidebar-reopen-btn");
 
+        initSidebarScrollPersistence(sidebar);
         initActiveNav(path);
 
         function closeDrawer() {
