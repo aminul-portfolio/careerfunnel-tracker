@@ -95,7 +95,28 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Runtime generated files live outside tracked source folders.
+STORAGE_ROOT = BASE_DIR / "storage"
+GENERATED_DOCUMENTS_ROOT = STORAGE_ROOT / "generated_documents"
+UPLOADED_DOCUMENTS_ROOT = STORAGE_ROOT / "application_documents"
+GENERATED_EXPORTS_ROOT = STORAGE_ROOT / "exports"
+GENERATED_SCREENSHOTS_ROOT = STORAGE_ROOT / "screenshots"
+MEDIA_GENERATED_DOCUMENTS_ROOT = MEDIA_ROOT / "generated_documents"
+MEDIA_APPLICATION_DOCUMENTS_ROOT = MEDIA_ROOT / "application_documents"
+FORBIDDEN_GENERATED_FILE_PREFIXES = (
+    "apps",
+    "templates",
+    "static",
+    "docs",
+    "data/master_cv",
+)
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Optional local master CV template paths. Keep personal CV files outside the repo.
+MASTER_CV_TEMPLATE_DOCX_PATH = config("MASTER_CV_TEMPLATE_DOCX_PATH", default="")
+MASTER_CV_TEMPLATE_PDF_PATH = config("MASTER_CV_TEMPLATE_PDF_PATH", default="")
+MASTER_CV_FILE_PATH = config("MASTER_CV_FILE_PATH", default="")
 
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "dashboard:overview"
