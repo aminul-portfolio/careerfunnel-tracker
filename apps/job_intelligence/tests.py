@@ -1,7 +1,7 @@
 from datetime import date
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from apps.applications.choices import (
@@ -512,3 +512,12 @@ class SkillIntelligenceFoundationTests(TestCase):
         import importlib.util
 
         self.assertIsNone(importlib.util.find_spec("apps.job_intelligence.models"))
+
+
+class MasterCvLockedClaimWordingTests(SimpleTestCase):
+    def test_portfolio_bullet_uses_locked_master_cv_test_count(self):
+        from apps.applications.master_cv import PORTFOLIO_PROJECT_BULLETS
+
+        careerfunnel = PORTFOLIO_PROJECT_BULLETS["CareerFunnel Tracker"]
+        self.assertIn("771 automated tests", careerfunnel[2])
+        self.assertNotIn("828 automated tests", careerfunnel[2])

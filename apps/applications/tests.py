@@ -1949,3 +1949,18 @@ class EvaluationQueueTests(TestCase):
         response = self.client.get(self.queue_url)
         self.assertContains(response, "Evaluation Queue")
         self.assertContains(response, self.queue_url)
+
+
+class MasterCvLockedClaimWordingTests(SimpleTestCase):
+    def test_baseline_and_portfolio_use_locked_master_cv_claims(self):
+        from apps.applications.master_cv import (
+            BASELINE_PROFILE_PARAGRAPH,
+            EXPERIENCE_MONEY_TRANSFER_FX_BULLETS,
+            PORTFOLIO_PROJECT_BULLETS,
+        )
+
+        careerfunnel = PORTFOLIO_PROJECT_BULLETS["CareerFunnel Tracker"]
+        self.assertIn("771 automated tests", careerfunnel[2])
+        self.assertNotIn("828 automated tests", careerfunnel[2])
+        self.assertIn("GBP 30,000", BASELINE_PROFILE_PARAGRAPH)
+        self.assertIn("GBP 30,000", EXPERIENCE_MONEY_TRANSFER_FX_BULLETS[2])
