@@ -26,7 +26,17 @@ from apps.applications.professional_exports import (
     PDF_CONTENT_TYPE,
     render_cover_letter_bytes_from_fields,
 )
-from apps.job_intelligence.draft_documents import build_application_document_drafts_from_fields
+from apps.job_intelligence.draft_documents import (
+    DRAFT_APPLICATION_PACK_FILENAME_PREFIX,
+    DRAFT_COVER_LETTER_FILENAME_PREFIX,
+    DRAFT_CV_NOTES_FILENAME_PREFIX,
+    build_analyzer_draft_download_filename,
+    build_application_document_drafts_from_fields,
+    build_draft_application_pack_download_text,
+    build_draft_cover_letter_download_text,
+    build_draft_cv_notes_download_text,
+    render_analyzer_draft_download_bytes,
+)
 
 from .claude_provider import make_claude_cv_tailoring_provider, make_claude_provider
 from .cover_letter_adjustment import apply_cover_letter_recommended_fixes
@@ -198,8 +208,83 @@ def job_posting_analyzer(request):
             "ai_wrapper_result": ai_wrapper_result,
             "ai_score_comparison": ai_score_comparison,
             "document_drafts": document_drafts,
+            "show_draft_download_buttons": bool(document_drafts),
         },
     )
+
+
+@login_required
+def job_posting_analyzer_draft_download(request):
+    if request.method != "POST":
+        return redirect("ai_agents:job_posting_analyzer")
+
+    form = JobPostingAnalyzerForm(request.POST)
+    if not form.is_valid():
+        messages.error(
+            request,
+            "Draft download requires valid job analysis fields. Regenerate drafts and try again.",
+        )
+        return redirect("ai_agents:job_posting_analyzer")
+
+    company_name = form.cleaned_data.get("company_name", "")
+    job_title = form.cleaned_data.get("job_title", "")
+    location = form.cleaned_data.get("location", "")
+    job_posting = form.cleaned_data["job_posting"]
+    analysis = analyze_job_posting(
+        company_name=company_name,
+        job_title=job_title,
+        location=location,
+        job_posting=job_posting,
+    )
+    document_drafts = build_application_document_drafts_from_fields(
+        company_name=company_name,
+        job_title=job_title,
+        location=location,
+        job_description=job_posting,
+        fit_score=analysis.fit_score,
+        fit_label=analysis.recommendation,
+        recommended_cv=analysis.recommended_cv,
+        recommended_projects=analysis.recommended_projects,
+    )
+
+    download_kind = (request.POST.get("download_kind") or "").strip().lower()
+    file_format = (request.POST.get("file_format") or "pdf").strip().lower()
+    if file_format not in {"pdf", "docx"}:
+        file_format = "pdf"
+
+    if download_kind == "cv_notes":
+        export_text = build_draft_cv_notes_download_text(document_drafts)
+        filename = build_analyzer_draft_download_filename(
+            DRAFT_CV_NOTES_FILENAME_PREFIX,
+            company_name,
+            job_title,
+            file_format,
+        )
+    elif download_kind == "cover_letter":
+        export_text = build_draft_cover_letter_download_text(document_drafts)
+        filename = build_analyzer_draft_download_filename(
+            DRAFT_COVER_LETTER_FILENAME_PREFIX,
+            company_name,
+            job_title,
+            file_format,
+        )
+    elif download_kind == "application_pack":
+        export_text = build_draft_application_pack_download_text(document_drafts)
+        filename = build_analyzer_draft_download_filename(
+            DRAFT_APPLICATION_PACK_FILENAME_PREFIX,
+            company_name,
+            job_title,
+            file_format,
+        )
+    else:
+        messages.error(request, "Choose a valid draft download type.")
+        return redirect("ai_agents:job_posting_analyzer")
+
+    content = render_analyzer_draft_download_bytes(export_text, file_format)
+    content_type = DOCX_CONTENT_TYPE if file_format == "docx" else PDF_CONTENT_TYPE
+    response = HttpResponse(content, content_type=content_type)
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 @login_required
