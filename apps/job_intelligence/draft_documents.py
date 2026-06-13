@@ -64,7 +64,7 @@ JOB_POSTING_SAVE_HELPER_TEXT = (
 )
 
 COVER_LETTER_DISCLAIMER = (
-    "Draft Cover Letter - review before use. Manual download/export will come later."
+    "Draft Cover Letter - review before use."
 )
 
 
@@ -235,7 +235,7 @@ def _build_claim_safety_notes(
 def _build_cv_claim_safety_warnings(learning_gaps: tuple[str, ...]) -> tuple[str, ...]:
     warnings = [
         "Use the locked master CV baseline only - do not invent alternate CV filenames.",
-        "Review before use - manual export is planned for a later sprint.",
+        "Review before use - draft download only; not a final CV.",
     ]
     if learning_gaps and learning_gaps[0] != "Not enough evidence from the job analysis":
         warnings.append(
@@ -275,6 +275,7 @@ def _build_cover_letter_draft(
     company = _display_or_fallback(company_name)
     role = _display_or_fallback(job_title)
     location_text = _display_or_fallback(location, "Not specified")
+    del matched_skills  # CV tailoring notes only; not echoed in employer-facing draft letter
 
     paragraph_1 = (
         f"I am writing to express my interest in the {role} role at {company}. "
@@ -305,13 +306,10 @@ def _build_cover_letter_draft(
         )
     paragraph_3 = " ".join(project_lines)
 
-    if matched_skills:
-        skill_text = ", ".join(matched_skills[:6])
-    else:
-        skill_text = "Python, SQL, Excel, and Django"
     paragraph_4 = (
-        f"The role highlights {skill_text}. I can connect these tools to portfolio work "
-        "with documented sprint-based delivery and manual, claim-safe workflow discipline."
+        "The role highlights several reporting and analytics requirements. I can connect "
+        "the strongest matched requirements to documented portfolio work and manual, "
+        "claim-safe workflow discipline."
     )
     learning_sentence = _learning_gap_sentence(learning_gaps)
     if learning_sentence:
@@ -592,6 +590,80 @@ def build_clean_cover_letter_content(
         body=cleaned_body,
     )
     return structured_document_to_plain_text(structured)
+
+
+def build_draft_cv_notes_download_text(drafts: ApplicationDocumentDrafts) -> str:
+    """Plain text for draft CV tailoring notes download (advisory only)."""
+    return _join_text_lines(
+        [
+            "Draft only - review manually before use.",
+            "",
+            _render_cv_content(drafts),
+        ]
+    )
+
+
+def build_draft_cover_letter_download_text(drafts: ApplicationDocumentDrafts) -> str:
+    """Plain text for draft cover letter download (advisory only)."""
+    return _join_text_lines(
+        [
+            drafts.cover_letter_disclaimer,
+            "Draft only - review manually before use.",
+            "",
+            drafts.cover_letter_draft,
+        ]
+    )
+
+
+def build_draft_application_pack_download_text(drafts: ApplicationDocumentDrafts) -> str:
+    """Plain text for combined draft application pack download (advisory only)."""
+    return _join_text_lines(
+        [
+            "Draft Application Pack",
+            "Draft only - review manually before use.",
+            "",
+            build_draft_cv_notes_download_text(drafts),
+            "",
+            "Draft Cover Letter",
+            drafts.cover_letter_disclaimer,
+            "",
+            drafts.cover_letter_draft,
+            "",
+            "Claim-Safety Notes",
+            _render_claim_safety_notes(drafts),
+        ]
+    )
+
+
+def build_analyzer_draft_download_filename(
+    prefix: str,
+    company_name: str,
+    job_title: str,
+    extension: str,
+) -> str:
+    from django.utils import timezone
+
+    from apps.applications.file_storage import build_safe_generated_filename, sanitize_filename_part
+
+    company = sanitize_filename_part(company_name, fallback="Company")
+    role = sanitize_filename_part(job_title, fallback="Role")
+    date_suffix = timezone.localdate().strftime("%Y%m%d")
+    base = f"{prefix}_{company}_{role}_{date_suffix}"
+    return build_safe_generated_filename(base, extension)
+
+
+DRAFT_CV_NOTES_FILENAME_PREFIX = "Aminul_Islam_Draft_CV_Notes"
+DRAFT_COVER_LETTER_FILENAME_PREFIX = "Aminul_Islam_Draft_Cover_Letter"
+DRAFT_APPLICATION_PACK_FILENAME_PREFIX = "Aminul_Islam_Draft_Application_Pack"
+
+
+def render_analyzer_draft_download_bytes(text: str, file_format: str) -> bytes:
+    from apps.applications.professional_exports import render_application_pack_bytes
+
+    normalized = (file_format or "pdf").lower()
+    if normalized not in {"pdf", "docx"}:
+        normalized = "pdf"
+    return render_application_pack_bytes(text, normalized)
 
 
 def save_application_document_drafts(

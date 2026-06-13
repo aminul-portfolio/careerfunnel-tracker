@@ -34,6 +34,43 @@
 
     <h3>Recommended Project Evidence</h3>
     <ul class="workflow-list">{% for item in document_drafts.recommended_project_evidence %}<li>{{ item }}</li>{% endfor %}</ul>
+
+    {% if show_draft_download_buttons %}
+    <div class="form-actions" id="analyzer-draft-downloads">
+        <p class="note-text"><strong>Draft only - review manually before use.</strong></p>
+        <form method="post" action="{% url 'ai_agents:job_posting_analyzer_draft_download' %}" class="form-actions">
+            {% csrf_token %}
+            <input type="hidden" name="company_name" value="{{ form.company_name.value|default:'' }}">
+            <input type="hidden" name="job_title" value="{{ form.job_title.value|default:'' }}">
+            <input type="hidden" name="location" value="{{ form.location.value|default:'' }}">
+            <textarea name="job_posting" hidden>{{ form.job_posting.value|default:'' }}</textarea>
+            <input type="hidden" name="download_kind" value="cv_notes">
+            <input type="hidden" name="file_format" value="pdf">
+            <button type="submit" class="btn btn-secondary">Download Draft CV Notes</button>
+        </form>
+        <form method="post" action="{% url 'ai_agents:job_posting_analyzer_draft_download' %}" class="form-actions">
+            {% csrf_token %}
+            <input type="hidden" name="company_name" value="{{ form.company_name.value|default:'' }}">
+            <input type="hidden" name="job_title" value="{{ form.job_title.value|default:'' }}">
+            <input type="hidden" name="location" value="{{ form.location.value|default:'' }}">
+            <textarea name="job_posting" hidden>{{ form.job_posting.value|default:'' }}</textarea>
+            <input type="hidden" name="download_kind" value="cover_letter">
+            <input type="hidden" name="file_format" value="pdf">
+            <button type="submit" class="btn btn-secondary">Download Draft Cover Letter</button>
+        </form>
+        <form method="post" action="{% url 'ai_agents:job_posting_analyzer_draft_download' %}" class="form-actions">
+            {% csrf_token %}
+            <input type="hidden" name="company_name" value="{{ form.company_name.value|default:'' }}">
+            <input type="hidden" name="job_title" value="{{ form.job_title.value|default:'' }}">
+            <input type="hidden" name="location" value="{{ form.location.value|default:'' }}">
+            <textarea name="job_posting" hidden>{{ form.job_posting.value|default:'' }}</textarea>
+            <input type="hidden" name="download_kind" value="application_pack">
+            <input type="hidden" name="file_format" value="pdf">
+            <button type="submit" class="btn btn-secondary">Download Draft Application Pack</button>
+        </form>
+    </div>
+    {% endif %}
+
     {% if show_save_drafts_action %}
     <form method="post" class="form-actions">
         {% csrf_token %}

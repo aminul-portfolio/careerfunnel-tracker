@@ -7,6 +7,11 @@ app_name = "ai_agents"
 urlpatterns = [
     path("", views.agent_dashboard, name="agent_dashboard"),
     path("job-posting-analyzer/", views.job_posting_analyzer, name="job_posting_analyzer"),
+    path(
+        "job-posting-analyzer/download-draft/",
+        views.job_posting_analyzer_draft_download,
+        name="job_posting_analyzer_draft_download",
+    ),
     path("next-best-actions/", views.next_best_actions, name="next_best_actions"),
     path("follow-up-writer/", views.followup_writer, name="followup_writer"),
     path(

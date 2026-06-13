@@ -18,6 +18,7 @@ from .draft_documents import (
     MASTER_CV_BASELINE,
     build_application_document_drafts,
     build_application_document_drafts_from_fields,
+    build_draft_cover_letter_download_text,
     save_application_document_drafts,
 )
 from .services import LOCKED_CV, build_skill_intelligence_context, build_smart_review
@@ -522,3 +523,119 @@ class MasterCvLockedClaimWordingTests(SimpleTestCase):
         careerfunnel = PORTFOLIO_PROJECT_BULLETS["CareerFunnel Tracker"]
         self.assertIn("771 automated tests", careerfunnel[2])
         self.assertNotIn("828 automated tests", careerfunnel[2])
+
+
+class JobPostingAnalyzerDraftDownloadTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="analyzer-dl", password="StrongPass12345")
+        self.analyzer_url = reverse("ai_agents:job_posting_analyzer")
+        self.download_url = reverse("ai_agents:job_posting_analyzer_draft_download")
+        self.post_data = {
+            "company_name": "Howden",
+            "job_title": "Junior Data Analyst",
+            "location": "London hybrid",
+            "job_posting": "Python SQL Excel reporting dashboards junior BI role",
+            "generate_drafts": "1",
+        }
+        self.client.login(username="analyzer-dl", password="StrongPass12345")
+
+    def test_analyzer_result_shows_draft_download_buttons_when_drafts_exist(self):
+        response = self.client.post(self.analyzer_url, self.post_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Download Draft CV Notes")
+        self.assertContains(response, "Download Draft Cover Letter")
+        self.assertContains(response, "Draft only - review manually before use.")
+
+    def test_cv_notes_download_returns_pdf_attachment(self):
+        response = self.client.post(
+            self.download_url,
+            {
+                **self.post_data,
+                "download_kind": "cv_notes",
+                "file_format": "pdf",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn("attachment", response["Content-Disposition"])
+        self.assertIn("Draft_CV_Notes", response["Content-Disposition"])
+        self.assertTrue(response.content.startswith(b"%PDF"))
+        pdf_text = response.content.decode("latin-1", errors="ignore").lower()
+        self.assertIn("draft cv tailoring notes", pdf_text)
+        self.assertIn("review manually before use", pdf_text)
+        self.assertNotIn("auto-submit", pdf_text)
+        self.assertNotIn("auto-apply", pdf_text)
+        self.assertNotIn("final cv", pdf_text)
+
+    def test_cover_letter_download_returns_pdf_attachment(self):
+        response = self.client.post(
+            self.download_url,
+            {
+                **self.post_data,
+                "download_kind": "cover_letter",
+                "file_format": "pdf",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn("Draft_Cover_Letter", response["Content-Disposition"])
+        self.assertTrue(response.content.startswith(b"%PDF"))
+        pdf_text = response.content.decode("latin-1", errors="ignore").lower()
+        self.assertIn("draft cover letter", pdf_text)
+        self.assertIn("review before use", pdf_text)
+        self.assertNotIn("final cover letter", pdf_text)
+        self.assertNotIn("submitted automatically", pdf_text)
+        self.assertNotIn("power bi", pdf_text)
+        self.assertNotIn("connect these tools to portfolio work", pdf_text)
+
+    def test_cover_letter_download_avoids_unproven_tool_echo_when_power_bi_in_posting(self):
+        response = self.client.post(
+            self.download_url,
+            {
+                "company_name": "Howden",
+                "job_title": "Junior Data Analyst",
+                "location": "London hybrid",
+                "job_posting": "Power BI SQL Excel reporting dashboards analytics junior role",
+                "download_kind": "cover_letter",
+                "file_format": "pdf",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        pdf_text = response.content.decode("latin-1", errors="ignore").lower()
+        self.assertNotIn("power bi", pdf_text)
+        self.assertNotIn("connect these tools to portfolio work", pdf_text)
+        self.assertIn("reporting and analytics requirements", pdf_text)
+
+    def test_cover_letter_helper_avoids_power_bi_while_cv_notes_may_prioritise_it(self):
+        drafts = build_application_document_drafts_from_fields(
+            company_name="Howden",
+            job_title="Junior Data Analyst",
+            job_description="Power BI SQL Excel reporting dashboards analytics",
+            required_skills="power bi sql excel",
+        )
+        cover_letter_text = build_draft_cover_letter_download_text(drafts).lower()
+        self.assertNotIn("power bi", cover_letter_text)
+        self.assertNotIn("connect these tools to portfolio work", cover_letter_text)
+        self.assertIn("reporting and analytics requirements", cover_letter_text)
+        cv_notes_text = drafts.cv_tailoring.skills_to_prioritise
+        self.assertTrue(any("power bi" in skill.lower() for skill in cv_notes_text))
+
+    def test_application_pack_download_uses_existing_pack_renderer(self):
+        response = self.client.post(
+            self.download_url,
+            {
+                **self.post_data,
+                "download_kind": "application_pack",
+                "file_format": "pdf",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Draft_Application_Pack", response["Content-Disposition"])
+        pdf_text = response.content.decode("latin-1", errors="ignore").lower()
+        self.assertIn("draft application pack", pdf_text)
+        self.assertIn("claim-safety notes", pdf_text)
+
+    def test_download_requires_post(self):
+        response = self.client.get(self.download_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, self.analyzer_url)
