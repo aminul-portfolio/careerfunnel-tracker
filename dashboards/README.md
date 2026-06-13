@@ -69,6 +69,16 @@ Sprint 18 dashboard evidence includes:
 
 These artefacts prove local Tableau dashboard construction from synthetic dashboard CSVs. They do not claim Tableau Public hosting, a live deployment URL, a Power BI dashboard, or use of real/private job-search data.
 
+## Future Power BI preparation
+
+Power BI portfolio work is **preparation-only / in progress**. No `.pbix` file or Power BI screenshot evidence is committed in this repository yet.
+
+Existing demo CSV exports (`dashboards/data/applications.csv`, `dashboards/data/daily_logs.csv`) may be used for future Power BI import. Describe them as demo CSVs suitable for future Power BI import, not as completed Power BI delivery.
+
+Full prep plan, business questions, KPI index, evidence checklist, and claim-safe wording: [docs/evidence/power_bi_portfolio_prep.md](../docs/evidence/power_bi_portfolio_prep.md).
+
+This does not imply completed Power BI implementation, production reporting, SaaS deployment, or platform integration.
+
 ## Quality Dashboard Usage
 
 - Analytics-ready rate: percentage of `applications.csv` rows where `is_analytics_ready` is `yes`
