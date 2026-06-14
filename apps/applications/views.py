@@ -8,13 +8,14 @@ from django.views.decorators.http import require_POST
 from apps.followups.services import build_followup_email_draft, mark_followup_sent
 from apps.job_intelligence.services import build_smart_review
 
-from .choices import DEFAULT_CV_BASELINE_NAME, PipelineStage, RoleFit
+from .choices import DEFAULT_CV_BASELINE_NAME, DocumentType, PipelineStage, RoleFit
 from .document_exports import (
     DOCX_CONTENT_TYPE,
     PDF_CONTENT_TYPE,
     build_application_document_download_filename,
     render_application_document_download_bytes,
 )
+from .document_uploads import attach_document_pack_upload, attach_external_reference
 from .evaluation_downloads import (
     build_evaluation_download_filename,
     build_evaluation_queue_rows,
@@ -25,7 +26,12 @@ from .evaluation_downloads import (
     render_evaluation_cv_docx,
     render_evaluation_cv_pdf,
 )
-from .forms import ApplicationDocumentSelectionForm, JobApplicationForm
+from .forms import (
+    ApplicationDocumentSelectionForm,
+    DocumentPackUploadForm,
+    ExternalDocumentReferenceForm,
+    JobApplicationForm,
+)
 from .models import ApplicationDocument, JobApplication
 from .selectors import get_user_applications
 from .services import (
@@ -181,30 +187,100 @@ def application_detail(request, pk):
             "selected_cover_letter_document": application.selected_cover_letter_document_id,
         },
     )
-    if request.method == "POST" and request.POST.get("action") == "select_documents":
-        document_selection_form = ApplicationDocumentSelectionForm(
-            request.POST,
-            application=application,
-        )
-        if document_selection_form.is_valid():
-            application.selected_cv_document = document_selection_form.cleaned_data[
-                "selected_cv_document"
-            ]
-            application.selected_cover_letter_document = document_selection_form.cleaned_data[
-                "selected_cover_letter_document"
-            ]
-            application.save(
-                update_fields=[
-                    "selected_cv_document",
-                    "selected_cover_letter_document",
-                    "updated_at",
+    external_cv_form = ExternalDocumentReferenceForm(prefix="external_cv")
+    external_cover_letter_form = ExternalDocumentReferenceForm(prefix="external_cl")
+    upload_cv_form = DocumentPackUploadForm(prefix="upload_cv")
+    upload_cover_letter_form = DocumentPackUploadForm(prefix="upload_cl")
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "select_documents":
+            document_selection_form = ApplicationDocumentSelectionForm(
+                request.POST,
+                application=application,
+            )
+            if document_selection_form.is_valid():
+                application.selected_cv_document = document_selection_form.cleaned_data[
+                    "selected_cv_document"
                 ]
+                application.selected_cover_letter_document = document_selection_form.cleaned_data[
+                    "selected_cover_letter_document"
+                ]
+                application.save(
+                    update_fields=[
+                        "selected_cv_document",
+                        "selected_cover_letter_document",
+                        "updated_at",
+                    ]
+                )
+                messages.success(
+                    request,
+                    "Selected CV and cover letter updated for this application.",
+                )
+                return redirect(f"{application.get_absolute_url()}#document-pack")
+        elif action == "create_external_cv":
+            external_cv_form = ExternalDocumentReferenceForm(
+                request.POST,
+                prefix="external_cv",
             )
-            messages.success(
-                request,
-                "Selected CV and cover letter updated for this application.",
+            if external_cv_form.is_valid():
+                attach_external_reference(
+                    application=application,
+                    document_type=DocumentType.CV,
+                    name=external_cv_form.cleaned_data["name"],
+                    notes=external_cv_form.cleaned_data.get("notes", ""),
+                )
+                messages.success(
+                    request,
+                    "External CV reference saved for manual evidence tracking.",
+                )
+                return redirect(f"{application.get_absolute_url()}#document-pack")
+        elif action == "create_external_cover_letter":
+            external_cover_letter_form = ExternalDocumentReferenceForm(
+                request.POST,
+                prefix="external_cl",
             )
-            return redirect(f"{application.get_absolute_url()}#document-pack")
+            if external_cover_letter_form.is_valid():
+                attach_external_reference(
+                    application=application,
+                    document_type=DocumentType.COVER_LETTER,
+                    name=external_cover_letter_form.cleaned_data["name"],
+                    notes=external_cover_letter_form.cleaned_data.get("notes", ""),
+                )
+                messages.success(
+                    request,
+                    "External cover letter reference saved for manual evidence tracking.",
+                )
+                return redirect(f"{application.get_absolute_url()}#document-pack")
+        elif action == "upload_cv":
+            upload_cv_form = DocumentPackUploadForm(
+                request.POST,
+                request.FILES,
+                prefix="upload_cv",
+            )
+            if upload_cv_form.is_valid():
+                result = attach_document_pack_upload(
+                    application=application,
+                    document_type=DocumentType.CV,
+                    uploaded_file=upload_cv_form.cleaned_data["uploaded_file"],
+                )
+                messages.success(request, result.message)
+                return redirect(f"{application.get_absolute_url()}#document-pack")
+        elif action == "upload_cover_letter":
+            upload_cover_letter_form = DocumentPackUploadForm(
+                request.POST,
+                request.FILES,
+                prefix="upload_cl",
+            )
+            if upload_cover_letter_form.is_valid():
+                result = attach_document_pack_upload(
+                    application=application,
+                    document_type=DocumentType.COVER_LETTER,
+                    uploaded_file=upload_cover_letter_form.cleaned_data["uploaded_file"],
+                )
+                messages.success(request, result.message)
+                return redirect(f"{application.get_absolute_url()}#document-pack")
+
     quick_call_notes = _build_quick_call_review_notes(application)
     return render(
         request,
@@ -217,6 +293,10 @@ def application_detail(request, pk):
             "smart_review": build_smart_review(application),
             "cv_version_display": build_application_cv_version_display(application),
             "document_selection_form": document_selection_form,
+            "external_cv_form": external_cv_form,
+            "external_cover_letter_form": external_cover_letter_form,
+            "upload_cv_form": upload_cv_form,
+            "upload_cover_letter_form": upload_cover_letter_form,
             "quick_call_notes": quick_call_notes,
         },
     )

@@ -11,11 +11,13 @@ from .choices import (
     LEGACY_CV_VERSION_LABELS,
     ApplicationSource,
     ApplicationStatus,
+    DocumentSource,
+    DocumentType,
     FollowUpStatus,
 )
 from .file_storage import build_professional_cv_basename
 from .file_storage import sanitize_filename_part as _sanitize_filename_part
-from .models import JobApplication
+from .models import ApplicationDocument, JobApplication
 from .selectors import get_user_applications
 
 
@@ -288,12 +290,53 @@ def _strip_or_empty(value: str | None) -> str:
     return value.strip()
 
 
+_GENERATED_DOCUMENT_SOURCES = frozenset(
+    {
+        DocumentSource.MANUAL,
+        DocumentSource.JOB_ANALYZER,
+        DocumentSource.MASTER_CV_BASELINE,
+    }
+)
+
+
+def display_application_document_source(source: str) -> str:
+    if source == DocumentSource.USER_UPLOAD:
+        return "Manual upload"
+    if source == DocumentSource.EXTERNAL_REFERENCE:
+        return "External reference"
+    if source in _GENERATED_DOCUMENT_SOURCES:
+        return "Generated document"
+    return "Generated document"
+
+
+def _application_has_cv_evidence(application) -> bool:
+    if application.selected_cv_document_id:
+        return True
+    if _strip_or_empty(application.cv_version) != "":
+        return True
+    return ApplicationDocument.objects.filter(
+        application=application,
+        document_type=DocumentType.CV,
+    ).exists()
+
+
+def _application_has_cover_letter_evidence(application) -> bool:
+    if application.selected_cover_letter_document_id:
+        return True
+    if _strip_or_empty(application.cover_letter_version) != "":
+        return True
+    return ApplicationDocument.objects.filter(
+        application=application,
+        document_type=DocumentType.COVER_LETTER,
+    ).exists()
+
+
 def _has_cv_version(application) -> bool:
-    return _strip_or_empty(application.cv_version) != ""
+    return _application_has_cv_evidence(application)
 
 
 def _has_cover_letter_version(application) -> bool:
-    return _strip_or_empty(application.cover_letter_version) != ""
+    return _application_has_cover_letter_evidence(application)
 
 
 def _has_job_url(application) -> bool:
