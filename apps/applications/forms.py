@@ -137,6 +137,43 @@ class JobApplicationForm(forms.ModelForm):
         return cleaned_data
 
 
+class ExternalDocumentReferenceForm(forms.Form):
+    name = forms.CharField(
+        max_length=255,
+        required=True,
+        label="Version / name",
+    )
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3}),
+        label="Notes",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["name"].widget.attrs["class"] = "form-control"
+        self.fields["notes"].widget.attrs["class"] = "form-control"
+
+
+class DocumentPackUploadForm(forms.Form):
+    uploaded_file = forms.FileField(
+        required=True,
+        label="Document file",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["uploaded_file"].widget.attrs["class"] = "form-control"
+        self.fields["uploaded_file"].widget.attrs["accept"] = ".pdf,.docx"
+
+    def clean_uploaded_file(self):
+        from apps.applications.document_uploads import validate_document_pack_upload
+
+        uploaded_file = self.cleaned_data["uploaded_file"]
+        validate_document_pack_upload(uploaded_file)
+        return uploaded_file
+
+
 class ApplicationDocumentSelectionForm(forms.Form):
     selected_cv_document = forms.ModelChoiceField(
         queryset=ApplicationDocument.objects.none(),

@@ -15,7 +15,13 @@ from apps.applications.choices import (
     DocumentStatus,
     DocumentType,
 )
-from apps.applications.document_uploads import attach_uploaded_document, validate_uploaded_file
+from apps.applications.document_uploads import (
+    attach_document_pack_upload,
+    attach_external_reference,
+    attach_uploaded_document,
+    validate_document_pack_upload,
+    validate_uploaded_file,
+)
 from apps.applications.file_storage import get_uploaded_documents_root
 from apps.applications.models import JobApplication
 
@@ -30,6 +36,20 @@ class DocumentUploadValidationTests(TestCase):
         uploaded = SimpleUploadedFile("cv.exe", b"bad", content_type="application/octet-stream")
         with self.assertRaises(ValidationError):
             validate_uploaded_file(uploaded)
+
+    def test_document_pack_upload_rejects_txt(self):
+        uploaded = SimpleUploadedFile("cv.txt", b"plain text", content_type="text/plain")
+        with self.assertRaises(ValidationError):
+            validate_document_pack_upload(uploaded)
+
+    def test_document_pack_upload_accepts_docx(self):
+        uploaded = SimpleUploadedFile(
+            "cv.docx",
+            b"PK docx",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        extension = validate_document_pack_upload(uploaded)
+        self.assertEqual(extension, "docx")
 
     def test_path_traversal_filename_is_rejected(self):
         uploaded = Mock()
@@ -100,3 +120,31 @@ class DocumentUploadServiceTests(TestCase):
             uploaded_file=second,
         ).document
         self.assertNotEqual(doc_one.uploaded_file.name, doc_two.uploaded_file.name)
+
+    def test_external_reference_is_created_without_file(self):
+        document = attach_external_reference(
+            application=self.application,
+            document_type=DocumentType.CV,
+            name="Email CV version",
+            notes="Sent manually.",
+        )
+        self.assertEqual(document.source, DocumentSource.EXTERNAL_REFERENCE)
+        self.assertEqual(document.name, "Email CV version")
+        self.assertEqual(document.tailoring_notes, "Sent manually.")
+        self.assertFalse(document.uploaded_file)
+
+    def test_document_pack_upload_preserves_original_filename(self):
+        uploaded = SimpleUploadedFile(
+            "Aminul_CV.docx",
+            b"PK docx content",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        result = attach_document_pack_upload(
+            application=self.application,
+            document_type=DocumentType.CV,
+            uploaded_file=uploaded,
+        )
+        document = result.document
+        self.assertEqual(document.name, "Aminul_CV.docx")
+        self.assertEqual(document.original_filename, "Aminul_CV.docx")
+        self.assertEqual(document.source, DocumentSource.USER_UPLOAD)

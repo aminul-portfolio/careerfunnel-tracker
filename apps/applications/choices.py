@@ -76,12 +76,14 @@ class DocumentSource(models.TextChoices):
     JOB_ANALYZER = "job_analyzer", "Job analyzer"
     MASTER_CV_BASELINE = "master_cv_baseline", "Master CV baseline"
     USER_UPLOAD = "user_upload", "User uploaded"
+    EXTERNAL_REFERENCE = "external_reference", "External reference"
 
 
 UPLOADED_CV_DOCUMENT_NAME = "Uploaded Final CV"
 UPLOADED_COVER_LETTER_DOCUMENT_NAME = "Uploaded Final Cover Letter"
 
 ALLOWED_UPLOAD_EXTENSIONS = frozenset({"pdf", "docx", "txt"})
+DOCUMENT_PACK_UPLOAD_EXTENSIONS = frozenset({"pdf", "docx"})
 MAX_UPLOAD_FILE_SIZE_BYTES = 5 * 1024 * 1024
 
 

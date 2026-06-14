@@ -209,3 +209,9 @@ class ApplicationDocument(models.Model):
 
     def __str__(self):
         return f"{self.get_document_type_display()} - {self.name}"
+
+    @property
+    def evidence_source_label(self) -> str:
+        from apps.applications.services import display_application_document_source
+
+        return display_application_document_source(self.source)

@@ -5,6 +5,7 @@ from urllib.parse import quote
 
 from django.contrib.auth.models import User
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -31,6 +32,7 @@ from .models import ApplicationDocument, JobApplication
 from .services import (
     ITEM_COMPANY_RESEARCHED,
     ITEM_CONTACT_EMAIL,
+    ITEM_COVER_LETTER_VERSION,
     ITEM_CV_VERSION,
     ITEM_FOLLOW_UP_DATE,
     ITEM_FOLLOW_UP_STATUS,
@@ -322,13 +324,14 @@ class ApplicationDocumentSelectionTests(TestCase):
         self.application.refresh_from_db()
         self.assertIsNone(self.application.selected_cv_document)
 
-    def test_no_file_upload_behaviour_added(self):
+    def test_document_pack_upload_forms_are_available(self):
         self.client.login(username="aminul", password="StrongPass12345")
         response = self.client.get(self.detail_url)
         content = response.content.decode().lower()
-        self.assertContains(response, "Download DOCX")
-        self.assertContains(response, "Download PDF")
-        self.assertNotIn('type="file"', content)
+        self.assertContains(response, "Upload CV")
+        self.assertContains(response, "Create external CV reference")
+        self.assertIn('type="file"', content)
+        self.assertIn("enctype=\"multipart/form-data\"", content)
 
 
 class ApplicationDocumentDownloadTests(TestCase):
@@ -490,12 +493,227 @@ class ApplicationDocumentDownloadTests(TestCase):
         self.assertGreater(len(docx_response.content), 100)
         self.assertGreater(len(pdf_response.content), 100)
 
-    def test_no_file_upload_behaviour_added(self):
-        self.client.login(username="aminul", password="StrongPass12345")
-        response = self.client.get(
-            reverse("applications:application_detail", kwargs={"pk": self.application.pk})
+
+class DocumentEvidenceWorkflowTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Howden",
+            job_title="Junior Data Analyst",
+            date_applied=date(2026, 5, 9),
         )
-        self.assertNotIn('type="file"', response.content.decode().lower())
+        self.detail_url = reverse(
+            "applications:application_detail",
+            kwargs={"pk": self.application.pk},
+        )
+
+    def test_readiness_passes_with_manual_cv_version_only(self):
+        self.application.cv_version = "Aminul_Islam_Data_Analyst_CV"
+        self.application.save(update_fields=["cv_version"])
+        readiness = build_application_evidence_readiness(self.application)
+        self.assertIn(ITEM_CV_VERSION, readiness.ready_items)
+
+    def test_readiness_passes_with_manual_cover_letter_version_only(self):
+        self.application.cover_letter_version = "Aminul_Islam_Cover_Letter_Howden"
+        self.application.save(update_fields=["cover_letter_version"])
+        readiness = build_application_evidence_readiness(self.application)
+        self.assertIn(ITEM_COVER_LETTER_VERSION, readiness.ready_items)
+
+    def test_readiness_passes_with_cv_document_without_manual_version(self):
+        ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.CV,
+            name="External CV reference",
+            source=DocumentSource.EXTERNAL_REFERENCE,
+        )
+        readiness = build_application_evidence_readiness(self.application)
+        self.assertIn(ITEM_CV_VERSION, readiness.ready_items)
+
+    def test_readiness_passes_with_cover_letter_document_without_manual_version(self):
+        ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.COVER_LETTER,
+            name="External cover letter reference",
+            source=DocumentSource.EXTERNAL_REFERENCE,
+        )
+        readiness = build_application_evidence_readiness(self.application)
+        self.assertIn(ITEM_COVER_LETTER_VERSION, readiness.ready_items)
+
+    def test_readiness_passes_when_selected_cv_document_exists(self):
+        cv_document = ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.CV,
+            name="Selected CV record",
+        )
+        self.application.selected_cv_document = cv_document
+        self.application.save(update_fields=["selected_cv_document"])
+        readiness = build_application_evidence_readiness(self.application)
+        self.assertIn(ITEM_CV_VERSION, readiness.ready_items)
+
+    def test_create_external_cv_reference_without_upload(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.post(
+            self.detail_url,
+            {
+                "action": "create_external_cv",
+                "external_cv-name": "Tailored CV sent via email",
+                "external_cv-notes": "Sent manually on 2026-06-14.",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        document = ApplicationDocument.objects.get(
+            application=self.application,
+            document_type=DocumentType.CV,
+        )
+        self.assertEqual(document.name, "Tailored CV sent via email")
+        self.assertEqual(document.source, DocumentSource.EXTERNAL_REFERENCE)
+        self.assertEqual(document.tailoring_notes, "Sent manually on 2026-06-14.")
+        self.assertFalse(document.uploaded_file)
+
+    def test_create_external_cover_letter_reference_without_upload(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        response = self.client.post(
+            self.detail_url,
+            {
+                "action": "create_external_cover_letter",
+                "external_cl-name": "Howden tailored cover letter",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        document = ApplicationDocument.objects.get(
+            application=self.application,
+            document_type=DocumentType.COVER_LETTER,
+        )
+        self.assertEqual(document.source, DocumentSource.EXTERNAL_REFERENCE)
+
+    def test_upload_docx_cv_appears_in_selection_list(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        uploaded = SimpleUploadedFile(
+            "Aminul_CV.docx",
+            b"PK docx test content",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        response = self.client.post(
+            self.detail_url,
+            {
+                "action": "upload_cv",
+                "upload_cv-uploaded_file": uploaded,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        document = ApplicationDocument.objects.get(
+            application=self.application,
+            document_type=DocumentType.CV,
+        )
+        self.assertEqual(document.name, "Aminul_CV.docx")
+        self.assertEqual(document.original_filename, "Aminul_CV.docx")
+        self.assertEqual(document.source, DocumentSource.USER_UPLOAD)
+        form = ApplicationDocumentSelectionForm(application=self.application)
+        self.assertIn(
+            document.pk,
+            form.fields["selected_cv_document"].queryset.values_list("pk", flat=True),
+        )
+
+    def test_upload_pdf_cover_letter_appears_in_selection_list(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        uploaded = SimpleUploadedFile(
+            "Cover_Letter.pdf",
+            b"%PDF-1.4 test",
+            content_type="application/pdf",
+        )
+        response = self.client.post(
+            self.detail_url,
+            {
+                "action": "upload_cover_letter",
+                "upload_cl-uploaded_file": uploaded,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        document = ApplicationDocument.objects.get(
+            application=self.application,
+            document_type=DocumentType.COVER_LETTER,
+        )
+        self.assertEqual(document.name, "Cover_Letter.pdf")
+
+    def test_invalid_upload_type_is_rejected(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        uploaded = SimpleUploadedFile(
+            "cv.exe",
+            b"bad",
+            content_type="application/octet-stream",
+        )
+        response = self.client.post(
+            self.detail_url,
+            {
+                "action": "upload_cv",
+                "upload_cv-uploaded_file": uploaded,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            ApplicationDocument.objects.filter(application=self.application).exists()
+        )
+
+    def test_selecting_documents_clears_document_pack_missing_display(self):
+        cv_document = ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.CV,
+            name="Generated CV draft",
+            source=DocumentSource.JOB_ANALYZER,
+        )
+        cover_letter_document = ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.COVER_LETTER,
+            name="Generated cover letter draft",
+            source=DocumentSource.JOB_ANALYZER,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+        before = self.client.get(self.detail_url)
+        self.assertContains(before, "Selection still needed")
+        response = self.client.post(
+            self.detail_url,
+            {
+                "action": "select_documents",
+                "selected_cv_document": cv_document.pk,
+                "selected_cover_letter_document": cover_letter_document.pk,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        after = self.client.get(self.detail_url)
+        self.assertNotContains(after, "Selection still needed")
+        self.assertContains(after, cv_document.name)
+        self.assertContains(after, cover_letter_document.name)
+        readiness = build_application_evidence_readiness(self.application)
+        self.assertIn(ITEM_CV_VERSION, readiness.ready_items)
+        self.assertIn(ITEM_COVER_LETTER_VERSION, readiness.ready_items)
+
+    def test_generated_document_source_label_is_generated_document(self):
+        document = ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.CV,
+            name="Generated CV draft",
+            source=DocumentSource.JOB_ANALYZER,
+        )
+        self.assertEqual(document.evidence_source_label, "Generated document")
+
+    def test_external_reference_source_label(self):
+        document = ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.CV,
+            name="External CV",
+            source=DocumentSource.EXTERNAL_REFERENCE,
+        )
+        self.assertEqual(document.evidence_source_label, "External reference")
+
+    def test_manual_upload_source_label(self):
+        document = ApplicationDocument.objects.create(
+            application=self.application,
+            document_type=DocumentType.CV,
+            name="Uploaded CV.pdf",
+            source=DocumentSource.USER_UPLOAD,
+        )
+        self.assertEqual(document.evidence_source_label, "Manual upload")
 
 
 class JobApplicationViewTests(TestCase):
