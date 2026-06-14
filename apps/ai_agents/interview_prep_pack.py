@@ -316,6 +316,48 @@ _PROJECT_PROFILES: dict[str, dict[str, object]] = {
             "ETL workflow explanation": "DataBridge ingestion-to-reporting handoff pattern.",
         },
     },
+    "bakeops-dbt": {
+        "interview_purpose": (
+            "Portfolio dbt and DuckDB analytics engineering with test-driven model discipline."
+        ),
+        "best_technical_evidence": (
+            "7 dbt models, 26 automated tests, v1.0.1 release, and local DuckDB warehouse "
+            "patterns - portfolio scope only."
+        ),
+        "business_value": (
+            "Shows staging-to-mart modelling and SQL transform discipline without claiming "
+            "production cloud warehouse or orchestration ownership."
+        ),
+        "question_types": (
+            "dbt modelling",
+            "SQL transforms",
+            "data testing",
+            "analytics engineering stretch",
+        ),
+        "story": {
+            "context": "Portfolio analytics engineering project using dbt and DuckDB.",
+            "problem": (
+                "Operational bakery metrics needed a governed dbt model layer with tested "
+                "transforms rather than ad hoc SQL scripts."
+            ),
+            "tools": "dbt, DuckDB, SQL, portfolio test discipline.",
+            "output": "7 dbt models with 26 tests at v1.0.1 in a local DuckDB warehouse.",
+            "business_value": (
+                "Demonstrates portfolio-scale analytics engineering patterns with honest "
+                "boundaries on production platform depth."
+            ),
+            "pitch": (
+                "bakeops-dbt shows how I structure dbt models and DuckDB transforms with "
+                "automated tests, while keeping claims at portfolio scope only."
+            ),
+        },
+        "topic_evidence": {
+            "dbt modelling": "bakeops-dbt dbt model layers, tests, and v1.0.1 release discipline.",
+            "SQL transforms": "bakeops-dbt staging-to-mart SQL transforms in DuckDB.",
+            "ETL workflow explanation": "bakeops-dbt source-to-mart portfolio pipeline pattern.",
+            "Data modelling": "bakeops-dbt governed model layers and test coverage.",
+        },
+    },
 }
 
 _BASE_TECHNICAL_TOPICS: tuple[tuple[str, str, str], ...] = (
@@ -381,6 +423,11 @@ def select_application_project_evidence(application: JobApplication) -> tuple[st
             "CareerFunnel Tracker",
             "MarketVista Dashboard",
         ]
+    elif any(
+        word in text
+        for word in ["dbt", "duckdb", "data modelling", "data modeling", "analytics engineer"]
+    ):
+        projects = ["bakeops-dbt", "DataBridge Market API", "CareerFunnel Tracker"]
     elif any(word in text for word in ["etl", "api", "pipeline", "integration"]):
         projects = ["DataBridge Market API", "MarketVista Dashboard", "TradeIntel 360"]
     else:
@@ -452,6 +499,21 @@ def _build_technical_topics(
                 revision_focus="Dashboard layout, KPI cards, filters, and drill-down logic.",
             )
         )
+    if "dbt" in text or "duckdb" in text:
+        topics.append(
+            InterviewTechnicalTopic(
+                topic="dbt modelling (portfolio)",
+                why_it_matters=(
+                    "This role mentions dbt; explain bakeops-dbt portfolio evidence honestly "
+                    "without claiming production or cloud warehouse depth."
+                ),
+                project_evidence=_pick_topic_evidence("dbt modelling", projects),
+                revision_focus=(
+                    "Model layers, tests, local DuckDB scope, and what is not claimed "
+                    "(Airflow, Snowflake, production orchestration)."
+                ),
+            )
+        )
     if "api" in text or "etl" in text:
         topics.append(
             InterviewTechnicalTopic(
@@ -503,6 +565,10 @@ def _build_likely_questions(
     if "DataBridge Market API" in projects:
         project_questions.append(
             "How would you explain your DataBridge ingestion workflow?"
+        )
+    if "bakeops-dbt" in projects:
+        project_questions.append(
+            "How does bakeops-dbt demonstrate portfolio dbt and DuckDB evidence?"
         )
     if "RiskWise Planner" in projects:
         project_questions.append(

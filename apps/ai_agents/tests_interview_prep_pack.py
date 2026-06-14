@@ -20,6 +20,7 @@ ALL_KNOWN_PROJECTS = {
     "TradeIntel 360",
     "RiskWise Planner",
     "DataBridge Market API",
+    "bakeops-dbt",
 }
 
 FORBIDDEN_CLAIMS = (
@@ -94,6 +95,20 @@ class InterviewPrepPackServiceTests(TestCase):
         unselected = ALL_KNOWN_PROJECTS - set(prep.projects_to_use)
         for project in unselected:
             self.assertNotIn(project, combined)
+
+    def test_dbt_role_selects_bakeops_dbt_project(self):
+        application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Pipeline Co",
+            job_title="Junior Analytics Engineer",
+            date_applied=date(2026, 6, 1),
+            job_description="Junior analytics engineer with dbt, DuckDB, and SQL modelling.",
+        )
+        projects = select_application_project_evidence(application)
+        self.assertIn("bakeops-dbt", projects)
+        prep = build_interview_prep_pack(application)
+        topic_names = {topic.topic for topic in prep.technical_topics}
+        self.assertIn("dbt modelling (portfolio)", topic_names)
 
 
 class InterviewPrepPageTests(TestCase):

@@ -14,7 +14,8 @@ from apps.job_intelligence.services import LOCKED_CV
 MASTER_CV_BASENAME = DEFAULT_CV_BASELINE_NAME
 MASTER_CV_DISPLAY_NAME = "AMINUL ISLAM"
 MASTER_CV_HEADLINE = (
-    "Data Analyst | BI Analyst | Python, SQL, Excel, Django | FX & FinTech Operations"
+    "Data Analyst | BI Analyst | Junior Analytics Engineer | "
+    "Python, SQL, Excel, Django, dbt, DuckDB | FX & FinTech Operations"
 )
 MASTER_CV_CONTACT_LINES = (
     "Purley, London | 07443 360827 | aminulislamkhan.tech@gmail.com",
@@ -54,6 +55,7 @@ DEFAULT_PROJECT_ORDER = (
     "CareerFunnel Tracker",
     "TradeIntel 360",
     "DataBridge Market API / MarketVista Dashboard",
+    "bakeops-dbt",
 )
 
 PORTFOLIO_PROJECTS_INTRO = (
@@ -70,6 +72,9 @@ PORTFOLIO_PROJECT_TAGLINES: dict[str, str] = {
     "DataBridge Market API / MarketVista Dashboard": (
         "DataBridge Market API / MarketVista Dashboard - Python | API ingestion | ETL | "
         "Django dashboards"
+    ),
+    "bakeops-dbt": (
+        "bakeops-dbt - dbt | DuckDB | SQL transforms | 7 models | 26 tests | v1.0.1"
     ),
 }
 
@@ -105,6 +110,14 @@ PORTFOLIO_PROJECT_BULLETS: dict[str, tuple[str, ...]] = {
         "Demonstrates API ingestion, structured data handling, ETL-style thinking, "
         "watchlists, alert-style signals, and analyst-facing market visibility.",
     ),
+    "bakeops-dbt": (
+        "Portfolio analytics engineering project using dbt models and a local DuckDB "
+        "warehouse - portfolio scope only, not production or cloud warehouse deployment.",
+        "Shipped 7 dbt models with 26 automated tests at v1.0.1, covering "
+        "staging-to-mart transforms and test-driven model discipline.",
+        "Demonstrates portfolio-scale data modelling and SQL transform patterns without "
+        "claiming enterprise orchestration, Airflow, or cloud platform ownership.",
+    ),
 }
 
 TECHNICAL_SKILL_GROUPS: dict[str, tuple[str, ...]] = {
@@ -128,6 +141,8 @@ TECHNICAL_SKILL_GROUPS: dict[str, tuple[str, ...]] = {
         "REST APIs",
         "CSV/Excel/JSON ingestion",
         "ETL workflows",
+        "dbt (portfolio project)",
+        "DuckDB (portfolio project)",
         "Streamlit",
         "Git/GitHub",
     ),

@@ -218,6 +218,30 @@ class ApplicationDocumentDraftGenerationTests(TestCase):
         notes = " ".join(drafts.claim_safety_notes).lower()
         self.assertIn("review manually", notes)
         self.assertIn("unsupported", notes)
+        self.assertIn("airflow", drafts.cv_tailoring.learning_gaps)
+        self.assertNotIn("dbt", drafts.cv_tailoring.learning_gaps)
+
+    def test_dbt_not_listed_as_learning_target(self):
+        from apps.job_intelligence.constants import LEARNING_TARGETS
+
+        self.assertNotIn("dbt", LEARNING_TARGETS)
+
+    def test_ae_draft_prioritises_bakeops_dbt_for_dbt_roles(self):
+        drafts = build_application_document_drafts_from_fields(
+            job_title="Junior Analytics Engineer",
+            job_description="dbt duckdb data modelling pipeline",
+            required_skills="dbt duckdb sql",
+        )
+        evidence_text = " ".join(drafts.recommended_project_evidence)
+        self.assertIn("bakeops-dbt", evidence_text)
+        self.assertLess(
+            evidence_text.index("bakeops-dbt"),
+            evidence_text.index("CareerFunnel Tracker"),
+        )
+
+    def test_draft_headline_includes_junior_analytics_engineer(self):
+        drafts = build_application_document_drafts(self.application)
+        self.assertIn("Junior Analytics Engineer", drafts.cv_tailoring.headline)
 
     def test_missing_job_data_is_handled_safely(self):
         drafts = build_application_document_drafts_from_fields()
@@ -508,7 +532,7 @@ class SkillIntelligenceFoundationTests(TestCase):
             role_titles,
             {"Data Analyst", "BI Analyst", "Analytics Engineer", "Data Engineer"},
         )
-        self.assertEqual(len(context.skill_evidence), 10)
+        self.assertEqual(len(context.skill_evidence), 12)
 
     def test_no_models_or_migrations_required(self):
         import importlib.util

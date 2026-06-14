@@ -217,6 +217,11 @@ def recommend_projects_from_text(text: str) -> list[str]:
         for word in ["operations", "kpi", "margin", "waste", "product performance"]
     ):
         return ["BakeOps Intelligence", "CareerFunnel Tracker", "MarketVista Dashboard"]
+    if any(
+        word in text
+        for word in ["dbt", "duckdb", "data modelling", "data modeling", "analytics engineer"]
+    ):
+        return ["bakeops-dbt", "DataBridge Market API", "CareerFunnel Tracker"]
     if any(word in text for word in ["etl", "api", "pipeline", "integration"]):
         return ["DataBridge Market API", "MarketVista Dashboard", "TradeIntel 360"]
     return ["BakeOps Intelligence", "MarketVista Dashboard", "CareerFunnel Tracker"]
@@ -504,6 +509,7 @@ REQUIRED_SKILLS = [
     "statistics",
     "snowflake",
     "dbt",
+    "duckdb",
     "aws",
 ]
 
@@ -533,10 +539,17 @@ USER_EVIDENCE_MAP = {
         "Database-backed Django projects and dashboard-ready data models; strengthen "
         "explicit SQL examples if needed"
     ),
+    "dbt": (
+        "Portfolio-verified dbt via bakeops-dbt project; not production or "
+        "cloud warehouse depth"
+    ),
+    "duckdb": (
+        "Portfolio-verified DuckDB via bakeops-dbt local warehouse project; "
+        "not production cloud platform evidence"
+    ),
 }
 
 HARD_GAP_TERMS = [
-    "dbt",
     "snowflake",
     "airflow",
     "spark",
@@ -569,7 +582,7 @@ def analyze_cv_gap(job_description: str, cv_evidence: str = "") -> CVGapAnalysis
     for skill in job_skills:
         if skill in evidence_text or skill in USER_EVIDENCE_MAP:
             if (
-                skill in ["sql", "power bi", "tableau", "dbt", "snowflake", "aws"]
+                skill in ["sql", "power bi", "tableau", "snowflake", "aws"]
                 and skill not in evidence_text
             ):
                 partial.append(skill)
@@ -850,8 +863,8 @@ def _build_cover_letter_angles(
         )
     elif role_family == "Analytics Engineering / Data Product Stretch":
         angles.append(
-            "Frame pipeline/API projects honestly and acknowledge optional cloud/dbt "
-            "requirements as stretch goals."
+            "Frame bakeops-dbt portfolio dbt/DuckDB evidence honestly; treat Airflow "
+            "and cloud warehouse requirements as stretch goals."
         )
     if cv_gap.partial_matches:
         angles.append(
@@ -1721,6 +1734,7 @@ def check_cover_letter_quality(
 
     project_terms = [
         "bakeops",
+        "bakeops-dbt",
         "marketvista",
         "riskwise",
         "tradeintel",
@@ -1850,7 +1864,7 @@ def analyze_rejection_patterns(user) -> RejectionPatternReport:
     ]
     if any("Hard-tool" in cause for cause in causes):
         recommendations.append(
-            "Strengthen or de-emphasise cloud/dbt/Snowflake-heavy roles unless "
+            "Strengthen or de-emphasise cloud/Snowflake-heavy roles unless "
             "listed as optional."
         )
 

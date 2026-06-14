@@ -86,7 +86,6 @@ DEAL_BREAKERS = [
 ]
 
 LEARNING_TARGETS = [
-    "dbt",
     "airflow",
     "spark",
     "kafka",
