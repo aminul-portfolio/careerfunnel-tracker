@@ -22,6 +22,7 @@ from apps.applications.master_cv import (
     EXPERIENCE_MONEY_TRANSFER_FX_BULLETS,
     MASTER_CV_CONTACT_LINE,
     MASTER_CV_CONTACT_LINES,
+    MASTER_CV_HEADLINE,
     PORTFOLIO_PROJECT_BULLETS,
     PORTFOLIO_PROJECT_TAGLINES,
     TECHNICAL_SKILL_GROUPS,
@@ -76,6 +77,9 @@ class MasterCvBaselineTests(SimpleTestCase):
         )
         self.assertIn("Power Query", TECHNICAL_SKILL_GROUPS["Analysis & reporting"])
         self.assertIn("Git/GitHub", TECHNICAL_SKILL_GROUPS["Data platforms & engineering"])
+        engineering_skills = TECHNICAL_SKILL_GROUPS["Data platforms & engineering"]
+        self.assertIn("dbt (portfolio project)", engineering_skills)
+        self.assertIn("DuckDB (portfolio project)", engineering_skills)
 
     def test_baseline_experience_bullets_match_approved_master_cv(self):
         self.assertEqual(len(EXPERIENCE_MONEY_TRANSFER_FX_BULLETS), 4)
@@ -98,6 +102,7 @@ class MasterCvBaselineTests(SimpleTestCase):
                 "CareerFunnel Tracker",
                 "TradeIntel 360",
                 "DataBridge Market API / MarketVista Dashboard",
+                "bakeops-dbt",
             ),
         )
         careerfunnel = PORTFOLIO_PROJECT_BULLETS["CareerFunnel Tracker"]
@@ -233,7 +238,7 @@ class ProfessionalCvExportTests(TestCase):
         self.assertIn("07443 360827", document_xml)
         self.assertIn("aminulislamkhan.tech@gmail.com", document_xml)
         self.assertIn(
-            "Data Analyst | BI Analyst | Python, SQL, Excel, Django | FX &amp; FinTech Operations",
+            MASTER_CV_HEADLINE.replace("&", "&amp;"),
             document_xml,
         )
 
@@ -337,7 +342,7 @@ class CoverLetterExportTests(TestCase):
         document_xml = self._docx_xml(render_structured_document_docx(self.structured))
         self.assertIn("Aminul Islam", document_xml)
         self.assertIn(
-            "Data Analyst | BI Analyst | Python, SQL, Excel, Django | FX &amp; FinTech Operations",
+            MASTER_CV_HEADLINE.replace("&", "&amp;"),
             document_xml,
         )
         self.assertIn(COVER_LETTER_CONTACT_LINE.replace("&", "&amp;"), document_xml)

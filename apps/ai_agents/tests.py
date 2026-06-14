@@ -94,6 +94,13 @@ class AiAgentServiceTests(TestCase):
         self.assertNotIn("dbt", analysis.deal_breakers)
         self.assertNotIn("airflow", analysis.deal_breakers)
         self.assertTrue(any("Learning-target tools detected" in risk for risk in analysis.risks))
+        self.assertTrue(any("airflow" in risk for risk in analysis.risks))
+        self.assertFalse(
+            any(
+                "dbt" in risk and "Learning-target" in risk
+                for risk in analysis.risks
+            )
+        )
         self.assertTrue(any("AE/DE stretch target" in risk for risk in analysis.risks))
 
     def test_true_deal_breakers_still_reduce_score(self):
@@ -480,7 +487,8 @@ class AdvancedAiAgentFeatureTests(TestCase):
             cv_evidence="Python Excel dashboard reporting Django projects",
         )
         self.assertGreaterEqual(analysis.score, 40)
-        self.assertIn("dbt", analysis.missing_skills)
+        self.assertIn("dbt", analysis.matched_skills)
+        self.assertIn("snowflake", analysis.missing_skills)
 
     def test_cover_letter_quality_service(self):
         from .services import check_cover_letter_quality
@@ -674,7 +682,7 @@ class CVTailoringAdvisorLogicTests(TestCase):
             )
         )
 
-    def test_missing_dbt_snowflake_airflow_treated_as_gaps_not_invented_experience(self):
+    def test_missing_snowflake_airflow_treated_as_gaps_not_invented_experience(self):
         result = build_cv_tailoring_advisor(
             job_title="Data Analyst",
             job_description="Python SQL dbt Snowflake Airflow required for reporting",
@@ -684,8 +692,9 @@ class CVTailoringAdvisorLogicTests(TestCase):
             result.missing_skills + result.partial_matches + result.risks
         ).lower()
         self.assertTrue(
-            any(tool in gap_text for tool in ("dbt", "snowflake", "airflow"))
+            any(tool in gap_text for tool in ("snowflake", "airflow"))
         )
+        self.assertNotIn("dbt", result.missing_skills)
         experience_text = " ".join(result.strongest_experience).lower()
         self.assertNotIn("dbt production expert", experience_text)
         self.assertNotIn("snowflake architect", experience_text)
@@ -1219,6 +1228,7 @@ class EvidenceBankTests(TestCase):
             "DataBridge Market API",
             "TradeIntel 360",
             "RiskWise Planner",
+            "bakeops-dbt",
         }
         display_names = {entry.display_name for entry in PROJECT_ENTRIES.values()}
         self.assertEqual(display_names, expected)
@@ -1247,6 +1257,45 @@ class EvidenceBankTests(TestCase):
             self.assertEqual(entry.tier, "gap_learning")
             self.assertFalse(entry.claimable)
             self.assertFalse(is_claimable_skill(skill_id))
+
+    def test_dbt_and_duckdb_are_portfolio_partial_claimable_not_strong(self):
+        from .evidence_bank import (
+            filter_claimable_for_matched,
+            get_evidence_entry,
+            is_claimable_skill,
+        )
+
+        for skill_id in ("dbt", "duckdb"):
+            entry = get_evidence_entry(skill_id)
+            self.assertIsNotNone(entry)
+            self.assertEqual(entry.tier, "partial")
+            self.assertTrue(entry.claimable)
+            self.assertTrue(is_claimable_skill(skill_id))
+            self.assertNotIn(skill_id, filter_claimable_for_matched([skill_id, "python"]))
+
+    def test_snowflake_and_airflow_remain_gap_learning_not_claimable(self):
+        from .evidence_bank import (
+            GAP_LEARNING_SKILL_IDS,
+            HARD_GAP_SKILL_IDS,
+            get_evidence_entry,
+            is_claimable_skill,
+        )
+
+        for skill_id in ("snowflake", "airflow"):
+            self.assertIn(skill_id, GAP_LEARNING_SKILL_IDS)
+            self.assertIn(skill_id, HARD_GAP_SKILL_IDS)
+            entry = get_evidence_entry(skill_id)
+            self.assertEqual(entry.tier, "gap_learning")
+            self.assertFalse(entry.claimable)
+            self.assertFalse(is_claimable_skill(skill_id))
+
+    def test_bakeops_dbt_is_accepted_as_canonical_project(self):
+        from .evidence_bank import PROJECT_ENTRIES, validate_project_names
+
+        self.assertIn("bakeops_dbt", PROJECT_ENTRIES)
+        self.assertEqual(PROJECT_ENTRIES["bakeops_dbt"].display_name, "bakeops-dbt")
+        validated = validate_project_names(["bakeops-dbt", "Unknown Portfolio App"])
+        self.assertEqual(validated, ["bakeops-dbt"])
 
     def test_filter_claimable_for_matched_strips_gap_tier_skills(self):
         from .evidence_bank import filter_claimable_for_matched
@@ -1647,6 +1696,7 @@ class TestCvTailoringAdvisorSemanticFallback(TestCase):
         self.assertIn("python", result.matched_skills)
         self.assertIn("django", result.matched_skills)
         self.assertNotIn("dbt", result.matched_skills)
+        self.assertIn("dbt", result.partial_matches)
 
     def test_gap_tier_skills_are_demoted_to_missing_skills_not_matched(self):
         def mock_provider(prompt):
@@ -1682,6 +1732,18 @@ class TestCvTailoringAdvisorSemanticFallback(TestCase):
         self.assertFalse(
             any("Unknown" in project for project in result.strongest_projects)
         )
+
+    def test_valid_semantic_payload_accepts_bakeops_dbt_project(self):
+        def mock_provider(prompt):
+            return self._valid_semantic_provider_payload(
+                semantic_project_highlights=["bakeops-dbt"],
+            )
+
+        result = build_cv_tailoring_advisor(
+            **self._job_fields(),
+            provider_callable=mock_provider,
+        )
+        self.assertIn("bakeops-dbt", result.strongest_projects)
 
     def test_recommended_cv_always_locked_cv_with_provider(self):
         def mock_provider(prompt):

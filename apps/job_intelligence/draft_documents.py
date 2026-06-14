@@ -11,7 +11,8 @@ from apps.job_intelligence.services import LOCKED_CV, SmartApplicationReview, bu
 
 MASTER_CV_BASELINE = LOCKED_CV
 MASTER_CV_HEADLINE = (
-    "Data Analyst | BI Analyst | Python, SQL, Excel, Django | FX & FinTech Operations"
+    "Data Analyst | BI Analyst | Junior Analytics Engineer | "
+    "Python, SQL, Excel, Django, dbt, DuckDB | FX & FinTech Operations"
 )
 
 DEFAULT_PROJECT_ORDER = (
@@ -19,6 +20,7 @@ DEFAULT_PROJECT_ORDER = (
     "CareerFunnel Tracker",
     "TradeIntel 360",
     "DataBridge Market API / MarketVista Dashboard",
+    "bakeops-dbt",
 )
 
 CAREERFUNNEL_EVIDENCE = (
@@ -46,11 +48,18 @@ DATABRIDGE_EVIDENCE = (
     "alert-style signals for analyst visibility."
 )
 
+BAKEOPS_DBT_EVIDENCE = (
+    "bakeops-dbt demonstrates portfolio-verified dbt and DuckDB analytics engineering "
+    "with 7 models, 26 tests, and v1.0.1 release discipline - not production or "
+    "cloud warehouse deployment."
+)
+
 PROJECT_EVIDENCE = {
     "BakeOps Intelligence": BAKEOPS_EVIDENCE,
     "CareerFunnel Tracker": CAREERFUNNEL_EVIDENCE,
     "TradeIntel 360": TRADEINTEL_EVIDENCE,
     "DataBridge Market API / MarketVista Dashboard": DATABRIDGE_EVIDENCE,
+    "bakeops-dbt": BAKEOPS_DBT_EVIDENCE,
 }
 
 DRAFT_HELPER_TEXT = (
@@ -126,11 +135,12 @@ def _build_recommended_cv_filename(company_name: str, job_title: str) -> str:
 
 def _detect_profile_angle(text: str) -> str:
     if any(title in text for title in TARGET_TITLES_AE_STRETCH) and any(
-        word in text for word in ["etl", "pipeline", "api", "data product"]
+        word in text for word in ["etl", "pipeline", "api", "data product", "dbt", "duckdb"]
     ):
         return (
-            "Junior Analytics Engineer stretch angle - emphasise Python, SQL, ETL-style "
-            "project evidence, but keep primary positioning as Data Analyst / BI Analyst."
+            "Junior Analytics Engineer stretch angle - emphasise bakeops-dbt portfolio "
+            "dbt/DuckDB evidence, Python, SQL, and ETL-style project work, but keep "
+            "primary positioning as Data Analyst / BI Analyst."
         )
     if any(word in text for word in ["bi", "dashboard", "power bi", "reporting", "insights"]):
         return (
@@ -152,11 +162,13 @@ def _prioritise_projects(text: str, suggested: list[str]) -> tuple[str, ...]:
     priority_keys: list[tuple[str, ...]] = [
         ("finance", "fx", "fintech", "trading", "market", "risk"),
         ("operations", "kpi", "margin", "waste"),
+        ("dbt", "duckdb", "data modelling", "data modeling", "analytics engineer"),
         ("etl", "api", "pipeline", "integration"),
     ]
     project_sets = [
         ("TradeIntel 360", "DataBridge Market API / MarketVista Dashboard", "BakeOps Intelligence"),
         ("BakeOps Intelligence", "CareerFunnel Tracker", "TradeIntel 360"),
+        ("bakeops-dbt", "DataBridge Market API / MarketVista Dashboard", "CareerFunnel Tracker"),
         ("DataBridge Market API / MarketVista Dashboard", "TradeIntel 360", "CareerFunnel Tracker"),
     ]
     ordered: list[str] = []

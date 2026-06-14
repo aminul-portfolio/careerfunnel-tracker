@@ -356,8 +356,29 @@ _SKILL_CATALOG: tuple[dict, ...] = (
         "name": "ETL / data preparation",
         "keywords": ("etl", "pipeline", "data preparation", "integration"),
         "summary": "Ingestion, cleaning, and hand-off between systems.",
-        "projects": ("DataBridge Market API", "TradeIntel 360"),
+        "projects": ("DataBridge Market API", "TradeIntel 360", "bakeops-dbt"),
         "evidence_note": "Analytics engineering and data product angles.",
+    },
+    {
+        "name": "dbt (portfolio)",
+        "keywords": ("dbt", "data build tool"),
+        "summary": (
+            "Portfolio dbt modelling via bakeops-dbt; not production or cloud warehouse depth."
+        ),
+        "projects": ("bakeops-dbt",),
+        "evidence_note": (
+            "Portfolio-verified via bakeops-dbt (7 models, 26 tests, v1.0.1); "
+            "not enterprise or cloud platform dbt."
+        ),
+    },
+    {
+        "name": "DuckDB (portfolio)",
+        "keywords": ("duckdb",),
+        "summary": (
+            "Local DuckDB warehouse evidence via bakeops-dbt; not production cloud platform use."
+        ),
+        "projects": ("bakeops-dbt",),
+        "evidence_note": "Portfolio warehouse project only; not Snowflake/BigQuery evidence.",
     },
     {
         "name": "Business operations / FX operations",
@@ -528,6 +549,20 @@ _PORTFOLIO_SKILL_MAPPINGS: tuple[PortfolioSkillMapping, ...] = (
         project_name="DataBridge Market API",
         skills_demonstrated=("Python", "ETL / data preparation", "Django"),
         manual_note="API and ingestion oriented evidence for engineering-leaning roles.",
+        career_evidence_url="",
+    ),
+    PortfolioSkillMapping(
+        project_name="bakeops-dbt",
+        skills_demonstrated=(
+            "dbt (portfolio)",
+            "DuckDB (portfolio)",
+            "SQL",
+            "ETL / data preparation",
+        ),
+        manual_note=(
+            "Portfolio analytics engineering project with 7 dbt models, 26 tests, v1.0.1; "
+            "not production or cloud warehouse evidence."
+        ),
         career_evidence_url="",
     ),
 )

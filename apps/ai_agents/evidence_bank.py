@@ -33,7 +33,6 @@ FORBIDDEN_CLAIM_PHRASES: tuple[str, ...] = (
 )
 
 GAP_LEARNING_SKILL_IDS: frozenset[str] = frozenset({
-    "dbt",
     "snowflake",
     "airflow",
     "spark",
@@ -45,7 +44,6 @@ GAP_LEARNING_SKILL_IDS: frozenset[str] = frozenset({
 })
 
 HARD_GAP_SKILL_IDS: frozenset[str] = frozenset({
-    "dbt",
     "snowflake",
     "airflow",
     "spark",
@@ -222,14 +220,27 @@ EVIDENCE_ENTRIES: dict[str, EvidenceEntry] = {
         "Dashboard evidence via portfolio projects; strengthen only with explicit examples.",
         (_DOC,),
     ),
-    # Gap / learning targets — never claimable
     "dbt": _entry(
         "dbt",
         "dbt",
-        "gap_learning",
-        "Learning target; portfolio shows ETL-style patterns only — not production dbt depth.",
-        (_S31A,),
+        "partial",
+        (
+            "Portfolio-verified via bakeops-dbt (7 models, 26 tests, v1.0.1); "
+            "not production, enterprise, or cloud warehouse dbt."
+        ),
+        (_S31A, "docs/evidence/sprint_63b_dbt_duckdb_evidence_alignment.md"),
     ),
+    "duckdb": _entry(
+        "duckdb",
+        "DuckDB",
+        "partial",
+        (
+            "Portfolio-verified via bakeops-dbt local DuckDB warehouse; "
+            "not production cloud platform evidence."
+        ),
+        (_S31A, "docs/evidence/sprint_63b_dbt_duckdb_evidence_alignment.md"),
+    ),
+    # Gap / learning targets - never claimable
     "snowflake": _entry(
         "snowflake",
         "Snowflake",
@@ -347,6 +358,19 @@ PROJECT_ENTRIES: dict[str, ProjectEvidenceEntry] = {
         evidence_summary="Risk and planning analytics portfolio project.",
         source_refs=(_PORTFOLIO, _DOC),
     ),
+    "bakeops_dbt": ProjectEvidenceEntry(
+        project_id="bakeops_dbt",
+        display_name="bakeops-dbt",
+        role_families=("Analytics Engineering / Data Product Stretch",),
+        evidence_summary=(
+            "Portfolio dbt and DuckDB analytics engineering project with 7 models, "
+            "26 tests, and v1.0.1 release discipline."
+        ),
+        source_refs=(
+            _PORTFOLIO,
+            "docs/evidence/sprint_63b_dbt_duckdb_evidence_alignment.md",
+        ),
+    ),
 }
 
 _DISPLAY_NAME_TO_PROJECT_ID: dict[str, str] = {
@@ -387,7 +411,8 @@ EXPERIENCE_ANGLE_ENTRIES: dict[str, ExperienceAngleEntry] = {
         label="Pipeline/API-style portfolio evidence with honest tool-gap boundaries",
         role_families=("Analytics Engineering / Data Product Stretch",),
         evidence_summary=(
-            "DataBridge and API evidence without claiming production dbt/Airflow depth."
+            "bakeops-dbt portfolio dbt/DuckDB evidence and DataBridge API patterns - "
+            "not production Airflow or cloud warehouse depth."
         ),
     ),
 }
