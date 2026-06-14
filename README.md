@@ -10,7 +10,7 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 Sprints **52-59** are complete on `main`. Sprint **60** (Application Document Pack workflow) is complete on branch `sprint-60-phase-6-final-validation-docs-closure`.
 
-Current verified baseline: **828 tests passing** (includes Sprint 60 Application Document Pack tests).
+Current verified baseline: **982 tests passing** (includes Sprint 60 Application Document Pack tests).
 
 Latest completed tag: `sprint-59-final-career-intelligence-workflow-complete` (Sprint 60 tag pending merge).
 
@@ -272,7 +272,7 @@ For a portfolio-level evidence map across the user's major GitHub projects, see 
 
 For recruiter-facing portfolio presentation materials, see `docs/career_evidence/portfolio_presentation_pack.md`.
 
-Current verified test count: **828 passing**.
+Current verified test count: **982 passing**.
 
 Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/` and Sprint 53-59 intelligence screenshots stored in `docs/screenshots/intelligence/`. The main supporting documentation is:
 
