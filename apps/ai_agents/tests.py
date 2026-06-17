@@ -1,8 +1,11 @@
+import html
 import json
+import re
 import zipfile
 from datetime import date, timedelta
 from io import BytesIO
 from unittest.mock import MagicMock, patch
+from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -295,7 +298,7 @@ class AiAgentViewTests(TestCase):
         self.assertContains(response, "No application is submitted automatically")
         page_text = response.content.decode()
         self.assertIn("No Gmail, Calendar, scraping, recruiter automation", page_text)
-        self.assertIn("auto-apply is used", page_text)
+        self.assertIn("automated recruiter or application submission is used", page_text)
         self.assertContains(response, "CV Tailoring Advisor")
         self.assertContains(response, LOCKED_CV)
         self.assertContains(response, "advisory only")
@@ -1849,6 +1852,15 @@ class JobPostingAnalyzerGuardrailTests(TestCase):
         data.update(overrides)
         return self.client.post(self.analyzer_url, data)
 
+    def _prefill_cta_href(self, response) -> str:
+        page_html = response.content.decode()
+        match = re.search(
+            r'<a[^>]+href="([^"]+)"[^>]*>\s*Pre-fill Add Application\s*</a>',
+            page_html,
+        )
+        self.assertIsNotNone(match)
+        return html.unescape(match.group(1))
+
     def test_weak_fit_result_does_not_show_generate_draft_cta(self):
         response = self._post_analysis(
             company_name="Unclear Co",
@@ -1887,7 +1899,7 @@ class JobPostingAnalyzerGuardrailTests(TestCase):
         self.assertGreaterEqual(score, ANALYZER_BORDERLINE_FIT_MIN_SCORE)
         self.assertLess(score, ANALYZER_STRONG_FIT_MIN_SCORE)
         self.assertContains(response, "Review manually before pre-fill")
-        self.assertNotContains(response, "Review & Pre-fill Application", html=True)
+        self.assertNotContains(response, "Pre-fill Add Application", html=True)
         self.assertNotContains(response, "Generate Draft Application Documents")
 
     def test_strong_fit_result_shows_prefill_cta(self):
@@ -1896,7 +1908,7 @@ class JobPostingAnalyzerGuardrailTests(TestCase):
             response.context["analysis"].fit_score,
             ANALYZER_STRONG_FIT_MIN_SCORE,
         )
-        self.assertContains(response, "Review & Pre-fill Application", html=True)
+        self.assertContains(response, "Pre-fill Add Application", html=True)
 
     def test_strong_fit_prefill_still_works_end_to_end(self):
         response = self._post_analysis(
@@ -1914,6 +1926,99 @@ class JobPostingAnalyzerGuardrailTests(TestCase):
         content = response.content.decode().lower()
         self.assertIn("advisory-only", content)
         self.assertIn("rule-based", content)
+
+    def test_analyzer_result_shows_prefill_add_application_cta(self):
+        response = self._post_analysis()
+
+        self.assertGreaterEqual(
+            response.context["analysis"].fit_score,
+            ANALYZER_STRONG_FIT_MIN_SCORE,
+        )
+        self.assertContains(response, "Pre-fill Add Application")
+
+    def test_prefill_cta_text_is_prefill_add_application(self):
+        response = self._post_analysis()
+
+        self.assertContains(response, ">Pre-fill Add Application</a>", html=False)
+        self.assertNotContains(response, ">Review & Pre-fill Application</a>", html=False)
+
+    def test_prefill_cta_link_targets_add_application_not_external_site(self):
+        response = self._post_analysis()
+
+        href = self._prefill_cta_href(response)
+        parsed_href = urlparse(href)
+        self.assertEqual(parsed_href.scheme, "")
+        self.assertEqual(parsed_href.netloc, "")
+        self.assertEqual(parsed_href.path, reverse("applications:application_create"))
+
+    def test_prefill_cta_does_not_appear_before_analysis_is_run(self):
+        response = self.client.get(self.analyzer_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context["analysis"])
+        self.assertNotContains(response, "Pre-fill Add Application")
+
+    def test_prefill_cta_does_not_appear_for_weak_fit_result(self):
+        response = self._post_analysis(
+            company_name="Unclear Co",
+            job_title="Senior Sales Manager",
+            location="Unspecified",
+            job_posting="Own enterprise sales targets and manage commercial pipeline.",
+        )
+
+        self.assertLessEqual(response.context["analysis"].fit_score, ANALYZER_WEAK_FIT_MAX_SCORE)
+        self.assertNotContains(response, "Pre-fill Add Application")
+
+    def test_analyzer_result_does_not_contain_apply_now(self):
+        response = self._post_analysis()
+
+        self.assertNotContains(response, "Apply Now")
+
+    def test_analyzer_result_does_not_contain_auto_apply(self):
+        response = self._post_analysis()
+        page_text = response.content.decode()
+
+        for forbidden_phrase in (
+            "auto-apply",
+            "auto apply",
+            "Auto Apply",
+            "Auto-fill and Submit",
+        ):
+            self.assertNotIn(forbidden_phrase, page_text)
+
+    def test_analyzer_result_does_not_contain_submit_application(self):
+        response = self._post_analysis()
+
+        self.assertNotContains(response, "Submit Application")
+
+    def test_prefill_cta_helper_text_confirms_manual_save_and_no_external_submission(self):
+        response = self._post_analysis()
+
+        self.assertContains(
+            response,
+            (
+                "Review the analysis above before continuing. Pre-filling opens the Add "
+                "Application form - you must save manually. No application is submitted "
+                "externally."
+            ),
+        )
+
+    def test_prefill_url_does_not_include_auto_save_or_auto_submit_parameter(self):
+        response = self._post_analysis()
+
+        href = self._prefill_cta_href(response)
+        parsed_href = urlparse(href)
+        query_params = parse_qs(parsed_href.query)
+        for forbidden_param in (
+            "auto_save",
+            "autosave",
+            "auto_submit",
+            "autosubmit",
+            "submit",
+            "submitted",
+        ):
+            self.assertNotIn(forbidden_param, query_params)
+        self.assertNotIn("status=submitted", href.lower())
 
 
 def _upload_docx_bytes(*paragraphs: str) -> bytes:

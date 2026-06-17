@@ -41,7 +41,7 @@
             AI scoring is advisory only. Manual review is required before using recommendations
             externally. No application is submitted automatically. No CV or cover letter is
             finalized automatically. No Gmail, Calendar, scraping, recruiter automation, or
-            auto-apply is used.
+            automated recruiter or application submission is used.
         </p>
         <div class="detail-grid">
             <div class="detail-item">
@@ -113,9 +113,9 @@
     </section>
     {% include "job_intelligence/_application_document_drafts.html" %}
     <section class="content-card">
-        <div class="card-header"><p class="eyebrow">Save to pipeline</p><h2>Review & Pre-fill Application</h2></div>
-        <p>This opens a pre-filled Add Application form. Nothing is saved until you review and submit the form. Nothing is submitted automatically.</p>
-        <a class="btn btn-primary" href="{% url 'applications:application_create' %}?company_name={{ form.company_name.value|urlencode }}&amp;job_title={{ form.job_title.value|urlencode }}&amp;location={{ form.location.value|urlencode }}&amp;fit_score={{ analysis.fit_score }}">Review & Pre-fill Application</a>
+        <div class="card-header"><p class="eyebrow">Save to pipeline</p><h2>Pre-fill Add Application</h2></div>
+        <p>Review the analysis above before continuing. Pre-filling opens the Add Application form - you must save manually. No application is submitted externally.</p>
+        <a class="btn btn-primary" href="{% url 'applications:application_create' %}?company_name={{ form.company_name.value|urlencode }}&amp;job_title={{ form.job_title.value|urlencode }}&amp;location={{ form.location.value|urlencode }}&amp;fit_score={{ analysis.fit_score }}">Pre-fill Add Application</a>
     </section>
     {% endif %}
     {% if tailoring_advisor %}
@@ -127,8 +127,8 @@
         <p class="muted-text">
             CV Tailoring Advisor remains advisory only. ChatGPT Tailoring v3 / CV V3.1 is the external final-document tailoring source. Rule-based fallback remains active.
             Claude semantic enhancement may be used only when configured; manual review is
-            required. No final CV, cover letter body, Gmail, Calendar, OAuth, auto-apply, or
-            automatic submission is used.
+            required. No final CV, cover letter body, Gmail, Calendar, OAuth, automated recruiter
+            or application submission is used.
         </p>
         <p class="muted-text">
             Suggestions only - not automatic tailoring. Review and approve all wording before
