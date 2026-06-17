@@ -2007,6 +2007,70 @@ class ApplicationCreatePrefillTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.context["form"].initial.get("role_fit"))
 
+    def test_prefill_url_with_blank_company_returns_safe_default(self):
+        response = self._get_create("company_name=&job_title=Junior+Data+Analyst")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["form"].initial.get("company_name"), "")
+        self.assertNotContains(response, "Unknown Company")
+
+    def test_prefill_url_with_blank_title_returns_safe_default(self):
+        response = self._get_create("company_name=FinSight&job_title=")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["form"].initial.get("job_title"), "")
+        self.assertNotContains(response, "Untitled Role")
+
+    def test_prefill_url_with_blank_location_returns_safe_default(self):
+        response = self._get_create("company_name=FinSight&location=")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["form"].initial.get("location"), "")
+        self.assertNotContains(response, 'name="location" value="Remote')
+
+    def test_prefill_url_with_all_blank_fields_does_not_crash(self):
+        response = self._get_create("company_name=&job_title=&location=&fit_score=")
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertEqual(form.initial.get("company_name"), "")
+        self.assertEqual(form.initial.get("job_title"), "")
+        self.assertEqual(form.initial.get("location"), "")
+        self.assertContains(response, "Manual review required before saving")
+
+    def test_add_application_from_prefill_does_not_default_to_submitted(self):
+        response = self._get_create("company_name=FinSight&job_title=Junior+Data+Analyst")
+        self.assertEqual(
+            response.context["form"].initial.get("status"),
+            ApplicationStatus.SAVED_FOR_LATER,
+        )
+        self.assertNotEqual(
+            response.context["form"].initial.get("status"),
+            ApplicationStatus.SUBMITTED,
+        )
+
+    def test_add_application_from_prefill_carries_correct_fields_only(self):
+        response = self._get_create(
+            "company_name=FinSight&job_title=Junior+Data+Analyst"
+            "&location=Hybrid+London&fit_score=80&status=submitted"
+        )
+        form = response.context["form"]
+        self.assertEqual(form.initial.get("company_name"), "FinSight")
+        self.assertEqual(form.initial.get("job_title"), "Junior Data Analyst")
+        self.assertEqual(form.initial.get("location"), "Hybrid London")
+        self.assertEqual(form.initial.get("role_fit"), RoleFit.STRONG)
+        self.assertEqual(form.initial.get("pipeline_stage"), PipelineStage.FIT_CHECKED)
+        self.assertEqual(form.initial.get("status"), ApplicationStatus.SAVED_FOR_LATER)
+        self.assertNotIn("required_skills", form.initial)
+        self.assertNotIn("job_description", form.initial)
+
+    def test_add_application_form_shows_manual_workflow_helper_text(self):
+        response = self._get_create("company_name=FinSight")
+        self.assertContains(
+            response,
+            (
+                "Analyze → Review → Approve → Pre-fill Add Application → Manual Save → "
+                "Manual external submission. CareerFunnel does not submit applications "
+                "automatically."
+            ),
+        )
+
     def test_pipeline_stage_fit_checked_when_prefill_params_exist(self):
         response = self._get_create("company_name=FinSight")
         self.assertEqual(

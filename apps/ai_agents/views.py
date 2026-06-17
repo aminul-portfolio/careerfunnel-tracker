@@ -47,6 +47,8 @@ from .forms import (
     JobPostingAnalyzerForm,
 )
 from .services import (
+    ANALYZER_BORDERLINE_FIT_MIN_SCORE,
+    ANALYZER_STRONG_FIT_MIN_SCORE,
     analyze_cv_gap,
     analyze_job_posting,
     analyze_rejection_patterns,
@@ -147,6 +149,9 @@ def job_posting_analyzer(request):
     ai_wrapper_result = None
     ai_score_comparison = None
     document_drafts = None
+    show_weak_fit_caution = False
+    show_borderline_review_path = False
+    show_strong_fit_actions = False
     if request.method == "POST":
         form = JobPostingAnalyzerForm(request.POST)
         if form.is_valid():
@@ -160,7 +165,14 @@ def job_posting_analyzer(request):
                 location=location,
                 job_posting=job_posting,
             )
-            if request.POST.get("generate_drafts"):
+            show_strong_fit_actions = analysis.fit_score >= ANALYZER_STRONG_FIT_MIN_SCORE
+            show_borderline_review_path = (
+                ANALYZER_BORDERLINE_FIT_MIN_SCORE
+                <= analysis.fit_score
+                < ANALYZER_STRONG_FIT_MIN_SCORE
+            )
+            show_weak_fit_caution = analysis.fit_score < ANALYZER_BORDERLINE_FIT_MIN_SCORE
+            if request.POST.get("generate_drafts") and show_strong_fit_actions:
                 document_drafts = build_application_document_drafts_from_fields(
                     company_name=company_name,
                     job_title=job_title,
@@ -209,6 +221,9 @@ def job_posting_analyzer(request):
             "ai_score_comparison": ai_score_comparison,
             "document_drafts": document_drafts,
             "show_draft_download_buttons": bool(document_drafts),
+            "show_weak_fit_caution": show_weak_fit_caution,
+            "show_borderline_review_path": show_borderline_review_path,
+            "show_strong_fit_actions": show_strong_fit_actions,
         },
     )
 

@@ -5,10 +5,20 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.ai_agents.services import (
+    ANALYZER_BORDERLINE_FIT_MIN_SCORE,
+    ANALYZER_STRONG_FIT_MIN_SCORE,
+)
 from apps.followups.services import build_followup_email_draft, mark_followup_sent
 from apps.job_intelligence.services import build_smart_review
 
-from .choices import DEFAULT_CV_BASELINE_NAME, DocumentType, PipelineStage, RoleFit
+from .choices import (
+    DEFAULT_CV_BASELINE_NAME,
+    ApplicationStatus,
+    DocumentType,
+    PipelineStage,
+    RoleFit,
+)
 from .document_exports import (
     DOCX_CONTENT_TYPE,
     PDF_CONTENT_TYPE,
@@ -355,10 +365,13 @@ def _application_create_prefill_params(request):
     return ("company_name", "job_title", "location", "fit_score")
 
 
+def _has_application_create_prefill(request) -> bool:
+    return any(key in request.GET for key in _application_create_prefill_params(request))
+
+
 def _build_application_create_initial(request):
     initial: dict[str, str] = {}
-    prefill_keys = _application_create_prefill_params(request)
-    has_prefill = any(key in request.GET for key in prefill_keys)
+    has_prefill = _has_application_create_prefill(request)
 
     if "company_name" in request.GET:
         initial["company_name"] = request.GET.get("company_name", "")
@@ -374,14 +387,15 @@ def _build_application_create_initial(request):
             except (TypeError, ValueError):
                 pass
             else:
-                if fit_score >= 60:
+                if fit_score >= ANALYZER_STRONG_FIT_MIN_SCORE:
                     initial["role_fit"] = RoleFit.STRONG
-                elif fit_score >= 40:
+                elif fit_score >= ANALYZER_BORDERLINE_FIT_MIN_SCORE:
                     initial["role_fit"] = RoleFit.MEDIUM
                 else:
                     initial["role_fit"] = RoleFit.WEAK
 
     if has_prefill:
+        initial["status"] = ApplicationStatus.SAVED_FOR_LATER
         initial["pipeline_stage"] = PipelineStage.FIT_CHECKED
         initial["cv_version"] = DEFAULT_CV_BASELINE_NAME
 
@@ -390,6 +404,7 @@ def _build_application_create_initial(request):
 
 @login_required
 def application_create(request):
+    is_analyzer_prefill = _has_application_create_prefill(request)
     if request.method == "POST":
         form = JobApplicationForm(request.POST)
         if form.is_valid():
@@ -409,6 +424,7 @@ def application_create(request):
             "form": form,
             "page_title": "Add Application",
             "submit_label": "Save Application",
+            "is_analyzer_prefill": is_analyzer_prefill,
             "cv_version_display": build_analyzer_cv_version_display(
                 company_name=form["company_name"].value() or "",
                 job_title=form["job_title"].value() or "",
