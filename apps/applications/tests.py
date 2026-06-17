@@ -780,6 +780,78 @@ class JobApplicationViewTests(TestCase):
             "hiring@example.com",
         )
 
+    def test_application_detail_page_loads_without_error(self):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_application_detail_shows_document_pack_is_archive_not_generator_message(self):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertContains(
+            response,
+            (
+                "The Document Pack stores and references your final CV and cover letter. "
+                "Documents are not generated here."
+            ),
+        )
+
+    def test_application_detail_shows_upload_externally_reviewed_documents_message(self):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertContains(
+            response,
+            (
+                "Upload or reference your final externally reviewed CV and cover letter "
+                "from your document source (e.g. ChatGPT Tailoring v3)."
+            ),
+        )
+
+    def test_application_detail_shows_after_save_next_steps_message(self):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertContains(
+            response,
+            (
+                "After saving: review your application record, attach final documents, "
+                "submit manually to the employer, then update your status and follow-up "
+                "date here."
+            ),
+        )
+
+    def test_application_detail_document_pack_does_not_claim_generation_capability(self):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertContains(response, "Documents are not generated here.")
+        self.assertNotContains(response, "Document Pack generates final documents")
+        self.assertNotContains(response, "final documents are generated inside CareerFunnel")
+        self.assertNotContains(response, "Apply Now")
+
     def test_application_detail_includes_evidence_readiness_context(self):
         application = self.create_application(cv_version="DA_CV_v1")
         self.client.login(username="aminul", password="StrongPass12345")
@@ -1974,6 +2046,46 @@ class ApplicationCreatePrefillTests(TestCase):
         form = response.context["form"]
         self.assertEqual(form.initial.get("company_name"), None)
         self.assertEqual(form.initial.get("pipeline_stage"), None)
+
+    def test_add_application_page_loads_without_error(self):
+        response = self._get_create()
+        self.assertEqual(response.status_code, 200)
+
+    def test_add_application_shows_prefill_is_not_save_message(self):
+        response = self._get_create("company_name=FinSight")
+        self.assertContains(
+            response,
+            (
+                "Pre-filling this form does not save your application. "
+                "Review all fields before saving."
+            ),
+        )
+
+    def test_add_application_shows_save_creates_tracking_record_only_message(self):
+        response = self._get_create("company_name=FinSight")
+        self.assertContains(
+            response,
+            (
+                "Saving creates a tracking record only. Your application has not been "
+                "submitted to the employer."
+            ),
+        )
+
+    def test_add_application_shows_manual_external_submission_message(self):
+        response = self._get_create("company_name=FinSight")
+        self.assertContains(
+            response,
+            (
+                "Submit your application manually through the employer's portal or job "
+                "board after saving this record."
+            ),
+        )
+
+    def test_add_application_submit_button_does_not_use_submit_application_label(self):
+        response = self._get_create("company_name=FinSight")
+        self.assertContains(response, "Save Application")
+        self.assertNotContains(response, "Submit Application")
+        self.assertNotContains(response, "Apply Now")
 
     def test_company_name_get_param_appears_in_form_initial(self):
         response = self._get_create("company_name=FinSight")

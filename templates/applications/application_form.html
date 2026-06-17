@@ -4,6 +4,13 @@
 {% block content %}
 <div class="content-card form-card">
     <div class="card-header"><p class="eyebrow">Application Record</p><h1>{{ page_title }}</h1><p>Capture the full application lifecycle: fit evidence, readiness, follow-up plan, CV version, and next action.</p></div>
+    {% if page_title == "Add Application" %}
+    <div class="diagnosis-box">
+        <p>Pre-filling this form does not save your application. Review all fields before saving.</p>
+        <p>Saving creates a tracking record only. Your application has not been submitted to the employer.</p>
+        <p>Submit your application manually through the employer's portal or job board after saving this record.</p>
+    </div>
+    {% endif %}
     {% if is_analyzer_prefill %}
     <div class="diagnosis-box">
         <strong>Manual review required before saving</strong>
