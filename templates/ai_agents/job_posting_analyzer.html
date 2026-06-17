@@ -20,6 +20,17 @@
         <div><p class="eyebrow">Advisory Recommendation</p><h2>{{ analysis.recommendation }}</h2><p>{{ analysis.explanation }}</p></div>
         <div class="diagnosis-action"><strong>Fit Score</strong><p class="agent-score">{{ analysis.fit_score }}/100</p></div>
     </section>
+    {% if show_weak_fit_caution %}
+    <section class="content-card">
+        <div class="card-header"><p class="eyebrow">Review Required</p><h2>Weak-fit caution</h2></div>
+        <p class="muted-text">This role scored below the recommended threshold. Review carefully before proceeding. Claude go/no-go assessment is recommended before generating draft documents.</p>
+    </section>
+    {% elif show_borderline_review_path %}
+    <section class="content-card">
+        <div class="card-header"><p class="eyebrow">Review Path Only</p><h2>Review manually before pre-fill</h2></div>
+        <p class="muted-text">This borderline result should be reviewed manually before creating an application record or generating draft documents.</p>
+    </section>
+    {% endif %}
     {% if ai_wrapper_result %}
     <section class="content-card" id="rule-based-vs-ai-score-check">
         <div class="card-header">
@@ -85,6 +96,7 @@
         <div class="content-card"><div class="card-header"><p class="eyebrow">Portfolio Match</p><h2>Recommended Projects</h2></div><ol class="agent-list">{% for project in analysis.recommended_projects %}<li>{{ project }}</li>{% endfor %}</ol></div>
     </section>
     <section class="content-card"><div class="card-header"><p class="eyebrow">Next Actions</p><h2>Application readiness steps</h2></div><ol class="agent-list">{% for action in analysis.next_actions %}<li>{{ action }}</li>{% endfor %}</ol></section>
+    {% if show_strong_fit_actions %}
     <section class="content-card">
         <div class="card-header"><p class="eyebrow">Rule-Based Drafts</p><h2>Application Document Drafts</h2></div>
         <p class="muted-text">Generate deterministic draft CV tailoring notes and a draft cover letter from this job analysis. Draft only - review manually before use. Final CV and cover-letter wording should come from ChatGPT Tailoring v3 / CV V3.1 or another externally reviewed final-document source.</p>
@@ -105,10 +117,11 @@
         <p>This opens a pre-filled Add Application form. Nothing is saved until you review and submit the form. Nothing is submitted automatically.</p>
         <a class="btn btn-primary" href="{% url 'applications:application_create' %}?company_name={{ form.company_name.value|urlencode }}&amp;job_title={{ form.job_title.value|urlencode }}&amp;location={{ form.location.value|urlencode }}&amp;fit_score={{ analysis.fit_score }}">Review & Pre-fill Application</a>
     </section>
+    {% endif %}
     {% if tailoring_advisor %}
     <section class="content-card" id="cv-tailoring-advisor">
         <div class="card-header">
-            <p class="eyebrow">Rule-Based · Advisory Only</p>
+            <p class="eyebrow">Rule-Based | Advisory Only</p>
             <h2>CV Tailoring Advisor</h2>
         </div>
         <p class="muted-text">
@@ -118,7 +131,7 @@
             automatic submission is used.
         </p>
         <p class="muted-text">
-            Suggestions only — not automatic tailoring. Review and approve all wording before
+            Suggestions only - not automatic tailoring. Review and approve all wording before
             using it in a CV, cover letter, recruiter message, or application.
         </p>
         <p class="note-text"><strong>{{ tailoring_advisor.approval_reminder }}</strong></p>

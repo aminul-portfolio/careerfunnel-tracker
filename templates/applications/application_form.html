@@ -4,6 +4,12 @@
 {% block content %}
 <div class="content-card form-card">
     <div class="card-header"><p class="eyebrow">Application Record</p><h1>{{ page_title }}</h1><p>Capture the full application lifecycle: fit evidence, readiness, follow-up plan, CV version, and next action.</p></div>
+    {% if is_analyzer_prefill %}
+    <div class="diagnosis-box">
+        <strong>Manual review required before saving</strong>
+        <p>Analyze → Review → Approve → Pre-fill Add Application → Manual Save → Manual external submission. CareerFunnel does not submit applications automatically.</p>
+    </div>
+    {% endif %}
     <form method="post" class="form-stack">{% csrf_token %}
         {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
         <div class="form-section"><h2>Job Details</h2><div class="form-grid">

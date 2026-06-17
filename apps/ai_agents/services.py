@@ -33,6 +33,9 @@ __all__ = [
 ]
 
 LOCKED_CV = "Aminul_Islam_Data_Analyst_CV"
+ANALYZER_WEAK_FIT_MAX_SCORE = 39
+ANALYZER_BORDERLINE_FIT_MIN_SCORE = 40
+ANALYZER_STRONG_FIT_MIN_SCORE = 60
 
 
 @dataclass(frozen=True)
@@ -141,16 +144,16 @@ def analyze_job_posting(
     score = max(0, min(100, score))
 
     if score >= 80:
-        recommendation = "Apply — strong match"
+        recommendation = "Apply - strong match"
         severity = "success"
-    elif score >= 60:
-        recommendation = "Apply selectively — check gaps first"
+    elif score >= ANALYZER_STRONG_FIT_MIN_SCORE:
+        recommendation = "Apply selectively - check gaps first"
         severity = "primary"
-    elif score >= 40:
+    elif score >= ANALYZER_BORDERLINE_FIT_MIN_SCORE:
         recommendation = "Review carefully before applying"
         severity = "warning"
     else:
-        recommendation = "Skip for now — weak fit"
+        recommendation = "Skip for now - weak fit"
         severity = "danger"
 
     recommended_cv = recommend_cv_from_text(text)
@@ -403,9 +406,9 @@ def build_weekly_coach_report(user) -> WeeklyCoachReport:
     ]
 
     if weekly_reviews.exists():
-        headline = "AI Weekly Coach — review your pattern and protect next week’s focus"
+        headline = "AI Weekly Coach - review your pattern and protect next week's focus"
     else:
-        headline = "AI Weekly Coach — start with consistent logging and application volume"
+        headline = "AI Weekly Coach - start with consistent logging and application volume"
 
     return WeeklyCoachReport(
         headline=headline,
@@ -713,7 +716,7 @@ def _detect_cv_angle_and_role_family(
         or "Skip" in job_analysis.recommendation
     ):
         return (
-            "Review-first — verify seniority, deal-breakers, and tool gaps before tailoring",
+            "Review-first - verify seniority, deal-breakers, and tool gaps before tailoring",
             "Review Carefully",
         )
 
@@ -750,31 +753,31 @@ def _detect_cv_angle_and_role_family(
         signal in text for signal in ae_signals
     ):
         return (
-            "Analytics Engineering / Data Product stretch — emphasize pipeline/API "
+            "Analytics Engineering / Data Product stretch - emphasize pipeline/API "
             "evidence and honest tool-gap boundaries",
             "Analytics Engineering / Data Product Stretch",
         )
     if any(signal in text for signal in finance_signals):
         return (
-            "Finance / FinTech / Risk — emphasize reconciliation discipline, "
+            "Finance / FinTech / Risk - emphasize reconciliation discipline, "
             "operational reporting, and governed analytics",
             "Finance / FinTech Analytics",
         )
     if any(signal in text for signal in bi_signals):
         return (
-            "BI / Reporting / Dashboard — emphasize KPI reporting, dashboards, "
+            "BI / Reporting / Dashboard - emphasize KPI reporting, dashboards, "
             "and stakeholder-ready outputs",
             "BI / Reporting Analytics",
         )
     if any(title in text for title in TARGET_TITLES):
         return (
-            "General Data Analyst — emphasize Python/Django analytics delivery "
+            "General Data Analyst - emphasize Python/Django analytics delivery "
             "and evidence-based reporting",
             "Data Analyst",
         )
 
     return (
-        "Review-first — role signals are unclear; confirm fit before tailoring",
+        "Review-first - role signals are unclear; confirm fit before tailoring",
         "Review Carefully",
     )
 
@@ -801,21 +804,21 @@ def _build_tailoring_risks(
 
     if any(signal in text for signal in SENIOR_SIGNALS):
         if "Seniority" not in " ".join(risks):
-            risks.append("Seniority risk — role may be above current target market.")
+            risks.append("Seniority risk - role may be above current target market.")
 
     location_text = normalise_text(location)
     if location_text and not any(
         loc in location_text for loc in GOOD_LOCATION_WORDS
     ) and "remote" not in location_text:
         risks.append(
-            "Location risk — location is not clearly London, Croydon, South London, "
+            "Location risk - location is not clearly London, Croydon, South London, "
             "or Remote UK."
         )
 
     hard_gaps = [term for term in HARD_GAP_TERMS if term in text]
     if hard_gaps:
         risks.append(
-            "Hard-tool gap risk — "
+            "Hard-tool gap risk - "
             + ", ".join(sorted(set(hard_gaps)))
             + "; treat as learning gaps unless clearly optional."
         )
@@ -831,12 +834,12 @@ def _build_tailoring_risks(
     if not any(title in text for title in TARGET_TITLES) and not any(
         title in text for title in TARGET_TITLES_AE_STRETCH
     ):
-        risks.append("Unclear role-fit risk — title is not a clear junior analytics target.")
+        risks.append("Unclear role-fit risk - title is not a clear junior analytics target.")
 
     if cv_gap.claims_to_avoid:
         for claim in cv_gap.claims_to_avoid[:2]:
             if claim not in risks:
-                risks.append(f"Overclaim risk — {claim}")
+                risks.append(f"Overclaim risk - {claim}")
 
     return list(dict.fromkeys(risks))
 
@@ -900,7 +903,7 @@ def _build_rule_based_cv_tailoring_advisor(
     job_description: str = "",
     cv_evidence: str = "",
 ) -> CVTailoringAdvisorResult:
-    """Rule-based CV tailoring baseline; advisory only — no document generation."""
+    """Rule-based CV tailoring baseline; advisory only - no document generation."""
     combined_description = " ".join(
         part for part in (job_title, job_description) if part
     ).strip()
@@ -925,7 +928,7 @@ def _build_rule_based_cv_tailoring_advisor(
     ):
         if "seniority mismatch" not in " ".join(deal_breakers).lower():
             risks.append(
-                "Seniority signal detected — treat as a blocker unless requirements are flexible."
+                "Seniority signal detected - treat as a blocker unless requirements are flexible."
             )
 
     cover_letter_angle = _build_cover_letter_angles(role_family, cv_gap, job_analysis)
@@ -1777,7 +1780,7 @@ def check_cover_letter_quality(
         strengths.append("Length is suitable for a concise application message.")
     else:
         weaknesses.append("Length may be too short or too long.")
-        fixes.append("Aim for a concise 3–5 paragraph letter with evidence, fit, and interest.")
+        fixes.append("Aim for a concise 3-5 paragraph letter with evidence, fit, and interest.")
 
     risky_claims = ["expert", "master", "guaranteed", "best candidate", "10 years of data"]
     if any(claim in text for claim in risky_claims):
@@ -1924,11 +1927,11 @@ def build_cv_ab_testing_rows(user) -> list[CVVersionPerformanceRow]:
         if total < 3:
             recommendation = "Not enough sample size yet."
         elif response_rate >= 25:
-            recommendation = "Promising CV version — keep using for matching roles."
+            recommendation = "Promising CV version - keep using for matching roles."
         elif response_rate == 0:
-            recommendation = "Underperforming so far — review targeting or CV positioning."
+            recommendation = "Underperforming so far - review targeting or CV positioning."
         else:
-            recommendation = "Mixed result — compare against role type and source."
+            recommendation = "Mixed result - compare against role type and source."
         rows.append(
             CVVersionPerformanceRow(
                 cv,
@@ -1992,7 +1995,7 @@ def build_smart_notifications(user, limit: int = 20) -> list[SmartNotification]:
             SmartNotification(
                 priority="Medium",
                 title="Missing CV version",
-                message=f"{app.company_name} — {app.job_title} has no CV version recorded.",
+                message=f"{app.company_name} - {app.job_title} has no CV version recorded.",
                 recommended_action="Add the CV version so CV A/B testing remains reliable.",
                 related_url=app.get_absolute_url(),
             )
@@ -2003,7 +2006,7 @@ def build_smart_notifications(user, limit: int = 20) -> list[SmartNotification]:
             SmartNotification(
                 priority="Low",
                 title="Missing job URL",
-                message=f"{app.company_name} — {app.job_title} has no saved job URL.",
+                message=f"{app.company_name} - {app.job_title} has no saved job URL.",
                 recommended_action="Add the URL if available for future review and evidence.",
                 related_url=app.get_absolute_url(),
             )
@@ -2035,10 +2038,10 @@ def build_smart_notifications(user, limit: int = 20) -> list[SmartNotification]:
         notifications.append(
             SmartNotification(
                 priority="Medium",
-                title="Today’s daily log is missing",
+                title="Today's daily log is missing",
                 message="No daily activity has been logged for today.",
                 recommended_action=(
-                    "Add today’s target, actual applications, and blocker notes "
+                    "Add today's target, actual applications, and blocker notes "
                     "before you stop working."
                 ),
             )

@@ -23,6 +23,9 @@ from apps.weekly_review.choices import FunnelDiagnosis, WeeklyMood
 from apps.weekly_review.models import WeeklyReview
 
 from .services import (
+    ANALYZER_BORDERLINE_FIT_MIN_SCORE,
+    ANALYZER_STRONG_FIT_MIN_SCORE,
+    ANALYZER_WEAK_FIT_MAX_SCORE,
     LOCKED_CV,
     analyze_job_posting,
     build_cv_tailoring_advisor,
@@ -118,6 +121,11 @@ class AiAgentServiceTests(TestCase):
         self.assertIn("acca", analysis.deal_breakers)
         self.assertLess(analysis.fit_score, 60)
         self.assertTrue(any("Hard requirement or deal-breaker" in risk for risk in analysis.risks))
+
+    def test_analyzer_score_bands_use_named_constants(self):
+        self.assertEqual(ANALYZER_WEAK_FIT_MAX_SCORE, 39)
+        self.assertEqual(ANALYZER_BORDERLINE_FIT_MIN_SCORE, 40)
+        self.assertEqual(ANALYZER_STRONG_FIT_MIN_SCORE, 60)
 
     def test_next_best_actions_includes_followup(self):
         actions = build_next_best_actions(self.user)
@@ -1820,6 +1828,92 @@ class TestCvTailoringAdvisorSemanticFallback(TestCase):
         mock_make_provider.assert_not_called()
         self.assertContains(response, "CV Tailoring Advisor")
         self.assertContains(response, "Rule-based fallback remains active")
+
+
+class JobPostingAnalyzerGuardrailTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="analyzer-guardrails",
+            password="StrongPass12345",
+        )
+        self.analyzer_url = reverse("ai_agents:job_posting_analyzer")
+        self.client.login(username="analyzer-guardrails", password="StrongPass12345")
+
+    def _post_analysis(self, **overrides):
+        data = {
+            "company_name": "FinSight",
+            "job_title": "Junior Finance Data Analyst",
+            "location": "Hybrid London",
+            "job_posting": "Python SQL Excel reporting dashboards junior 0-2 years",
+        }
+        data.update(overrides)
+        return self.client.post(self.analyzer_url, data)
+
+    def test_weak_fit_result_does_not_show_generate_draft_cta(self):
+        response = self._post_analysis(
+            company_name="Unclear Co",
+            job_title="Senior Sales Manager",
+            location="Unspecified",
+            job_posting="Own enterprise sales targets and manage commercial pipeline.",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertLessEqual(response.context["analysis"].fit_score, ANALYZER_WEAK_FIT_MAX_SCORE)
+        self.assertNotContains(response, "Generate Draft Application Documents")
+
+    def test_weak_fit_result_shows_caution_message(self):
+        response = self._post_analysis(
+            company_name="Unclear Co",
+            job_title="Senior Sales Manager",
+            location="Unspecified",
+            job_posting="Own enterprise sales targets and manage commercial pipeline.",
+        )
+        self.assertContains(
+            response,
+            (
+                "This role scored below the recommended threshold. Review carefully before "
+                "proceeding. Claude go/no-go assessment is recommended before generating "
+                "draft documents."
+            ),
+        )
+
+    def test_borderline_fit_result_shows_review_path_only(self):
+        response = self._post_analysis(
+            company_name="Maybe Co",
+            job_title="Data Analyst",
+            location="Unspecified",
+            job_posting="SQL reporting role. Experience level and location are unclear.",
+        )
+        score = response.context["analysis"].fit_score
+        self.assertGreaterEqual(score, ANALYZER_BORDERLINE_FIT_MIN_SCORE)
+        self.assertLess(score, ANALYZER_STRONG_FIT_MIN_SCORE)
+        self.assertContains(response, "Review manually before pre-fill")
+        self.assertNotContains(response, "Review & Pre-fill Application", html=True)
+        self.assertNotContains(response, "Generate Draft Application Documents")
+
+    def test_strong_fit_result_shows_prefill_cta(self):
+        response = self._post_analysis()
+        self.assertGreaterEqual(
+            response.context["analysis"].fit_score,
+            ANALYZER_STRONG_FIT_MIN_SCORE,
+        )
+        self.assertContains(response, "Review & Pre-fill Application", html=True)
+
+    def test_strong_fit_prefill_still_works_end_to_end(self):
+        response = self._post_analysis(
+            company_name="Smith & Jones Ltd",
+            job_title="Junior Finance Data Analyst",
+            location="Hybrid London",
+        )
+        self.assertContains(response, "company_name=Smith%20%26%20Jones%20Ltd")
+        self.assertContains(response, "job_title=Junior%20Finance%20Data%20Analyst")
+        self.assertContains(response, "location=Hybrid%20London")
+        self.assertContains(response, "fit_score=")
+
+    def test_analyzer_advisory_only_label_present_in_output(self):
+        response = self._post_analysis()
+        content = response.content.decode().lower()
+        self.assertIn("advisory-only", content)
+        self.assertIn("rule-based", content)
 
 
 def _upload_docx_bytes(*paragraphs: str) -> bytes:
