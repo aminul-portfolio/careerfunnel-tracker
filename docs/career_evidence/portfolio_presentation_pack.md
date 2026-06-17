@@ -105,7 +105,7 @@ Nine Django-based portfolio projects show how operational and market data can be
 
 ## Strongest 5 projects to feature first
 
-1. **CareerFunnel Tracker** -- Verified anchor: job-search analytics, Career Evidence OS, 771 automated tests.
+1. **CareerFunnel Tracker** -- Verified anchor: job-search analytics, Career Evidence OS, 900+ validated tests.
 2. **BakeOps Intelligence** -- Operational KPIs, waste-adjusted margin insight, BI CSV exports.
 3. **DataBridge Market API** -- Market ingestion, ETL observability, read-only API, Streamlit.
 4. **RiskWise Planner** -- Pre-trade risk, Monte Carlo, stress tests, 64 test functions in repo.
@@ -123,7 +123,7 @@ Nine Django-based portfolio projects show how operational and market data can be
 ## Claims safety summary
 
 - **Do not claim:** live SaaS, real users/customers, production deployment, external AI, Gmail/Calendar automation, auto-apply, live cross-project integrations, CI passed (unless verified), local validation complete (unless terminal proof exists).
-- **CareerFunnel only:** say "771 automated tests" and "local validation complete" for this repository.
+- **CareerFunnel only:** say "900+ validated tests" and "local validation complete" for this repository.
 - **Other repos:** say "portfolio evidence from GitHub/archive review" unless you have run and saved validation commands locally.
 - **FinTech suite:** DataBridge, RiskWise, MarketVista, and TradeIntel are separate portfolio demos -- not a connected production platform.
 

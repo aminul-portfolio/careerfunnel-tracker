@@ -10,7 +10,7 @@ CareerFunnel Tracker is a Django/Python analytics workflow project that structur
 
 Claim-safe boundaries: manual and advisory workflows only (rule-based job-post review, field audit, decision-evidence logging, application readiness checks). No auto-apply, external AI/LLM integration, Gmail/Calendar automation, scraping, live SaaS deployment, production users, or commercial product claims.
 
-Validated with 771 automated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery.
+Backed by 900+ validated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery.
 
 ## Target Roles
 
@@ -20,7 +20,7 @@ Repository evidence supports positioning toward: **Data Analyst, BI Analyst, Rep
 
 - Python application code under `apps/` with dependencies in `requirements.txt` (V2 matrix: Strong).
 - Django project structure: `manage.py`, `config/`, installed apps (V2 matrix: Strong).
-- Automated tests: 771 automated tests documented in README; app test modules in V1 inventory.
+- Automated tests: 900+ validated tests documented in README; app test modules in V1 inventory.
 - CI workflow: `.github/workflows/django-ci.yml` (V2 matrix: Strong Git/GitHub).
 - V2 strongest matches include: Python, Django, Data analysis, Reporting, Dashboards, KPI tracking, Data quality, Exports / CSV....
 
@@ -49,11 +49,11 @@ Repository evidence supports positioning toward: **Data Analyst, BI Analyst, Rep
 
 1. Built a job-search analytics tracker with structured application records, funnel-stage metrics, source-performance reporting, and data-quality warnings.
 2. Delivered manual intake workflow with rule-based review, field audit, decision-evidence logging, skill-gap tracking, and application readiness checks.
-3. Validated with 771 automated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery.
+3. Backed by 900+ validated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery.
 
 ## LinkedIn Project Summary
 
-CareerFunnel Tracker - Django | Python | analytics workflow | test discipline. Portfolio job-search analytics with structured application records, funnel-stage metrics, source-performance reporting, data-quality warnings, and a manual intake workflow (rule-based review, field audit, decision-evidence logging, skill-gap tracking, application readiness checks). Validated with 771 automated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery. Not a live SaaS product; no external AI, Gmail/Calendar, scraping, or auto-apply.
+CareerFunnel Tracker - Django | Python | analytics workflow | test discipline. Portfolio job-search analytics with structured application records, funnel-stage metrics, source-performance reporting, data-quality warnings, and a manual intake workflow (rule-based review, field audit, decision-evidence logging, skill-gap tracking, application readiness checks). Backed by 900+ validated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery. Not a live SaaS product; no external AI, Gmail/Calendar, scraping, or auto-apply.
 
 ## Interview Talking Points
 

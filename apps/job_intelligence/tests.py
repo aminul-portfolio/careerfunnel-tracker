@@ -181,7 +181,7 @@ class ApplicationDocumentDraftGenerationTests(TestCase):
         drafts = build_application_document_drafts(self.application)
         evidence_text = " ".join(drafts.recommended_project_evidence).lower()
         self.assertIn("skill-gap tracking", evidence_text)
-        self.assertIn("771 automated tests", evidence_text)
+        self.assertIn("900+ validated tests", evidence_text)
         self.assertNotIn("828 automated tests", evidence_text)
         self.assertNotIn("skill intelligence", evidence_text)
 
@@ -545,7 +545,7 @@ class MasterCvLockedClaimWordingTests(SimpleTestCase):
         from apps.applications.master_cv import PORTFOLIO_PROJECT_BULLETS
 
         careerfunnel = PORTFOLIO_PROJECT_BULLETS["CareerFunnel Tracker"]
-        self.assertIn("771 automated tests", careerfunnel[2])
+        self.assertIn("900+ validated tests", careerfunnel[2])
         self.assertNotIn("828 automated tests", careerfunnel[2])
 
 

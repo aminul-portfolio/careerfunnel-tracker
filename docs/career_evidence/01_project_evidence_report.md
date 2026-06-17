@@ -8,7 +8,7 @@ CareerFunnel Tracker is a Django/Python analytics workflow project that structur
 
 - Built a job-search analytics tracker with structured application records, funnel-stage metrics, source-performance reporting, and data-quality warnings.
 - Delivered manual intake workflow with rule-based review, field audit, decision-evidence logging, skill-gap tracking, and application readiness checks.
-- Validated with 771 automated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery.
+- Backed by 900+ validated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery.
 
 ## Project Summary
 
@@ -17,7 +17,7 @@ The following lines are quoted from README.md (non-heading content only).
 > CareerFunnel Tracker is a Django portfolio analytics product that turns job-search activity into explainable funnel metrics, data-quality signals, and reviewer-ready evidence for Data Analyst, BI Analyst, Reporting Analyst, Analytics Engineer, Junior Data Engineer, and FinTech analytics roles.
 > Deployment is conditional and not yet verified. This README does not claim a live hosted demo, demo login, production configuration, or public customer usage. If a deployment is added later, it should be verified separately and documented with the exact URL and environment assumptions.
 > Sprints **52-59** are complete on `main`.
-> Current verified baseline: **771 tests passing**.
+> Current verified baseline: **999 tests passing**.
 > Latest completed tag: `sprint-59-final-career-intelligence-workflow-complete`.
 
 ## Repository Structure
@@ -214,7 +214,7 @@ The scanner does **not** execute linters, Django checks, migrations checks, or t
 | `ruff check .` | _Not collected by scanner - verify manually_ |
 | `python manage.py check` | _Not collected by scanner - verify manually_ |
 | `python manage.py makemigrations --check --dry-run` | _Not collected by scanner - verify manually_ |
-| `python manage.py test` | **771 automated tests** (README baseline; verify at review) |
+| `python manage.py test` | **999 tests** (Sprint 66A current baseline; verify at review) |
 
 After final checks, paste pass/fail results and test counts into review notes. Do not assume green builds from an older report timestamp.
 

@@ -331,7 +331,7 @@ CAREERFUNNEL_EVIDENCE_SUMMARY = (
     "funnel-stage metrics, source-performance reporting, and data-quality warnings.",
     "Delivered manual intake workflow with rule-based review, field audit, "
     "decision-evidence logging, skill-gap tracking, and application readiness checks.",
-    "Validated with 771 automated tests, Ruff checks, Django system checks, migration "
+    "Backed by 900+ validated tests, Ruff checks, Django system checks, migration "
     "dry-run discipline, and documented sprint-based delivery.",
 )
 
@@ -356,7 +356,8 @@ def render_validation_evidence_section() -> list[str]:
         "| `python manage.py check` | _Not collected by scanner - verify manually_ |",
         "| `python manage.py makemigrations --check --dry-run` | "
         "_Not collected by scanner - verify manually_ |",
-        "| `python manage.py test` | **771 automated tests** (README baseline; verify at review) |",
+        "| `python manage.py test` | **900+ validated tests** "
+        "(current README baseline; verify at review) |",
         "",
         "After final checks, paste pass/fail results and test counts into review notes. "
         "Do not assume green builds from an older report timestamp.",

@@ -92,8 +92,9 @@ PORTFOLIO_PROJECT_BULLETS: dict[str, tuple[str, ...]] = {
         "metrics, source-performance reporting, and data-quality warnings.",
         "Includes a documented manual intake workflow with rule-based review, field audit, "
         "decision-evidence logging, skill-gap tracking, application readiness checks, and "
-        "Application Document Pack workflow.",
-        "Validated with 771 automated tests, Ruff checks, Django system checks, migration "
+        "Application Document Pack workflow for storing/referencing externally generated "
+        "CV and cover-letter documents.",
+        "Backed by 900+ validated tests, Ruff checks, Django system checks, migration "
         "dry-run discipline, and documented sprint-based delivery.",
     ),
     "TradeIntel 360": (
@@ -443,7 +444,8 @@ COVER_LETTER_INTERNAL_PHRASES = (
 
 
 COVER_LETTER_BODY_MISSING_MESSAGE = (
-    "Cover letter body is missing. Paste, upload, or generate cover-letter text "
+    "Cover letter body is missing. Paste externally generated final text, "
+    "or generate draft cover-letter text "
     "before downloading."
 )
 COVER_LETTER_DUPLICATE_STRUCTURE_MESSAGE = (

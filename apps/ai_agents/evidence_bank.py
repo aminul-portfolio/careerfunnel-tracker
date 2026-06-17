@@ -210,7 +210,10 @@ EVIDENCE_ENTRIES: dict[str, EvidenceEntry] = {
         "power_bi",
         "Power BI",
         "partial",
-        "Dashboard evidence via portfolio projects; not a primary production stack claim.",
+        (
+            "Power BI portfolio publishing evidence through BakeOps plus "
+            "GoalTracker .pbix proof; not production Power BI administration."
+        ),
         (_DOC,),
     ),
     "tableau": _entry(
@@ -225,7 +228,8 @@ EVIDENCE_ENTRIES: dict[str, EvidenceEntry] = {
         "dbt",
         "partial",
         (
-            "Portfolio-verified via bakeops-dbt (7 models, 26 tests, v1.0.1); "
+            "dbt Core and DuckDB portfolio analytics-engineering evidence through "
+            "bakeops-dbt (7 models, 26 tests); "
             "not production, enterprise, or cloud warehouse dbt."
         ),
         (_S31A, "docs/evidence/sprint_63b_dbt_duckdb_evidence_alignment.md"),
@@ -235,7 +239,8 @@ EVIDENCE_ENTRIES: dict[str, EvidenceEntry] = {
         "DuckDB",
         "partial",
         (
-            "Portfolio-verified via bakeops-dbt local DuckDB warehouse; "
+            "dbt Core and DuckDB portfolio analytics-engineering evidence through "
+            "bakeops-dbt local DuckDB validation; "
             "not production cloud platform evidence."
         ),
         (_S31A, "docs/evidence/sprint_63b_dbt_duckdb_evidence_alignment.md"),
@@ -273,7 +278,10 @@ EVIDENCE_ENTRIES: dict[str, EvidenceEntry] = {
         "bigquery",
         "BigQuery",
         "gap_learning",
-        "Learning target; cloud warehouse exposure is stretch-only.",
+        (
+            "Optional dbt validation target with safe credential handling only; "
+            "not production warehouse ownership."
+        ),
         (_S31A,),
     ),
     "aws_redshift": _entry(
@@ -363,7 +371,8 @@ PROJECT_ENTRIES: dict[str, ProjectEvidenceEntry] = {
         display_name="bakeops-dbt",
         role_families=("Analytics Engineering / Data Product Stretch",),
         evidence_summary=(
-            "Portfolio dbt and DuckDB analytics engineering project with 7 models, "
+            "dbt Core and DuckDB portfolio analytics-engineering evidence through "
+            "bakeops-dbt with 7 models, "
             "26 tests, and v1.0.1 release discipline."
         ),
         source_refs=(

@@ -3,7 +3,7 @@
 {% block page_heading %}AI Job Posting Analyzer{% endblock %}
 {% block content %}
 <div class="dashboard-grid">
-    <section class="hero-panel"><p class="eyebrow">AI Job Posting Analyzer</p><h1>Paste a role before applying.</h1><p>The analyzer checks target fit, seniority, location, skills, deal-breakers, CV version, and portfolio projects.</p>{% include "ai_agents/_agent_nav.html" %}</section>
+    <section class="hero-panel"><p class="eyebrow">AI Job Posting Analyzer</p><h1>Paste a role before applying.</h1><p>The analyzer provides an advisory-only, rule-based fit assessment across target fit, seniority, location, skills, deal-breakers, CV version, and portfolio projects.</p>{% include "ai_agents/_agent_nav.html" %}</section>
     <section class="content-card form-card">
         <form method="post" class="form-stack">{% csrf_token %}
             <div class="form-grid">
@@ -17,7 +17,7 @@
     </section>
     {% if analysis %}
     <section class="diagnosis-panel diagnosis-{{ analysis.severity }}">
-        <div><p class="eyebrow">AI Recommendation</p><h2>{{ analysis.recommendation }}</h2><p>{{ analysis.explanation }}</p></div>
+        <div><p class="eyebrow">Advisory Recommendation</p><h2>{{ analysis.recommendation }}</h2><p>{{ analysis.explanation }}</p></div>
         <div class="diagnosis-action"><strong>Fit Score</strong><p class="agent-score">{{ analysis.fit_score }}/100</p></div>
     </section>
     {% if ai_wrapper_result %}
@@ -87,7 +87,7 @@
     <section class="content-card"><div class="card-header"><p class="eyebrow">Next Actions</p><h2>Application readiness steps</h2></div><ol class="agent-list">{% for action in analysis.next_actions %}<li>{{ action }}</li>{% endfor %}</ol></section>
     <section class="content-card">
         <div class="card-header"><p class="eyebrow">Rule-Based Drafts</p><h2>Application Document Drafts</h2></div>
-        <p class="muted-text">Generate deterministic draft CV tailoring notes and a draft cover letter from this job analysis. Draft only - review manually before use.</p>
+        <p class="muted-text">Generate deterministic draft CV tailoring notes and a draft cover letter from this job analysis. Draft only - review manually before use. Final CV and cover-letter wording should come from ChatGPT Tailoring v3 / CV V3.1 or another externally reviewed final-document source.</p>
         <p class="muted-text">To save these drafts, first create or open an application record, then use Application Smart Review.</p>
         <form method="post" class="form-actions">
             {% csrf_token %}
@@ -112,7 +112,7 @@
             <h2>CV Tailoring Advisor</h2>
         </div>
         <p class="muted-text">
-            CV Tailoring Advisor remains advisory only. Rule-based fallback remains active.
+            CV Tailoring Advisor remains advisory only. ChatGPT Tailoring v3 / CV V3.1 is the external final-document tailoring source. Rule-based fallback remains active.
             Claude semantic enhancement may be used only when configured; manual review is
             required. No final CV, cover letter body, Gmail, Calendar, OAuth, auto-apply, or
             automatic submission is used.

@@ -109,4 +109,4 @@ Do not claim:
 - Gmail or Calendar integration
 - External AI/API automation
 - Tableau Public unless verified
-- Power BI implementation
+- CareerFunnel Power BI implementation

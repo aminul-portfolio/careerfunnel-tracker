@@ -81,4 +81,4 @@ Do not say in interviews:
 - Gmail or Calendar integration exists
 - External AI/API automation exists
 - Tableau Public is available unless verified
-- Power BI implementation exists
+- CareerFunnel Power BI implementation exists

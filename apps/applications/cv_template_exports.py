@@ -172,8 +172,8 @@ def apply_tailored_sections_to_master_docx_xml(
         updated = _replace_paragraph_starting_with(updated, prefix, paragraph)
 
     for bullet in _careerfunnel_bullets(tailored):
-        if "771 automated tests" in bullet:
-            updated = _replace_paragraph_containing(updated, "771 automated tests", bullet)
+        if "900+ validated tests" in bullet:
+            updated = _replace_paragraph_containing(updated, "900+ validated tests", bullet)
         elif "Application Document Pack workflow" in bullet:
             updated = _replace_paragraph_containing(
                 updated,

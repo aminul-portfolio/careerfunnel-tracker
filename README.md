@@ -10,7 +10,7 @@ Deployment is conditional and not yet verified. This README does not claim a liv
 
 Sprints **52-59** are complete on `main`. Sprint **60** (Application Document Pack workflow) is complete on branch `sprint-60-phase-6-final-validation-docs-closure`.
 
-Current verified baseline: **982 tests passing** (includes Sprint 60 Application Document Pack tests).
+Current verified baseline: **999 tests passing** (Sprint 66A validation; includes Application Document Pack and evidence cleanup coverage).
 
 Latest completed tag: `sprint-59-final-career-intelligence-workflow-complete` (Sprint 60 tag pending merge).
 
@@ -113,7 +113,7 @@ Sprint **35** extends this path with clearer cross-links between Application Det
 
 ### Application Document Pack (Sprint 60)
 
-**Application Document Pack:** generated draft CV and cover-letter records can be saved to each application, selected for call review, and downloaded as DOCX/PDF from saved database text. The workflow remains manual-review only and does not perform automatic submission, upload files, or connect to Gmail/Calendar/OAuth.
+**Application Document Pack:** CareerFunnel stores/references externally generated final CV and cover-letter documents, including outputs from ChatGPT Tailoring v3 / CV V3.1 as the external final-document tailoring source. It can also save rule-based draft CV tailoring notes and draft cover-letter records to each application for manual review, call preparation, and DOCX/PDF download from saved database text. The workflow remains manual-review only and does not perform automatic submission, upload files, or connect to Gmail/Calendar/OAuth.
 
 ```text
 Smart Review / job analysis -> draft documents -> save to document pack -> select documents -> download DOCX/PDF -> manual review before use
@@ -272,7 +272,7 @@ For a portfolio-level evidence map across the user's major GitHub projects, see 
 
 For recruiter-facing portfolio presentation materials, see `docs/career_evidence/portfolio_presentation_pack.md`.
 
-Current verified test count: **982 passing**.
+Current verified test count: **999 tests passing**.
 
 Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/` and Sprint 53-59 intelligence screenshots stored in `docs/screenshots/intelligence/`. The main supporting documentation is:
 

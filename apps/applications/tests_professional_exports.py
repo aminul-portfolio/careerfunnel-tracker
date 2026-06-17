@@ -108,7 +108,7 @@ class MasterCvBaselineTests(SimpleTestCase):
         careerfunnel = PORTFOLIO_PROJECT_BULLETS["CareerFunnel Tracker"]
         self.assertIn("skill-gap tracking", careerfunnel[1])
         self.assertIn("Application Document Pack workflow", careerfunnel[1])
-        self.assertIn("771 automated tests", careerfunnel[2])
+        self.assertIn("900+ validated tests", careerfunnel[2])
         self.assertNotIn("Skill Intelligence", " ".join(careerfunnel))
         self.assertNotIn("828 automated tests", " ".join(careerfunnel))
         self.assertNotIn("screenshot evidence", " ".join(careerfunnel))
@@ -167,7 +167,7 @@ class ProfessionalCvExportTests(TestCase):
             document_xml = self._docx_xml(render_tailored_cv_bytes(self.structured, "docx"))
         self.assertIn(f'w:top="{TEMPLATE_MARGIN_TOP}"', document_xml)
         self.assertIn("AMINUL ISLAM", document_xml)
-        self.assertIn("771 automated tests", document_xml)
+        self.assertIn("900+ validated tests", document_xml)
         self.assertNotIn("828 automated tests", document_xml)
         self.assertNotIn("Skill Intelligence", document_xml)
         self.assertIn("skill-gap tracking", document_xml)
@@ -246,7 +246,7 @@ class ProfessionalCvExportTests(TestCase):
         document_xml = self._docx_xml(render_structured_document_docx(self.structured))
         self.assertIn("Western Union and Ria", document_xml)
         self.assertIn("800 agents", document_xml)
-        self.assertIn("771 automated tests", document_xml)
+        self.assertIn("900+ validated tests", document_xml)
         self.assertIn("Application Document Pack workflow", document_xml)
         self.assertIn("University of Greenwich", document_xml)
         self.assertNotIn("Skill Intelligence", document_xml)
@@ -303,7 +303,7 @@ class ProfessionalCvExportTests(TestCase):
             'w:line="250"',
             "<w:br w:type=\"page\"/>",
             "PORTFOLIO PROJECTS",
-            "771 automated tests",
+            "900+ validated tests",
         ):
             self.assertIn(marker, saved_docx)
             self.assertIn(marker, direct_docx)
@@ -328,7 +328,7 @@ class CoverLetterExportTests(TestCase):
                 "financial transactions, daily balancing, discrepancy review, customer "
                 "verification, AML-aware workflows, and operational reporting.\n\n"
                 "My portfolio includes BakeOps Intelligence and CareerFunnel Tracker with "
-                "skill-gap tracking and 771 automated tests.\n\n"
+                "skill-gap tracking and 900+ validated tests.\n\n"
                 "I would welcome the opportunity to discuss how my operational finance "
                 "background could support Howden's data and reporting work."
             ),
@@ -365,7 +365,7 @@ class CoverLetterExportTests(TestCase):
         document_xml = self._docx_xml(render_structured_document_docx(self.structured))
         self.assertIn("BakeOps Intelligence", document_xml)
         self.assertIn("CareerFunnel Tracker", document_xml)
-        self.assertIn("771 automated tests", document_xml)
+        self.assertIn("900+ validated tests", document_xml)
         self.assertIn("skill-gap tracking", document_xml)
         self.assertIn("financial services", document_xml.lower())
         self.assertIn("FX", document_xml)
@@ -432,7 +432,7 @@ class DocumentExportsAlignmentTests(TestCase):
                     "I am writing to express my interest in the Junior Data Analyst "
                     "role at Howden. "
                     "My portfolio includes CareerFunnel Tracker with skill-gap tracking and "
-                    "771 automated tests.\n\n"
+                    "900+ validated tests.\n\n"
                     "I would welcome the opportunity to discuss how my background could support "
                     "Howden's data and reporting work."
                 ),
@@ -447,7 +447,7 @@ class DocumentExportsAlignmentTests(TestCase):
             return_value=None,
         ):
             document_xml = self._docx_xml(render_application_document_docx(self.cv_document))
-        self.assertIn("771 automated tests", document_xml)
+        self.assertIn("900+ validated tests", document_xml)
         self.assertIn("GBP 30,000", document_xml)
         self.assertNotIn("828 automated tests", document_xml)
         self.assertNotIn("Tailoring notes", document_xml)
@@ -459,6 +459,6 @@ class DocumentExportsAlignmentTests(TestCase):
         self.assertTrue(pdf_bytes.startswith(b"%PDF"))
         self.assertIn(b"Dear Hiring Team", pdf_bytes)
         self.assertIn(b"Howden", pdf_bytes)
-        self.assertIn(b"771 automated tests", pdf_bytes)
+        self.assertIn(b"900+ validated tests", pdf_bytes)
         self.assertNotIn(b"Review before use", pdf_bytes)
         self.assertNotIn(b"828 automated tests", pdf_bytes)
