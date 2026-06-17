@@ -54,7 +54,7 @@ Use these as repository descriptions or pin summaries. Keep under ~350 character
 
 ### CareerFunnel Tracker
 
-Django job-search analytics: funnel metrics, source/CV performance, data-quality reporting, manual recruiter-email workflow (rule-based), workbook exports, and Career Evidence OS (V1-V6). Portfolio project with 771 automated tests -- not a live SaaS.
+Django job-search analytics: funnel metrics, source/CV performance, data-quality reporting, manual recruiter-email workflow (rule-based), workbook exports, and Career Evidence OS (V1-V6). Portfolio project with 900+ validated tests -- not a live SaaS.
 
 ### BakeOps Intelligence
 

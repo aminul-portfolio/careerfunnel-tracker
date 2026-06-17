@@ -5,7 +5,7 @@
         <h2>Application Document Drafts</h2>
     </div>
     <p class="muted-text">{{ document_drafts.helper_text }}</p>
-    <p class="note-text"><strong>Draft CV Tailoring Notes and Draft Cover Letter - review before use.</strong></p>
+    <p class="note-text"><strong>Draft CV Tailoring Notes and Draft Cover Letter - review before use. Final CV and cover-letter wording should come from ChatGPT Tailoring v3 / CV V3.1 or another externally reviewed final-document source.</strong></p>
 
     <h3>Draft CV Tailoring Notes</h3>
     <div class="detail-grid">
@@ -37,7 +37,7 @@
 
     {% if show_draft_download_buttons %}
     <div class="form-actions" id="analyzer-draft-downloads">
-        <p class="note-text"><strong>Draft only - review manually before use.</strong></p>
+        <p class="note-text"><strong>Draft only - review manually before use. Store/reference externally generated final CV and cover-letter documents before employer use.</strong></p>
         <form method="post" action="{% url 'ai_agents:job_posting_analyzer_draft_download' %}" class="form-actions">
             {% csrf_token %}
             <input type="hidden" name="company_name" value="{{ form.company_name.value|default:'' }}">

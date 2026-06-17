@@ -50,7 +50,7 @@ Django-based job-search intelligence and analytics platform that turns applicati
 - Career Evidence OS V1-V6
 - Playwright screenshot automation
 - Optional Notion metadata/status sync
-- 771 automated tests documented
+- 900+ validated tests documented
 - GitHub Actions Django CI
 
 ## Planned / Not Implemented / Not Proven
@@ -76,7 +76,7 @@ Django-based job-search intelligence and analytics platform that turns applicati
 | Dashboard UI | `/dashboard/career-evidence/` | V4 browser review surfaces |
 | Reviewer-verifiable outputs | `docs/evidence/`, sprint closure docs | Documented sprint-based delivery |
 | Notion sync (optional) | `docs/notion/README.md` | V6 metadata-only sync boundary |
-| Automated tests | `tests/` | 771 automated tests (verified locally) |
+| Automated tests | `tests/` | 900+ validated tests (verified locally) |
 | CI | `.github/workflows/` | Django CI workflow configuration |
 
 ## Signature Evidence
@@ -114,11 +114,11 @@ python manage.py test
 
 - Built a job-search analytics tracker with structured application records, funnel-stage metrics, source-performance reporting, and data-quality warnings.
 - Delivered manual intake workflow with rule-based review, field audit, decision-evidence logging, skill-gap tracking, and application readiness checks.
-- Validated with 771 automated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery.
+- Backed by 900+ validated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery.
 
 ## LinkedIn Wording
 
-CareerFunnel Tracker - Django | Python | analytics workflow | test discipline. Portfolio job-search analytics with funnel metrics, source-performance reporting, data-quality warnings, skill-gap tracking, and manual intake workflow evidence. Validated with 771 automated tests. Not a live SaaS product; no external AI or email/calendar automation.
+CareerFunnel Tracker - Django | Python | analytics workflow | test discipline. Portfolio job-search analytics with funnel metrics, source-performance reporting, data-quality warnings, skill-gap tracking, and manual intake workflow evidence. Backed by 900+ validated tests. Not a live SaaS product; no external AI or email/calendar automation.
 
 ## Interview Talking Points
 
@@ -144,4 +144,4 @@ Sprint name: Portfolio readiness alignment (Sprint 30)
 Goal: Keep README, portfolio project review, and pinned-repo strategy aligned with the Sprint 29 baseline without overstating product maturity.
 Allowed scope: `README.md`, `docs/career_evidence/portfolio_*`, `docs/evidence/` cross-links
 Do not add: Fake deployment, Gmail/OAuth/inbox sync, automatic sending, automatic status mutation, automatic interview prep creation, or external AI claims
-Validation plan: Re-run full `python manage.py test` (771 automated tests) and `ruff check .` after material repo changes
+Validation plan: Re-run full `python manage.py test` (900+ validated tests) and `ruff check .` after material repo changes

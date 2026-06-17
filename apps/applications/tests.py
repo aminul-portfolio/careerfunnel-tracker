@@ -2174,7 +2174,7 @@ class MasterCvLockedClaimWordingTests(SimpleTestCase):
         )
 
         careerfunnel = PORTFOLIO_PROJECT_BULLETS["CareerFunnel Tracker"]
-        self.assertIn("771 automated tests", careerfunnel[2])
+        self.assertIn("900+ validated tests", careerfunnel[2])
         self.assertNotIn("828 automated tests", careerfunnel[2])
         self.assertIn("GBP 30,000", BASELINE_PROFILE_PARAGRAPH)
         self.assertIn("GBP 30,000", EXPERIENCE_MONEY_TRANSFER_FX_BULLETS[2])

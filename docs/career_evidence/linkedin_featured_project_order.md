@@ -32,7 +32,7 @@ Presentation order and wording for LinkedIn Featured section, posts, and project
 | Field | Content |
 |---|---|
 | Short title | CareerFunnel Tracker -- Job Search Analytics (Django) |
-| Description | CareerFunnel Tracker is a Django/Python analytics workflow project that structures job-search activity into application records, funnel-stage metrics, source-performance reporting, data-quality warnings, manual job-post review, skill-gap tracking, and application readiness checks. Validated with 771 automated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery. Not a live SaaS product. |
+| Description | CareerFunnel Tracker is a Django/Python analytics workflow project that structures job-search activity into application records, funnel-stage metrics, source-performance reporting, data-quality warnings, manual job-post review, skill-gap tracking, and application readiness checks. Backed by 900+ validated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery. Not a live SaaS product. |
 | Best role signal | Data Analyst, BI Analyst, Analytics Engineer, Python/Django data product |
 | Screenshot angle | Dashboard funnel metrics; Career Evidence overview; data-quality report |
 | Link | https://github.com/aminul-portfolio/careerfunnel-tracker |
@@ -118,7 +118,7 @@ Same card content as above. Use when BI/commerce breadth is the story.
 
 ### CareerFunnel Tracker
 
-Built CareerFunnel Tracker -- a Django job-search analytics project that turns application activity into explainable funnel metrics, source/CV performance, and data-quality signals, plus workbook exports and a Career Evidence OS for portfolio review. Evidence-first build with 771 automated tests. Portfolio project only -- not a live SaaS. #DataAnalytics #Django #Python #PortfolioProject
+Built CareerFunnel Tracker -- a Django job-search analytics project that turns application activity into explainable funnel metrics, source/CV performance, and data-quality signals, plus workbook exports and a Career Evidence OS for portfolio review. Evidence-first build with 900+ validated tests. Portfolio project only -- not a live SaaS. #DataAnalytics #Django #Python #PortfolioProject
 
 ### BakeOps Intelligence
 

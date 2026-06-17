@@ -22,7 +22,7 @@ The strongest part of the project is the analytics layer. It turns application r
 
 It also includes metric definitions, analytics lineage, exportable evidence, screenshots, visual analytics evidence, an interview evidence workspace, and tests, so the project is built like a realistic portfolio data product rather than a simple tracker.
 
-The current release-candidate state is ready for recruiter review as an evidence-based portfolio handoff. It does not claim live deployment, production SaaS usage, real users, external AI/API automation, Tableau Public hosting, Power BI implementation, Gmail, Calendar, scraping, auto-apply, or background automation.
+The current release-candidate state is ready for recruiter review as an evidence-based portfolio handoff. It does not claim live deployment, production SaaS usage, real users, external AI/API automation, Tableau Public hosting, CareerFunnel Power BI implementation, Gmail, Calendar, scraping, auto-apply, or background automation.
 
 ---
 
@@ -591,7 +591,7 @@ Expected current result:
 ```text
 System check identified no issues
 No changes detected
-771 automated tests passing
+999 tests passing
 ```
 
 Use this to prove repository stability.
@@ -630,7 +630,7 @@ Do not claim:
 - scraping or auto-apply workflows
 - background automation
 - Tableau Public hosting
-- Power BI implementation
+- CareerFunnel Power BI implementation
 - scientific CV A/B testing
 - financial ROI
 - enterprise data warehouse architecture
@@ -679,7 +679,7 @@ Current limitations:
 - No scraping or auto-apply workflow is active.
 - No Celery / Redis background processing is active.
 - No Tableau Public URL is claimed.
-- No Power BI implementation is claimed.
+- No CareerFunnel Power BI implementation is claimed.
 - No production SaaS billing or commercial layer is active.
 
 Strong answer:

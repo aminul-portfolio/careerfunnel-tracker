@@ -27,8 +27,9 @@ CAREERFUNNEL_EVIDENCE = (
     "CareerFunnel Tracker demonstrates a Django/Python analytics workflow with "
     "structured application records, funnel-stage metrics, source-performance reporting, "
     "data-quality warnings, manual intake workflow, skill-gap tracking, application "
-    "readiness checks, and Application Document Pack workflow, validated with "
-    "771 automated tests."
+    "readiness checks, and Application Document Pack workflow for storing/referencing "
+    "externally generated CV and cover-letter documents, backed by 900+ validated "
+    "tests."
 )
 
 BAKEOPS_EVIDENCE = (
@@ -49,9 +50,9 @@ DATABRIDGE_EVIDENCE = (
 )
 
 BAKEOPS_DBT_EVIDENCE = (
-    "bakeops-dbt demonstrates portfolio-verified dbt and DuckDB analytics engineering "
-    "with 7 models, 26 tests, and v1.0.1 release discipline - not production or "
-    "cloud warehouse deployment."
+    "bakeops-dbt demonstrates dbt Core and DuckDB portfolio analytics-engineering "
+    "evidence through bakeops-dbt, with 7 models and 26 dbt tests - not "
+    "production or cloud warehouse deployment."
 )
 
 PROJECT_EVIDENCE = {

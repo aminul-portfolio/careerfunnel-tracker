@@ -85,7 +85,7 @@ FinTech, operations, reconciliation, reporting, data quality
 - [ ] No Gmail/Calendar integration
 - [ ] No external AI/API automation
 - [ ] No Tableau Public unless verified
-- [ ] No Power BI implementation
+- [ ] No CareerFunnel-native Power BI implementation
 
 ## Final Sprint 22B-22E Completion Criteria
 

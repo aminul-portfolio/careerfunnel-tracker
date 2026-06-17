@@ -44,7 +44,7 @@ POSITIONING_BOUNDARIES = (
 )
 
 VALIDATION_SUMMARY = (
-    "Validated with 771 automated tests, Ruff checks, Django system checks, migration "
+    "Backed by 900+ validated tests, Ruff checks, Django system checks, migration "
     "dry-run discipline, and documented sprint-based delivery."
 )
 
@@ -365,7 +365,7 @@ def render_pack(sources: EvidenceSources, parsed: ParsedEvidence) -> str:
                 "Django project structure: `manage.py`, `config/`, installed apps "
                 "(V2 matrix: Strong).",
                 (
-                    "Automated tests: 771 automated tests documented in README; "
+                    "Automated tests: 900+ validated tests documented in README; "
                     "app test modules in V1 inventory."
                 ),
                 "CI workflow: `.github/workflows/django-ci.yml` (V2 matrix: Strong Git/GitHub).",
