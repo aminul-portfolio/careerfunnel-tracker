@@ -6,6 +6,7 @@ from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
+from apps.applications.choices import FollowUpStatus
 from apps.applications.models import JobApplication
 
 from .services import build_followup_email_draft, get_due_followups
@@ -34,6 +35,57 @@ class FollowupTests(TestCase):
     def test_followup_page_requires_login(self):
         response = self.client.get(reverse("followups:followup_list"))
         self.assertEqual(response.status_code, 302)
+
+    def test_follow_up_detail_shows_manual_tracking_state_message(self):
+        self.create_application(
+            follow_up_date=date(2026, 5, 2),
+            follow_up_status=FollowUpStatus.DUE,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(reverse("followups:followup_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            (
+                "Follow-up status and dates are manual tracking fields. They are not "
+                "automatically updated from your email or the employer's system."
+            ),
+        )
+        self.assertContains(
+            response,
+            (
+                "Mark Follow-up Sent only after you have manually sent the follow-up "
+                "email. This updates your tracking record only - CareerFunnel does "
+                "not send emails."
+            ),
+        )
+        self.assertNotContains(response, "CareerFunnel sends emails")
+        self.assertNotContains(response, "automatically sends")
+        self.assertNotContains(response, "auto-send")
+        self.assertNotContains(response, "auto sync")
+        self.assertNotContains(response, "auto-sync")
+        self.assertNotContains(response, "Gmail")
+        self.assertNotContains(response, "OAuth")
+        self.assertNotContains(response, "Calendar")
+        self.assertNotContains(response, "Apply Now")
+        self.assertNotContains(response, "Submit Application")
+
+    def test_follow_up_status_label_is_neutral(self):
+        self.create_application(
+            follow_up_date=date(2026, 5, 2),
+            follow_up_status=FollowUpStatus.DUE,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(reverse("followups:followup_list"))
+
+        self.assertContains(response, "Follow-up Status")
+        self.assertContains(response, "Mark Follow-up Sent")
+        self.assertNotContains(response, "Send Email")
+        self.assertNotContains(response, "Apply Now")
+        self.assertNotContains(response, "Submit Application")
 
     def test_email_draft_uses_contact_name_when_available(self):
         application = self.create_application(contact_name="Taylor Morgan")

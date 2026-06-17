@@ -994,6 +994,110 @@ class JobApplicationViewTests(TestCase):
         self.assertContains(response, "I applied for the Junior Data Analyst")
         self.assertContains(response, "Manual draft only.")
 
+    def test_follow_up_section_page_loads_without_error(self):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="followup"')
+
+    def test_application_detail_follow_up_section_shows_manual_send_only_message(self):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertContains(
+            response,
+            (
+                "Follow-up email drafts are for manual use only. Copy the draft and "
+                "send it yourself through your email client."
+            ),
+        )
+
+    def test_application_detail_mark_follow_up_sent_shows_tracking_only_message(self):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertContains(
+            response,
+            (
+                "Mark Follow-up Sent only after you have manually sent the follow-up "
+                "email. This updates your tracking record only - CareerFunnel does "
+                "not send emails."
+            ),
+        )
+
+    def test_application_detail_follow_up_status_dates_are_manual_tracking_fields(self):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertContains(
+            response,
+            (
+                "Follow-up status and dates are manual tracking fields. They are not "
+                "automatically updated from your email or the employer's system."
+            ),
+        )
+
+    def test_application_detail_follow_up_does_not_imply_auto_send(self):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        self.assertContains(response, "CareerFunnel does not send emails")
+        self.assertNotContains(response, "CareerFunnel sends emails")
+        self.assertNotContains(response, "automatically sends")
+        self.assertNotContains(response, "Apply Now")
+        self.assertNotContains(response, "Submit Application")
+
+    def test_application_detail_follow_up_wording_does_not_mention_gmail_oauth_or_calendar(
+        self,
+    ):
+        application = self.create_application()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+        content = response.content.decode()
+        followup_status_section = content.split('<section id="followup"', 1)[1].split(
+            '<section id="recruiter-emails"',
+            1,
+        )[0]
+        followup_draft_section = content.split("<h2>Follow-up Email Draft</h2>", 1)[1].split(
+            '<section id="role"',
+            1,
+        )[0]
+        followup_content = followup_status_section + followup_draft_section
+        for unsafe_text in (
+            "auto-send",
+            "auto sync",
+            "auto-sync",
+            "Gmail",
+            "OAuth",
+            "Calendar",
+        ):
+            self.assertNotIn(unsafe_text, followup_content)
+
     def test_application_detail_makes_draft_manual_only(self):
         application = self.create_application()
         self.client.login(username="aminul", password="StrongPass12345")
