@@ -46,6 +46,63 @@ class JobAICapabilityMatchReportViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Job AI Capability Match")
 
+    def test_skill_gap_page_loads_without_error(self):
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Missing / weak capabilities")
+
+    def test_skill_gap_page_shows_advisory_only_message(self):
+        response = self._get()
+        self.assertContains(
+            response,
+            (
+                "Skill gap signals are advisory only. They indicate learning priorities, "
+                "not current proficiency."
+            ),
+        )
+
+    def test_skill_gap_page_shows_portfolio_evidence_required_message(self):
+        response = self._get()
+        self.assertContains(
+            response,
+            (
+                "Before adding a skill to your CV or public profile, ensure it is supported "
+                "by project evidence, tests, screenshots, or prior work experience."
+            ),
+        )
+
+    def test_skill_gap_wording_does_not_claim_skill_as_proven(self):
+        response = self._get()
+        content = response.content.decode()
+        self.assertNotIn("proven proficiency", content)
+        self.assertNotIn("verified skill", content)
+        self.assertNotIn("is ready to claim", content)
+        self.assertNotIn("skills are ready to claim", content)
+        self.assertNotIn("recommendation proves", content)
+        self.assertNotIn("proves proficiency", content)
+
+    def test_skill_intelligence_wording_does_not_mention_auto_apply_or_auto_sync(self):
+        response = self._get()
+        content = response.content.decode()
+        for phrase in (
+            "auto-apply",
+            "auto apply",
+            "auto-sync",
+            "auto sync",
+            "automatically updated",
+            "Gmail",
+            "OAuth",
+            "Calendar",
+            "Submit Application",
+            "Apply Now",
+        ):
+            self.assertNotIn(phrase, content)
+
+    def test_skill_gap_page_does_not_invent_learning_target_boundary(self):
+        response = self._get()
+        content = response.content.decode()
+        self.assertNotIn("LEARNING_TARGET", content)
+
     def test_match_score_appears(self):
         response = self._get()
         self.assertContains(response, str(self.expected.match_score))
