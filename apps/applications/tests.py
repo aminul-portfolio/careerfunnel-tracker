@@ -765,6 +765,33 @@ class JobApplicationViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(JobApplication.objects.filter(company_name="Example Ltd").exists())
 
+    def test_add_application_manual_save_boundary_still_present_via_prefill(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        application_count_before = JobApplication.objects.count()
+
+        response = self.client.get(
+            reverse("applications:application_create")
+            + "?company_name=FinSight&job_title=Junior+Finance+Data+Analyst"
+            + "&location=Hybrid+London&fit_score=70"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(JobApplication.objects.count(), application_count_before)
+        self.assertContains(
+            response,
+            (
+                "Pre-filling this form does not save your application. "
+                "Review all fields before saving."
+            ),
+        )
+        self.assertContains(response, "Manual review required before saving")
+        self.assertContains(response, "Manual Save")
+        self.assertContains(response, "Manual external submission")
+        self.assertContains(
+            response,
+            "CareerFunnel does not submit applications automatically.",
+        )
+
     def test_application_detail_includes_followup_email_draft_context(self):
         application = self.create_application(contact_email="hiring@example.com")
         self.client.login(username="aminul", password="StrongPass12345")
@@ -2329,7 +2356,7 @@ class JobPostingAnalyzerPrefillBridgeTests(TestCase):
     def test_save_as_application_not_shown_before_analysis(self):
         response = self.client.get(self.analyzer_url)
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "Review & Pre-fill Application", html=True)
+        self.assertNotContains(response, "Pre-fill Add Application", html=True)
 
     def test_save_as_application_shown_after_analysis(self):
         response = self.client.post(
@@ -2342,8 +2369,15 @@ class JobPostingAnalyzerPrefillBridgeTests(TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Review & Pre-fill Application", html=True)
-        self.assertContains(response, "Nothing is submitted automatically")
+        self.assertContains(response, "Pre-fill Add Application", html=True)
+        self.assertContains(
+            response,
+            (
+                "Review the analysis above before continuing. Pre-filling opens the Add "
+                "Application form - you must save manually. No application is submitted "
+                "externally."
+            ),
+        )
 
     def test_save_as_application_link_contains_encoded_get_params(self):
         job_title = "Junior Finance Data Analyst"
