@@ -45,6 +45,41 @@ class LearningRecommendationsReportViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Learning Recommendations")
 
+    def test_learning_recommendations_page_shows_planning_aid_only_message(self):
+        response = self._get()
+        self.assertContains(
+            response,
+            (
+                "Learning recommendations are planning aids. A recommendation does not "
+                "mean the skill is portfolio-evidenced or ready to claim."
+            ),
+        )
+
+    def test_learning_recommendations_wording_does_not_claim_proven_proficiency(self):
+        response = self._get()
+        content = response.content.decode()
+        self.assertNotIn("proven proficiency", content)
+        self.assertNotIn("verified skill", content)
+        self.assertNotIn("is ready to claim", content)
+        self.assertNotIn("skills are ready to claim", content)
+        self.assertNotIn("recommendation proves", content)
+        self.assertNotIn("proves proficiency", content)
+
+    def test_learning_recommendations_page_shows_portfolio_evidence_required_message(self):
+        response = self._get()
+        self.assertContains(
+            response,
+            (
+                "Before adding a skill to your CV or public profile, ensure it is supported "
+                "by project evidence, tests, screenshots, or prior work experience."
+            ),
+        )
+
+    def test_learning_recommendations_page_does_not_invent_learning_target_boundary(self):
+        response = self._get()
+        content = response.content.decode()
+        self.assertNotIn("LEARNING_TARGET", content)
+
     def test_overall_priority_appears(self):
         response = self._get()
         self.assertContains(response, "Overall Priority")
