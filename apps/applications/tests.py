@@ -730,14 +730,173 @@ class JobApplicationViewTests(TestCase):
         defaults.update(overrides)
         return JobApplication.objects.create(**defaults)
 
+    def _login(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+
+    def _get_application_list(self, query_string=""):
+        self._login()
+        url = reverse("applications:application_list")
+        if query_string:
+            url = f"{url}?{query_string}"
+        return self.client.get(url)
+
     def test_application_list_requires_login(self):
         response = self.client.get(reverse("applications:application_list"))
         self.assertEqual(response.status_code, 302)
 
     def test_application_list_loads_for_logged_in_user(self):
-        self.client.login(username="aminul", password="StrongPass12345")
-        response = self.client.get(reverse("applications:application_list"))
+        response = self._get_application_list()
         self.assertEqual(response.status_code, 200)
+
+    def test_application_list_phase_69c_premium_shell_renders(self):
+        response = self._get_application_list()
+        content = response.content.decode()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Track every application honestly.", content)
+        self.assertIn("Logged Applications", content)
+        for class_name in (
+            "cf69c-page",
+            "cf69c-zone-hero",
+            "cf69c-safety-grid",
+            "cf69c-zone-snapshot",
+            "cf69c-kpi-grid",
+            "cf69c-filter-panel",
+            "cf69c-zone-records",
+        ):
+            with self.subTest(class_name=class_name):
+                self.assertIn(class_name, content)
+
+    def test_application_list_phase_69c_kpi_values_render_from_saved_records(self):
+        self.create_application(status=ApplicationStatus.SUBMITTED)
+        self.create_application(
+            company_name="Response Co",
+            status=ApplicationStatus.ACKNOWLEDGED,
+        )
+        self.create_application(
+            company_name="Interview Co",
+            status=ApplicationStatus.INTERVIEW,
+        )
+
+        response = self._get_application_list()
+        content = response.content.decode()
+
+        self.assertEqual(response.context["summary"].total_applications, 3)
+        self.assertIn(f">{response.context['summary'].total_applications}<", content)
+        self.assertIn(f">{response.context['response_rate']}%<", content)
+        self.assertIn(f">{response.context['interview_rate']}%<", content)
+        self.assertIn(f">{response.context['offer_rate']}%<", content)
+
+    def test_application_list_phase_69c_rows_render_existing_record_fields_and_view_link(self):
+        application = self.create_application(
+            company_name="Evidence Analytics Ltd",
+            job_title="BI Analyst",
+            status=ApplicationStatus.ACKNOWLEDGED,
+            source=ApplicationSource.LINKEDIN,
+            role_fit=RoleFit.STRONG,
+            location="London",
+        )
+
+        response = self._get_application_list()
+        content = response.content.decode()
+
+        self.assertContains(response, "Evidence Analytics Ltd")
+        self.assertContains(response, "BI Analyst")
+        self.assertContains(response, "Acknowledged")
+        self.assertContains(response, "LinkedIn")
+        self.assertContains(response, date_format(application.date_applied, "DATE_FORMAT"))
+        self.assertContains(response, application.get_absolute_url())
+        self.assertIn(">View<", content)
+
+    def test_application_list_phase_69c_search_query_filters_and_preserves_q_value(self):
+        self.create_application(company_name="FinSight Analytics", job_title="Data Analyst")
+        self.create_application(company_name="Other Co", job_title="Reporting Analyst")
+
+        response = self._get_application_list("q=FinSight")
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["table_rows"]), 1)
+        self.assertContains(response, "FinSight Analytics")
+        self.assertNotContains(response, "Other Co")
+        self.assertIn('name="q"', content)
+        self.assertIn('value="FinSight"', content)
+
+    def test_application_list_phase_69c_status_filter_filters_and_preserves_selected_state(self):
+        self.create_application(company_name="Submitted Co", status=ApplicationStatus.SUBMITTED)
+        self.create_application(company_name="Interview Co", status=ApplicationStatus.INTERVIEW)
+
+        response = self._get_application_list("status=interview")
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["table_rows"]), 1)
+        self.assertContains(response, "Interview Co")
+        self.assertNotContains(response, "Submitted Co")
+        self.assertIn('<option value="interview" selected>Interview</option>', content)
+
+    def test_application_list_phase_69c_client_side_scan_hooks_remain(self):
+        response = self._get_application_list()
+        content = response.content.decode()
+        self.assertIn("data-cf-client-table-filter", content)
+        self.assertIn("data-cf-table-filter-input", content)
+        self.assertIn("data-cf-table-filter-status", content)
+        self.assertIn("Quick scan filters visible rows on this page only", content)
+
+    def test_application_list_phase_69c_empty_state_remains_safe(self):
+        response = self._get_application_list()
+        content = response.content.decode()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("No applications logged yet.", content)
+        self.assertIn("saved-record evidence base", content)
+        self.assertIn("tracking record only", content.lower())
+        self.assertIn("external application action remains manual", content)
+
+    def test_application_list_phase_69c_manual_saved_record_wording_visible(self):
+        response = self._get_application_list()
+        content = response.content.decode().lower()
+        self.assertIn("saved application records", content)
+        self.assertIn("manual tracking workflow", content)
+        self.assertIn("tracking record only", content)
+        self.assertIn("no auto-apply", content)
+        self.assertIn("no automatic submission", content)
+        self.assertIn("no employer submission by careerfunnel", content)
+        self.assertIn("application actions happen manually outside the tracker", content)
+        self.assertIn("not scraped live-market data", content)
+        self.assertIn("not proof of employer interaction or external verification", content)
+
+    def test_application_list_phase_69c_unsafe_positive_action_labels_absent(self):
+        response = self._get_application_list()
+        content = response.content.decode()
+        for label in ("Apply Now", "Submit Application", "Auto Apply", "Send Application"):
+            with self.subTest(label=label):
+                self.assertNotIn(f">{label}<", content)
+
+    def test_application_list_phase_69c_no_invented_trend_or_live_data_claims(self):
+        response = self._get_application_list()
+        content = response.content.decode().lower()
+        for phrase in (
+            "% increase",
+            "% decrease",
+            "trending up",
+            "trending down",
+            "upward trend",
+            "downward trend",
+            "live data",
+            "externally verified",
+            "live saas",
+            "scraped market",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_application_list_phase_69c_get_does_not_mutate_application_records(self):
+        self.create_application()
+        before_count = JobApplication.objects.filter(user=self.user).count()
+
+        response = self._get_application_list("q=Example&status=submitted")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(JobApplication.objects.filter(user=self.user).count(), before_count)
 
     def test_user_can_create_application(self):
         self.client.login(username="aminul", password="StrongPass12345")

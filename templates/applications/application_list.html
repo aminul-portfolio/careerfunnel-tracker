@@ -1,1 +1,480 @@
-{% extends "base.html" %}{% block title %}Applications | CareerFunnel Tracker{% endblock %}{% block page_heading %}Applications{% endblock %}{% block content %}<div class="dashboard-grid"><section class="hero-panel"><p class="eyebrow">Application Tracker</p><h1>Track every application honestly.</h1><p>This page captures the core evidence: where you applied, which CV version you used, what happened next, and where the job-search funnel may be leaking.</p><div class="hero-actions"><a href="{% url 'applications:application_create' %}" class="btn btn-primary">Add Application</a></div></section><section class="kpi-grid"><div class="kpi-card"><p>Total Applications</p><h2>{{ summary.total_applications }}</h2></div><div class="kpi-card"><p>Response Rate</p><h2>{{ response_rate }}%</h2></div><div class="kpi-card"><p>Interview Rate</p><h2>{{ interview_rate }}%</h2></div><div class="kpi-card"><p>Offer Rate</p><h2>{{ offer_rate }}%</h2></div></section><section class="content-card"><div class="card-header card-header-row"><div><p class="eyebrow">Application Records</p><h2>Logged Applications</h2></div><a href="{% url 'applications:application_create' %}" class="btn btn-primary">New Application</a></div><form method="get" class="filter-bar"><input type="text" name="q" value="{{ search_query }}" placeholder="Search company or role..." class="form-control"><select name="status" class="form-control"><option value="">All statuses</option><option value="submitted">Submitted</option><option value="acknowledged">Acknowledged</option><option value="screening_call">Screening call</option><option value="technical_screen">Technical screen</option><option value="interview">Interview</option><option value="offer">Offer</option><option value="rejected">Rejected</option><option value="auto_rejected">Auto-rejected</option><option value="no_response">No response</option></select><button type="submit" class="btn btn-secondary">Filter</button></form><div class="cf-table-client-filter" data-cf-client-table-filter aria-label="Client-side row scan"><p class="cf-client-filter-note">Quick scan filters visible rows on this page only. Use Filter above for server-side results.</p><input type="search" class="form-control" data-cf-table-filter-input placeholder="Filter visible rows..." autocomplete="off"><p class="cf-client-filter-status" data-cf-table-filter-status></p></div>{% if table_rows %}<div class="table-wrap"><table class="data-table"><thead><tr><th>Company</th><th>Role</th><th>Status</th><th>Date Applied</th><th>Role Fit</th><th>Source</th><th>Days to Response</th><th></th></tr></thead><tbody>{% for row in table_rows %}<tr><td><strong>{{ row.application.company_name }}</strong><span class="table-subtext">{{ row.application.location }}</span></td><td>{{ row.application.job_title }}</td><td><span class="badge {{ row.badge_class }}">{{ row.application.get_status_display }}</span></td><td>{{ row.application.date_applied }}</td><td>{{ row.application.get_role_fit_display }}</td><td>{{ row.application.get_source_display }}</td><td>{% if row.days_to_response is not None %}{{ row.days_to_response }} days{% else %}-{% endif %}</td><td><a href="{{ row.application.get_absolute_url }}" class="table-link">View</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state"><h3>No applications logged yet.</h3><p>Add your first application to start building your job-search evidence base.</p><a href="{% url 'applications:application_create' %}" class="btn btn-primary">Add First Application</a></div>{% endif %}</section></div>{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Applications | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Applications{% endblock %}
+
+{% block content %}
+<style>
+    .cf69c-page {
+        --cf69c-canvas: #f0f2f5;
+        --cf69c-surface: #ffffff;
+        --cf69c-subtle: #f8fafc;
+        --cf69c-ink: #0f172a;
+        --cf69c-body: #334155;
+        --cf69c-muted: #64748b;
+        --cf69c-border: #e2e8f0;
+        --cf69c-primary: #1d4ed8;
+        --cf69c-primary-soft: #eff6ff;
+        --cf69c-manual: #0f766e;
+        --cf69c-manual-soft: #f0fdfa;
+        --cf69c-warning: #92400e;
+        --cf69c-warning-soft: #fffbeb;
+        --cf69c-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+        background: var(--cf69c-canvas);
+        border-radius: 18px;
+        color: var(--cf69c-body);
+        padding: 18px;
+    }
+
+    .cf69c-page * {
+        box-sizing: border-box;
+    }
+
+    .cf69c-zone {
+        display: grid;
+        gap: 18px;
+        margin-bottom: 18px;
+    }
+
+    .cf69c-card {
+        background: var(--cf69c-surface);
+        border: 1px solid var(--cf69c-border);
+        border-radius: 14px;
+        box-shadow: var(--cf69c-shadow);
+        padding: 22px;
+    }
+
+    .cf69c-hero {
+        overflow: hidden;
+        position: relative;
+    }
+
+    .cf69c-hero::before {
+        background: linear-gradient(135deg, rgba(29, 78, 216, 0.12), rgba(15, 118, 110, 0.08));
+        content: "";
+        inset: 0;
+        pointer-events: none;
+        position: absolute;
+    }
+
+    .cf69c-hero > * {
+        position: relative;
+    }
+
+    .cf69c-eyebrow {
+        color: var(--cf69c-primary);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        margin: 0 0 8px;
+        text-transform: uppercase;
+    }
+
+    .cf69c-title {
+        color: var(--cf69c-ink);
+        font-size: clamp(1.7rem, 4vw, 2.35rem);
+        line-height: 1.12;
+        margin: 0;
+    }
+
+    .cf69c-copy {
+        color: var(--cf69c-body);
+        line-height: 1.65;
+        margin: 10px 0 0;
+        max-width: 76ch;
+    }
+
+    .cf69c-hero-actions,
+    .cf69c-record-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+    }
+
+    .cf69c-safety-grid,
+    .cf69c-kpi-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .cf69c-safety-card,
+    .cf69c-kpi-card {
+        background: var(--cf69c-surface);
+        border: 1px solid var(--cf69c-border);
+        border-radius: 12px;
+        padding: 16px;
+    }
+
+    .cf69c-safety-card strong {
+        color: var(--cf69c-ink);
+        display: block;
+        margin-bottom: 6px;
+    }
+
+    .cf69c-safety-card span,
+    .cf69c-kpi-note,
+    .cf69c-section-note,
+    .cf69c-filter-note,
+    .cf69c-table-context,
+    .cf69c-empty-copy {
+        color: var(--cf69c-muted);
+        font-size: 0.9rem;
+        line-height: 1.55;
+    }
+
+    .cf69c-safety-info {
+        background: var(--cf69c-primary-soft);
+        border-color: #bfdbfe;
+    }
+
+    .cf69c-safety-manual {
+        background: var(--cf69c-manual-soft);
+        border-color: #99f6e4;
+    }
+
+    .cf69c-safety-warning {
+        background: var(--cf69c-warning-soft);
+        border-color: #fde68a;
+    }
+
+    .cf69c-kpi-label {
+        color: var(--cf69c-muted);
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .cf69c-kpi-value {
+        color: var(--cf69c-ink);
+        display: block;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 1.75rem;
+        font-weight: 700;
+        line-height: 1.15;
+        margin: 8px 0 4px;
+    }
+
+    .cf69c-record-header {
+        align-items: flex-start;
+        display: flex;
+        gap: 16px;
+        justify-content: space-between;
+        margin-bottom: 18px;
+    }
+
+    .cf69c-section-title {
+        color: var(--cf69c-ink);
+        font-size: 1.35rem;
+        margin: 0 0 6px;
+    }
+
+    .cf69c-filter-panel {
+        background: var(--cf69c-subtle);
+        border: 1px solid var(--cf69c-border);
+        border-radius: 12px;
+        display: grid;
+        gap: 14px;
+        margin-bottom: 16px;
+        padding: 16px;
+    }
+
+    .cf69c-filter-bar {
+        align-items: end;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: minmax(220px, 1fr) minmax(180px, 260px) auto;
+    }
+
+    .cf69c-filter-field label {
+        color: var(--cf69c-ink);
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .cf69c-client-scan {
+        background: var(--cf69c-surface);
+        border: 1px solid var(--cf69c-border);
+        border-radius: 10px;
+        padding: 14px;
+    }
+
+    .cf69c-table-wrap {
+        border: 1px solid var(--cf69c-border);
+        border-radius: 12px;
+        overflow-x: auto;
+    }
+
+    .cf69c-table {
+        border-collapse: collapse;
+        min-width: 920px;
+        width: 100%;
+    }
+
+    .cf69c-table th,
+    .cf69c-table td {
+        border-bottom: 1px solid var(--cf69c-border);
+        padding: 13px 14px;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .cf69c-table th {
+        background: var(--cf69c-subtle);
+        color: var(--cf69c-muted);
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .cf69c-table tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .cf69c-company {
+        color: var(--cf69c-ink);
+        display: block;
+        font-weight: 700;
+    }
+
+    .cf69c-subtext {
+        color: var(--cf69c-muted);
+        display: block;
+        font-size: 0.85rem;
+        margin-top: 3px;
+    }
+
+    .cf69c-view-link {
+        color: var(--cf69c-primary);
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .cf69c-view-link:hover {
+        text-decoration: underline;
+    }
+
+    .cf69c-empty-state {
+        background: var(--cf69c-subtle);
+        border: 1px dashed var(--cf69c-border);
+        border-radius: 12px;
+        padding: 22px;
+    }
+
+    .cf69c-empty-state h3 {
+        color: var(--cf69c-ink);
+        margin-top: 0;
+    }
+
+    @media (max-width: 980px) {
+        .cf69c-safety-grid,
+        .cf69c-kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .cf69c-filter-bar {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .cf69c-page {
+            padding: 10px;
+        }
+
+        .cf69c-safety-grid,
+        .cf69c-kpi-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .cf69c-record-header {
+            display: grid;
+        }
+    }
+</style>
+
+<div class="dashboard-grid cf69c-page">
+    <section class="cf69c-zone cf69c-zone-hero" aria-label="Application List context">
+        <div class="cf69c-card cf69c-hero">
+            <p class="cf69c-eyebrow">Application Tracker</p>
+            <h1 class="cf69c-title">Track every application honestly.</h1>
+            <p class="cf69c-copy">
+                This page is the saved application records hub: where you applied, which CV version you used,
+                what happened next, and where manual follow-up or evidence cleanup may be needed.
+            </p>
+            <div class="cf69c-hero-actions">
+                <a href="{% url 'applications:application_create' %}" class="btn btn-primary">Add Application</a>
+            </div>
+        </div>
+        <div class="cf69c-safety-grid" aria-label="Application List safety boundaries">
+            <div class="cf69c-safety-card cf69c-safety-info">
+                <strong>Saved application records</strong>
+                <span>These rows are tracker evidence only, based on records saved in CareerFunnel.</span>
+            </div>
+            <div class="cf69c-safety-card cf69c-safety-manual">
+                <strong>Manual tracking workflow</strong>
+                <span>Tracking record only: application actions happen manually outside the tracker.</span>
+            </div>
+            <div class="cf69c-safety-card cf69c-safety-manual">
+                <strong>No automatic submission</strong>
+                <span>No auto-apply and no employer submission by CareerFunnel.</span>
+            </div>
+            <div class="cf69c-safety-card cf69c-safety-warning">
+                <strong>Evidence limits</strong>
+                <span>Not scraped live-market data and not proof of employer interaction or external verification.</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="cf69c-zone cf69c-zone-snapshot" aria-label="Application List saved-record snapshot">
+        <div class="cf69c-kpi-grid">
+            <div class="cf69c-kpi-card">
+                <span class="cf69c-kpi-label">Total applications</span>
+                <strong class="cf69c-kpi-value">{{ summary.total_applications }}</strong>
+                <span class="cf69c-kpi-note">Saved application records</span>
+            </div>
+            <div class="cf69c-kpi-card">
+                <span class="cf69c-kpi-label">Response rate</span>
+                <strong class="cf69c-kpi-value">{{ response_rate }}%</strong>
+                <span class="cf69c-kpi-note">Calculated from saved statuses only</span>
+            </div>
+            <div class="cf69c-kpi-card">
+                <span class="cf69c-kpi-label">Interview rate</span>
+                <strong class="cf69c-kpi-value">{{ interview_rate }}%</strong>
+                <span class="cf69c-kpi-note">Manual reporting context</span>
+            </div>
+            <div class="cf69c-kpi-card">
+                <span class="cf69c-kpi-label">Offer rate</span>
+                <strong class="cf69c-kpi-value">{{ offer_rate }}%</strong>
+                <span class="cf69c-kpi-note">Saved-record summary only</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="content-card cf69c-card cf69c-zone cf69c-zone-records" aria-label="Application records">
+        <div class="cf69c-record-header">
+            <div>
+                <p class="cf69c-eyebrow">Application Records</p>
+                <h2 class="cf69c-section-title">Logged Applications</h2>
+                <p class="cf69c-section-note">
+                    Search and filter saved records without changing application data. Use View to inspect one tracking record.
+                </p>
+            </div>
+            <div class="cf69c-record-actions">
+                <a href="{% url 'applications:application_create' %}" class="btn btn-primary">New Application</a>
+            </div>
+        </div>
+
+        <div class="cf69c-filter-panel" aria-label="Application List filters">
+            <form method="get" class="filter-bar cf69c-filter-bar">
+                <div class="cf69c-filter-field">
+                    <label for="cf69c-application-search">Search records</label>
+                    <input
+                        id="cf69c-application-search"
+                        type="text"
+                        name="q"
+                        value="{{ search_query }}"
+                        placeholder="Search company or role..."
+                        class="form-control"
+                    >
+                </div>
+                <div class="cf69c-filter-field">
+                    <label for="cf69c-status-filter">Status</label>
+                    <select id="cf69c-status-filter" name="status" class="form-control">
+                        <option value="" {% if not status_filter %}selected{% endif %}>All statuses</option>
+                        <option value="submitted" {% if status_filter == "submitted" %}selected{% endif %}>Submitted</option>
+                        <option value="acknowledged" {% if status_filter == "acknowledged" %}selected{% endif %}>Acknowledged</option>
+                        <option value="screening_call" {% if status_filter == "screening_call" %}selected{% endif %}>Screening call</option>
+                        <option value="technical_screen" {% if status_filter == "technical_screen" %}selected{% endif %}>Technical screen</option>
+                        <option value="interview" {% if status_filter == "interview" %}selected{% endif %}>Interview</option>
+                        <option value="offer" {% if status_filter == "offer" %}selected{% endif %}>Offer</option>
+                        <option value="rejected" {% if status_filter == "rejected" %}selected{% endif %}>Rejected</option>
+                        <option value="auto_rejected" {% if status_filter == "auto_rejected" %}selected{% endif %}>Auto-rejected</option>
+                        <option value="no_response" {% if status_filter == "no_response" %}selected{% endif %}>No response</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-secondary">Filter</button>
+            </form>
+            <p class="cf69c-filter-note">
+                Server-side filters narrow saved tracker records. They do not submit applications or contact employers.
+            </p>
+            <div
+                class="cf-table-client-filter cf69c-client-scan"
+                data-cf-client-table-filter
+                aria-label="Client-side row scan"
+            >
+                <p class="cf-client-filter-note">
+                    Quick scan filters visible rows on this page only. Use Filter above for server-side results.
+                </p>
+                <input
+                    type="search"
+                    class="form-control"
+                    data-cf-table-filter-input
+                    placeholder="Filter visible rows..."
+                    autocomplete="off"
+                >
+                <p class="cf-client-filter-status" data-cf-table-filter-status></p>
+            </div>
+        </div>
+
+        {% if table_rows %}
+        <p class="cf69c-table-context">
+            Table rows are the evidence anchor for this page. The View action opens the saved tracking record only.
+        </p>
+        <div class="table-wrap cf69c-table-wrap">
+            <table class="data-table cf69c-table">
+                <thead>
+                    <tr>
+                        <th>Company</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Date Applied</th>
+                        <th>Role Fit</th>
+                        <th>Source</th>
+                        <th>Days to Response</th>
+                        <th>Record</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in table_rows %}
+                    <tr>
+                        <td>
+                            <strong class="cf69c-company">{{ row.application.company_name }}</strong>
+                            <span class="table-subtext cf69c-subtext">{{ row.application.location }}</span>
+                        </td>
+                        <td>{{ row.application.job_title }}</td>
+                        <td><span class="badge {{ row.badge_class }}">{{ row.application.get_status_display }}</span></td>
+                        <td>{{ row.application.date_applied }}</td>
+                        <td>{{ row.application.get_role_fit_display }}</td>
+                        <td>{{ row.application.get_source_display }}</td>
+                        <td>
+                            {% if row.days_to_response is not None %}
+                            {{ row.days_to_response }} days
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td><a href="{{ row.application.get_absolute_url }}" class="table-link cf69c-view-link">View</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state cf69c-empty-state">
+            <h3>No applications logged yet.</h3>
+            <p class="cf69c-empty-copy">
+                Add your first application to start building a saved-record evidence base.
+                This creates a tracking record only; any external application action remains manual.
+            </p>
+            <a href="{% url 'applications:application_create' %}" class="btn btn-primary">Add First Application</a>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
