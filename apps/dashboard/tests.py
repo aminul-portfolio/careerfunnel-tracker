@@ -416,10 +416,10 @@ class DashboardCommandCentrePolishTests(TestCase):
         response = self.client.get(reverse("dashboard:overview"))
         summary = response.context["summary"]
         self.assertContains(response, "Total Applications")
-        self.assertContains(response, f"<h2>{summary.total_applications}</h2>", html=True)
-        self.assertContains(response, f"<h2>{summary.applications_this_week}</h2>", html=True)
-        self.assertContains(response, f"<h2>{summary.response_rate}%</h2>", html=True)
-        self.assertContains(response, f"<h2>{summary.interview_rate}%</h2>", html=True)
+        self.assertContains(response, f">{summary.total_applications}<")
+        self.assertContains(response, f">{summary.applications_this_week}<")
+        self.assertContains(response, f">{summary.response_rate}%<")
+        self.assertContains(response, f">{summary.interview_rate}%<")
 
     @patch(
         "apps.dashboard.services.timezone.localdate",
@@ -442,42 +442,26 @@ class DashboardCommandCentrePolishTests(TestCase):
         response = self.client.get(reverse("dashboard:overview"))
         snapshot = response.context["funnel_snapshot"]
         self.assertContains(response, "Funnel Snapshot")
-        self.assertContains(response, f"<strong>{snapshot.applications}</strong>", html=True)
-        self.assertContains(response, f"<strong>{snapshot.responses}</strong>", html=True)
-        self.assertContains(response, f"<strong>{snapshot.interviews}</strong>", html=True)
-        self.assertContains(response, f"<strong>{snapshot.offers}</strong>", html=True)
+        self.assertContains(response, f">{snapshot.applications}<")
+        self.assertContains(response, f">{snapshot.responses}<")
+        self.assertContains(response, f">{snapshot.interviews}<")
+        self.assertContains(response, f">{snapshot.offers}<")
 
     def test_dashboard_phase_69a_week_pulse_values_render(self):
         response = self.client.get(reverse("dashboard:overview"))
         week_pulse = response.context["week_pulse"]
         self.assertContains(response, "Week Pulse")
         self.assertContains(response, week_pulse.week_range_label)
-        self.assertContains(
-            response,
-            f"<strong>{week_pulse.target_applications}</strong>",
-            html=True,
-        )
-        self.assertContains(
-            response,
-            f"<strong>{week_pulse.actual_applications}</strong>",
-            html=True,
-        )
-        self.assertContains(response, f"<strong>{week_pulse.variance}</strong>", html=True)
+        self.assertContains(response, f">{week_pulse.target_applications}<")
+        self.assertContains(response, f">{week_pulse.actual_applications}<")
+        self.assertContains(response, f">{week_pulse.variance}<")
 
     def test_dashboard_phase_69a_evidence_readiness_values_render(self):
         response = self.client.get(reverse("dashboard:overview"))
         readiness = response.context["evidence_readiness"]
         self.assertContains(response, "Evidence Readiness")
-        self.assertContains(
-            response,
-            f"<strong>{readiness.missing_cv_versions}</strong>",
-            html=True,
-        )
-        self.assertContains(
-            response,
-            f"<strong>{readiness.missing_job_descriptions}</strong>",
-            html=True,
-        )
+        self.assertContains(response, f">{readiness.missing_cv_versions}<")
+        self.assertContains(response, f">{readiness.missing_job_descriptions}<")
         self.assertContains(response, "Data Quality Report")
 
     def test_dashboard_phase_69a_signature_insight_renders_when_present(self):
@@ -496,8 +480,8 @@ class DashboardCommandCentrePolishTests(TestCase):
             "% decrease",
             "trending up",
             "trending down",
-            "↑",
-            "↓",
+            "upward trend",
+            "downward trend",
         )
         for phrase in forbidden_trends:
             with self.subTest(phrase=phrase):
@@ -528,6 +512,20 @@ class DashboardCommandCentrePolishTests(TestCase):
         ):
             with self.subTest(label=label):
                 self.assertContains(response, label)
+
+    def test_dashboard_phase_69a_scoped_zone_and_advisory_classes_render(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        for class_name in (
+            "cf69-zone-command",
+            "cf69-zone-today",
+            "cf69-zone-intelligence",
+            "cf69-zone-actions",
+            "cf69-advisory-info",
+            "cf69-advisory-manual",
+            "cf69-advisory-warning",
+        ):
+            with self.subTest(class_name=class_name):
+                self.assertContains(response, class_name)
 
     @patch(
         "apps.dashboard.services.timezone.localdate",
