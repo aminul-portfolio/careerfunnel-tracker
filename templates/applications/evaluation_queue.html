@@ -2,27 +2,250 @@
 {% block title %}Evaluation Queue | CareerFunnel Tracker{% endblock %}
 {% block page_heading %}Evaluation Queue{% endblock %}
 {% block content %}
-<div class="dashboard-grid">
-    <section class="hero-panel">
+<style>
+    .evaluation-queue-premium {
+        background: #f6f7fb;
+        border-radius: 28px;
+        margin: -0.5rem;
+        padding: clamp(1rem, 2vw, 2rem);
+    }
+
+    .evaluation-queue-grid {
+        display: grid;
+        gap: 1.25rem;
+    }
+
+    .evaluation-hero {
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 24px;
+        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
+        padding: clamp(1.25rem, 3vw, 2.5rem);
+    }
+
+    .evaluation-hero h1 {
+        letter-spacing: -0.035em;
+        margin-bottom: 0.5rem;
+    }
+
+    .evaluation-hero .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1.25rem;
+    }
+
+    .evaluation-panel {
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 24px;
+        box-shadow: 0 18px 50px rgba(15, 23, 42, 0.07);
+        padding: clamp(1rem, 2.5vw, 1.75rem);
+    }
+
+    .evaluation-helper {
+        background: linear-gradient(135deg, #eff6ff, #f8fafc);
+        border: 1px solid rgba(59, 130, 246, 0.18);
+        border-radius: 18px;
+        color: #334155;
+        margin: 1rem 0 1.25rem;
+        padding: 1rem 1.15rem;
+    }
+
+    .evaluation-table-wrap {
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 20px;
+        overflow: hidden;
+    }
+
+    .evaluation-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+    }
+
+    .evaluation-table th {
+        background: #f8fafc;
+        color: #475569;
+        font-size: 0.78rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .evaluation-table td,
+    .evaluation-table th {
+        border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+        padding: 1rem;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .evaluation-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .queue-role-cell strong {
+        color: #0f172a;
+        display: block;
+        margin-bottom: 0.2rem;
+    }
+
+    .queue-subtext {
+        color: #64748b;
+        display: block;
+        font-size: 0.86rem;
+        line-height: 1.45;
+        margin-top: 0.35rem;
+    }
+
+    .queue-badge {
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: 0.8rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        padding: 0.4rem 0.65rem;
+        white-space: nowrap;
+    }
+
+    .queue-badge--fit {
+        background: #ecfdf5;
+        border: 1px solid #bbf7d0;
+        color: #166534;
+    }
+
+    .queue-badge--stage {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1d4ed8;
+    }
+
+    .asset-cell {
+        min-width: 14rem;
+    }
+
+    .asset-status {
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: 0.78rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        padding: 0.35rem 0.6rem;
+        white-space: nowrap;
+    }
+
+    .asset-status--available {
+        background: #ecfdf5;
+        border: 1px solid #bbf7d0;
+        color: #166534;
+    }
+
+    .asset-status--missing {
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        color: #475569;
+    }
+
+    .asset-name {
+        color: #0f172a;
+        font-weight: 800;
+        overflow-wrap: anywhere;
+    }
+
+    .asset-note {
+        color: #475569;
+        display: block;
+        font-size: 0.84rem;
+        line-height: 1.45;
+        margin-top: 0.4rem;
+    }
+
+    .queue-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        min-width: 12rem;
+    }
+
+    .queue-action-group {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        width: 100%;
+    }
+
+    .queue-action-label {
+        color: #64748b;
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        width: 100%;
+    }
+
+    .queue-download-link {
+        background: #ffffff;
+        border: 1px solid rgba(37, 99, 235, 0.25);
+        border-radius: 999px;
+        color: #1d4ed8;
+        font-size: 0.82rem;
+        font-weight: 800;
+        padding: 0.35rem 0.6rem;
+        text-decoration: none;
+    }
+
+    .queue-download-link:hover {
+        border-color: #1d4ed8;
+    }
+
+    .queue-primary-link {
+        background: #0f172a;
+        border-radius: 999px;
+        color: #ffffff;
+        font-size: 0.84rem;
+        font-weight: 800;
+        padding: 0.45rem 0.7rem;
+        text-decoration: none;
+    }
+
+    .queue-primary-link:hover {
+        color: #ffffff;
+    }
+
+    @media (max-width: 1100px) {
+        .evaluation-table-wrap {
+            overflow-x: auto;
+        }
+
+        .evaluation-table {
+            min-width: 980px;
+        }
+    }
+</style>
+<div class="evaluation-queue-premium">
+<div class="dashboard-grid evaluation-queue-grid">
+    <section class="hero-panel evaluation-hero">
         <p class="eyebrow">Pre-application pipeline</p>
         <h1>Evaluation Queue</h1>
-        <p>These roles are still being evaluated before you apply. Review fit, compare options, and move forward only when the role is worth your time.</p>
+        <p>These roles are still being evaluated before you move forward. Review fit, compare options, and keep decisions tracking-only until you act manually outside CareerFunnel.</p>
         <div class="hero-actions">
-            <a href="{% url 'ai_agents:job_posting_analyzer' %}" class="btn btn-primary">Job Posting Analyzer</a>
-            <a href="{% url 'applications:application_list' %}" class="btn btn-secondary">All Applications</a>
+            <a href="{% url 'ai_agents:job_posting_analyzer' %}" class="btn btn-primary">Review</a>
+            <a href="{% url 'applications:application_list' %}" class="btn btn-secondary">View Details</a>
         </div>
     </section>
-    <section class="content-card">
+    <section class="content-card evaluation-panel">
         <div class="card-header card-header-row">
             <div>
                 <p class="eyebrow">Opportunities under review</p>
                 <h2>Roles at Job Found or Fit Checked</h2>
             </div>
         </div>
-        <p class="muted-text">CV and cover letter exports use saved draft records with employer-facing formatting. Application Pack exports remain manual-review drafts only.</p>
+        <p class="muted-text evaluation-helper">CV and cover letter exports use saved draft records with employer-facing formatting. Application Pack exports remain manual-review drafts only. Nothing on this page submits an application externally.</p>
         {% if table_rows %}
-        <div class="table-wrap">
-            <table class="data-table">
+        <div class="table-wrap evaluation-table-wrap">
+            <table class="data-table evaluation-table">
                 <thead>
                     <tr>
                         <th>Company</th>
@@ -38,36 +261,64 @@
                 <tbody>
                     {% for row in table_rows %}
                     <tr>
-                        <td><strong>{{ row.application.company_name }}</strong></td>
-                        <td>{{ row.application.job_title }}</td>
+                        <td class="queue-role-cell"><strong>{{ row.application.company_name }}</strong><span class="queue-subtext">{{ row.application.get_source_display }}</span></td>
+                        <td class="queue-role-cell"><strong>{{ row.application.job_title }}</strong><span class="queue-subtext">Evaluation record</span></td>
                         <td>{{ row.application.get_source_display }}</td>
-                        <td>{{ row.application.get_role_fit_display }}</td>
-                        <td>{{ row.application.get_pipeline_stage_display }}</td>
-                        <td>{{ row.downloads.cv_version_display }}</td>
-                        <td>{{ row.downloads.cover_letter_version_display }}</td>
+                        <td><span class="queue-badge queue-badge--fit">{{ row.application.get_role_fit_display }}</span></td>
+                        <td><span class="queue-badge queue-badge--stage">{{ row.application.get_pipeline_stage_display }}</span></td>
+                        <td class="asset-cell">
+                            {% if row.downloads.cv_available %}
+                            <span class="asset-status asset-status--available">CV draft available</span>
+                            {% else %}
+                            <span class="asset-status asset-status--missing">Missing CV draft</span>
+                            {% endif %}
+                            <span class="asset-name">{{ row.downloads.cv_version_display }}</span>
+                            <span class="asset-note">Draft - tracking record only. Final tailored CV comes from your external document source.</span>
+                            <span class="asset-note">Baseline - not tailored for this role.</span>
+                            {% if not row.downloads.cv_available %}
+                            <span class="asset-note">{{ row.downloads.cv_missing_message }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="asset-cell">
+                            {% if row.downloads.cover_letter_available %}
+                            <span class="asset-status asset-status--available">Cover letter draft available</span>
+                            {% else %}
+                            <span class="asset-status asset-status--missing">Missing cover letter draft</span>
+                            {% endif %}
+                            <span class="asset-name">{{ row.downloads.cover_letter_version_display }}</span>
+                            <span class="asset-note">Draft - for tracking and reference only.</span>
+                            {% if not row.downloads.cover_letter_available %}
+                            <span class="asset-note">{{ row.downloads.cover_letter_missing_message }}</span>
+                            {% endif %}
+                        </td>
                         <td>
-                            <a href="{{ row.application.get_absolute_url }}" class="table-link">View</a>
+                            <div class="queue-actions">
+                            <a href="{{ row.application.get_absolute_url }}" class="queue-primary-link">View Details</a>
                             {% if row.downloads.cv_urls %}
-                            <span class="table-subtext">CV:</span>
+                            <div class="queue-action-group"><span class="queue-action-label">CV</span>
                             {% if row.downloads.cv_urls.pdf %}
-                            <a href="{{ row.downloads.cv_urls.pdf }}" class="table-link">PDF</a>
+                            <a href="{{ row.downloads.cv_urls.pdf }}" class="queue-download-link">PDF</a>
                             {% endif %}
                             {% if row.downloads.cv_urls.docx %}
-                            <a href="{{ row.downloads.cv_urls.docx }}" class="table-link">DOCX</a>
+                            <a href="{{ row.downloads.cv_urls.docx }}" class="queue-download-link">DOCX</a>
                             {% endif %}
+                            </div>
                             {% else %}
-                            <span class="table-subtext">{{ row.downloads.cv_missing_message }}</span>
+                            <span class="queue-subtext">{{ row.downloads.cv_missing_message }}</span>
                             {% endif %}
                             {% if row.downloads.cover_letter_urls %}
-                            <span class="table-subtext">Cover letter:</span>
-                            <a href="{{ row.downloads.cover_letter_urls.pdf }}" class="table-link">PDF</a>
-                            <a href="{{ row.downloads.cover_letter_urls.docx }}" class="table-link">DOCX</a>
+                            <div class="queue-action-group"><span class="queue-action-label">Cover letter</span>
+                            <a href="{{ row.downloads.cover_letter_urls.pdf }}" class="queue-download-link">PDF</a>
+                            <a href="{{ row.downloads.cover_letter_urls.docx }}" class="queue-download-link">DOCX</a>
+                            </div>
                             {% else %}
-                            <span class="table-subtext">{{ row.downloads.cover_letter_missing_message }}</span>
+                            <span class="queue-subtext">{{ row.downloads.cover_letter_missing_message }}</span>
                             {% endif %}
-                            <span class="table-subtext">Pack:</span>
-                            <a href="{{ row.downloads.application_pack_urls.pdf }}" class="table-link">PDF</a>
-                            <a href="{{ row.downloads.application_pack_urls.docx }}" class="table-link">DOCX</a>
+                            <div class="queue-action-group"><span class="queue-action-label">Pack</span>
+                            <a href="{{ row.downloads.application_pack_urls.pdf }}" class="queue-download-link">PDF</a>
+                            <a href="{{ row.downloads.application_pack_urls.docx }}" class="queue-download-link">DOCX</a>
+                            </div>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -78,9 +329,10 @@
         <div class="empty-state">
             <h3>No roles in the evaluation queue yet.</h3>
             <p>Use the Job Posting Analyzer to score a role first, then save it as an application when the fit looks acceptable.</p>
-            <a href="{% url 'ai_agents:job_posting_analyzer' %}" class="btn btn-primary">Open Job Posting Analyzer</a>
+            <a href="{% url 'ai_agents:job_posting_analyzer' %}" class="btn btn-primary">Review</a>
         </div>
         {% endif %}
     </section>
+</div>
 </div>
 {% endblock %}
