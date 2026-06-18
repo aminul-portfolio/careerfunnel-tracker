@@ -28,17 +28,20 @@
         padding: 18px;
     }
 
-    .cf69-dashboard .cf69-command-hero,
-    .cf69-dashboard .cf69-card,
-    .cf69-dashboard .cf69-guidance-panel,
-    .cf69-dashboard .cf69-reporting-panel {
+    .cf69-shell-card {
         background: var(--cf69-surface);
         border: 1px solid var(--cf69-border);
         border-radius: 12px;
         box-shadow: var(--cf69-shadow);
     }
 
-    .cf69-dashboard .cf69-command-hero {
+    .cf69-zone {
+        display: grid;
+        gap: 18px;
+        margin-bottom: 18px;
+    }
+
+    .cf69-command-hero {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         gap: 24px;
@@ -48,7 +51,7 @@
         position: relative;
     }
 
-    .cf69-dashboard .cf69-command-hero::before {
+    .cf69-command-hero::before {
         background: linear-gradient(135deg, rgba(26, 86, 219, 0.14), rgba(13, 110, 99, 0.08));
         content: "";
         inset: 0;
@@ -56,11 +59,12 @@
         position: absolute;
     }
 
-    .cf69-dashboard .cf69-command-hero > * {
+    .cf69-command-hero-content,
+    .cf69-actions {
         position: relative;
     }
 
-    .cf69-dashboard .cf69-command-hero h1 {
+    .cf69-hero-title {
         color: var(--cf69-ink);
         font-size: 1.875rem;
         font-weight: 700;
@@ -68,22 +72,22 @@
         margin-bottom: 10px;
     }
 
-    .cf69-dashboard .cf69-command-hero p {
+    .cf69-hero-copy {
         color: var(--cf69-body);
         font-size: 0.9375rem;
         line-height: 1.6;
         max-width: 760px;
     }
 
-    .cf69-dashboard .cf69-evidence-strip {
+    .cf69-evidence-strip {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
         margin-top: 18px;
     }
 
-    .cf69-dashboard .cf69-guidance-pill,
-    .cf69-dashboard .cf69-manual-badge {
+    .cf69-guidance-pill,
+    .cf69-manual-badge {
         border-radius: 999px;
         display: inline-flex;
         font-size: 0.7rem;
@@ -93,17 +97,36 @@
         text-transform: uppercase;
     }
 
-    .cf69-dashboard .cf69-guidance-pill {
+    .cf69-guidance-pill,
+    .cf69-advisory-info {
         background: var(--cf69-info-bg);
+        border-color: #bfdbfe;
         color: var(--cf69-primary-dark);
     }
 
-    .cf69-dashboard .cf69-manual-badge {
+    .cf69-manual-badge,
+    .cf69-advisory-manual {
         background: var(--cf69-manual-bg);
+        border-color: #99f6e4;
         color: var(--cf69-manual);
     }
 
-    .cf69-dashboard .cf69-actions {
+    .cf69-advisory-warning {
+        background: var(--cf69-warning-bg);
+        border-color: #fde68a;
+        color: var(--cf69-warning);
+    }
+
+    .cf69-advisory-info,
+    .cf69-advisory-manual,
+    .cf69-advisory-warning {
+        border-style: solid;
+        border-width: 1px;
+        border-radius: 12px;
+        padding: 14px 16px;
+    }
+
+    .cf69-actions {
         align-items: center;
         display: flex;
         flex-wrap: wrap;
@@ -111,33 +134,24 @@
         justify-content: flex-end;
     }
 
-    .cf69-dashboard .cf69-actions .btn {
+    .cf69-action-link {
         border-radius: 8px;
         min-height: 40px;
     }
 
-    .cf69-dashboard .cf69-guidance-panel {
+    .cf69-guidance-panel {
         background: linear-gradient(180deg, var(--cf69-info-bg), var(--cf69-surface));
         border-color: #bfdbfe;
         padding: 24px;
     }
 
-    .cf69-dashboard .cf69-guidance-panel .reviewer-note,
-    .cf69-dashboard .cf69-manual-note {
-        background: var(--cf69-manual-bg);
-        border: 1px solid #99f6e4;
-        border-radius: 12px;
-        color: var(--cf69-manual);
-        padding: 14px 16px;
-    }
-
-    .cf69-dashboard .cf69-kpi-strip {
+    .cf69-kpi-strip {
         display: grid;
         gap: 16px;
         grid-template-columns: repeat(5, minmax(0, 1fr));
     }
 
-    .cf69-dashboard .cf69-kpi-card {
+    .cf69-kpi-card {
         background: var(--cf69-surface);
         border: 1px solid var(--cf69-border);
         border-radius: 12px;
@@ -145,7 +159,7 @@
         padding: 18px;
     }
 
-    .cf69-dashboard .cf69-kpi-card h2 {
+    .cf69-kpi-value {
         color: var(--cf69-ink);
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
         font-size: 1.75rem;
@@ -153,8 +167,8 @@
         line-height: 1.15;
     }
 
-    .cf69-dashboard .cf69-kpi-card p,
-    .cf69-dashboard .cf69-label {
+    .cf69-kpi-label,
+    .cf69-label {
         color: var(--cf69-muted);
         font-size: 0.75rem;
         font-weight: 700;
@@ -162,82 +176,81 @@
         text-transform: uppercase;
     }
 
-    .cf69-dashboard .cf69-intelligence-grid {
+    .cf69-intelligence-grid {
         display: grid;
         gap: 18px;
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .cf69-dashboard .cf69-card {
+    .cf69-card {
         padding: 22px;
     }
 
-    .cf69-dashboard .cf69-card .card-header h2,
-    .cf69-dashboard .cf69-reporting-panel h2 {
+    .cf69-card-title {
         color: var(--cf69-ink);
         font-size: 1.25rem;
         font-weight: 700;
     }
 
-    .cf69-dashboard .cf69-metric-list {
+    .cf69-metric-list {
         background: var(--cf69-subtle);
         border: 1px solid var(--cf69-border);
         border-radius: 12px;
         padding: 6px;
     }
 
-    .cf69-dashboard .cf69-metric-list .metric-list-row {
+    .cf69-metric-row {
         border-bottom: 1px solid var(--cf69-border);
         padding: 12px;
     }
 
-    .cf69-dashboard .cf69-metric-list .metric-list-row:last-child {
+    .cf69-metric-row:last-child {
         border-bottom: 0;
     }
 
-    .cf69-dashboard .cf69-metric-list strong,
-    .cf69-dashboard .cf69-funnel-step strong {
+    .cf69-metric-value,
+    .cf69-funnel-value {
         color: var(--cf69-ink);
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
         font-size: 1.35rem;
         font-weight: 700;
     }
 
-    .cf69-dashboard .cf69-funnel-flow {
+    .cf69-funnel-flow {
         display: grid;
         gap: 10px;
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
-    .cf69-dashboard .cf69-funnel-step {
+    .cf69-funnel-step {
         background: var(--cf69-subtle);
         border: 1px solid var(--cf69-border);
         border-radius: 12px;
         padding: 16px;
     }
 
-    .cf69-dashboard .cf69-signal-item {
+    .cf69-signal-item {
         border-left: 4px solid var(--cf69-primary);
         border-radius: 12px;
     }
 
-    .cf69-dashboard .cf69-warning-card {
+    .cf69-warning-card {
         background: linear-gradient(180deg, var(--cf69-warning-bg), var(--cf69-surface));
         border-color: #fde68a;
     }
 
-    .cf69-dashboard .cf69-warning-card .trust-note {
+    .cf69-warning-note {
         color: var(--cf69-warning);
     }
 
-    .cf69-dashboard .cf69-reporting-panel {
+    .cf69-reporting-panel {
         display: grid;
         gap: 18px;
         grid-template-columns: minmax(0, 1fr) minmax(260px, 0.35fr);
         padding: 24px;
     }
 
-    .cf69-dashboard .cf69-reporting-panel .diagnosis-action {
+    .cf69-reporting-action {
         background: var(--cf69-subtle);
         border: 1px solid var(--cf69-border);
         border-radius: 12px;
@@ -245,17 +258,17 @@
     }
 
     @media (max-width: 980px) {
-        .cf69-dashboard .cf69-command-hero,
-        .cf69-dashboard .cf69-reporting-panel,
-        .cf69-dashboard .cf69-intelligence-grid {
+        .cf69-command-hero,
+        .cf69-reporting-panel,
+        .cf69-intelligence-grid {
             grid-template-columns: 1fr;
         }
 
-        .cf69-dashboard .cf69-actions {
+        .cf69-actions {
             justify-content: flex-start;
         }
 
-        .cf69-dashboard .cf69-kpi-strip {
+        .cf69-kpi-strip {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
     }
@@ -265,8 +278,8 @@
             padding: 10px;
         }
 
-        .cf69-dashboard .cf69-kpi-strip,
-        .cf69-dashboard .cf69-funnel-flow {
+        .cf69-kpi-strip,
+        .cf69-funnel-flow {
             grid-template-columns: 1fr;
         }
     }
@@ -274,11 +287,12 @@
 
 <div class="dashboard-page cf-command-centre cf69-dashboard">
 
-    <section class="hero-panel dashboard-hero cf-command-hero cf69-command-hero">
-        <div>
+    <section class="cf69-zone cf69-zone-command" aria-label="Command Hero">
+    <section class="hero-panel dashboard-hero cf-command-hero cf69-command-hero cf69-shell-card">
+        <div class="cf69-command-hero-content">
             <p class="eyebrow">Analytics Command Centre</p>
-            <h1>Calm authority for the manual job-search pipeline</h1>
-            <p>
+            <h1 class="cf69-hero-title">Calm authority for the manual job-search pipeline</h1>
+            <p class="cf69-hero-copy">
                 Today's strongest manual action, pipeline health, weekly pulse, evidence readiness,
                 reporting confidence, and recent activity - all from authenticated tracker records.
             </p>
@@ -289,16 +303,16 @@
             </div>
         </div>
         <div class="hero-actions cf69-actions">
-            <a href="{% url 'applications:application_create' %}" class="btn btn-primary">Log Application</a>
-            <a href="{% url 'daily_log:daily_log_create' %}" class="btn btn-secondary">Daily Log</a>
-            <a href="{% url 'weekly_review:weekly_review_create' %}" class="btn btn-secondary">Weekly Review</a>
+            <a href="{% url 'applications:application_create' %}" class="btn btn-primary cf69-action-link">Log Application</a>
+            <a href="{% url 'daily_log:daily_log_create' %}" class="btn btn-secondary cf69-action-link">Daily Log</a>
+            <a href="{% url 'weekly_review:weekly_review_create' %}" class="btn btn-secondary cf69-action-link">Weekly Review</a>
         </div>
     </section>
 
-    <section id="reviewer-walkthrough" class="content-card cf-reviewer-walkthrough cf69-guidance-panel">
+    <section id="reviewer-walkthrough" class="content-card cf-reviewer-walkthrough cf69-guidance-panel cf69-shell-card cf69-advisory-info">
         <div class="card-header">
             <p class="eyebrow">Reviewer walkthrough</p>
-            <h2>How to assess this portfolio project</h2>
+            <h2 class="cf69-card-title">How to assess this portfolio project</h2>
             <p class="section-note">
                 CareerFunnel Tracker is a manual, advisory, deterministic job-search analytics app for one user.
                 Review saved records, rule-based guidance, and evidence docs - not live SaaS automation.
@@ -311,136 +325,47 @@
             <li>Open <a href="{% url 'skill_gaps:dashboard' %}" class="table-link">Skill Intelligence Dashboard</a> for saved skill gaps and advisory planning sections.</li>
             <li>Read <code>docs/evidence/evidence_index.md</code> and sprint evidence under <code>docs/evidence/</code> for the implementation trail.</li>
         </ol>
-        <p class="reviewer-note">
+        <p class="reviewer-note cf69-advisory-manual">
             Deliberately not implemented: automatic application submission, automatic outbound email,
             Gmail/Calendar/OAuth integration, scraping, automatic CV rewriting, automatic interview prep generation,
             AI prediction claims, background polling, live SaaS users, production deployment, or billing.
         </p>
     </section>
-
-    <section class="content-card cf-signature-insight cf69-card">
-        <div class="card-header">
-            <p class="eyebrow">Signature Career Insight</p>
-            <h2>{{ signature_insight.diagnosis }}</h2>
-        </div>
-        <div class="cf-insight-grid">
-            <div class="cf-insight-block">
-                <span class="cf-insight-label">Best manual action</span>
-                <p>{{ signature_insight.best_manual_action }}</p>
-            </div>
-            <div class="cf-insight-block">
-                <span class="cf-insight-label">Why it matters</span>
-                <p>{{ signature_insight.why_it_matters }}</p>
-            </div>
-        </div>
-        {% if signature_insight.manual_url %}
-            <div class="hero-actions cf69-actions">
-                <a href="{{ signature_insight.manual_url }}" class="btn btn-primary">Open manual workflow</a>
-            </div>
-        {% endif %}
     </section>
 
-    <section class="dashboard-two-column cf69-intelligence-grid">
-        <section class="content-card cf-week-pulse cf69-card" data-cf-collapsible-card>
-            <div class="card-header">
-                <p class="eyebrow">Week Pulse</p>
-                <h2>{{ week_pulse.week_range_label }}</h2>
-            </div>
-            <div class="metric-list cf69-metric-list">
-                <div class="metric-list-row">
-                    <span>Target applications</span>
-                    <strong>{{ week_pulse.target_applications }}</strong>
-                </div>
-                <div class="metric-list-row">
-                    <span>Actual applications</span>
-                    <strong>{{ week_pulse.actual_applications }}</strong>
-                </div>
-                <div class="metric-list-row">
-                    <span>Variance</span>
-                    <strong>{{ week_pulse.variance }}</strong>
-                </div>
-                <div class="metric-list-row">
-                    <span>Weekly review</span>
-                    <strong>{{ week_pulse.weekly_review_status }}</strong>
-                </div>
-                <div class="metric-list-row">
-                    <span>Follow-ups due</span>
-                    <strong>{{ week_pulse.follow_ups_due }}</strong>
-                </div>
-                <div class="metric-list-row">
-                    <span>Interview prep</span>
-                    <strong>{{ week_pulse.interview_prep_status }}</strong>
-                </div>
-            </div>
-            <div class="hero-actions cf69-actions">
-                {% if week_pulse.weekly_review_url %}
-                    <a href="{{ week_pulse.weekly_review_url }}" class="btn btn-secondary">Weekly Review</a>
-                {% endif %}
-                <a href="{{ week_pulse.follow_ups_url }}" class="btn btn-secondary">Follow-up Tracker</a>
-                <a href="{{ week_pulse.interview_prep_url }}" class="btn btn-secondary">Interview Prep</a>
-            </div>
-        </section>
-
-        <div class="content-card cf-funnel-snapshot cf69-card">
-            <div class="card-header">
-                <p class="eyebrow">Funnel Snapshot</p>
-                <h2>Applications to responses to interviews to offers</h2>
-            </div>
-            <div class="cf-funnel-flow cf69-funnel-flow">
-                <div class="cf-funnel-step cf69-funnel-step">
-                    <span>Applications</span>
-                    <strong>{{ funnel_snapshot.applications }}</strong>
-                </div>
-                <div class="cf-funnel-step cf69-funnel-step">
-                    <span>Responses</span>
-                    <strong>{{ funnel_snapshot.responses }}</strong>
-                </div>
-                <div class="cf-funnel-step cf69-funnel-step">
-                    <span>Interviews</span>
-                    <strong>{{ funnel_snapshot.interviews }}</strong>
-                </div>
-                <div class="cf-funnel-step cf69-funnel-step">
-                    <span>Offers</span>
-                    <strong>{{ funnel_snapshot.offers }}</strong>
-                </div>
-            </div>
-            <p class="trust-note">Built from logged application statuses. No mock conversion values.</p>
-            <a href="{% url 'metrics:funnel_metrics' %}" class="table-link">Funnel Metrics</a>
-        </div>
-    </section>
-
+    <section class="cf69-zone cf69-zone-today" aria-label="Today Signals">
     <section class="kpi-grid premium-kpi-grid cf-kpi-strip cf69-kpi-strip">
         <div class="kpi-card cf69-kpi-card">
-            <p>Total Applications</p>
-            <h2>{{ summary.total_applications }}</h2>
+            <p class="cf69-kpi-label">Total Applications</p>
+            <h2 class="cf69-kpi-value">{{ summary.total_applications }}</h2>
             <span class="kpi-note">All logged applications</span>
         </div>
         <div class="kpi-card cf69-kpi-card">
-            <p>This Week</p>
-            <h2>{{ summary.applications_this_week }}</h2>
+            <p class="cf69-kpi-label">This Week</p>
+            <h2 class="cf69-kpi-value">{{ summary.applications_this_week }}</h2>
             <span class="kpi-note">Applications submitted this week</span>
         </div>
         <div class="kpi-card cf69-kpi-card">
-            <p>Response Rate</p>
-            <h2>{{ summary.response_rate }}%</h2>
+            <p class="cf69-kpi-label">Response Rate</p>
+            <h2 class="cf69-kpi-value">{{ summary.response_rate }}%</h2>
             <span class="kpi-note">Responses from submitted applications</span>
         </div>
         <div class="kpi-card cf69-kpi-card">
-            <p>Interview Rate</p>
-            <h2>{{ summary.interview_rate }}%</h2>
+            <p class="cf69-kpi-label">Interview Rate</p>
+            <h2 class="cf69-kpi-value">{{ summary.interview_rate }}%</h2>
             <span class="kpi-note">Applications reaching interview stage</span>
         </div>
         <div class="kpi-card cf69-kpi-card">
-            <p>Data Readiness</p>
-            <h2>{{ evidence_readiness.analytics_ready_rate }}%</h2>
+            <p class="cf69-kpi-label">Data Readiness</p>
+            <h2 class="cf69-kpi-value">{{ evidence_readiness.analytics_ready_rate }}%</h2>
             <span class="kpi-note">Analytics-ready application records</span>
         </div>
     </section>
 
-    <section class="content-card cf-today-signals cf69-card">
+    <section class="content-card cf-today-signals cf69-card cf69-shell-card cf69-advisory-manual">
         <div class="card-header">
             <p class="eyebrow">Today Signals</p>
-            <h2>Manual priorities from saved records</h2>
+            <h2 class="cf69-card-title">Manual priorities from saved records</h2>
         </div>
         {% if today_signals %}
             <div class="compact-list">
@@ -463,18 +388,111 @@
                 <p>Keep logging applications, follow-ups, and daily activity manually.</p>
             </div>
         {% endif %}
-        <p class="reviewer-note">
+        <p class="reviewer-note cf69-advisory-info">
             Today Signals are rule-based from saved applications, follow-ups, interviews, and daily logs.
             CareerFunnel Tracker does not submit applications, send email, update statuses automatically,
-            create interview prep automatically, auto-apply, run background polling, or claim live SaaS deployment.
+            create interview prep automatically, no auto-apply, run background polling, or claim live SaaS deployment.
             Open a link to complete the manual step yourself.
         </p>
     </section>
+    </section>
 
-    <section class="content-card cf-pipeline-health cf69-card" data-cf-collapsible-card>
+    <section class="cf69-zone cf69-zone-intelligence" aria-label="Intelligence Row">
+    <section class="content-card cf-signature-insight cf69-card cf69-shell-card">
+        <div class="card-header">
+            <p class="eyebrow">Signature Career Insight</p>
+            <h2 class="cf69-card-title">{{ signature_insight.diagnosis }}</h2>
+        </div>
+        <div class="cf-insight-grid">
+            <div class="cf-insight-block">
+                <span class="cf-insight-label">Best manual action</span>
+                <p>{{ signature_insight.best_manual_action }}</p>
+            </div>
+            <div class="cf-insight-block">
+                <span class="cf-insight-label">Why it matters</span>
+                <p>{{ signature_insight.why_it_matters }}</p>
+            </div>
+        </div>
+        {% if signature_insight.manual_url %}
+            <div class="hero-actions cf69-actions">
+                <a href="{{ signature_insight.manual_url }}" class="btn btn-primary cf69-action-link">Open manual workflow</a>
+            </div>
+        {% endif %}
+    </section>
+
+    <section class="dashboard-two-column cf69-intelligence-grid">
+        <section class="content-card cf-week-pulse cf69-card cf69-shell-card" data-cf-collapsible-card>
+            <div class="card-header">
+                <p class="eyebrow">Week Pulse</p>
+                <h2 class="cf69-card-title">{{ week_pulse.week_range_label }}</h2>
+            </div>
+            <div class="metric-list cf69-metric-list">
+                <div class="metric-list-row cf69-metric-row">
+                    <span>Target applications</span>
+                    <strong class="cf69-metric-value">{{ week_pulse.target_applications }}</strong>
+                </div>
+                <div class="metric-list-row cf69-metric-row">
+                    <span>Actual applications</span>
+                    <strong class="cf69-metric-value">{{ week_pulse.actual_applications }}</strong>
+                </div>
+                <div class="metric-list-row cf69-metric-row">
+                    <span>Variance</span>
+                    <strong class="cf69-metric-value">{{ week_pulse.variance }}</strong>
+                </div>
+                <div class="metric-list-row cf69-metric-row">
+                    <span>Weekly review</span>
+                    <strong class="cf69-metric-value">{{ week_pulse.weekly_review_status }}</strong>
+                </div>
+                <div class="metric-list-row cf69-metric-row">
+                    <span>Follow-ups due</span>
+                    <strong class="cf69-metric-value">{{ week_pulse.follow_ups_due }}</strong>
+                </div>
+                <div class="metric-list-row cf69-metric-row">
+                    <span>Interview prep</span>
+                    <strong class="cf69-metric-value">{{ week_pulse.interview_prep_status }}</strong>
+                </div>
+            </div>
+            <div class="hero-actions cf69-actions">
+                {% if week_pulse.weekly_review_url %}
+                    <a href="{{ week_pulse.weekly_review_url }}" class="btn btn-secondary cf69-action-link">Weekly Review</a>
+                {% endif %}
+                <a href="{{ week_pulse.follow_ups_url }}" class="btn btn-secondary cf69-action-link">Follow-up Tracker</a>
+                <a href="{{ week_pulse.interview_prep_url }}" class="btn btn-secondary cf69-action-link">Interview Prep</a>
+            </div>
+        </section>
+
+        <div class="content-card cf-funnel-snapshot cf69-card cf69-shell-card">
+            <div class="card-header">
+                <p class="eyebrow">Funnel Snapshot</p>
+                <h2 class="cf69-card-title">Applications to responses to interviews to offers</h2>
+            </div>
+            <div class="cf-funnel-flow cf69-funnel-flow">
+                <div class="cf-funnel-step cf69-funnel-step">
+                    <span>Applications</span>
+                    <strong class="cf69-funnel-value">{{ funnel_snapshot.applications }}</strong>
+                </div>
+                <div class="cf-funnel-step cf69-funnel-step">
+                    <span>Responses</span>
+                    <strong class="cf69-funnel-value">{{ funnel_snapshot.responses }}</strong>
+                </div>
+                <div class="cf-funnel-step cf69-funnel-step">
+                    <span>Interviews</span>
+                    <strong class="cf69-funnel-value">{{ funnel_snapshot.interviews }}</strong>
+                </div>
+                <div class="cf-funnel-step cf69-funnel-step">
+                    <span>Offers</span>
+                    <strong class="cf69-funnel-value">{{ funnel_snapshot.offers }}</strong>
+                </div>
+            </div>
+            <p class="trust-note">Built from logged application statuses. No mock conversion values.</p>
+            <a href="{% url 'metrics:funnel_metrics' %}" class="table-link">Funnel Metrics</a>
+        </div>
+    </section>
+
+    <section class="content-card cf-pipeline-health cf69-card cf69-shell-card" data-cf-collapsible-card>
         <div class="card-header">
             <p class="eyebrow">Pipeline Health Matrix</p>
-            <h2>Six discipline signals for your search</h2>
+            <h2 class="cf69-card-title">Six discipline signals for your search</h2>
         </div>
         <div class="cf-health-grid">
             {% for metric in pipeline_health.metrics %}
@@ -492,39 +510,42 @@
     </section>
 
     <section class="dashboard-two-column cf69-intelligence-grid">
-        <div class="content-card cf-evidence-readiness cf69-card cf69-warning-card">
+        <div class="content-card cf-evidence-readiness cf69-card cf69-shell-card cf69-warning-card cf69-advisory-warning">
             <div class="card-header">
                 <p class="eyebrow">Evidence Readiness</p>
-                <h2>Reporting confidence gaps</h2>
+                <h2 class="cf69-card-title">Reporting confidence gaps</h2>
             </div>
             <div class="metric-list cf69-metric-list">
-                <div class="metric-list-row">
+                <div class="metric-list-row cf69-metric-row">
                     <span>Missing CV versions</span>
-                    <strong>{{ evidence_readiness.missing_cv_versions }}</strong>
+                    <strong class="cf69-metric-value">{{ evidence_readiness.missing_cv_versions }}</strong>
                 </div>
-                <div class="metric-list-row">
+                <div class="metric-list-row cf69-metric-row">
                     <span>Missing job descriptions</span>
-                    <strong>{{ evidence_readiness.missing_job_descriptions }}</strong>
+                    <strong class="cf69-metric-value">{{ evidence_readiness.missing_job_descriptions }}</strong>
                 </div>
-                <div class="metric-list-row">
+                <div class="metric-list-row cf69-metric-row">
                     <span>Missing required skills</span>
-                    <strong>{{ evidence_readiness.missing_required_skills }}</strong>
+                    <strong class="cf69-metric-value">{{ evidence_readiness.missing_required_skills }}</strong>
                 </div>
-                <div class="metric-list-row">
+                <div class="metric-list-row cf69-metric-row">
                     <span>Missing follow-up data</span>
-                    <strong>{{ evidence_readiness.missing_follow_up_data }}</strong>
+                    <strong class="cf69-metric-value">{{ evidence_readiness.missing_follow_up_data }}</strong>
                 </div>
             </div>
-            <p class="trust-note">
+            <p class="trust-note cf69-warning-note">
                 {{ evidence_readiness.analytics_ready_rate }}% analytics-ready across logged applications.
             </p>
             <a href="{{ evidence_readiness.manual_url }}" class="table-link">Data Quality Report</a>
         </div>
+    </section>
+    </section>
 
-        <div class="content-card cf-operating-pipeline cf69-card">
+    <section class="cf69-zone cf69-zone-actions" aria-label="Actions">
+        <div class="content-card cf-operating-pipeline cf69-card cf69-shell-card cf69-advisory-manual">
             <div class="card-header">
                 <p class="eyebrow">Weekly Operating Pipeline</p>
-                <h2>Capture, analyze, decide, track, review, improve</h2>
+                <h2 class="cf69-card-title">Capture, analyze, decide, track, review, improve</h2>
             </div>
             <p class="muted-text">
                 Manual rhythm only - this pipeline does not trigger automatic actions, submissions,
@@ -540,12 +561,11 @@
                 {% endfor %}
             </ol>
         </div>
-    </section>
 
-    <section class="content-card cf-recent-activity cf69-card">
+    <section class="content-card cf-recent-activity cf69-card cf69-shell-card">
         <div class="card-header">
             <p class="eyebrow">Recent Activity Timeline</p>
-            <h2>Latest manual records across the tracker</h2>
+            <h2 class="cf69-card-title">Latest manual records across the tracker</h2>
         </div>
         {% if recent_activity_timeline %}
             <div class="cf-activity-timeline">
@@ -567,15 +587,15 @@
             <div class="empty-state small-empty-state">
                 <h3>No activity yet.</h3>
                 <p>Add your first application or daily log to start the command centre timeline.</p>
-                <a href="{% url 'applications:application_create' %}" class="btn btn-primary">Log Application</a>
+                <a href="{% url 'applications:application_create' %}" class="btn btn-primary cf69-action-link">Log Application</a>
             </div>
         {% endif %}
     </section>
 
-    <section class="diagnosis-panel diagnosis-{{ summary.diagnosis_severity }} cf69-reporting-panel">
+    <section class="diagnosis-panel diagnosis-{{ summary.diagnosis_severity }} cf69-reporting-panel cf69-shell-card cf69-advisory-info">
         <div>
             <p class="eyebrow">Reporting Confidence</p>
-            <h2>{{ summary.diagnosis_title }}</h2>
+            <h2 class="cf69-card-title">{{ summary.diagnosis_title }}</h2>
             <p>{{ summary.diagnosis_explanation }}</p>
             <p class="trust-note">
                 Calculated from authenticated tracker records across applications, statuses, daily logs,
@@ -588,10 +608,11 @@
                 <a href="{% url 'ai_agents:weekly_coach' %}" class="table-link">AI Weekly Coach</a>.
             </p>
         </div>
-        <div class="diagnosis-action">
+        <div class="diagnosis-action cf69-reporting-action">
             <strong>Recommended manual action</strong>
             <p>{{ summary.recommended_action }}</p>
         </div>
+    </section>
     </section>
 
 </div>
