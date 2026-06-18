@@ -306,8 +306,8 @@ class DashboardCommandCentrePolishTests(TestCase):
     def test_dashboard_renders_career_command_centre_copy(self):
         response = self.client.get(reverse("dashboard:overview"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Career Command Centre")
-        self.assertContains(response, "Premium manual job-search command centre")
+        self.assertContains(response, "Analytics Command Centre")
+        self.assertContains(response, "Calm authority for the manual job-search pipeline")
         self.assertContains(response, "Signature Career Insight")
 
     def test_dashboard_shows_week_pulse(self):
@@ -386,6 +386,148 @@ class DashboardCommandCentrePolishTests(TestCase):
         ):
             with self.subTest(url_name=url_name):
                 self.assertContains(response, reverse(url_name))
+
+    def test_dashboard_phase_69a_loads_without_error_for_authenticated_user(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_dashboard_phase_69a_preserves_reviewer_walkthrough_wording(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertContains(response, "Reviewer walkthrough")
+        self.assertContains(response, "How to assess this portfolio project")
+        self.assertContains(response, "manual, advisory, deterministic job-search analytics app")
+        self.assertContains(response, "Deliberately not implemented")
+
+    def test_dashboard_phase_69a_preserves_manual_advisory_wording(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertContains(response, "Manual workflow only")
+        self.assertContains(response, "Advisory guidance")
+        self.assertContains(response, "Open manual workflow")
+        self.assertContains(response, "Manual rhythm only")
+
+    def test_dashboard_phase_69a_preserves_deterministic_rule_based_wording(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertContains(response, "Deterministic records")
+        self.assertContains(response, "rule-based from saved applications")
+        self.assertContains(response, "Calculated from authenticated tracker records")
+
+    def test_dashboard_phase_69a_kpi_values_render_from_context(self):
+        self._create_application(status=ApplicationStatus.ACKNOWLEDGED)
+        response = self.client.get(reverse("dashboard:overview"))
+        summary = response.context["summary"]
+        self.assertContains(response, "Total Applications")
+        self.assertContains(response, f"<h2>{summary.total_applications}</h2>", html=True)
+        self.assertContains(response, f"<h2>{summary.applications_this_week}</h2>", html=True)
+        self.assertContains(response, f"<h2>{summary.response_rate}%</h2>", html=True)
+        self.assertContains(response, f"<h2>{summary.interview_rate}%</h2>", html=True)
+
+    @patch(
+        "apps.dashboard.services.timezone.localdate",
+        return_value=STABLE_NON_WEEK_END,
+    )
+    def test_dashboard_phase_69a_today_signals_or_safe_empty_state_renders(
+        self, _mock_localdate
+    ):
+        DailyLog.objects.create(user=self.user, log_date=STABLE_NON_WEEK_END)
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertContains(response, "Today Signals")
+        content = response.content.decode()
+        self.assertTrue(
+            "Command centre clear" in content
+            or "Nothing urgent needs attention right now." in content
+        )
+
+    def test_dashboard_phase_69a_funnel_snapshot_values_render(self):
+        self._create_application(status=ApplicationStatus.INTERVIEW)
+        response = self.client.get(reverse("dashboard:overview"))
+        snapshot = response.context["funnel_snapshot"]
+        self.assertContains(response, "Funnel Snapshot")
+        self.assertContains(response, f"<strong>{snapshot.applications}</strong>", html=True)
+        self.assertContains(response, f"<strong>{snapshot.responses}</strong>", html=True)
+        self.assertContains(response, f"<strong>{snapshot.interviews}</strong>", html=True)
+        self.assertContains(response, f"<strong>{snapshot.offers}</strong>", html=True)
+
+    def test_dashboard_phase_69a_week_pulse_values_render(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        week_pulse = response.context["week_pulse"]
+        self.assertContains(response, "Week Pulse")
+        self.assertContains(response, week_pulse.week_range_label)
+        self.assertContains(
+            response,
+            f"<strong>{week_pulse.target_applications}</strong>",
+            html=True,
+        )
+        self.assertContains(
+            response,
+            f"<strong>{week_pulse.actual_applications}</strong>",
+            html=True,
+        )
+        self.assertContains(response, f"<strong>{week_pulse.variance}</strong>", html=True)
+
+    def test_dashboard_phase_69a_evidence_readiness_values_render(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        readiness = response.context["evidence_readiness"]
+        self.assertContains(response, "Evidence Readiness")
+        self.assertContains(
+            response,
+            f"<strong>{readiness.missing_cv_versions}</strong>",
+            html=True,
+        )
+        self.assertContains(
+            response,
+            f"<strong>{readiness.missing_job_descriptions}</strong>",
+            html=True,
+        )
+        self.assertContains(response, "Data Quality Report")
+
+    def test_dashboard_phase_69a_signature_insight_renders_when_present(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        insight = response.context["signature_insight"]
+        self.assertContains(response, "Signature Career Insight")
+        content = response.content.decode()
+        self.assertIn(insight.diagnosis.replace("'", "&#x27;"), content)
+        self.assertIn(insight.best_manual_action.replace("'", "&#x27;"), content)
+
+    def test_dashboard_phase_69a_does_not_render_invented_trend_indicators(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        content = response.content.decode().lower()
+        forbidden_trends = (
+            "% increase",
+            "% decrease",
+            "trending up",
+            "trending down",
+            "↑",
+            "↓",
+        )
+        for phrase in forbidden_trends:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_dashboard_phase_69a_unsafe_positive_action_labels_are_absent(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        content = response.content.decode()
+        unsafe_labels = (
+            "Apply Now",
+            "Submit Application",
+            "Auto Apply",
+            "Send Application",
+        )
+        for label in unsafe_labels:
+            with self.subTest(label=label):
+                self.assertNotIn(f">{label}<", content)
+
+    def test_dashboard_phase_69a_safe_manual_action_labels_render(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        for label in (
+            "Log Application",
+            "Weekly Review",
+            "Follow-up Tracker",
+            "Interview Prep",
+            "Funnel Metrics",
+            "Data Quality Report",
+        ):
+            with self.subTest(label=label):
+                self.assertContains(response, label)
 
     @patch(
         "apps.dashboard.services.timezone.localdate",
