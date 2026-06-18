@@ -2519,6 +2519,160 @@ class EvaluationQueueTests(TestCase):
         response = self.client.get(self.queue_url)
         self.assertEqual(response.status_code, 200)
 
+    def test_evaluation_queue_page_loads_without_error(self):
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_evaluation_queue_cv_version_column_present(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="CV Column Co",
+            pipeline_stage=PipelineStage.FIT_CHECKED,
+        )
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertContains(response, "CV Version")
+        self.assertContains(
+            response,
+            (
+                "Draft - tracking record only. Final tailored CV comes from your "
+                "external document source."
+            ),
+        )
+        self.assertContains(response, "Baseline - not tailored for this role.")
+
+    def test_evaluation_queue_cover_letter_column_present(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Cover Column Co",
+            pipeline_stage=PipelineStage.FIT_CHECKED,
+        )
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertContains(response, "Cover Letter")
+        self.assertContains(response, "Draft - for tracking and reference only.")
+
+    def test_evaluation_queue_shows_draft_availability_state(self):
+        application = JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Draft Ready Co",
+            pipeline_stage=PipelineStage.FIT_CHECKED,
+            cv_version=DEFAULT_CV_BASELINE_NAME,
+            cover_letter_version="Draft_CL_v1",
+        )
+        ApplicationDocument.objects.create(
+            application=application,
+            document_type=DocumentType.CV,
+            name="Draft Ready CV",
+            content="Draft CV content.",
+        )
+        ApplicationDocument.objects.create(
+            application=application,
+            document_type=DocumentType.COVER_LETTER,
+            name="Draft Ready Cover Letter",
+            content="Draft cover letter content.",
+        )
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertContains(response, "CV draft available")
+        self.assertContains(response, "Cover letter draft available")
+        self.assertContains(response, "Draft Ready Co")
+
+    def test_evaluation_queue_shows_missing_draft_state(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Missing Draft Co",
+            pipeline_stage=PipelineStage.FIT_CHECKED,
+        )
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertContains(response, "Missing CV draft")
+        self.assertContains(response, "Missing cover letter draft")
+        self.assertContains(response, "No CV draft available yet")
+        self.assertContains(response, "No cover letter draft available yet")
+
+    def test_evaluation_queue_role_fit_badge_text_present(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Role Fit Co",
+            pipeline_stage=PipelineStage.FIT_CHECKED,
+            role_fit=RoleFit.STRONG,
+        )
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertContains(response, "Role Fit")
+        self.assertContains(response, "Strong fit")
+
+    def test_evaluation_queue_pipeline_stage_badge_text_present(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Pipeline Co",
+            pipeline_stage=PipelineStage.FIT_CHECKED,
+        )
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertContains(response, "Pipeline Stage")
+        self.assertContains(response, "Fit checked")
+
+    def test_evaluation_queue_action_links_do_not_imply_external_submission(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Action Safety Co",
+            pipeline_stage=PipelineStage.FIT_CHECKED,
+        )
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertContains(response, "View Details")
+        self.assertNotContains(response, "Apply Now")
+        self.assertNotContains(response, "Auto Apply")
+        self.assertNotContains(response, "Submit Application")
+        self.assertNotContains(response, "Send Application")
+
+    def test_evaluation_queue_does_not_contain_apply_now(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="No Unsafe Action Co",
+            pipeline_stage=PipelineStage.FIT_CHECKED,
+        )
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertNotContains(response, "Apply Now")
+
+    def test_evaluation_queue_does_not_contain_auto_apply(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="No Automation Co",
+            pipeline_stage=PipelineStage.FIT_CHECKED,
+        )
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        page_text = response.content.decode()
+        for forbidden_phrase in ("Auto Apply", "auto-apply", "auto apply"):
+            self.assertNotIn(forbidden_phrase, page_text)
+
+    def test_evaluation_queue_does_not_contain_submit_application(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="No Submit Co",
+            pipeline_stage=PipelineStage.FIT_CHECKED,
+        )
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertNotContains(response, "Submit Application")
+        self.assertNotContains(response, "Send Application")
+
+    def test_evaluation_queue_does_not_hide_missing_cv_or_cover_letter_drafts(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Visible Missing Co",
+            pipeline_stage=PipelineStage.JOB_FOUND,
+        )
+        self.client.login(username="queue", password="StrongPass12345")
+        response = self.client.get(self.queue_url)
+        self.assertContains(response, "No CV draft available yet")
+        self.assertContains(response, "No cover letter draft available yet")
+
     def test_job_found_applications_appear(self):
         application = JobApplication.objects.create(
             **self.base_kwargs,
