@@ -1,14 +1,454 @@
-{% if data_quality_report.analytics_impact_notes %}
-<section class="content-card">
-    <div class="card-header">
-        <p class="eyebrow">Analytics Impact</p>
-        <h2>Which reports are affected by current data gaps</h2>
-        <p class="section-note">These notes explain the consequence of each data quality gap on the analytics reports this platform produces.</p>
+<style>
+    .cf69b-data-quality-report {
+        --cf69b-dq-surface: #ffffff;
+        --cf69b-dq-subtle: #f8fafc;
+        --cf69b-dq-ink: #0f172a;
+        --cf69b-dq-body: #334155;
+        --cf69b-dq-muted: #64748b;
+        --cf69b-dq-border: #e2e8f0;
+        --cf69b-dq-primary: #1d4ed8;
+        --cf69b-dq-primary-soft: #eff6ff;
+        --cf69b-dq-manual: #0f766e;
+        --cf69b-dq-manual-soft: #f0fdfa;
+        --cf69b-dq-warning: #92400e;
+        --cf69b-dq-warning-soft: #fffbeb;
+        --cf69b-dq-danger: #991b1b;
+        --cf69b-dq-danger-soft: #fef2f2;
+        border: 1px solid var(--cf69b-dq-border);
+        border-radius: 16px;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+    }
+
+    .cf69b-data-quality-report * {
+        box-sizing: border-box;
+    }
+
+    .cf69b-dq-hero {
+        background:
+            linear-gradient(135deg, rgba(29, 78, 216, 0.09), rgba(15, 118, 110, 0.08)),
+            var(--cf69b-dq-surface);
+        display: grid;
+        gap: 16px;
+        padding: 24px;
+    }
+
+    .cf69b-dq-eyebrow {
+        color: var(--cf69b-dq-primary);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        margin: 0 0 6px;
+        text-transform: uppercase;
+    }
+
+    .cf69b-dq-title {
+        color: var(--cf69b-dq-ink);
+        font-size: clamp(1.45rem, 3vw, 2.15rem);
+        line-height: 1.15;
+        margin: 0;
+    }
+
+    .cf69b-dq-subtitle {
+        color: var(--cf69b-dq-body);
+        line-height: 1.6;
+        margin: 8px 0 0;
+        max-width: 72ch;
+    }
+
+    .cf69b-dq-safety-grid,
+    .cf69b-dq-kpi-grid,
+    .cf69b-dq-missing-grid {
+        display: grid;
+        gap: 14px;
+    }
+
+    .cf69b-dq-safety-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .cf69b-dq-safety-card,
+    .cf69b-dq-kpi-card,
+    .cf69b-dq-missing-card,
+    .cf69b-dq-guidance-card {
+        background: var(--cf69b-dq-surface);
+        border: 1px solid var(--cf69b-dq-border);
+        border-radius: 12px;
+        padding: 16px;
+    }
+
+    .cf69b-dq-safety-card strong,
+    .cf69b-dq-guidance-card strong {
+        color: var(--cf69b-dq-ink);
+        display: block;
+        margin-bottom: 6px;
+    }
+
+    .cf69b-dq-safety-card span,
+    .cf69b-dq-guidance-card p,
+    .cf69b-dq-kpi-note,
+    .cf69b-dq-missing-note,
+    .cf69b-dq-section-note {
+        color: var(--cf69b-dq-muted);
+        font-size: 0.9rem;
+        line-height: 1.55;
+    }
+
+    .cf69b-dq-safety-info {
+        background: var(--cf69b-dq-primary-soft);
+        border-color: #bfdbfe;
+    }
+
+    .cf69b-dq-safety-manual {
+        background: var(--cf69b-dq-manual-soft);
+        border-color: #99f6e4;
+    }
+
+    .cf69b-dq-safety-warning {
+        background: var(--cf69b-dq-warning-soft);
+        border-color: #fde68a;
+    }
+
+    .cf69b-dq-section {
+        background: var(--cf69b-dq-surface);
+        border-top: 1px solid var(--cf69b-dq-border);
+        padding: 24px;
+    }
+
+    .cf69b-dq-section-header {
+        margin-bottom: 16px;
+    }
+
+    .cf69b-dq-section-title {
+        color: var(--cf69b-dq-ink);
+        font-size: 1.2rem;
+        margin: 0 0 6px;
+    }
+
+    .cf69b-dq-kpi-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .cf69b-dq-kpi-label,
+    .cf69b-dq-missing-label {
+        color: var(--cf69b-dq-muted);
+        display: block;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .cf69b-dq-kpi-value,
+    .cf69b-dq-missing-value {
+        color: var(--cf69b-dq-ink);
+        display: block;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 1.7rem;
+        font-weight: 700;
+        line-height: 1.15;
+        margin: 8px 0 4px;
+    }
+
+    .cf69b-dq-missing-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .cf69b-dq-table-wrap {
+        border: 1px solid var(--cf69b-dq-border);
+        border-radius: 12px;
+        overflow-x: auto;
+    }
+
+    .cf69b-dq-table {
+        border-collapse: collapse;
+        min-width: 760px;
+        width: 100%;
+    }
+
+    .cf69b-dq-table th,
+    .cf69b-dq-table td {
+        border-bottom: 1px solid var(--cf69b-dq-border);
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .cf69b-dq-table th {
+        background: var(--cf69b-dq-subtle);
+        color: var(--cf69b-dq-muted);
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .cf69b-dq-table tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .cf69b-dq-check-name {
+        color: var(--cf69b-dq-ink);
+        font-weight: 700;
+    }
+
+    .cf69b-dq-severity {
+        border-radius: 999px;
+        display: inline-block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 5px 10px;
+        text-transform: capitalize;
+    }
+
+    .cf69b-dq-row-success .cf69b-dq-severity {
+        background: var(--cf69b-dq-manual-soft);
+        color: var(--cf69b-dq-manual);
+    }
+
+    .cf69b-dq-row-warning .cf69b-dq-severity {
+        background: var(--cf69b-dq-warning-soft);
+        color: var(--cf69b-dq-warning);
+    }
+
+    .cf69b-dq-row-danger .cf69b-dq-severity {
+        background: var(--cf69b-dq-danger-soft);
+        color: var(--cf69b-dq-danger);
+    }
+
+    .cf69b-dq-list {
+        display: grid;
+        gap: 10px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .cf69b-dq-list li {
+        background: var(--cf69b-dq-subtle);
+        border: 1px solid var(--cf69b-dq-border);
+        border-radius: 10px;
+        color: var(--cf69b-dq-body);
+        line-height: 1.55;
+        padding: 12px 14px;
+    }
+
+    .cf69b-dq-empty {
+        background: var(--cf69b-dq-subtle);
+        border: 1px dashed var(--cf69b-dq-border);
+        border-radius: 12px;
+        color: var(--cf69b-dq-muted);
+        line-height: 1.55;
+        padding: 18px;
+    }
+
+    .cf69b-dq-guidance-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cf69b-dq-manual-link {
+        background: var(--cf69b-dq-ink);
+        border-radius: 999px;
+        color: #ffffff;
+        display: inline-block;
+        font-weight: 700;
+        margin-top: 12px;
+        padding: 9px 14px;
+        text-decoration: none;
+    }
+
+    @media (max-width: 980px) {
+        .cf69b-dq-safety-grid,
+        .cf69b-dq-kpi-grid,
+        .cf69b-dq-missing-grid,
+        .cf69b-dq-guidance-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 640px) {
+        .cf69b-dq-hero,
+        .cf69b-dq-section {
+            padding: 18px;
+        }
+
+        .cf69b-dq-safety-grid,
+        .cf69b-dq-kpi-grid,
+        .cf69b-dq-missing-grid,
+        .cf69b-dq-guidance-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<section class="content-card cf69b-data-quality-report" aria-labelledby="cf69b-data-quality-title">
+    <div class="cf69b-dq-hero">
+        <div>
+            <p class="cf69b-dq-eyebrow">Data Quality Report</p>
+            <h2 id="cf69b-data-quality-title" class="cf69b-dq-title">Saved-record analytics readiness</h2>
+            <p class="cf69b-dq-subtitle">
+                This report uses saved tracker records to show which application fields are complete enough for manual,
+                advisory, evidence-based interpretation. It does not correct records automatically, submit applications,
+                verify missing data externally, or use scraped live-market data.
+            </p>
+        </div>
+        <div class="cf69b-dq-safety-grid" aria-label="Data Quality Report safety boundaries">
+            <div class="cf69b-dq-safety-card cf69b-dq-safety-info">
+                <strong>Advisory report only</strong>
+                <span>Calculated from saved tracker records and intended for manual review.</span>
+            </div>
+            <div class="cf69b-dq-safety-card cf69b-dq-safety-manual">
+                <strong>Manual workflow only</strong>
+                <span>No auto-apply, no automatic submission, and no employer submission by the app.</span>
+            </div>
+            <div class="cf69b-dq-safety-card cf69b-dq-safety-warning">
+                <strong>Evidence requires review</strong>
+                <span>Missing fields are not proof of external verification; they require manual cleanup.</span>
+            </div>
+        </div>
     </div>
-    <ul class="workflow-list">
-        {% for note in data_quality_report.analytics_impact_notes %}
-        <li>{{ note }}</li>
-        {% endfor %}
-    </ul>
+
+    <div class="cf69b-dq-section" aria-label="Data Quality snapshot">
+        <div class="cf69b-dq-section-header">
+            <h3 class="cf69b-dq-section-title">Quality snapshot</h3>
+            <p class="cf69b-dq-section-note">
+                Summary values below come from the existing Data Quality Report context.
+            </p>
+        </div>
+        <div class="cf69b-dq-kpi-grid">
+            <div class="cf69b-dq-kpi-card">
+                <span class="cf69b-dq-kpi-label">Total applications</span>
+                <strong class="cf69b-dq-kpi-value">{{ data_quality_report.total_applications }}</strong>
+                <span class="cf69b-dq-kpi-note">Saved tracker records</span>
+            </div>
+            <div class="cf69b-dq-kpi-card">
+                <span class="cf69b-dq-kpi-label">Analytics-ready</span>
+                <strong class="cf69b-dq-kpi-value">{{ data_quality_report.analytics_ready_applications }}</strong>
+                <span class="cf69b-dq-kpi-note">{{ data_quality_report.analytics_ready_rate }}% readiness rate</span>
+            </div>
+            <div class="cf69b-dq-kpi-card">
+                <span class="cf69b-dq-kpi-label">Data quality score</span>
+                <strong class="cf69b-dq-kpi-value">{{ data_quality_report.data_quality_score }}%</strong>
+                <span class="cf69b-dq-kpi-note">Same saved-record basis as analytics readiness</span>
+            </div>
+            <div class="cf69b-dq-kpi-card">
+                <span class="cf69b-dq-kpi-label">Quality checks</span>
+                <strong class="cf69b-dq-kpi-value">{{ data_quality_report.checks|length }}</strong>
+                <span class="cf69b-dq-kpi-note">Completeness checks already produced by the report</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="cf69b-dq-section" aria-label="Missing-field indicators">
+        <div class="cf69b-dq-section-header">
+            <h3 class="cf69b-dq-section-title">Completeness indicators</h3>
+            <p class="cf69b-dq-section-note">
+                These are existing missing-field and generic-source counts. They are not inferred trends.
+            </p>
+        </div>
+        <div class="cf69b-dq-missing-grid">
+            <div class="cf69b-dq-missing-card">
+                <span class="cf69b-dq-missing-label">Missing source</span>
+                <strong class="cf69b-dq-missing-value">{{ data_quality_report.missing_source_count }}</strong>
+                <span class="cf69b-dq-missing-note">Blank, whitespace-only, or generic source values.</span>
+            </div>
+            <div class="cf69b-dq-missing-card">
+                <span class="cf69b-dq-missing-label">Generic source</span>
+                <strong class="cf69b-dq-missing-value">{{ data_quality_report.generic_source_count }}</strong>
+                <span class="cf69b-dq-missing-note">Applications still using the generic Other label.</span>
+            </div>
+            <div class="cf69b-dq-missing-card">
+                <span class="cf69b-dq-missing-label">Missing CV version</span>
+                <strong class="cf69b-dq-missing-value">{{ data_quality_report.missing_cv_version_count }}</strong>
+                <span class="cf69b-dq-missing-note">Records without a comparable CV version.</span>
+            </div>
+            <div class="cf69b-dq-missing-card">
+                <span class="cf69b-dq-missing-label">Thin job description</span>
+                <strong class="cf69b-dq-missing-value">{{ data_quality_report.missing_job_description_count }}</strong>
+                <span class="cf69b-dq-missing-note">Descriptions below the existing evidence threshold.</span>
+            </div>
+            <div class="cf69b-dq-missing-card">
+                <span class="cf69b-dq-missing-label">Missing required skills</span>
+                <strong class="cf69b-dq-missing-value">{{ data_quality_report.missing_required_skills_count }}</strong>
+                <span class="cf69b-dq-missing-note">Skills text below the existing evidence threshold.</span>
+            </div>
+            <div class="cf69b-dq-missing-card">
+                <span class="cf69b-dq-missing-label">Missing follow-up</span>
+                <strong class="cf69b-dq-missing-value">{{ data_quality_report.missing_follow_up_count }}</strong>
+                <span class="cf69b-dq-missing-note">Active pipeline records without follow-up dates.</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="cf69b-dq-section" aria-label="Data quality findings">
+        <div class="cf69b-dq-section-header">
+            <h3 class="cf69b-dq-section-title">Quality findings</h3>
+            <p class="cf69b-dq-section-note">
+                Each row preserves the existing check name, issue count, completion rate, severity, and manual recommendation.
+            </p>
+        </div>
+        {% if data_quality_report.checks %}
+        <div class="cf69b-dq-table-wrap">
+            <table class="cf69b-dq-table">
+                <thead>
+                    <tr>
+                        <th>Check</th>
+                        <th>Issues</th>
+                        <th>Applications</th>
+                        <th>Completion</th>
+                        <th>Severity</th>
+                        <th>Manual recommendation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for check in data_quality_report.checks %}
+                    <tr class="cf69b-dq-row cf69b-dq-row-{{ check.severity }}">
+                        <td class="cf69b-dq-check-name">{{ check.check_name }}</td>
+                        <td>{{ check.issue_count }}</td>
+                        <td>{{ check.total_applications }}</td>
+                        <td>{{ check.completion_rate }}%</td>
+                        <td><span class="cf69b-dq-severity">{{ check.severity }}</span></td>
+                        <td>{{ check.recommendation }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="cf69b-dq-empty">
+            No data quality checks are available yet. Log applications manually to build saved-record evidence.
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="cf69b-dq-section" aria-label="Analytics impact and manual guidance">
+        <div class="cf69b-dq-guidance-grid">
+            <div class="cf69b-dq-guidance-card">
+                <strong>Analytics Impact</strong>
+                {% if data_quality_report.analytics_impact_notes %}
+                <ul class="cf69b-dq-list">
+                    {% for note in data_quality_report.analytics_impact_notes %}
+                    <li>{{ note }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p>No analytics impact warnings are present for the current saved records.</p>
+                {% endif %}
+            </div>
+            <div class="cf69b-dq-guidance-card">
+                <strong>Manual evidence-quality guidance</strong>
+                {% if data_quality_report.recommendations %}
+                <ul class="cf69b-dq-list">
+                    {% for recommendation in data_quality_report.recommendations %}
+                    <li>{{ recommendation }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p>Continue reviewing saved applications manually and keep evidence fields complete.</p>
+                {% endif %}
+                <a class="cf69b-dq-manual-link" href="{% url 'applications:application_list' %}">Review applications manually</a>
+            </div>
+        </div>
+    </div>
 </section>
-{% endif %}
