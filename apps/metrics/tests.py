@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from decimal import Decimal
+from pathlib import Path
 
 from django.contrib.auth.models import User
 from django.template.defaultfilters import date as format_date
@@ -1301,6 +1302,237 @@ class MetricsViewTests(TestCase):
         self.assertContains(response, "Analytics Impact")
         self.assertContains(response, "Source ROI")
 
+    def test_funnel_metrics_phase_69b_premium_shell_renders(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Funnel Metrics", content)
+        for class_name in (
+            "cf69b-page",
+            "cf69b-zone-hero",
+            "cf69b-zone-snapshot",
+            "cf69b-zone-breakdown",
+            "cf69b-zone-guidance",
+            "cf69b-advisory-info",
+            "cf69b-advisory-manual",
+            "cf69b-advisory-warning",
+        ):
+            with self.subTest(class_name=class_name):
+                self.assertIn(class_name, content)
+
+    def test_funnel_metrics_phase_69b_kpi_values_render_from_saved_records(self):
+        self._create_app(status=ApplicationStatus.ACKNOWLEDGED)
+        self._create_app(company_name="Interview Co", status=ApplicationStatus.INTERVIEW)
+        response = self._get_funnel_metrics()
+        metrics = response.context["metrics"]
+        content = response.content.decode()
+        self.assertIn(f">{metrics.total_applications}<", content)
+        self.assertIn(f">{metrics.response_count}<", content)
+        self.assertIn(f">{metrics.interview_count}<", content)
+        self.assertIn(f"{metrics.response_rate}% response rate", content)
+
+    def test_funnel_metrics_phase_69b_existing_sections_still_render(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        for heading in (
+            "Funnel Performance",
+            "Data Quality",
+            "Application Quality",
+            "Source Performance",
+            "CV Version Performance",
+            "Rejection Patterns",
+            "Weekly Trend",
+            "Visual Evidence",
+            "Daily Discipline",
+        ):
+            with self.subTest(heading=heading):
+                self.assertIn(heading, content)
+
+    def test_funnel_metrics_phase_69b_safety_wording_remains_visible(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode().lower()
+        self.assertIn("saved tracker records", content)
+        self.assertIn("manual workflow only", content)
+        self.assertIn("advisory and evidence-based", content)
+        self.assertIn("no automatic submission", content)
+        self.assertIn("no auto-apply", content)
+        self.assertIn("no employer submission by the app", content)
+        self.assertIn("not financial roi proof", content)
+        self.assertIn("not scraped live-market data", content)
+
+    def test_funnel_metrics_phase_69b_unsafe_positive_labels_absent(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        for label in ("Apply Now", "Submit Application", "Auto Apply", "Send Application"):
+            with self.subTest(label=label):
+                self.assertNotIn(f">{label}<", content)
+
+    def test_funnel_metrics_phase_69b_no_invented_trend_or_roi_claims(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode().lower()
+        forbidden_phrases = (
+            "% increase",
+            "% decrease",
+            "trending up",
+            "trending down",
+            "upward trend",
+            "downward trend",
+            "guaranteed roi",
+            "financial return",
+            "return on investment proof",
+        )
+        for phrase in forbidden_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_funnel_metrics_phase_69b_sparse_data_empty_states_remain_safe(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("No funnel data yet", content)
+        self.assertIn("No funnel conversion data yet", content)
+        self.assertIn("No outcome data yet", content)
+        self.assertIn("Start logging applications", content)
+
+    def test_data_quality_report_phase_69b_premium_shell_renders(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Data Quality Report", content)
+        self.assertIn("Saved-record analytics readiness", content)
+        for class_name in (
+            "cf69b-data-quality-report",
+            "cf69b-dq-hero",
+            "cf69b-dq-safety-grid",
+            "cf69b-dq-kpi-grid",
+            "cf69b-dq-missing-grid",
+            "cf69b-dq-table",
+            "cf69b-dq-guidance-grid",
+        ):
+            with self.subTest(class_name=class_name):
+                self.assertIn(class_name, content)
+
+    def test_data_quality_report_phase_69b_values_render_from_saved_records(self):
+        self._create_app(
+            company_name="Ready Co",
+            source=ApplicationSource.LINKEDIN,
+            cv_version="Aminul_Islam_Data_Analyst_CV",
+            job_description="x" * 40,
+            required_skills="y" * 10,
+        )
+        self._create_app(
+            company_name="Gap Co",
+            source=ApplicationSource.OTHER,
+            cv_version="",
+            job_description="short",
+            required_skills="",
+        )
+        response = self._get_funnel_metrics()
+        report = response.context["data_quality_report"]
+        content = response.content.decode()
+        self.assertEqual(report.total_applications, 2)
+        self.assertEqual(report.analytics_ready_applications, 1)
+        self.assertEqual(report.analytics_ready_rate, 50.0)
+        self.assertIn(f">{report.total_applications}<", content)
+        self.assertIn(f">{report.analytics_ready_applications}<", content)
+        self.assertIn(f"{report.analytics_ready_rate}% readiness rate", content)
+        self.assertIn(f">{report.data_quality_score}%<", content)
+
+    def test_data_quality_report_phase_69b_quality_findings_still_render(self):
+        self._create_app(
+            company_name="Missing Evidence Co",
+            source=ApplicationSource.OTHER,
+            cv_version="",
+            job_description="short",
+            required_skills="",
+            follow_up_date=None,
+        )
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        for expected in (
+            "Completeness indicators",
+            "Quality findings",
+            "Missing source",
+            "Missing CV version",
+            "Thin job description",
+            "Missing required skills",
+            "Missing follow-up",
+            "Precise application source",
+            "CV version recorded",
+            "Job description evidence",
+            "Required skills captured",
+            "Follow-up date",
+            "Analytics impact",
+            "Source ROI",
+            "Smart Review",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, content)
+
+    def test_data_quality_report_phase_69b_safety_wording_visible(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode().lower()
+        self.assertIn("saved tracker records", content)
+        self.assertIn("manual workflow only", content)
+        self.assertIn("advisory, evidence-based interpretation", content)
+        self.assertIn("no auto-apply", content)
+        self.assertIn("no automatic submission", content)
+        self.assertIn("no employer submission by the app", content)
+        self.assertIn("does not correct records automatically", content)
+        self.assertIn("verify missing data externally", content)
+        self.assertIn("scraped live-market data", content)
+
+    def test_data_quality_report_phase_69b_unsafe_positive_labels_absent(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        for label in (
+            "Apply Now",
+            "Submit Application",
+            "Auto Apply",
+            "Send Application",
+            "Auto Fix",
+            "Auto Correct",
+        ):
+            with self.subTest(label=label):
+                self.assertNotIn(f">{label}<", content)
+
+    def test_data_quality_report_phase_69b_no_invented_trend_or_live_data_claims(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode().lower()
+        for phrase in (
+            "% increase",
+            "% decrease",
+            "trending up",
+            "trending down",
+            "upward trend",
+            "downward trend",
+            "externally verified",
+            "live saas automation",
+            "live-data claim",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_data_quality_report_phase_69b_sparse_empty_state_remains_safe(self):
+        response = self._get_funnel_metrics()
+        content = response.content.decode()
+        report = response.context["data_quality_report"]
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(report.total_applications, 0)
+        self.assertIn("No analytics impact warnings are present", content)
+        self.assertIn("Log job applications in the tracker first", content)
+        self.assertIn("Review applications manually", content)
+
+    def test_data_quality_report_phase_69b_funnel_template_not_changed_for_phase2(self):
+        repo_root = Path(__file__).resolve().parent.parent.parent
+        data_quality_template = repo_root / "templates" / "metrics" / "data_quality_report.html"
+        funnel_template = repo_root / "templates" / "metrics" / "funnel_metrics.html"
+        data_quality_content = data_quality_template.read_text(encoding="utf-8")
+        funnel_content = funnel_template.read_text(encoding="utf-8")
+        self.assertIn("cf69b-data-quality-report", data_quality_content)
+        self.assertIn('{% include "metrics/data_quality_report.html" %}', funnel_content)
+        self.assertNotIn("cf69b-data-quality-report", funnel_content)
+
 
 class PremiumReportingFoundationTests(TestCase):
     def setUp(self):
@@ -1367,7 +1599,7 @@ class PremiumReportingFoundationTests(TestCase):
         content = response.content.decode()
         self.assertIn("advisory and evidence-based", content)
         self.assertIn("read-only", content)
-        self.assertNotIn("auto-apply", content.lower())
+        self.assertIn("no auto-apply", content.lower())
         self.assertNotIn("automatic status", content.lower())
 
     def test_reporting_get_does_not_mutate_records(self):
@@ -1597,7 +1829,7 @@ class PremiumReportingSourceCvTests(TestCase):
         self.assertIn("advisory and evidence-based", content)
         self.assertIn("read-only", content)
         self.assertIn("manual", content.lower())
-        self.assertNotIn("auto-apply", content.lower())
+        self.assertIn("no auto-apply", content.lower())
 
 class PremiumReportingSprint40cTests(TestCase):
     def setUp(self):
@@ -1682,7 +1914,7 @@ class PremiumReportingSprint40cTests(TestCase):
         content = response.content.decode()
         self.assertIn("advisory and evidence-based", content)
         self.assertIn("read-only", content)
-        self.assertNotIn("auto-apply", content.lower())
+        self.assertIn("no auto-apply", content.lower())
         self.assertNotIn("live saas users", content.lower())
         self.assertNotIn("production deployment", content.lower())
 
@@ -1771,7 +2003,7 @@ class Sprint52Phase2FoundationTests(TestCase):
         content = response.content.decode().lower()
         self.assertIn("calculated from saved tracker records", content)
         self.assertIn("manual review only", content)
-        self.assertNotIn("auto-apply", content)
+        self.assertIn("no auto-apply", content)
         self.assertNotIn("live saas users", content)
         self.assertNotIn("predictive ai", content)
         self.assertNotIn("billing", content)
@@ -1925,7 +2157,7 @@ class Sprint52Phase3VisualAnalyticsTests(TestCase):
         content = response.content.decode().lower()
         self.assertIn("calculated from saved tracker records", content)
         self.assertIn("manual review only", content)
-        self.assertNotIn("auto-apply", content)
+        self.assertIn("no auto-apply", content)
         self.assertNotIn("predictive ai", content)
         self.assertNotIn("live saas users", content)
         self.assertNotIn("sprint 53", content)
