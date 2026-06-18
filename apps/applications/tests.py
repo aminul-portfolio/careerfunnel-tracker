@@ -2182,6 +2182,92 @@ class ApplicationCreatePrefillTests(TestCase):
         response = self._get_create()
         self.assertEqual(response.status_code, 200)
 
+    def test_add_application_manual_save_boundary_text_present(self):
+        response = self._get_create()
+        self.assertContains(
+            response,
+            (
+                "Pre-filling this form does not save your application. "
+                "Review all fields before saving."
+            ),
+        )
+        self.assertContains(
+            response,
+            (
+                "Saving creates a tracking record only. Your application has not been "
+                "submitted to the employer."
+            ),
+        )
+        self.assertContains(
+            response,
+            (
+                "Submit your application manually through the employer's portal or job "
+                "board after saving this record."
+            ),
+        )
+
+    def test_add_application_prefill_advisory_text_present(self):
+        response = self._get_create("company_name=FinSight")
+        self.assertContains(response, "Manual review required before saving")
+        self.assertContains(
+            response,
+            (
+                "Analyze - Review - Approve - Pre-fill Add Application - Manual Save - "
+                "Manual external submission. CareerFunnel does not submit applications "
+                "automatically."
+            ),
+        )
+
+    def test_add_application_cv_version_field_present(self):
+        response = self._get_create()
+        self.assertContains(response, "CV Version")
+        self.assertContains(response, 'name="cv_version"')
+
+    def test_add_application_cv_version_draft_tracking_label_present(self):
+        response = self._get_create()
+        self.assertContains(
+            response,
+            (
+                "Draft - tracking record only. Final tailored CV comes from your "
+                "external document source."
+            ),
+        )
+
+    def test_add_application_baseline_cv_label_present(self):
+        response = self._get_create()
+        self.assertContains(response, "Baseline - not tailored for this role.")
+
+    def test_add_application_cover_letter_version_field_present(self):
+        response = self._get_create()
+        self.assertContains(response, "Cover Letter Version")
+        self.assertContains(response, 'name="cover_letter_version"')
+
+    def test_add_application_cover_letter_version_draft_label_present(self):
+        response = self._get_create()
+        self.assertContains(response, "Draft - for tracking and reference only.")
+
+    def test_add_application_save_button_is_manual_not_auto_submit(self):
+        response = self._get_create()
+        self.assertContains(response, "Save Application")
+        self.assertNotContains(response, "Auto Save")
+        self.assertNotContains(response, "auto-save")
+        self.assertNotContains(response, "Submit Application")
+
+    def test_add_application_does_not_contain_apply_now(self):
+        response = self._get_create("company_name=FinSight")
+        self.assertNotContains(response, "Apply Now")
+
+    def test_add_application_does_not_contain_auto_apply(self):
+        response = self._get_create("company_name=FinSight")
+        page_text = response.content.decode()
+        for forbidden_phrase in ("Auto Apply", "auto-apply", "auto apply"):
+            self.assertNotIn(forbidden_phrase, page_text)
+
+    def test_add_application_does_not_contain_submit_application(self):
+        response = self._get_create("company_name=FinSight")
+        self.assertNotContains(response, "Submit Application")
+        self.assertNotContains(response, "Send Application")
+
     def test_add_application_shows_prefill_is_not_save_message(self):
         response = self._get_create("company_name=FinSight")
         self.assertContains(
@@ -2308,7 +2394,7 @@ class ApplicationCreatePrefillTests(TestCase):
         self.assertContains(
             response,
             (
-                "Analyze → Review → Approve → Pre-fill Add Application → Manual Save → "
+                "Analyze - Review - Approve - Pre-fill Add Application - Manual Save - "
                 "Manual external submission. CareerFunnel does not submit applications "
                 "automatically."
             ),

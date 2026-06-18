@@ -2,24 +2,232 @@
 {% block title %}{{ page_title }} | CareerFunnel Tracker{% endblock %}
 {% block page_heading %}{{ page_title }}{% endblock %}
 {% block content %}
-<div class="content-card form-card">
-    <div class="card-header"><p class="eyebrow">Application Record</p><h1>{{ page_title }}</h1><p>Capture the full application lifecycle: fit evidence, readiness, follow-up plan, CV version, and next action.</p></div>
+<style>
+    .application-form-premium {
+        background: #f6f7fb;
+        border-radius: 28px;
+        margin: -0.5rem;
+        padding: clamp(1rem, 2vw, 2rem);
+    }
+
+    .application-form-shell {
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 24px;
+        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
+        padding: clamp(1.25rem, 3vw, 2.5rem);
+    }
+
+    .application-form-hero {
+        align-items: flex-start;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+        display: flex;
+        gap: 1.5rem;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1.5rem;
+    }
+
+    .application-form-hero h1 {
+        letter-spacing: -0.035em;
+        margin-bottom: 0.5rem;
+    }
+
+    .application-status-pill {
+        background: #ecfeff;
+        border: 1px solid #a5f3fc;
+        border-radius: 999px;
+        color: #0f766e;
+        display: inline-flex;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        padding: 0.45rem 0.75rem;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .application-advisory-stack {
+        display: grid;
+        gap: 0.85rem;
+        margin: 1.25rem 0 1.5rem;
+    }
+
+    .application-advisory {
+        background: linear-gradient(135deg, #eff6ff, #f8fafc);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        border-radius: 18px;
+        box-shadow: 0 14px 32px rgba(37, 99, 235, 0.08);
+        padding: 1rem 1.15rem;
+    }
+
+    .application-advisory strong {
+        color: #1e3a8a;
+        display: block;
+        margin-bottom: 0.35rem;
+    }
+
+    .application-advisory p {
+        margin: 0.35rem 0 0;
+    }
+
+    .application-form-stack {
+        display: grid;
+        gap: 1.1rem;
+    }
+
+    .application-form-section {
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        border-radius: 20px;
+        box-shadow: 0 14px 38px rgba(15, 23, 42, 0.05);
+        padding: clamp(1rem, 2vw, 1.5rem);
+    }
+
+    .application-form-section .section-heading {
+        align-items: baseline;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .application-form-section h2 {
+        margin: 0;
+    }
+
+    .section-kicker {
+        color: #64748b;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        margin: 0;
+        text-transform: uppercase;
+    }
+
+    .readiness-section {
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        border-color: rgba(37, 99, 235, 0.22);
+    }
+
+    .readiness-assets {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+        margin-bottom: 1rem;
+    }
+
+    .readiness-asset-card {
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.26);
+        border-radius: 18px;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+        padding: 1rem;
+    }
+
+    .readiness-asset-card--primary {
+        border-color: rgba(37, 99, 235, 0.3);
+        box-shadow: 0 16px 34px rgba(37, 99, 235, 0.09);
+    }
+
+    .asset-label {
+        color: #475569;
+        display: block;
+        font-size: 0.82rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+    }
+
+    .asset-name {
+        color: #0f172a;
+        font-size: 1rem;
+        font-weight: 800;
+        margin: 0 0 0.45rem;
+        overflow-wrap: anywhere;
+    }
+
+    .asset-note {
+        color: #475569;
+        font-size: 0.9rem;
+        margin: 0.4rem 0 0;
+    }
+
+    .asset-baseline {
+        background: #f8fafc;
+        border: 1px dashed rgba(100, 116, 139, 0.35);
+        border-radius: 12px;
+        color: #475569;
+        display: inline-flex;
+        font-size: 0.86rem;
+        margin-top: 0.65rem;
+        padding: 0.45rem 0.65rem;
+    }
+
+    .readiness-checklist {
+        background: #f8fafc;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 16px;
+        display: grid;
+        gap: 0.85rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 1rem;
+    }
+
+    .application-form-actions {
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 18px;
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.05);
+        padding: 1rem;
+    }
+
+    @media (max-width: 900px) {
+        .application-form-hero,
+        .readiness-assets,
+        .readiness-checklist {
+            display: grid;
+            grid-template-columns: 1fr;
+        }
+
+        .application-status-pill {
+            justify-self: start;
+        }
+    }
+</style>
+<div class="application-form-premium">
+<div class="content-card form-card application-form-shell">
+    <div class="card-header application-form-hero">
+        <div>
+            <p class="eyebrow">Application Record</p>
+            <h1>{{ page_title }}</h1>
+            <p>Capture the full application lifecycle: fit evidence, readiness, follow-up plan, CV version, and next action.</p>
+        </div>
+        {% if page_title == "Add Application" %}
+        <span class="application-status-pill">Tracking record only</span>
+        {% endif %}
+    </div>
+    <div class="application-advisory-stack">
     {% if page_title == "Add Application" %}
-    <div class="diagnosis-box">
+    <div class="diagnosis-box application-advisory">
         <p>Pre-filling this form does not save your application. Review all fields before saving.</p>
         <p>Saving creates a tracking record only. Your application has not been submitted to the employer.</p>
         <p>Submit your application manually through the employer's portal or job board after saving this record.</p>
     </div>
     {% endif %}
     {% if is_analyzer_prefill %}
-    <div class="diagnosis-box">
+    <div class="diagnosis-box application-advisory">
         <strong>Manual review required before saving</strong>
-        <p>Analyze → Review → Approve → Pre-fill Add Application → Manual Save → Manual external submission. CareerFunnel does not submit applications automatically.</p>
+        <p>Analyze - Review - Approve - Pre-fill Add Application - Manual Save - Manual external submission. CareerFunnel does not submit applications automatically.</p>
     </div>
     {% endif %}
-    <form method="post" class="form-stack">{% csrf_token %}
+    </div>
+    <form method="post" class="form-stack application-form-stack">{% csrf_token %}
         {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
-        <div class="form-section"><h2>Job Details</h2><div class="form-grid">
+        <div class="form-section application-form-section">
+            <div class="section-heading"><div><p class="section-kicker">Role intake</p><h2>Job Details</h2></div></div>
+            <div class="form-grid">
             <div class="form-group"><label>Company Name</label>{{ form.company_name }}{{ form.company_name.errors }}</div>
             <div class="form-group"><label>Job Title</label>{{ form.job_title }}{{ form.job_title.errors }}</div>
             <div class="form-group form-wide"><label>Job URL</label>{{ form.job_url }}{{ form.job_url.errors }}</div>
@@ -30,44 +238,64 @@
             <div class="form-group"><label>Role Fit</label>{{ form.role_fit }}{{ form.role_fit.errors }}</div>
             <div class="form-group"><label>Experience Level</label>{{ form.experience_level }}{{ form.experience_level.errors }}</div>
         </div></div>
-        <div class="form-section"><h2>Smart Fit Inputs</h2><div class="form-grid">
+        <div class="form-section application-form-section">
+            <div class="section-heading"><div><p class="section-kicker">Evidence inputs</p><h2>Smart Fit Inputs</h2></div></div>
+            <div class="form-grid">
             <div class="form-group"><label>Required Skills</label>{{ form.required_skills }}{{ form.required_skills.errors }}</div>
             <div class="form-group"><label>Job Description / Requirements</label>{{ form.job_description }}{{ form.job_description.errors }}</div>
         </div></div>
-        <div class="form-section"><h2>Lifecycle Status</h2><div class="form-grid">
+        <div class="form-section application-form-section">
+            <div class="section-heading"><div><p class="section-kicker">Pipeline state</p><h2>Lifecycle Status</h2></div></div>
+            <div class="form-grid">
             <div class="form-group"><label>Date Applied</label>{{ form.date_applied }}{{ form.date_applied.errors }}</div>
             <div class="form-group"><label>Status</label>{{ form.status }}{{ form.status.errors }}</div>
             <div class="form-group"><label>Pipeline Stage</label>{{ form.pipeline_stage }}{{ form.pipeline_stage.errors }}</div>
             <div class="form-group"><label>Response Date</label>{{ form.response_date }}{{ form.response_date.errors }}</div>
         </div></div>
-        <div class="form-section"><h2>Application Readiness</h2><div class="form-grid">
-            <div class="form-group form-wide">
-                <label>CV Version</label>
-                <p><strong>{{ cv_version_display.professional_basename }}</strong></p>
+        <div class="form-section application-form-section readiness-section">
+            <div class="section-heading"><div><p class="section-kicker">Tracked assets</p><h2>Application Readiness</h2></div></div>
+            <div class="readiness-assets">
+            <div class="form-group readiness-asset-card readiness-asset-card--primary">
+                <label class="asset-label">CV Version</label>
+                <p class="asset-name">{{ cv_version_display.professional_basename }}</p>
+                <p class="asset-note">Draft - tracking record only. Final tailored CV comes from your external document source.</p>
                 {% if cv_version_display.internal_baseline %}
-                <p class="muted-text">Internal baseline: {{ cv_version_display.internal_baseline }}</p>
+                <p class="asset-baseline">Internal baseline: {{ cv_version_display.internal_baseline }}. Baseline - not tailored for this role.</p>
                 {% endif %}
                 {{ form.cv_version.as_hidden }}
                 {{ form.cv_version.errors }}
             </div>
-            <div class="form-group"><label>Cover Letter Version</label>{{ form.cover_letter_version }}{{ form.cover_letter_version.errors }}</div>
+            <div class="form-group readiness-asset-card">
+                <label class="asset-label">Cover Letter Version</label>
+                <p class="asset-note">Draft - for tracking and reference only.</p>
+                {{ form.cover_letter_version }}{{ form.cover_letter_version.errors }}
+            </div>
+            </div>
+            <div class="readiness-checklist">
             <div class="checkbox-group form-wide">{{ form.is_cv_tailored }} <label>CV tailored for this role</label></div>
             <div class="checkbox-group form-wide">{{ form.is_cover_letter_tailored }} <label>Cover letter tailored</label></div>
             <div class="checkbox-group form-wide">{{ form.portfolio_project_included }} <label>Portfolio project included or referenced</label></div>
             <div class="checkbox-group form-wide">{{ form.company_researched }} <label>Company researched</label></div>
         </div></div>
-        <div class="form-section"><h2>Follow-Up Plan</h2><div class="form-grid">
+        <div class="form-section application-form-section">
+            <div class="section-heading"><div><p class="section-kicker">Next contact</p><h2>Follow-Up Plan</h2></div></div>
+            <div class="form-grid">
             <div class="form-group"><label>Follow-up Date</label>{{ form.follow_up_date }}{{ form.follow_up_date.errors }}</div>
             <div class="form-group"><label>Follow-up Status</label>{{ form.follow_up_status }}{{ form.follow_up_status.errors }}</div>
             <div class="form-group"><label>Last Contacted Date</label>{{ form.last_contacted_date }}{{ form.last_contacted_date.errors }}</div>
             <div class="form-group"><label>Next Action</label>{{ form.next_action }}{{ form.next_action.errors }}</div>
         </div></div>
-        <div class="form-section"><h2>Contact</h2><div class="form-grid">
+        <div class="form-section application-form-section">
+            <div class="section-heading"><div><p class="section-kicker">Recruiter details</p><h2>Contact</h2></div></div>
+            <div class="form-grid">
             <div class="form-group"><label>Contact Name</label>{{ form.contact_name }}{{ form.contact_name.errors }}</div>
             <div class="form-group"><label>Contact Email</label>{{ form.contact_email }}{{ form.contact_email.errors }}</div>
         </div></div>
-        <div class="form-section"><h2>Notes</h2><div class="form-group"><label>Notes</label>{{ form.notes }}{{ form.notes.errors }}</div></div>
-        <div class="form-actions"><button type="submit" class="btn btn-primary">{{ submit_label }}</button><a href="{% url 'applications:application_list' %}" class="btn btn-secondary">Cancel</a></div>
+        <div class="form-section application-form-section">
+            <div class="section-heading"><div><p class="section-kicker">Context</p><h2>Notes</h2></div></div>
+            <div class="form-group"><label>Notes</label>{{ form.notes }}{{ form.notes.errors }}</div></div>
+        <div class="form-actions application-form-actions"><button type="submit" class="btn btn-primary">{{ submit_label }}</button><a href="{% url 'applications:application_list' %}" class="btn btn-secondary">Cancel</a></div>
     </form>
+</div>
 </div>
 {% endblock %}
