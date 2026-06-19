@@ -2,16 +2,232 @@
 {% block title %}Career Strategy Action Plan | CareerFunnel Tracker{% endblock %}
 {% block page_heading %}Career Strategy Action Plan{% endblock %}
 {% block content %}
-<div class="dashboard-grid cf-career-strategy-action-plan">
-    <section class="hero-panel">
-        <p class="eyebrow">Career Strategy Action Plan</p>
+<style>
+    .cf69i-route6-page {
+        --cf69i-canvas: #f0f2f5;
+        --cf69i-surface: #ffffff;
+        --cf69i-subtle: #f8fafc;
+        --cf69i-ink: #0f172a;
+        --cf69i-body: #334155;
+        --cf69i-muted: #64748b;
+        --cf69i-border: #e2e8f0;
+        --cf69i-primary: #1d4ed8;
+        --cf69i-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+        background: var(--cf69i-canvas);
+        border-radius: 18px;
+        color: var(--cf69i-body);
+        display: grid;
+        gap: 18px;
+        padding: 18px;
+    }
+
+    .cf69i-route6-page * {
+        box-sizing: border-box;
+    }
+
+    .cf69i-route6-hero,
+    .cf69i-route6-kpi-card,
+    .cf69i-route6-section {
+        background: var(--cf69i-surface);
+        border: 1px solid var(--cf69i-border);
+        border-radius: 14px;
+        box-shadow: var(--cf69i-shadow);
+    }
+
+    .cf69i-route6-hero {
+        overflow: hidden;
+        padding: 24px;
+        position: relative;
+    }
+
+    .cf69i-route6-hero::before {
+        background: linear-gradient(135deg, rgba(29, 78, 216, 0.12), rgba(15, 118, 110, 0.1));
+        content: "";
+        inset: 0;
+        pointer-events: none;
+        position: absolute;
+    }
+
+    .cf69i-route6-hero > * {
+        position: relative;
+    }
+
+    .cf69i-route6-hero h1 {
+        color: var(--cf69i-ink);
+        font-size: clamp(1.75rem, 4vw, 2.4rem);
+        line-height: 1.12;
+        margin: 0 0 10px;
+    }
+
+    .cf69i-route6-hero p,
+    .cf69i-route6-section p {
+        color: var(--cf69i-body);
+        line-height: 1.6;
+    }
+
+    .cf69i-route6-hero-kicker {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+
+    .cf69i-route6-step-badge {
+        background: var(--cf69i-surface);
+        border: 1px solid var(--cf69i-border);
+        border-radius: 999px;
+        color: var(--cf69i-primary);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        padding: 8px 12px;
+        text-transform: uppercase;
+    }
+
+    .cf69i-route6-trust-note {
+        background: rgba(240, 253, 250, 0.84);
+        border: 1px solid #99f6e4;
+        border-radius: 12px;
+        margin: 16px 0 0;
+        padding: 14px;
+    }
+
+    .cf69i-route6-trust-list {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: 16px;
+    }
+
+    .cf69i-route6-trust-list li {
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid var(--cf69i-border);
+        border-radius: 12px;
+        color: var(--cf69i-ink);
+        line-height: 1.5;
+        padding: 12px;
+    }
+
+    .cf69i-route6-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+    .cf69i-route6-kpi-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .cf69i-route6-kpi-card {
+        padding: 18px;
+    }
+
+    .cf69i-route6-kpi-card p {
+        color: var(--cf69i-muted);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        margin: 0;
+        text-transform: uppercase;
+    }
+
+    .cf69i-route6-kpi-card h2 {
+        color: var(--cf69i-primary);
+        font-size: 2rem;
+        margin: 8px 0 0;
+    }
+
+    .cf69i-route6-kpi-card .small-kpi-text {
+        color: var(--cf69i-ink);
+        font-size: 1.25rem;
+        line-height: 1.35;
+    }
+
+    .cf69i-route6-section {
+        padding: 22px;
+    }
+
+    .cf69i-route6-section .card-header {
+        border-bottom: 1px solid var(--cf69i-border);
+        margin-bottom: 16px;
+        padding-bottom: 14px;
+    }
+
+    .cf69i-route6-section h2 {
+        color: var(--cf69i-ink);
+    }
+
+    .cf69i-route6-section .eyebrow {
+        color: var(--cf69i-primary);
+    }
+
+    .cf69i-route6-section-list {
+        background: var(--cf69i-subtle);
+        border: 1px solid var(--cf69i-border);
+        border-radius: 12px;
+        margin-bottom: 0;
+        padding: 16px 16px 16px 34px;
+    }
+
+    .cf69i-route6-section-list li {
+        line-height: 1.6;
+    }
+
+    .cf69i-route6-table-wrap {
+        border: 1px solid var(--cf69i-border);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .cf69i-route6-table-wrap .data-table {
+        margin-bottom: 0;
+    }
+
+    .cf69i-route6-table-wrap .data-table th {
+        background: var(--cf69i-subtle);
+        color: var(--cf69i-ink);
+        font-size: 0.78rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    @media (max-width: 1100px) {
+        .cf69i-route6-kpi-grid,
+        .cf69i-route6-trust-list {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 680px) {
+        .cf69i-route6-page {
+            padding: 12px;
+        }
+
+        .cf69i-route6-section,
+        .cf69i-route6-hero {
+            padding: 18px;
+        }
+    }
+</style>
+
+<div class="dashboard-grid cf-career-strategy-action-plan cf69i-route6-page">
+    <section class="hero-panel cf69i-route6-hero">
+        <div class="cf69i-route6-hero-kicker">
+            <p class="eyebrow">Career Strategy Action Plan</p>
+            <span class="cf69i-route6-step-badge">Step 6 of 7</span>
+        </div>
         <h1>Rule-based career strategy action plan for manual review.</h1>
         <p>
             This page converts Sprint 57 career readiness dashboard signals into manual action items,
             progress indicators, and evidence targets. Phase 2 uses portfolio baseline dashboard
             inputs only.
         </p>
-        <p class="trust-note">
+        <p class="trust-note cf69i-route6-trust-note">
             This is a rule-based career strategy action plan for manual review.
             It is not predictive hiring AI.
             It does not use external AI APIs.
@@ -19,12 +235,12 @@
             It does not replace human judgement.
             Progress indicators are advisory snapshots, not persisted tracking records.
         </p>
-        <ul class="workflow-list cf-skill-trust-list">
+        <ul class="workflow-list cf-skill-trust-list cf69i-route6-trust-list">
             <li>Dashboard + recommendations + gaps - action plan - progress - evidence targets.</li>
             <li>Portfolio baseline dashboard inputs only; not saved application data.</li>
             <li>Verify every action item and progress indicator manually before acting.</li>
         </ul>
-        <div class="cf-report-manual-actions">
+        <div class="cf-report-manual-actions cf69i-route6-actions">
             <a href="{% url 'skills:career_readiness_dashboard' %}" class="cf-report-manual-link">
                 Open Career Readiness Dashboard
             </a>
@@ -40,26 +256,26 @@
         </div>
     </section>
 
-    <section class="kpi-grid">
-        <div class="kpi-card">
+    <section class="kpi-grid cf69i-route6-kpi-grid">
+        <div class="kpi-card cf69i-route6-kpi-card">
             <p>Strategy Label</p>
             <h2 class="small-kpi-text">{{ action_plan.strategy_label }}</h2>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card cf69i-route6-kpi-card">
             <p>Overall Status</p>
             <h2 class="small-kpi-text">{{ action_plan.overall_status }}</h2>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card cf69i-route6-kpi-card">
             <p>Action Items</p>
             <h2>{{ action_plan.action_items|length }}</h2>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card cf69i-route6-kpi-card">
             <p>Evidence Targets</p>
             <h2>{{ action_plan.evidence_targets|length }}</h2>
         </div>
     </section>
 
-    <section class="content-card cf-ai-readiness-section">
+    <section class="content-card cf-ai-readiness-section cf69i-route6-section">
         <div class="card-header">
             <p class="eyebrow">Next best action</p>
             <h2>Manual review starting point</h2>
@@ -67,13 +283,13 @@
         </div>
     </section>
 
-    <section class="content-card cf-ai-readiness-section">
+    <section class="content-card cf-ai-readiness-section cf69i-route6-section">
         <div class="card-header">
             <p class="eyebrow">Progress indicators</p>
             <h2>Advisory progress snapshots</h2>
             <p class="section-note">Not persisted tracking records. Verify manually.</p>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap cf69i-route6-table-wrap">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -99,13 +315,13 @@
         </div>
     </section>
 
-    <section class="content-card cf-ai-readiness-section">
+    <section class="content-card cf-ai-readiness-section cf69i-route6-section">
         <div class="card-header">
             <p class="eyebrow">Action items</p>
             <h2>Manual strategy actions</h2>
             <p class="section-note">Advisory only. Verify before acting on any item.</p>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap cf69i-route6-table-wrap">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -137,36 +353,36 @@
         </div>
     </section>
 
-    <section class="content-card cf-ai-readiness-section">
+    <section class="content-card cf-ai-readiness-section cf69i-route6-section">
         <div class="card-header">
             <p class="eyebrow">Evidence targets</p>
             <h2>Manual evidence focus areas</h2>
         </div>
-        <ul class="workflow-list">
+        <ul class="workflow-list cf69i-route6-section-list">
             {% for target in action_plan.evidence_targets %}
             <li>{{ target }}</li>
             {% endfor %}
         </ul>
     </section>
 
-    <section class="content-card cf-ai-readiness-section">
+    <section class="content-card cf-ai-readiness-section cf69i-route6-section">
         <div class="card-header">
             <p class="eyebrow">Summary points</p>
             <h2>Action plan summary</h2>
         </div>
-        <ul class="workflow-list">
+        <ul class="workflow-list cf69i-route6-section-list">
             {% for point in action_plan.summary_points %}
             <li>{{ point }}</li>
             {% endfor %}
         </ul>
     </section>
 
-    <section class="content-card cf-ai-readiness-section">
+    <section class="content-card cf-ai-readiness-section cf69i-route6-section">
         <div class="card-header">
             <p class="eyebrow">Claim-safety notes</p>
             <h2>Manual review boundaries</h2>
         </div>
-        <ul class="workflow-list">
+        <ul class="workflow-list cf69i-route6-section-list">
             {% for note in action_plan.claim_safety_notes %}
             <li>{{ note }}</li>
             {% endfor %}
