@@ -4,26 +4,294 @@
 {% block page_heading %}Skill Intelligence Dashboard{% endblock %}
 
 {% block content %}
-<div class="dashboard-grid cf-skill-gap-dashboard">
-    <section class="hero-panel">
+<style>
+    .cf69g-page {
+        --cf69g-canvas: #f0f2f5;
+        --cf69g-surface: #ffffff;
+        --cf69g-subtle: #f8fafc;
+        --cf69g-ink: #0f172a;
+        --cf69g-body: #334155;
+        --cf69g-muted: #64748b;
+        --cf69g-border: #e2e8f0;
+        --cf69g-primary: #1d4ed8;
+        --cf69g-primary-soft: #eff6ff;
+        --cf69g-manual: #0f766e;
+        --cf69g-manual-soft: #f0fdfa;
+        --cf69g-warning: #92400e;
+        --cf69g-warning-soft: #fffbeb;
+        --cf69g-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+        background: var(--cf69g-canvas);
+        border-radius: 18px;
+        color: var(--cf69g-body);
+        display: grid;
+        gap: 18px;
+        padding: 18px;
+    }
+
+    .cf69g-page * {
+        box-sizing: border-box;
+    }
+
+    .cf69g-hero,
+    .cf69g-section,
+    .cf69g-kpi-card,
+    .cf69g-safety-note {
+        background: var(--cf69g-surface);
+        border: 1px solid var(--cf69g-border);
+        border-radius: 14px;
+        box-shadow: var(--cf69g-shadow);
+    }
+
+    .cf69g-hero {
+        overflow: hidden;
+        padding: 24px;
+        position: relative;
+    }
+
+    .cf69g-hero::before {
+        background: linear-gradient(135deg, rgba(29, 78, 216, 0.12), rgba(15, 118, 110, 0.1));
+        content: "";
+        inset: 0;
+        pointer-events: none;
+        position: absolute;
+    }
+
+    .cf69g-hero > * {
+        position: relative;
+    }
+
+    .cf69g-hero h1 {
+        color: var(--cf69g-ink);
+        font-size: clamp(1.8rem, 4vw, 2.45rem);
+        line-height: 1.12;
+        margin: 0 0 10px;
+    }
+
+    .cf69g-hero p,
+    .cf69g-section .section-note,
+    .cf69g-safety-note p,
+    .cf69g-empty-state p {
+        color: var(--cf69g-body);
+        line-height: 1.6;
+    }
+
+    .cf69g-evidence-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+    .cf69g-evidence-strip .evidence-strip-item,
+    .cf69g-learning-pill {
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid var(--cf69g-border);
+        border-radius: 999px;
+        color: var(--cf69g-ink);
+        font-size: 0.82rem;
+        font-weight: 700;
+        padding: 8px 11px;
+    }
+
+    .cf69g-trust-note {
+        background: rgba(240, 253, 250, 0.82);
+        border: 1px solid #99f6e4;
+        border-radius: 12px;
+        margin: 16px 0 0;
+        padding: 14px;
+    }
+
+    .cf69g-safety-note {
+        background: linear-gradient(135deg, var(--cf69g-manual-soft), var(--cf69g-primary-soft));
+        display: grid;
+        gap: 14px;
+        grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr);
+        padding: 18px;
+    }
+
+    .cf69g-safety-note h2 {
+        color: var(--cf69g-ink);
+        margin: 0 0 8px;
+    }
+
+    .cf69g-learning-pills {
+        align-content: start;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .cf69g-kpi-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .cf69g-kpi-card {
+        padding: 18px;
+    }
+
+    .cf69g-kpi-card p {
+        color: var(--cf69g-muted);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        margin: 0;
+        text-transform: uppercase;
+    }
+
+    .cf69g-kpi-card h2 {
+        color: var(--cf69g-primary);
+        font-size: 2rem;
+        margin: 8px 0 0;
+    }
+
+    .cf69g-kpi-card .kpi-note {
+        color: var(--cf69g-muted);
+        display: block;
+        font-size: 0.84rem;
+        margin-top: 8px;
+    }
+
+    .cf69g-section {
+        padding: 22px;
+    }
+
+    .cf69g-section .card-header {
+        border-bottom: 1px solid var(--cf69g-border);
+        margin-bottom: 16px;
+        padding-bottom: 14px;
+    }
+
+    .cf69g-section h2,
+    .cf69g-section h3 {
+        color: var(--cf69g-ink);
+    }
+
+    .cf69g-section .eyebrow {
+        color: var(--cf69g-primary);
+    }
+
+    .cf69g-advisory-grid {
+        display: grid;
+        gap: 14px;
+    }
+
+    .cf69g-advisory-grid > div,
+    .cf69g-advisory-grid > ul,
+    .cf69g-advisory-grid > ol {
+        background: var(--cf69g-subtle);
+        border: 1px solid var(--cf69g-border);
+        border-radius: 12px;
+        padding: 16px;
+    }
+
+    .cf69g-advisory-grid ul,
+    .cf69g-advisory-grid ol {
+        margin-bottom: 0;
+    }
+
+    .cf69g-advisory-grid li {
+        line-height: 1.6;
+    }
+
+    .cf69g-filter-bar {
+        background: var(--cf69g-subtle);
+        border: 1px solid var(--cf69g-border);
+        border-radius: 12px;
+        padding: 14px;
+    }
+
+    .cf69g-table-wrap {
+        border: 1px solid var(--cf69g-border);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .cf69g-table-wrap .data-table {
+        margin-bottom: 0;
+    }
+
+    .cf69g-table-wrap .data-table th {
+        background: var(--cf69g-subtle);
+        color: var(--cf69g-ink);
+        font-size: 0.78rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .cf69g-empty-state {
+        background: var(--cf69g-subtle);
+        border: 1px dashed var(--cf69g-border);
+        border-radius: 12px;
+        padding: 18px;
+    }
+
+    @media (max-width: 1100px) {
+        .cf69g-kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .cf69g-safety-note {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 680px) {
+        .cf69g-page {
+            padding: 12px;
+        }
+
+        .cf69g-kpi-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .cf69g-section,
+        .cf69g-hero {
+            padding: 18px;
+        }
+    }
+</style>
+
+<div class="dashboard-grid cf-skill-gap-dashboard cf69g-page">
+    <section class="hero-panel cf69g-hero">
         <p class="eyebrow">Saved skill gaps</p>
         <h1>Skill Intelligence Dashboard</h1>
         <p>
             Advisory only. This read-only view surfaces manually saved application skill-gap
             records from your tracker. It does not create, update, or delete gaps automatically.
         </p>
-        <div class="evidence-strip">
+        <div class="evidence-strip cf69g-evidence-strip">
             <span class="evidence-strip-item">Saved skill gaps</span>
             <span class="evidence-strip-item">Advisory only</span>
             <span class="evidence-strip-item">Based on manually saved application skill-gap records</span>
         </div>
-        <p class="trust-note">
+        <p class="trust-note cf69g-trust-note">
             Based on manually saved application skill-gap records. Rule-based priority scores are
             for review only - not hiring decisions or automatic CV changes.
         </p>
     </section>
 
-    <section id="reviewer-skill-gaps-walkthrough" class="content-card cf-reviewer-skill-gaps-walkthrough">
+    <section class="cf69g-safety-note" aria-label="Skill intelligence safety note">
+        <div>
+            <p class="eyebrow">Manual advisory boundary</p>
+            <h2>Evidence-informed planning, not automatic profile changes</h2>
+            <p>
+                Use this dashboard to review manually saved records, plan portfolio evidence,
+                and check CV or public profile wording before claiming skills.
+            </p>
+        </div>
+        <div class="cf69g-learning-pills" aria-label="Learning targets needing evidence review">
+            <span class="cf69g-learning-pill">dbt</span>
+            <span class="cf69g-learning-pill">Airflow</span>
+            <span class="cf69g-learning-pill">Snowflake</span>
+            <span class="cf69g-learning-pill">BigQuery</span>
+            <span class="cf69g-learning-pill">Power BI</span>
+            <span class="cf69g-learning-pill">Manual evidence review before claiming</span>
+        </div>
+    </section>
+
+    <section id="reviewer-skill-gaps-walkthrough" class="content-card cf-reviewer-skill-gaps-walkthrough cf69g-section">
         <div class="card-header">
             <p class="eyebrow">Reviewer walkthrough</p>
             <h2>Skill gaps workflow (manual and advisory)</h2>
@@ -32,7 +300,7 @@
                 each section below is read-only and uses existing ApplicationSkillGap fields only.
             </p>
         </div>
-        <ol class="cf-reviewer-skill-gap-steps">
+        <ol class="cf-reviewer-skill-gap-steps cf69g-advisory-grid">
             <li><strong>Manual action plan</strong> - suggested next steps from unresolved gaps.</li>
             <li><strong>Manual learning plan</strong> - learning focus and suggested practice prompts.</li>
             <li><strong>Manual evidence readiness</strong> - which gaps need stronger proof ideas.</li>
@@ -42,34 +310,34 @@
             <li><strong>Saved records table</strong> - filtered list of gaps; GET filters do not change advisory sections.</li>
         </ol>
         <p class="reviewer-note">
-            Not implemented on this page: external account integrations, outbound messaging, job-board scraping,
-            background jobs, finished CV edits, finished interview materials, hiring predictions, paid-product
-            operations, or deployed-user claims. Gap records and advisory sections are not created or updated
-            automatically.
+            Not implemented on this page: external account integrations, outbound messaging, imported
+            job-board data, background jobs, finished CV edits, finished interview materials,
+            hiring-decision automation, paid-product operations, or deployed-user claims. Gap records
+            and advisory sections are not created or updated automatically.
         </p>
     </section>
 
-    <section class="kpi-grid">
-        <div class="kpi-card">
+    <section class="kpi-grid cf69g-kpi-grid" aria-label="Skill gap summary">
+        <div class="kpi-card cf69g-kpi-card">
             <p>Total saved skill gaps</p>
             <h2>{{ summary.total }}</h2>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card cf69g-kpi-card">
             <p>Unresolved</p>
             <h2>{{ summary.unresolved }}</h2>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card cf69g-kpi-card">
             <p>Resolved</p>
             <h2>{{ summary.resolved }}</h2>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card cf69g-kpi-card">
             <p>High-priority gaps</p>
             <h2>{{ summary.high_priority }}</h2>
             <span class="kpi-note">High or critical priority</span>
         </div>
     </section>
 
-    <section id="manual-action-plan" class="content-card cf-skill-gap-action-plan">
+    <section id="manual-action-plan" class="content-card cf-skill-gap-action-plan cf69g-section">
         <div class="card-header">
             <p class="eyebrow">Manual action plan</p>
             <h2>Suggested next steps</h2>
@@ -80,7 +348,7 @@
         </div>
 
         {% if action_plan.has_unresolved %}
-        <div class="cf-action-plan-groups">
+        <div class="cf-action-plan-groups cf69g-advisory-grid">
             {% if action_plan.high_priority_unresolved.items %}
             <div class="cf-action-plan-group">
                 <h3>{{ action_plan.high_priority_unresolved.label }}</h3>
@@ -172,7 +440,7 @@
             {% endif %}
         </div>
         {% else %}
-        <div class="empty-state">
+        <div class="empty-state cf69g-empty-state">
             <h3>No unresolved skill gaps for a manual action plan.</h3>
             <p>
                 When you save unresolved skill gaps, suggested next steps will appear here.
@@ -182,7 +450,7 @@
         {% endif %}
     </section>
 
-    <section id="manual-learning-plan" class="content-card cf-skill-gap-learning-plan">
+    <section id="manual-learning-plan" class="content-card cf-skill-gap-learning-plan cf69g-section">
         <div class="card-header">
             <p class="eyebrow">Manual learning plan</p>
             <h2>Learning focus</h2>
@@ -193,7 +461,7 @@
         </div>
 
         {% if learning_plan.has_unresolved %}
-        <div class="cf-learning-plan-groups">
+        <div class="cf-learning-plan-groups cf69g-advisory-grid">
             {% if learning_plan.immediate_learning_focus.items %}
             <div class="cf-learning-plan-group">
                 <h3>{{ learning_plan.immediate_learning_focus.label }}</h3>
@@ -287,7 +555,7 @@
             {% endif %}
         </div>
         {% else %}
-        <div class="empty-state">
+        <div class="empty-state cf69g-empty-state">
             <h3>No unresolved skill gaps for a manual learning plan.</h3>
             <p>
                 When you save unresolved skill gaps, learning focus areas will appear here.
@@ -297,7 +565,7 @@
         {% endif %}
     </section>
 
-    <section id="manual-evidence-readiness" class="content-card cf-skill-gap-evidence-readiness">
+    <section id="manual-evidence-readiness" class="content-card cf-skill-gap-evidence-readiness cf69g-section">
         <div class="card-header">
             <p class="eyebrow">Manual evidence readiness</p>
             <h2>Evidence focus</h2>
@@ -308,7 +576,7 @@
         </div>
 
         {% if evidence_readiness.has_unresolved %}
-        <div class="cf-evidence-readiness-groups">
+        <div class="cf-evidence-readiness-groups cf69g-advisory-grid">
             {% if evidence_readiness.evidence_needed_now.items %}
             <div class="cf-evidence-readiness-group">
                 <h3>{{ evidence_readiness.evidence_needed_now.label }}</h3>
@@ -418,7 +686,7 @@
             {% endif %}
         </div>
         {% else %}
-        <div class="empty-state">
+        <div class="empty-state cf69g-empty-state">
             <h3>No unresolved skill gaps for manual evidence readiness.</h3>
             <p>
                 When you save unresolved skill gaps, evidence focus areas will appear here.
@@ -428,7 +696,7 @@
         {% endif %}
     </section>
 
-    <section id="manual-portfolio-evidence-mapping" class="content-card cf-skill-gap-portfolio-mapping">
+    <section id="manual-portfolio-evidence-mapping" class="content-card cf-skill-gap-portfolio-mapping cf69g-section">
         <div class="card-header">
             <p class="eyebrow">Manual portfolio evidence mapping</p>
             <h2>Portfolio proof focus</h2>
@@ -439,7 +707,7 @@
         </div>
 
         {% if portfolio_evidence_mapping.has_unresolved %}
-        <div class="cf-portfolio-mapping-groups">
+        <div class="cf-portfolio-mapping-groups cf69g-advisory-grid">
             {% if portfolio_evidence_mapping.map_to_portfolio_proof_now.items %}
             <div class="cf-portfolio-mapping-group">
                 <h3>{{ portfolio_evidence_mapping.map_to_portfolio_proof_now.label }}</h3>
@@ -552,7 +820,7 @@
             {% endif %}
         </div>
         {% else %}
-        <div class="empty-state">
+        <div class="empty-state cf69g-empty-state">
             <h3>No unresolved skill gaps for manual portfolio evidence mapping.</h3>
             <p>
                 When you save unresolved skill gaps, portfolio proof focus areas will appear here.
@@ -562,7 +830,7 @@
         {% endif %}
     </section>
 
-    <section id="manual-interview-story-mapping" class="content-card cf-skill-gap-interview-story-mapping">
+    <section id="manual-interview-story-mapping" class="content-card cf-skill-gap-interview-story-mapping cf69g-section">
         <div class="card-header">
             <p class="eyebrow">Manual interview story mapping</p>
             <h2>Interview story focus</h2>
@@ -573,7 +841,7 @@
         </div>
 
         {% if interview_story_mapping.has_unresolved %}
-        <div class="cf-interview-story-groups">
+        <div class="cf-interview-story-groups cf69g-advisory-grid">
             {% if interview_story_mapping.prepare_interview_stories_now.items %}
             <div class="cf-interview-story-group">
                 <h3>{{ interview_story_mapping.prepare_interview_stories_now.label }}</h3>
@@ -690,7 +958,7 @@
             {% endif %}
         </div>
         {% else %}
-        <div class="empty-state">
+        <div class="empty-state cf69g-empty-state">
             <h3>No unresolved skill gaps for manual interview story mapping.</h3>
             <p>
                 When you save unresolved skill gaps, interview story focus areas will appear here.
@@ -700,7 +968,7 @@
         {% endif %}
     </section>
 
-    <section id="manual-cv-bullet-mapping" class="content-card cf-skill-gap-cv-bullet-mapping">
+    <section id="manual-cv-bullet-mapping" class="content-card cf-skill-gap-cv-bullet-mapping cf69g-section">
         <div class="card-header">
             <p class="eyebrow">Manual CV bullet mapping</p>
             <h2>CV bullet focus</h2>
@@ -712,7 +980,7 @@
         </div>
 
         {% if cv_bullet_mapping.has_unresolved %}
-        <div class="cf-cv-bullet-groups">
+        <div class="cf-cv-bullet-groups cf69g-advisory-grid">
             {% if cv_bullet_mapping.draft_cv_bullet_prompts_now.items %}
             <div class="cf-cv-bullet-group">
                 <h3>{{ cv_bullet_mapping.draft_cv_bullet_prompts_now.label }}</h3>
@@ -826,7 +1094,7 @@
             {% endif %}
         </div>
         {% else %}
-        <div class="empty-state">
+        <div class="empty-state cf69g-empty-state">
             <h3>No unresolved skill gaps for manual CV bullet mapping.</h3>
             <p>
                 When you save unresolved skill gaps, CV bullet focus areas will appear here.
@@ -836,7 +1104,7 @@
         {% endif %}
     </section>
 
-    <section class="content-card">
+    <section class="content-card cf69g-section">
         <div class="card-header card-header-row">
             <div>
                 <p class="eyebrow">Saved records</p>
@@ -845,7 +1113,7 @@
             </div>
         </div>
 
-        <form method="get" class="filter-bar cf-skill-gap-filter-bar" aria-label="Filter saved skill gaps">
+        <form method="get" class="filter-bar cf-skill-gap-filter-bar cf69g-filter-bar" aria-label="Filter saved skill gaps">
             <select name="priority" class="form-control" aria-label="Filter by priority">
                 <option value="">All priorities</option>
                 <option value="critical"{% if priority_filter == "critical" %} selected{% endif %}>Critical</option>
@@ -870,7 +1138,7 @@
         </form>
 
         {% if skill_gaps %}
-        <div class="table-wrap">
+        <div class="table-wrap cf69g-table-wrap">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -910,7 +1178,7 @@
             </table>
         </div>
         {% else %}
-        <div class="empty-state">
+        <div class="empty-state cf69g-empty-state">
             <h3>No saved skill gaps to show.</h3>
             <p>
                 Skill gaps appear here after you save them against an application record.

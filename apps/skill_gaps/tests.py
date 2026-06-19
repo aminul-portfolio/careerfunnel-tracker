@@ -510,6 +510,153 @@ class SkillGapDashboardTests(TestCase):
         self.assertNotIn("gmail", content)
         self.assertNotIn("live saas users", content)
 
+    def test_sprint_69g_dashboard_premium_shell_renders(self):
+        self._login()
+        response = self.client.get(self.url)
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Skill Intelligence Dashboard")
+        expected_classes = [
+            "cf69g-page",
+            "cf69g-hero",
+            "cf69g-safety-note",
+            "cf69g-kpi-grid",
+            "cf69g-kpi-card",
+            "cf69g-section",
+            "cf69g-filter-bar",
+        ]
+        for class_name in expected_classes:
+            with self.subTest(class_name=class_name):
+                self.assertIn(class_name, content)
+
+    def test_sprint_69g_dashboard_preserves_manual_advisory_read_only_framing(self):
+        self._login()
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Advisory only")
+        self.assertContains(response, "read-only view")
+        self.assertContains(response, "manually saved application skill-gap records")
+        self.assertContains(response, "Evidence-informed planning")
+        self.assertContains(response, "not automatic profile changes")
+        self.assertContains(response, "does not create, update, or delete gaps automatically")
+
+    def test_sprint_69g_saved_gap_records_still_render_in_polished_table(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="Power BI",
+            priority=SkillGapPriority.HIGH,
+            stage=SkillGapStage.TECHNICAL,
+        )
+        self._login()
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Application skill gaps")
+        self.assertContains(response, "Power BI")
+        self.assertContains(response, "Acme")
+        self.assertContains(response, "Data Analyst")
+        self.assertContains(response, "cf69g-table-wrap")
+
+    def test_sprint_69g_empty_state_remains_safe_and_scoped(self):
+        self._login()
+        response = self.client.get(self.url)
+        content = response.content.decode()
+
+        self.assertContains(response, "No saved skill gaps to show")
+        self.assertContains(response, "This dashboard does not create gaps automatically")
+        self.assertIn("cf69g-empty-state", content)
+        self.assertNotContains(response, "guaranteed readiness")
+        self.assertNotContains(response, "verified skill mastery")
+
+    def test_sprint_69g_learning_targets_are_manual_evidence_review_items(self):
+        for skill_name in ("dbt", "Airflow", "Snowflake", "BigQuery", "Power BI"):
+            self._create_gap(
+                application=self.app,
+                skill_name=skill_name,
+                priority=SkillGapPriority.LOW,
+            )
+        self._login()
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        for skill_name in ("dbt", "airflow", "snowflake", "bigquery", "power bi"):
+            with self.subTest(skill_name=skill_name):
+                self.assertIn(skill_name, content)
+        self.assertContains(response, "Manual evidence review before claiming")
+        forbidden_phrases = [
+            "verified skill mastery",
+            "guaranteed readiness",
+            "proven current skills",
+            "employer verification",
+            "external verification",
+            "hiring prediction",
+            "automatic career decisioning",
+        ]
+        for phrase in forbidden_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_sprint_69g_dashboard_does_not_imply_automatic_cv_or_profile_changes(self):
+        self._login()
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        self.assertIn("not hiring decisions or automatic cv changes", content)
+        self.assertIn("not automatic profile changes", content)
+        forbidden_phrases = [
+            "updates your cv automatically",
+            "automatic profile updates",
+            "rewrites your cv automatically",
+            "publishes profile changes",
+        ]
+        for phrase in forbidden_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_sprint_69g_dashboard_get_does_not_create_update_or_delete_gap_records(self):
+        gap = self._create_gap(
+            application=self.app,
+            skill_name="SQL",
+            priority=SkillGapPriority.HIGH,
+        )
+        before = list(
+            ApplicationSkillGap.objects.filter(application__user=self.user).values(
+                "pk",
+                "skill_name",
+                "priority",
+                "resolved",
+                "priority_score",
+                "updated_at",
+            )
+        )
+
+        self._login()
+        response = self.client.get(self.url, {"priority": SkillGapPriority.HIGH})
+        gap.refresh_from_db()
+        after = list(
+            ApplicationSkillGap.objects.filter(application__user=self.user).values(
+                "pk",
+                "skill_name",
+                "priority",
+                "resolved",
+                "priority_score",
+                "updated_at",
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(before, after)
+        self.assertEqual(gap.skill_name, "SQL")
+
+    def test_sprint_69g_dashboard_template_keeps_styles_page_scoped(self):
+        template_path = REPO_ROOT / "templates" / "skill_gaps" / "dashboard.html"
+        template_source = template_path.read_text(encoding="utf-8")
+
+        self.assertIn("cf69g-", template_source)
+        self.assertIn("<style>", template_source)
+        self.assertNotIn("static/css", template_source)
+        self.assertNotIn("static/js", template_source)
+
 
 class SkillGapActionPlanTests(TestCase):
     def setUp(self):
