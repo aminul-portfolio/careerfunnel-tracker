@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
@@ -69,3 +72,122 @@ class AICapabilityFrameworkViewTests(TestCase):
             tuple(response.context["capabilities"]),
             get_ai_capability_framework(),
         )
+
+    def test_sprint_69h_premium_shell_classes_render(self):
+        response = self._get()
+        content = response.content.decode()
+
+        expected_classes = [
+            "cf69h-page",
+            "cf69h-hero",
+            "cf69h-safety-note",
+            "cf69h-summary-grid",
+            "cf69h-summary-card",
+            "cf69h-section",
+            "cf69h-evidence-grid",
+            "cf69h-evidence-card",
+        ]
+        for class_name in expected_classes:
+            with self.subTest(class_name=class_name):
+                self.assertIn(class_name, content)
+
+    def test_sprint_69h_preserves_advisory_planning_framing(self):
+        response = self._get()
+
+        self.assertContains(response, "manual and advisory")
+        self.assertContains(response, "read-only page")
+        self.assertContains(response, "portfolio planning")
+        self.assertContains(response, "Planning framework")
+        self.assertContains(response, "Evidence-informed review before public claims")
+        self.assertContains(response, "capability planning")
+
+    def test_sprint_69h_existing_capability_dimensions_still_render(self):
+        response = self._get()
+        capabilities = get_ai_capability_framework()
+
+        self.assertContains(response, capabilities[0].title)
+        self.assertContains(response, capabilities[0].description)
+        self.assertContains(response, capabilities[0].evidence_examples[0])
+        self.assertContains(response, capabilities[0].career_relevance)
+        self.assertContains(response, "Evidence examples")
+        self.assertContains(response, "Career relevance")
+        self.assertContains(response, "Tool examples")
+        self.assertContains(response, "Claim-safety note")
+
+    def test_sprint_69h_summary_uses_existing_capabilities(self):
+        response = self._get()
+
+        self.assertContains(response, "Capability categories")
+        self.assertContains(response, f"<strong>{len(get_ai_capability_framework())}</strong>")
+        self.assertContains(response, "Manual")
+        self.assertContains(response, "Planning")
+        self.assertContains(response, "Examples")
+
+    def test_sprint_69h_learning_targets_are_not_framed_as_proven_current_skills(self):
+        response = self._get()
+        content = response.content.decode().lower()
+
+        for skill_name in ("dbt", "airflow", "snowflake", "bigquery", "power bi"):
+            with self.subTest(skill_name=skill_name):
+                self.assertIn(skill_name, content)
+        self.assertContains(response, "Evidence review required before public claims")
+        forbidden_phrases = [
+            "verified mastery",
+            "guaranteed readiness",
+            "proven current skills",
+            "employer verification",
+            "external verification",
+            "hiring prediction",
+            "automatic career decisioning",
+        ]
+        for phrase in forbidden_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_sprint_69h_does_not_imply_automatic_cv_or_profile_changes(self):
+        response = self._get()
+        content = response.content.decode().lower()
+
+        self.assertIn("not automatic cv changes", content)
+        forbidden_phrases = [
+            "updates your cv automatically",
+            "automatic profile updates",
+            "updates your profile automatically",
+            "rewrites your cv automatically",
+        ]
+        for phrase in forbidden_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_sprint_69h_get_request_does_not_create_update_or_delete_records(self):
+        before_user_count = User.objects.count()
+        before_capabilities = get_ai_capability_framework()
+
+        response = self._get()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(User.objects.count(), before_user_count)
+        self.assertEqual(get_ai_capability_framework(), before_capabilities)
+
+    def test_sprint_69h_styles_remain_page_scoped(self):
+        template_path = (
+            Path(settings.BASE_DIR) / "templates" / "skills" / "ai_capability_framework.html"
+        )
+        template_source = template_path.read_text(encoding="utf-8")
+
+        self.assertIn("cf69h-", template_source)
+        self.assertIn("<style>", template_source)
+        self.assertNotIn("static/css", template_source)
+        self.assertNotIn("static/js", template_source)
+
+    def test_sprint_69h_phase_a_styles_are_scoped_to_capability_template(self):
+        template_path = (
+            Path(settings.BASE_DIR) / "templates" / "skills" / "ai_capability_framework.html"
+        )
+        template_source = template_path.read_text(encoding="utf-8")
+
+        self.assertIn("cf69h-", template_source)
+        self.assertIn("cf-ai-capability-framework", template_source)
+        self.assertIn("<style>", template_source)
+        self.assertNotIn("static/css", template_source)
+        self.assertNotIn("static/js", template_source)

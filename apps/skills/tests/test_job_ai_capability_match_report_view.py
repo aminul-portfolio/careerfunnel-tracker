@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
@@ -151,3 +154,136 @@ class JobAICapabilityMatchReportViewTests(TestCase):
         response = self._get()
         self.assertContains(response, DEMO_JOB_DESCRIPTION)
         self.assertContains(response, "not a real application")
+
+    def test_sprint_69h_c_premium_shell_classes_render(self):
+        response = self._get()
+        content = response.content.decode()
+
+        expected_classes = [
+            "cf69h-page",
+            "cf69h-hero",
+            "cf69h-safety-note",
+            "cf69h-kpi-grid",
+            "cf69h-kpi-card",
+            "cf69h-section",
+            "cf69h-section-list",
+            "cf69h-table-wrap",
+        ]
+        for class_name in expected_classes:
+            with self.subTest(class_name=class_name):
+                self.assertIn(class_name, content)
+
+    def test_sprint_69h_c_preserves_advisory_planning_framing(self):
+        response = self._get()
+
+        self.assertContains(response, "rule-based keyword matching report")
+        self.assertContains(response, "manual review")
+        self.assertContains(response, "Planning match")
+        self.assertContains(response, "Evidence-informed review before public claims")
+        self.assertContains(response, "capability match review")
+        self.assertContains(response, "portfolio evidence review")
+
+    def test_sprint_69h_c_existing_match_content_still_renders(self):
+        response = self._get()
+
+        self.assertContains(response, "Match Score")
+        self.assertContains(response, str(self.expected.match_score))
+        self.assertContains(response, self.expected.match_label)
+        self.assertContains(response, "Matched capabilities")
+        self.assertContains(response, "Missing / weak capabilities")
+        self.assertContains(response, f"Match score {self.expected.match_score}/100")
+        self.assertContains(response, "from")
+        self.assertContains(response, self.expected.claim_safety_notes[0])
+
+    def test_sprint_69h_c_preserves_manual_reference_links(self):
+        response = self._get()
+
+        self.assertContains(response, "Open AI Capability Framework")
+        self.assertContains(response, reverse("skills:ai_capability_framework"))
+        self.assertContains(response, "Open AI Readiness Report")
+        self.assertContains(response, reverse("skills:ai_readiness_report"))
+
+    def test_sprint_69h_c_learning_targets_are_not_framed_as_proven_current_skills(self):
+        response = self._get()
+        content = response.content.decode().lower()
+
+        for skill_name in ("dbt", "airflow", "snowflake", "bigquery", "power bi"):
+            with self.subTest(skill_name=skill_name):
+                self.assertIn(skill_name, content)
+        self.assertContains(response, "Evidence review required before public claims")
+        forbidden_phrases = [
+            "verified mastery",
+            "guaranteed readiness",
+            "proven current skills",
+            "employer verification",
+            "external verification",
+            "hiring prediction",
+            "automatic career decisioning",
+        ]
+        for phrase in forbidden_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_sprint_69h_c_does_not_imply_automatic_cv_or_profile_changes(self):
+        response = self._get()
+        content = response.content.decode().lower()
+
+        self.assertIn("not automatic cv changes", content)
+        forbidden_phrases = [
+            "updates your cv automatically",
+            "automatic profile updates",
+            "updates your profile automatically",
+            "rewrites your cv automatically",
+        ]
+        for phrase in forbidden_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_sprint_69h_c_get_request_does_not_create_update_or_delete_records(self):
+        before_user_count = User.objects.count()
+        before_match = match_job_description_to_ai_capabilities(DEMO_JOB_DESCRIPTION)
+
+        response = self._get()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(User.objects.count(), before_user_count)
+        self.assertEqual(
+            match_job_description_to_ai_capabilities(DEMO_JOB_DESCRIPTION),
+            before_match,
+        )
+
+    def test_sprint_69h_c_styles_remain_page_scoped(self):
+        template_path = (
+            Path(settings.BASE_DIR)
+            / "templates"
+            / "skills"
+            / "job_ai_capability_match_report.html"
+        )
+        template_source = template_path.read_text(encoding="utf-8")
+
+        self.assertIn("cf69h-", template_source)
+        self.assertIn("<style>", template_source)
+        self.assertNotIn("static/css", template_source)
+        self.assertNotIn("static/js", template_source)
+
+    def test_sprint_69h_c_phase_a_and_b_files_are_not_modified_by_this_test_contract(self):
+        untouched_paths = [
+            Path(settings.BASE_DIR) / "templates" / "skills" / "ai_capability_framework.html",
+            Path(settings.BASE_DIR) / "templates" / "skills" / "ai_readiness_report.html",
+            Path(settings.BASE_DIR)
+            / "apps"
+            / "skills"
+            / "tests"
+            / "test_ai_capability_framework_view.py",
+            Path(settings.BASE_DIR)
+            / "apps"
+            / "skills"
+            / "tests"
+            / "test_ai_readiness_report_view.py",
+        ]
+
+        for path in untouched_paths:
+            with self.subTest(path=path):
+                content = path.read_text(encoding="utf-8")
+                self.assertNotIn("cf-job-ai-capability-match", content)
+                self.assertNotIn("Job AI Capability Match", content)
