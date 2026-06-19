@@ -9,6 +9,15 @@ from apps.skills.services.final_career_intelligence_workflow import (
 FORBIDDEN_PAGE_PHRASES = (
     "auto-apply",
     "auto-send",
+    "ai automation",
+    "automated career decision",
+    "career plan is complete",
+    "completed career plan",
+    "completion guarantee",
+    "employer verified",
+    "employer verification",
+    "guaranteed readiness",
+    "live job market",
     "scraping",
     "gmail integration",
     "calendar integration",
@@ -43,6 +52,74 @@ class FinalCareerIntelligenceWorkflowViewTests(TestCase):
         response = self._get()
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Final Career Intelligence Workflow")
+
+    def test_final_career_intelligence_workflow_page_loads_without_error(self):
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(
+            response,
+            "skills/final_career_intelligence_workflow.html",
+        )
+
+    def test_final_career_intelligence_workflow_advisory_only_label_present(self):
+        response = self._get()
+        self.assertContains(
+            response,
+            "Rule-based final career intelligence workflow for manual review.",
+        )
+        self.assertContains(response, "Advisory only. Verify each stage output manually.")
+
+    def test_final_career_intelligence_workflow_step_indicator_present(self):
+        response = self._get()
+        self.assertContains(response, "Step 7 of 7")
+
+    def test_final_career_intelligence_workflow_get_does_not_create_or_modify_records(
+        self,
+    ):
+        self._login()
+        before_user_count = User.objects.count()
+        before_user_state = User.objects.values(
+            "username",
+            "email",
+            "is_active",
+            "is_staff",
+            "is_superuser",
+            "last_login",
+        ).get(pk=self.user.pk)
+
+        response = self.client.get(self.url)
+
+        after_user_state = User.objects.values(
+            "username",
+            "email",
+            "is_active",
+            "is_staff",
+            "is_superuser",
+            "last_login",
+        ).get(pk=self.user.pk)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(User.objects.count(), before_user_count)
+        self.assertEqual(after_user_state, before_user_state)
+        self.assertEqual(response.context["workflow"], self.expected)
+
+    def test_final_career_intelligence_workflow_does_not_imply_completion_guarantee(
+        self,
+    ):
+        response = self._get()
+        content = response.content.decode().lower()
+        self.assertNotIn("career plan is complete", content)
+        self.assertNotIn("completed career plan", content)
+        self.assertNotIn("completion guarantee", content)
+        self.assertNotIn("you are ready", content)
+        self.assertNotIn("guaranteed readiness", content)
+
+    def test_final_career_intelligence_workflow_advisory_framing_present(self):
+        response = self._get()
+        content = response.content.decode().lower()
+        self.assertIn("rule-based final career intelligence workflow", content)
+        self.assertIn("advisory only", content)
+        self.assertIn("manual verification", content)
+        self.assertIn("manual review", content)
 
     def test_workflow_label_appears(self):
         response = self._get()
