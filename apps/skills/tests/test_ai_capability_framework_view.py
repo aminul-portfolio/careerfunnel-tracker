@@ -180,25 +180,14 @@ class AICapabilityFrameworkViewTests(TestCase):
         self.assertNotIn("static/css", template_source)
         self.assertNotIn("static/js", template_source)
 
-    def test_sprint_69h_phase_b_and_c_files_are_not_modified_by_this_test_contract(self):
-        untouched_paths = [
-            Path(settings.BASE_DIR) / "templates" / "skills" / "ai_readiness_report.html",
-            Path(settings.BASE_DIR)
-            / "templates"
-            / "skills"
-            / "job_ai_capability_match_report.html",
-            Path(settings.BASE_DIR)
-            / "apps"
-            / "skills"
-            / "tests"
-            / "test_ai_readiness_report_view.py",
-            Path(settings.BASE_DIR)
-            / "apps"
-            / "skills"
-            / "tests"
-            / "test_job_ai_capability_match_report_view.py",
-        ]
+    def test_sprint_69h_phase_a_styles_are_scoped_to_capability_template(self):
+        template_path = (
+            Path(settings.BASE_DIR) / "templates" / "skills" / "ai_capability_framework.html"
+        )
+        template_source = template_path.read_text(encoding="utf-8")
 
-        for path in untouched_paths:
-            with self.subTest(path=path):
-                self.assertNotIn("cf69h-", path.read_text(encoding="utf-8"))
+        self.assertIn("cf69h-", template_source)
+        self.assertIn("cf-ai-capability-framework", template_source)
+        self.assertIn("<style>", template_source)
+        self.assertNotIn("static/css", template_source)
+        self.assertNotIn("static/js", template_source)
