@@ -4,124 +4,38 @@
 {% block content %}
 <style>
     .cf69h-page {
-        --cf69h-canvas: #f0f2f5;
-        --cf69h-surface: #ffffff;
-        --cf69h-subtle: #f8fafc;
-        --cf69h-ink: #0f172a;
-        --cf69h-body: #334155;
-        --cf69h-muted: #64748b;
-        --cf69h-border: #e2e8f0;
-        --cf69h-primary: #1d4ed8;
-        --cf69h-primary-soft: #eff6ff;
-        --cf69h-manual: #0f766e;
-        --cf69h-manual-soft: #f0fdfa;
-        --cf69h-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
-        background: var(--cf69h-canvas);
-        border-radius: 18px;
-        color: var(--cf69h-body);
-        display: grid;
-        gap: 18px;
-        padding: 18px;
+        --cf69h-surface: var(--cf-premium-surface);
+        --cf69h-subtle: var(--cf-premium-surface-subtle);
+        --cf69h-ink: var(--cf-premium-ink);
+        --cf69h-muted: var(--cf-premium-muted);
+        --cf69h-border: var(--cf-premium-border-soft);
+        --cf69h-primary: var(--cf-premium-primary);
     }
 
     .cf69h-page * {
         box-sizing: border-box;
     }
 
-    .cf69h-hero,
-    .cf69h-kpi-card,
-    .cf69h-section,
-    .cf69h-safety-note {
+    .cf69h-kpi-card {
         background: var(--cf69h-surface);
         border: 1px solid var(--cf69h-border);
         border-radius: 14px;
-        box-shadow: var(--cf69h-shadow);
     }
 
-    .cf69h-hero {
-        overflow: hidden;
-        padding: 24px;
-        position: relative;
-    }
-
-    .cf69h-hero::before {
-        background: linear-gradient(135deg, rgba(29, 78, 216, 0.12), rgba(15, 118, 110, 0.1));
-        content: "";
-        inset: 0;
-        pointer-events: none;
-        position: absolute;
-    }
-
-    .cf69h-hero > * {
-        position: relative;
-    }
-
-    .cf69h-hero h1 {
-        color: var(--cf69h-ink);
-        font-size: clamp(1.75rem, 4vw, 2.4rem);
-        line-height: 1.12;
-        margin: 0 0 10px;
-    }
-
-    .cf69h-hero p,
     .cf69h-section p,
     .cf69h-safety-note p {
-        color: var(--cf69h-body);
         line-height: 1.6;
     }
 
-    .cf69h-trust-note {
-        background: rgba(240, 253, 250, 0.84);
-        border: 1px solid #99f6e4;
-        border-radius: 12px;
-        margin: 16px 0 0;
-        padding: 14px;
-    }
-
-    .cf69h-trust-list {
-        display: grid;
-        gap: 10px;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        margin-top: 16px;
-    }
-
-    .cf69h-trust-list li {
-        background: rgba(255, 255, 255, 0.82);
-        border: 1px solid var(--cf69h-border);
-        border-radius: 12px;
-        color: var(--cf69h-ink);
-        line-height: 1.5;
-        padding: 12px;
-    }
-
     .cf69h-safety-note {
-        background: linear-gradient(135deg, var(--cf69h-manual-soft), var(--cf69h-primary-soft));
         display: grid;
         gap: 14px;
         grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr);
-        padding: 18px;
     }
 
     .cf69h-safety-note h2 {
         color: var(--cf69h-ink);
         margin: 0 0 8px;
-    }
-
-    .cf69h-learning-pills {
-        align-content: start;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-
-    .cf69h-learning-pill {
-        background: var(--cf69h-surface);
-        border: 1px solid var(--cf69h-border);
-        border-radius: 999px;
-        color: var(--cf69h-ink);
-        font-size: 0.82rem;
-        font-weight: 700;
-        padding: 8px 11px;
     }
 
     .cf69h-kpi-grid {
@@ -205,43 +119,31 @@
 
     @media (max-width: 1100px) {
         .cf69h-kpi-grid,
-        .cf69h-trust-list,
         .cf69h-safety-note {
             grid-template-columns: 1fr;
         }
     }
-
-    @media (max-width: 680px) {
-        .cf69h-page {
-            padding: 12px;
-        }
-
-        .cf69h-section,
-        .cf69h-hero {
-            padding: 18px;
-        }
-    }
 </style>
 
-<div class="dashboard-grid cf-ai-readiness-report cf69h-page">
-    <section class="hero-panel cf69h-hero">
+<div class="dashboard-grid cf-ai-readiness-report cf69h-page cf-premium-page">
+    <section class="hero-panel cf69h-hero cf-premium-hero">
         <p class="eyebrow">AI Readiness Report</p>
-        <h1>Rule-based advisory readiness report for manual review.</h1>
-        <p>
+        <h1 class="cf-premium-hero-title">Rule-based advisory readiness report for manual review.</h1>
+        <p class="cf-premium-hero-copy">
             This page shows how Sprint 53 AI capability coverage and evidence strength
             combine into a deterministic readiness score and label. The result uses the
             CareerFunnel Tracker portfolio evidence baseline from the Phase 1 scoring service.
         </p>
-        <p class="trust-note cf69h-trust-note">
+        <p class="trust-note cf69h-trust-note cf-premium-advisory cf-premium-advisory-manual">
             This is a rule-based advisory readiness report for manual review.
             It is not predictive hiring AI.
             It does not use external AI APIs.
             It does not automate applications, email, calendar workflows, or hosted operations.
         </p>
-        <ul class="workflow-list cf-skill-trust-list cf69h-trust-list">
-            <li>AI Capability Framework - evidence strength - readiness score - label - explanations.</li>
-            <li>Scoring is deterministic, explainable, and intended for self-review only.</li>
-            <li>Verify every capability line manually before portfolio or interview claims.</li>
+        <ul class="workflow-list cf-skill-trust-list cf69h-trust-list cf-premium-trust-list">
+            <li class="cf-premium-trust-list-item">AI Capability Framework - evidence strength - readiness score - label - explanations.</li>
+            <li class="cf-premium-trust-list-item">Scoring is deterministic, explainable, and intended for self-review only.</li>
+            <li class="cf-premium-trust-list-item">Verify every capability line manually before portfolio or interview claims.</li>
         </ul>
         <div class="cf-report-manual-actions">
             <a href="{% url 'skills:ai_capability_framework' %}" class="cf-report-manual-link">
@@ -250,7 +152,7 @@
         </div>
     </section>
 
-    <section class="cf69h-safety-note" aria-label="AI readiness advisory boundary">
+    <section class="cf69h-safety-note cf-premium-advisory cf-premium-advisory-manual" aria-label="AI readiness advisory boundary">
         <div>
             <p class="eyebrow">Planning report</p>
             <h2>Evidence-informed review before public claims</h2>
@@ -260,13 +162,13 @@
                 not automatic CV changes, and not proof of employer interaction.
             </p>
         </div>
-        <div class="cf69h-learning-pills" aria-label="Learning targets needing evidence review">
-            <span class="cf69h-learning-pill">dbt</span>
-            <span class="cf69h-learning-pill">Airflow</span>
-            <span class="cf69h-learning-pill">Snowflake</span>
-            <span class="cf69h-learning-pill">BigQuery</span>
-            <span class="cf69h-learning-pill">Power BI</span>
-            <span class="cf69h-learning-pill">Evidence review required before public claims</span>
+        <div class="cf69h-learning-pills cf-premium-pill-list" aria-label="Learning targets needing evidence review">
+            <span class="cf69h-learning-pill cf-premium-pill">dbt</span>
+            <span class="cf69h-learning-pill cf-premium-pill">Airflow</span>
+            <span class="cf69h-learning-pill cf-premium-pill">Snowflake</span>
+            <span class="cf69h-learning-pill cf-premium-pill">BigQuery</span>
+            <span class="cf69h-learning-pill cf-premium-pill">Power BI</span>
+            <span class="cf69h-learning-pill cf-premium-pill">Evidence review required before public claims</span>
         </div>
     </section>
 
@@ -293,7 +195,7 @@
         </div>
     </section>
 
-    <section class="content-card cf-ai-readiness-section cf69h-section">
+    <section class="content-card cf-ai-readiness-section cf69h-section cf-premium-section">
         <div class="card-header">
             <p class="eyebrow">Explanation points</p>
             <h2>How this score was calculated</h2>
@@ -309,7 +211,7 @@
         </ul>
     </section>
 
-    <section class="content-card cf-ai-readiness-section cf69h-section">
+    <section class="content-card cf-ai-readiness-section cf69h-section cf-premium-section">
         <div class="card-header">
             <p class="eyebrow">Claim-safety notes</p>
             <h2>Manual review boundaries</h2>
@@ -321,7 +223,7 @@
         </ul>
     </section>
 
-    <section class="content-card cf-ai-readiness-section cf69h-section">
+    <section class="content-card cf-ai-readiness-section cf69h-section cf-premium-section">
         <div class="card-header">
             <p class="eyebrow">Capability readiness lines</p>
             <h2>Per-capability evidence and points</h2>

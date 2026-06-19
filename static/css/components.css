@@ -1634,6 +1634,23 @@ html.cf-js-ready [data-cf-collapsible-card].cf-section-collapsed .cf-collapsible
     color: var(--cf-premium-warning-text);
 }
 
+.cf-premium-pill-list {
+    align-content: start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cf-premium-pill {
+    background: var(--cf-premium-surface);
+    border: 1px solid var(--cf-premium-border-soft);
+    border-radius: 999px;
+    color: var(--cf-premium-ink);
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 8px 11px;
+}
+
 .cf-premium-advisory {
     border: 1px solid var(--cf-premium-border-soft);
     border-radius: var(--cf-premium-radius-md);
