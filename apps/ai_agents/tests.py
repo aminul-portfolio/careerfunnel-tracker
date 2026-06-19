@@ -2198,6 +2198,108 @@ class JobPostingAnalyzerGuardrailTests(TestCase):
             ),
         )
 
+    def test_phase_c_prefill_cta_card_uses_safe_manual_boundary_copy(self):
+        response = self._post_analysis()
+        content = response.content.decode()
+
+        self.assertGreaterEqual(
+            response.context["analysis"].fit_score,
+            ANALYZER_STRONG_FIT_MIN_SCORE,
+        )
+        self.assertIn("cf69f-prefill-card", content)
+        self.assertIn("cf69f-prefill-layout", content)
+        self.assertIn("cf69f-prefill-boundary", content)
+        self.assertContains(response, "Internal pre-fill only")
+        self.assertContains(response, "No auto-apply")
+        self.assertContains(response, "no automatic submission")
+        self.assertContains(response, "no automatic application record creation")
+        self.assertContains(response, "no employer submission by CareerFunnel")
+        self.assertContains(response, "Pre-fill Add Application")
+        for label in ANALYZER_UNSAFE_ACTION_LABELS:
+            with self.subTest(label=label):
+                self.assertNotIn(label, content)
+
+    def test_phase_c_prefill_workflow_terms_remain_visible_near_cta(self):
+        response = self._post_analysis()
+        content = response.content.decode()
+
+        self.assertIn("cf69f-prefill-steps", content)
+        expected_terms = [
+            "Analyze",
+            "Review",
+            "Approve",
+            "Pre-fill Add Application",
+            "Manual Save",
+        ]
+        for term in expected_terms:
+            with self.subTest(term=term):
+                self.assertIn(term, content)
+
+    def test_phase_c_weak_fit_suppression_state_is_manual_advisory(self):
+        response = self._post_analysis(
+            company_name="Unclear Co",
+            job_title="Senior Sales Manager",
+            location="Unspecified",
+            job_posting="Own enterprise sales targets and manage commercial pipeline.",
+        )
+        content = response.content.decode()
+
+        self.assertLessEqual(response.context["analysis"].fit_score, ANALYZER_WEAK_FIT_MAX_SCORE)
+        self.assertIn("cf69f-suppression-card", content)
+        self.assertIn("cf69f-suppression-note", content)
+        self.assertContains(response, "Weak-fit results require manual review")
+        self.assertContains(response, "Pre-fill Add Application is suppressed here")
+        self.assertContains(response, "fit score is advisory only")
+        self.assertContains(response, "not a hiring prediction")
+        self._assert_no_prefill_cta_link(response)
+        for label in ANALYZER_UNSAFE_ACTION_LABELS:
+            with self.subTest(label=label):
+                self.assertNotIn(label, content)
+
+    def test_phase_c_borderline_suppression_state_is_review_only(self):
+        response = self._post_analysis(
+            company_name="Maybe Co",
+            job_title="Data Analyst",
+            location="Unspecified",
+            job_posting="SQL reporting role. Experience level and location are unclear.",
+        )
+        content = response.content.decode()
+
+        score = response.context["analysis"].fit_score
+        self.assertGreaterEqual(score, ANALYZER_BORDERLINE_FIT_MIN_SCORE)
+        self.assertLess(score, ANALYZER_STRONG_FIT_MIN_SCORE)
+        self.assertIn("cf69f-suppression-card", content)
+        self.assertContains(response, "Review Path Only")
+        self.assertContains(response, "Manual review is required before proceeding")
+        self.assertContains(
+            response,
+            (
+                "Pre-fill Add Application stays unavailable until the existing analyzer "
+                "context allows it."
+            ),
+        )
+        self._assert_no_prefill_cta_link(response)
+
+    def test_phase_c_prefill_url_contract_preserves_existing_query_parameters(self):
+        response = self._post_analysis(
+            company_name="Smith & Jones Ltd",
+            job_title="Junior Finance Data Analyst",
+            location="Hybrid London",
+        )
+
+        href = self._prefill_cta_href(response)
+        parsed_href = urlparse(href)
+        query_params = parse_qs(parsed_href.query)
+        self.assertEqual(parsed_href.path, reverse("applications:application_create"))
+        self.assertEqual(query_params["company_name"], ["Smith & Jones Ltd"])
+        self.assertEqual(query_params["job_title"], ["Junior Finance Data Analyst"])
+        self.assertEqual(query_params["location"], ["Hybrid London"])
+        self.assertEqual(query_params["fit_score"], [str(response.context["analysis"].fit_score)])
+        self.assertEqual(
+            set(query_params),
+            {"company_name", "job_title", "location", "fit_score"},
+        )
+
     def test_prefill_url_does_not_include_auto_save_or_auto_submit_parameter(self):
         response = self._post_analysis()
 

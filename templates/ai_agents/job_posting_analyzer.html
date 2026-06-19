@@ -265,6 +265,78 @@
         border-color: #fde68a;
     }
 
+    .cf69f-suppression-card {
+        display: grid;
+        gap: 12px;
+    }
+
+    .cf69f-suppression-note,
+    .cf69f-prefill-boundary {
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(146, 64, 14, 0.2);
+        border-radius: 12px;
+        color: var(--cf69f-body);
+        line-height: 1.6;
+        margin: 0;
+        padding: 14px;
+    }
+
+    .cf69f-prefill-card {
+        background:
+            linear-gradient(135deg, rgba(15, 118, 110, 0.11), rgba(29, 78, 216, 0.08)),
+            var(--cf69f-surface);
+        border: 1px solid #99f6e4;
+        box-shadow: var(--cf69f-shadow);
+    }
+
+    .cf69f-prefill-layout {
+        align-items: start;
+        display: grid;
+        gap: 18px;
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .cf69f-prefill-title {
+        color: var(--cf69f-ink);
+        margin: 0;
+    }
+
+    .cf69f-prefill-copy {
+        color: var(--cf69f-body);
+        line-height: 1.6;
+        margin: 10px 0 0;
+    }
+
+    .cf69f-prefill-steps {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+    }
+
+    .cf69f-prefill-steps span {
+        background: var(--cf69f-surface);
+        border: 1px solid var(--cf69f-border);
+        border-radius: 999px;
+        color: var(--cf69f-ink);
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 7px 10px;
+    }
+
+    .cf69f-prefill-action {
+        display: grid;
+        gap: 10px;
+        justify-items: start;
+    }
+
+    .cf69f-prefill-boundary {
+        background: var(--cf69f-manual-soft);
+        border-color: #99f6e4;
+        font-size: 0.9rem;
+        max-width: 34ch;
+    }
+
     .cf69f-advisory-panel {
         background: linear-gradient(135deg, rgba(29, 78, 216, 0.06), rgba(15, 118, 110, 0.06));
     }
@@ -311,7 +383,8 @@
         }
 
         .cf69f-result-summary,
-        .cf69f-result-grid {
+        .cf69f-result-grid,
+        .cf69f-prefill-layout {
             grid-template-columns: 1fr;
         }
     }
@@ -416,14 +489,16 @@
         </div>
     </section>
     {% if show_weak_fit_caution %}
-    <section class="content-card cf69f-result-card cf69f-result-warning">
+    <section class="content-card cf69f-result-card cf69f-result-warning cf69f-suppression-card">
         <div class="card-header"><p class="eyebrow">Review Required</p><h2>Weak-fit caution</h2></div>
         <p class="muted-text">This role scored below the recommended threshold. Review carefully before proceeding. Claude go/no-go assessment is recommended before generating draft documents.</p>
+        <p class="cf69f-suppression-note">Weak-fit results require manual review before proceeding. Pre-fill Add Application is suppressed here; the fit score is advisory only and is not a hiring prediction.</p>
     </section>
     {% elif show_borderline_review_path %}
-    <section class="content-card cf69f-result-card cf69f-result-warning">
+    <section class="content-card cf69f-result-card cf69f-result-warning cf69f-suppression-card">
         <div class="card-header"><p class="eyebrow">Review Path Only</p><h2>Review manually before pre-fill</h2></div>
         <p class="muted-text">This borderline result should be reviewed manually before creating an application record or generating draft documents.</p>
+        <p class="cf69f-suppression-note">Manual review is required before proceeding. Pre-fill Add Application stays unavailable until the existing analyzer context allows it.</p>
     </section>
     {% endif %}
     {% if ai_wrapper_result %}
@@ -507,10 +582,24 @@
         </form>
     </section>
     {% include "job_intelligence/_application_document_drafts.html" %}
-    <section class="content-card">
-        <div class="card-header"><p class="eyebrow">Save to pipeline</p><h2>Pre-fill Add Application</h2></div>
-        <p>Review the analysis above before continuing. Pre-filling opens the Add Application form - you must save manually. No application is submitted externally.</p>
-        <a class="btn btn-primary" href="{% url 'applications:application_create' %}?company_name={{ form.company_name.value|urlencode }}&amp;job_title={{ form.job_title.value|urlencode }}&amp;location={{ form.location.value|urlencode }}&amp;fit_score={{ analysis.fit_score }}">Pre-fill Add Application</a>
+    <section class="content-card cf69f-prefill-card">
+        <div class="cf69f-prefill-layout">
+            <div>
+                <div class="card-header"><p class="eyebrow">Save to pipeline</p><h2 class="cf69f-prefill-title">Pre-fill Add Application</h2></div>
+                <p class="cf69f-prefill-copy">Review the analysis above before continuing. Pre-filling opens the Add Application form - you must save manually. No application is submitted externally.</p>
+                <div class="cf69f-prefill-steps" aria-label="Manual pre-fill workflow">
+                    <span>Analyze</span>
+                    <span>Review</span>
+                    <span>Approve</span>
+                    <span>Pre-fill Add Application</span>
+                    <span>Manual Save</span>
+                </div>
+            </div>
+            <div class="cf69f-prefill-action">
+                <a class="btn btn-primary" href="{% url 'applications:application_create' %}?company_name={{ form.company_name.value|urlencode }}&amp;job_title={{ form.job_title.value|urlencode }}&amp;location={{ form.location.value|urlencode }}&amp;fit_score={{ analysis.fit_score }}">Pre-fill Add Application</a>
+                <p class="cf69f-prefill-boundary">Internal pre-fill only. No auto-apply, no automatic submission, no automatic application record creation, and no employer submission by CareerFunnel.</p>
+            </div>
+        </div>
     </section>
     {% endif %}
     {% if tailoring_advisor %}
