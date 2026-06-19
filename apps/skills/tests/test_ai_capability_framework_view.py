@@ -91,6 +91,28 @@ class AICapabilityFrameworkViewTests(TestCase):
             with self.subTest(class_name=class_name):
                 self.assertIn(class_name, content)
 
+    def test_sprint_69j_b_shared_premium_classes_render(self):
+        response = self._get()
+        content = response.content.decode()
+
+        expected_classes = [
+            "cf-premium-page",
+            "cf-premium-hero",
+            "cf-premium-hero-title",
+            "cf-premium-hero-copy",
+            "cf-premium-advisory",
+            "cf-premium-advisory-manual",
+            "cf-premium-trust-list",
+            "cf-premium-trust-list-item",
+            "cf-premium-pill-list",
+            "cf-premium-pill",
+            "cf-premium-card",
+            "cf-premium-section",
+        ]
+        for class_name in expected_classes:
+            with self.subTest(class_name=class_name):
+                self.assertIn(class_name, content)
+
     def test_sprint_69h_preserves_advisory_planning_framing(self):
         response = self._get()
 
@@ -176,7 +198,10 @@ class AICapabilityFrameworkViewTests(TestCase):
         template_source = template_path.read_text(encoding="utf-8")
 
         self.assertIn("cf69h-", template_source)
+        self.assertIn("cf-premium-", template_source)
         self.assertIn("<style>", template_source)
+        self.assertIn("cf69h-summary-grid", template_source)
+        self.assertIn("cf69h-evidence-grid", template_source)
         self.assertNotIn("static/css", template_source)
         self.assertNotIn("static/js", template_source)
 

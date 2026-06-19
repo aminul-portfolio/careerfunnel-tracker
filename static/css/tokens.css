@@ -37,3 +37,47 @@
         --motion-fast: 0ms;
     }
 }
+
+/* Sprint 69J-A premium CSS token foundation */
+:root {
+    --cf-premium-canvas: #f0f2f5;
+    --cf-premium-surface: #ffffff;
+    --cf-premium-surface-subtle: #f8f9fb;
+    --cf-premium-primary: #1a56db;
+    --cf-premium-primary-dark: #1e40af;
+    --cf-premium-primary-bg: #eff6ff;
+    --cf-premium-ink: #0d1526;
+    --cf-premium-body: #1e293b;
+    --cf-premium-muted: #64748b;
+    --cf-premium-placeholder: #94a3b8;
+    --cf-premium-border-soft: #e2e8f0;
+    --cf-premium-border-strong: #cbd5e1;
+    --cf-premium-divider: #f1f5f9;
+    --cf-premium-success-text: #14532d;
+    --cf-premium-success-bg: #f0fdf4;
+    --cf-premium-success-border: #86efac;
+    --cf-premium-warning-text: #78350f;
+    --cf-premium-warning-bg: #fffbeb;
+    --cf-premium-warning-border: #fcd34d;
+    --cf-premium-danger-text: #7f1d1d;
+    --cf-premium-danger-bg: #fef2f2;
+    --cf-premium-danger-border: #fca5a5;
+    --cf-premium-info-text: #1e3a8a;
+    --cf-premium-info-bg: #eff6ff;
+    --cf-premium-info-border: #93c5fd;
+    --cf-premium-neutral-text: #374151;
+    --cf-premium-neutral-bg: #f9fafb;
+    --cf-premium-neutral-border: #e2e8f0;
+    --cf-premium-tracking-text: #0d6e63;
+    --cf-premium-tracking-bg: #f0fdfa;
+    --cf-premium-tracking-border: #99f6e4;
+    --cf-premium-draft-text: #475569;
+    --cf-premium-draft-bg: #f8fafc;
+    --cf-premium-draft-border: #e2e8f0;
+    --cf-premium-radius-sm: 10px;
+    --cf-premium-radius-md: 14px;
+    --cf-premium-radius-lg: 18px;
+    --cf-premium-shadow-card: 0 12px 30px rgba(15, 23, 42, 0.06);
+    --cf-premium-shadow-panel: 0 18px 45px rgba(15, 23, 42, 0.08);
+    --cf-premium-shadow-soft: 0 8px 20px rgba(15, 23, 42, 0.05);
+}
