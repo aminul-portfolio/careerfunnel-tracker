@@ -740,6 +740,12 @@ class JobApplicationViewTests(TestCase):
             url = f"{url}?{query_string}"
         return self.client.get(url)
 
+    def _get_application_detail(self, application):
+        self._login()
+        return self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
     def test_application_list_requires_login(self):
         response = self.client.get(reverse("applications:application_list"))
         self.assertEqual(response.status_code, 302)
@@ -968,13 +974,270 @@ class JobApplicationViewTests(TestCase):
 
     def test_application_detail_page_loads_without_error(self):
         application = self.create_application()
-        self.client.login(username="aminul", password="StrongPass12345")
-
-        response = self.client.get(
-            reverse("applications:application_detail", kwargs={"pk": application.pk}),
-        )
+        response = self._get_application_detail(application)
 
         self.assertEqual(response.status_code, 200)
+
+    def test_application_detail_phase_69d_core_shell_renders(self):
+        application = self.create_application()
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Application Record", content)
+        self.assertIn("Application identity", content)
+        for class_name in (
+            "cf69d-page",
+            "cf69d-zone-hero",
+            "cf69d-safety-grid",
+            "cf69d-zone-core",
+            "cf69d-identity-grid",
+            "cf69d-nav",
+            "cf69d-detail-grid",
+        ):
+            with self.subTest(class_name=class_name):
+                self.assertIn(class_name, content)
+
+    def test_application_detail_phase_69d_core_record_fields_render(self):
+        application = self.create_application(
+            company_name="Evidence Analytics Ltd",
+            job_title="BI Analyst",
+            location="London",
+            source=ApplicationSource.LINKEDIN,
+            status=ApplicationStatus.ACKNOWLEDGED,
+            role_fit=RoleFit.STRONG,
+            job_url="https://example.com/job-reference",
+        )
+
+        response = self._get_application_detail(application)
+
+        self.assertContains(response, "Evidence Analytics Ltd")
+        self.assertContains(response, "BI Analyst")
+        self.assertContains(response, "London")
+        self.assertContains(response, "LinkedIn")
+        self.assertContains(response, "Acknowledged")
+        self.assertContains(response, "Strong")
+        self.assertContains(response, "Open job post reference")
+        self.assertContains(response, date_format(application.date_applied, "DATE_FORMAT"))
+
+    def test_application_detail_phase_69d_manual_saved_record_wording_visible(self):
+        application = self.create_application()
+        response = self._get_application_detail(application)
+        content = response.content.decode().lower()
+
+        self.assertIn("saved application record", content)
+        self.assertIn("manual tracking workflow", content)
+        self.assertIn("tracking record only", content)
+        self.assertIn("no auto-apply", content)
+        self.assertIn("no automatic submission", content)
+        self.assertIn("no employer submission by careerfunnel", content)
+        self.assertIn("application actions happen manually outside the tracker", content)
+        self.assertIn("not scraped live-market data", content)
+        self.assertIn("not proof of employer interaction or external verification", content)
+
+    def test_application_detail_phase_69d_unsafe_positive_action_labels_absent(self):
+        application = self.create_application()
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+
+        for label in ("Apply Now", "Submit Application", "Auto Apply", "Send Application"):
+            with self.subTest(label=label):
+                self.assertNotIn(f">{label}<", content)
+
+    def test_application_detail_phase_69d_no_invented_live_or_verification_claims(self):
+        application = self.create_application()
+        response = self._get_application_detail(application)
+        content = response.content.decode().lower()
+
+        for phrase in (
+            "live data",
+            "externally verified",
+            "confirmed employer interaction",
+            "automatic employer update",
+            "live-market feed",
+            "scraped market",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_application_detail_phase_69d_internal_navigation_remains(self):
+        application = self.create_application()
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+
+        self.assertContains(
+            response,
+            reverse("applications:application_update", kwargs={"pk": application.pk}),
+        )
+        self.assertContains(
+            response,
+            reverse("applications:application_delete", kwargs={"pk": application.pk}),
+        )
+        self.assertContains(response, reverse("applications:application_list"))
+        self.assertIn(">Edit Application<", content)
+        self.assertIn(">Delete<", content)
+        self.assertIn(">Back<", content)
+
+    def test_application_detail_phase_69d_get_does_not_mutate_application_records(self):
+        application = self.create_application()
+        before_count = JobApplication.objects.filter(user=self.user).count()
+
+        response = self._get_application_detail(application)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(JobApplication.objects.filter(user=self.user).count(), before_count)
+
+    def test_application_detail_phase_69d_lower_sections_still_render(self):
+        application = self.create_application()
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+
+        for expected in (
+            "Follow-Up Plan",
+            "Recruiter Emails",
+            "Follow-up Email Draft",
+            "Role Information",
+            "Application Assets",
+            "Application Document Pack",
+            "Required Skills",
+            "Job Description",
+            "Application Notes",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, content)
+
+    def test_application_detail_phase_69d_phase2_lower_sections_have_scoped_classes(self):
+        application = self.create_application()
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 200)
+        for class_name in (
+            "cf69d-zone-lower-safety",
+            "cf69d-action-safety",
+            "cf69d-followup-section",
+            "cf69d-recruiter-section",
+            "cf69d-followup-draft-section",
+            "cf69d-role-section",
+            "cf69d-assets-section",
+            "cf69d-document-pack-section",
+            "cf69d-notes-section",
+            "cf69d-danger-zone",
+        ):
+            with self.subTest(class_name=class_name):
+                self.assertIn(class_name, content)
+
+    def test_application_detail_phase_69d_phase2_document_review_safety_wording_visible(self):
+        application = self.create_application()
+        response = self._get_application_detail(application)
+        content = response.content.decode().lower()
+
+        self.assertIn("document pack is for review/use outside the tracker", content)
+        self.assertIn("manual document-review boundary", content)
+        self.assertIn("saved application record", content)
+        self.assertIn("manual tracking workflow", content)
+        self.assertIn("tracking record only", content)
+        self.assertIn("no auto-apply", content)
+        self.assertIn("no automatic submission", content)
+        self.assertIn("no employer submission by careerfunnel", content)
+        self.assertIn("not scraped live-market data", content)
+        self.assertIn("not proof of employer interaction or external verification", content)
+
+    def test_application_detail_phase_69d_phase2_document_followup_wording_remains_safe(self):
+        application = self.create_application()
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+
+        for expected in (
+            (
+                "The Document Pack stores and references your final CV and cover "
+                "letter. Documents are not generated here."
+            ),
+            (
+                "Manual review required before any employer submission - no "
+                "automatic submission is used."
+            ),
+            "Follow-up status and dates are manual tracking fields.",
+            "CareerFunnel Tracker does not send email.",
+            "No recruiter emails imported yet.",
+            "No CV or cover letter documents have been saved for this application yet.",
+            "No notes added yet.",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, content)
+
+    def test_application_detail_phase_69d_phase2_unsafe_positive_action_labels_absent(self):
+        application = self.create_application()
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+
+        for label in (
+            "Apply Now",
+            "Submit Application",
+            "Auto Apply",
+            "Send Application",
+            "Auto Send",
+            "Auto Submit",
+        ):
+            with self.subTest(label=label):
+                self.assertNotIn(f">{label}<", content)
+
+    def test_application_detail_phase_69d_phase2_no_invented_document_or_live_claims(self):
+        application = self.create_application()
+        response = self._get_application_detail(application)
+        content = response.content.decode().lower()
+
+        for phrase in (
+            "documents are automatically generated",
+            "documents are automatically sent",
+            "documents are externally verified",
+            "confirmed employer interaction",
+            "automatic employer update",
+            "live-market feed",
+            "scraped market",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_application_detail_phase_69d_phase2_internal_navigation_remains(self):
+        application = self.create_application()
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+
+        self.assertContains(
+            response,
+            reverse("applications:application_update", kwargs={"pk": application.pk}),
+        )
+        self.assertContains(
+            response,
+            reverse("applications:application_delete", kwargs={"pk": application.pk}),
+        )
+        self.assertContains(response, reverse("applications:application_list"))
+        self.assertContains(response, reverse("recruiter_emails:import", args=[application.pk]))
+        self.assertIn(">Edit Application<", content)
+        self.assertIn(">Back<", content)
+        self.assertIn(">Delete<", content)
+
+    def test_application_detail_phase_69d_phase2_get_does_not_mutate_application_records(self):
+        application = self.create_application()
+        before_count = JobApplication.objects.filter(user=self.user).count()
+
+        response = self._get_application_detail(application)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(JobApplication.objects.filter(user=self.user).count(), before_count)
+
+    def test_application_detail_phase_69d_phase2_application_list_template_untouched(self):
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent.parent
+        application_list_template = (
+            repo_root / "templates" / "applications" / "application_list.html"
+        )
+        content = application_list_template.read_text(encoding="utf-8")
+
+        self.assertIn("cf69c-page", content)
+        self.assertNotIn("cf69d-", content)
 
     def test_application_detail_shows_document_pack_is_archive_not_generator_message(self):
         application = self.create_application()
