@@ -9,11 +9,17 @@ from apps.skills.services.learning_recommendations import (
 FORBIDDEN_PAGE_PHRASES = (
     "auto-apply",
     "auto-send",
+    "ai automation",
+    "automated career decision",
     "web scraping",
     "scrapes jobs",
+    "employer verified",
+    "employer verification",
+    "guaranteed readiness",
     "gmail integration",
     "calendar integration",
     "billing",
+    "live job market",
     "live saas users",
     "customers",
     "production deployment",
@@ -44,6 +50,50 @@ class LearningRecommendationsReportViewTests(TestCase):
         response = self._get()
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Learning Recommendations")
+
+    def test_learning_recommendations_report_page_loads_without_error(self):
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "skills/learning_recommendations_report.html")
+
+    def test_learning_recommendations_report_advisory_only_label_present(self):
+        response = self._get()
+        self.assertContains(
+            response,
+            "Rule-based advisory recommendation report for manual review.",
+        )
+        self.assertContains(response, "Advisory only. Verify before acting on any item.")
+
+    def test_learning_recommendations_report_step_indicator_present(self):
+        response = self._get()
+        self.assertContains(response, "Step 4 of 7")
+
+    def test_learning_recommendations_report_get_does_not_create_or_modify_records(self):
+        self._login()
+        before_user_count = User.objects.count()
+        before_user_state = User.objects.values(
+            "username",
+            "email",
+            "is_active",
+            "is_staff",
+            "is_superuser",
+            "last_login",
+        ).get(pk=self.user.pk)
+
+        response = self.client.get(self.url)
+
+        after_user_state = User.objects.values(
+            "username",
+            "email",
+            "is_active",
+            "is_staff",
+            "is_superuser",
+            "last_login",
+        ).get(pk=self.user.pk)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(User.objects.count(), before_user_count)
+        self.assertEqual(after_user_state, before_user_state)
+        self.assertEqual(response.context["recommendations"], self.expected)
 
     def test_learning_recommendations_page_shows_planning_aid_only_message(self):
         response = self._get()
@@ -114,6 +164,7 @@ class LearningRecommendationsReportViewTests(TestCase):
         response = self._get()
         content = response.content.decode().lower()
         self.assertIn("rule-based advisory recommendation report", content)
+        self.assertIn("advisory only", content)
         self.assertIn("not predictive hiring ai", content)
         self.assertIn("does not use external ai apis", content)
         self.assertIn("does not replace human judgement", content)
