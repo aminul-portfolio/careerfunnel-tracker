@@ -198,6 +198,94 @@
         max-width: 46ch;
     }
 
+    .cf69f-result-summary {
+        background: linear-gradient(135deg, #ffffff, #f8fafc);
+        border: 1px solid var(--cf69f-border);
+        border-radius: 14px;
+        box-shadow: var(--cf69f-shadow);
+        display: grid;
+        gap: 18px;
+        grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+        padding: 22px;
+    }
+
+    .cf69f-result-summary h2,
+    .cf69f-result-card h2,
+    .cf69f-advisory-panel h2 {
+        color: var(--cf69f-ink);
+    }
+
+    .cf69f-result-summary p,
+    .cf69f-result-card p,
+    .cf69f-advisory-panel p,
+    .cf69f-empty-result p {
+        color: var(--cf69f-body);
+        line-height: 1.6;
+    }
+
+    .cf69f-score-card {
+        background: var(--cf69f-primary-soft);
+        border: 1px solid #bfdbfe;
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+    }
+
+    .cf69f-score-card strong {
+        color: var(--cf69f-muted);
+        display: block;
+        font-size: 0.78rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .cf69f-score-card .agent-score {
+        color: var(--cf69f-primary);
+        margin: 6px 0;
+    }
+
+    .cf69f-score-note {
+        color: var(--cf69f-muted);
+        font-size: 0.84rem;
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    .cf69f-result-card,
+    .cf69f-advisory-panel {
+        background: var(--cf69f-surface);
+        border: 1px solid var(--cf69f-border);
+        border-radius: 14px;
+        box-shadow: var(--cf69f-shadow);
+        padding: 22px;
+    }
+
+    .cf69f-result-warning {
+        background: var(--cf69f-warning-soft);
+        border-color: #fde68a;
+    }
+
+    .cf69f-advisory-panel {
+        background: linear-gradient(135deg, rgba(29, 78, 216, 0.06), rgba(15, 118, 110, 0.06));
+    }
+
+    .cf69f-result-grid {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cf69f-result-grid .content-card {
+        box-shadow: var(--cf69f-shadow);
+    }
+
+    .cf69f-empty-result {
+        background: var(--cf69f-subtle);
+        border: 1px dashed var(--cf69f-border);
+        border-radius: 14px;
+        padding: 18px;
+    }
+
     @media (max-width: 1100px) {
         .cf69f-workflow-strip {
             grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -219,6 +307,11 @@
 
         .cf69f-workflow-strip,
         .cf69f-safety-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .cf69f-result-summary,
+        .cf69f-result-grid {
             grid-template-columns: 1fr;
         }
     }
@@ -314,23 +407,27 @@
         </form>
     </section>
     {% if analysis %}
-    <section class="diagnosis-panel diagnosis-{{ analysis.severity }}">
+    <section class="diagnosis-panel diagnosis-{{ analysis.severity }} cf69f-result-summary">
         <div><p class="eyebrow">Advisory Recommendation</p><h2>{{ analysis.recommendation }}</h2><p>{{ analysis.explanation }}</p></div>
-        <div class="diagnosis-action"><strong>Fit Score</strong><p class="agent-score">{{ analysis.fit_score }}/100</p></div>
+        <div class="diagnosis-action cf69f-score-card">
+            <strong>Fit Score</strong>
+            <p class="agent-score">{{ analysis.fit_score }}/100</p>
+            <p class="cf69f-score-note">Fit score is an advisory signal, not a hiring prediction.</p>
+        </div>
     </section>
     {% if show_weak_fit_caution %}
-    <section class="content-card">
+    <section class="content-card cf69f-result-card cf69f-result-warning">
         <div class="card-header"><p class="eyebrow">Review Required</p><h2>Weak-fit caution</h2></div>
         <p class="muted-text">This role scored below the recommended threshold. Review carefully before proceeding. Claude go/no-go assessment is recommended before generating draft documents.</p>
     </section>
     {% elif show_borderline_review_path %}
-    <section class="content-card">
+    <section class="content-card cf69f-result-card cf69f-result-warning">
         <div class="card-header"><p class="eyebrow">Review Path Only</p><h2>Review manually before pre-fill</h2></div>
         <p class="muted-text">This borderline result should be reviewed manually before creating an application record or generating draft documents.</p>
     </section>
     {% endif %}
     {% if ai_wrapper_result %}
-    <section class="content-card" id="rule-based-vs-ai-score-check">
+    <section class="content-card cf69f-advisory-panel" id="rule-based-vs-ai-score-check">
         <div class="card-header">
             <p class="eyebrow">Advisory Only | Mocked-First</p>
             <h2>Rule-Based vs AI Score Check</h2>
@@ -385,15 +482,15 @@
         {% endif %}
     </section>
     {% endif %}
-    <section class="dashboard-two-column">
-        <div class="content-card"><div class="card-header"><p class="eyebrow">Matched Skills</p><h2>Evidence found</h2></div><div class="tag-row">{% for skill in analysis.matched_skills %}<span>{{ skill }}</span>{% empty %}<span>No strong skill keywords found</span>{% endfor %}</div></div>
-        <div class="content-card"><div class="card-header"><p class="eyebrow">Risks</p><h2>Check before applying</h2></div><ul class="agent-list">{% for risk in analysis.risks %}<li>{{ risk }}</li>{% empty %}<li>No major risk detected.</li>{% endfor %}{% for breaker in analysis.deal_breakers %}<li>Deal-breaker signal: {{ breaker }}</li>{% endfor %}</ul></div>
+    <section class="dashboard-two-column cf69f-result-grid">
+        <div class="content-card cf69f-result-card"><div class="card-header"><p class="eyebrow">Matched Skills</p><h2>Evidence found</h2></div><div class="tag-row">{% for skill in analysis.matched_skills %}<span>{{ skill }}</span>{% empty %}<span>No strong skill keywords found</span>{% endfor %}</div></div>
+        <div class="content-card cf69f-result-card"><div class="card-header"><p class="eyebrow">Risks</p><h2>Check before applying</h2></div><ul class="agent-list">{% for risk in analysis.risks %}<li>{{ risk }}</li>{% empty %}<li>No major risk detected.</li>{% endfor %}{% for breaker in analysis.deal_breakers %}<li>Deal-breaker signal: {{ breaker }}</li>{% endfor %}</ul></div>
     </section>
-    <section class="dashboard-two-column">
-        <div class="content-card"><div class="card-header"><p class="eyebrow">Smart CV</p><h2>{{ analysis.recommended_cv }}</h2></div><ul class="agent-list">{% for item in analysis.cover_letter_focus %}<li>{{ item }}</li>{% endfor %}</ul></div>
-        <div class="content-card"><div class="card-header"><p class="eyebrow">Portfolio Match</p><h2>Recommended Projects</h2></div><ol class="agent-list">{% for project in analysis.recommended_projects %}<li>{{ project }}</li>{% endfor %}</ol></div>
+    <section class="dashboard-two-column cf69f-result-grid">
+        <div class="content-card cf69f-result-card"><div class="card-header"><p class="eyebrow">Smart CV</p><h2>{{ analysis.recommended_cv }}</h2></div><ul class="agent-list">{% for item in analysis.cover_letter_focus %}<li>{{ item }}</li>{% endfor %}</ul></div>
+        <div class="content-card cf69f-result-card"><div class="card-header"><p class="eyebrow">Portfolio Match</p><h2>Recommended Projects</h2></div><ol class="agent-list">{% for project in analysis.recommended_projects %}<li>{{ project }}</li>{% endfor %}</ol></div>
     </section>
-    <section class="content-card"><div class="card-header"><p class="eyebrow">Next Actions</p><h2>Application readiness steps</h2></div><ol class="agent-list">{% for action in analysis.next_actions %}<li>{{ action }}</li>{% endfor %}</ol></section>
+    <section class="content-card cf69f-result-card"><div class="card-header"><p class="eyebrow">Next Actions</p><h2>Application readiness steps</h2></div><ol class="agent-list">{% for action in analysis.next_actions %}<li>{{ action }}</li>{% endfor %}</ol></section>
     {% if show_strong_fit_actions %}
     <section class="content-card">
         <div class="card-header"><p class="eyebrow">Rule-Based Drafts</p><h2>Application Document Drafts</h2></div>
@@ -417,7 +514,7 @@
     </section>
     {% endif %}
     {% if tailoring_advisor %}
-    <section class="content-card" id="cv-tailoring-advisor">
+    <section class="content-card cf69f-advisory-panel" id="cv-tailoring-advisor">
         <div class="card-header">
             <p class="eyebrow">Rule-Based | Advisory Only</p>
             <h2>CV Tailoring Advisor</h2>
@@ -478,6 +575,12 @@
         <ul class="agent-list">{% for note in tailoring_advisor.claim_safety_notes %}<li>{{ note }}</li>{% endfor %}</ul>
     </section>
     {% endif %}
+    {% else %}
+    <section class="cf69f-empty-result" aria-label="Analyzer result status">
+        <p class="cf69f-eyebrow">Result status</p>
+        <h2 class="cf69f-form-title">No analysis run yet</h2>
+        <p>Paste a job posting and choose Analyze Job Posting to generate a rule-based advisory review. Manual review remains required before any external action.</p>
+    </section>
     {% endif %}
 </div>
 {% endblock %}

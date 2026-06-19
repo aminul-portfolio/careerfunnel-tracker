@@ -1962,6 +1962,99 @@ class JobPostingAnalyzerGuardrailTests(TestCase):
             count_before,
         )
 
+    def test_job_posting_analyzer_phase_b_empty_result_state_is_safe(self):
+        response = self.client.get(self.analyzer_url)
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("cf69f-empty-result", content)
+        self.assertContains(response, "No analysis run yet")
+        self.assertContains(response, "rule-based advisory review")
+        self.assertContains(response, "Manual review remains required")
+
+    def test_job_posting_analyzer_phase_b_result_sections_use_scoped_classes(self):
+        response = self._post_analysis()
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("cf69f-result-summary", content)
+        self.assertIn("cf69f-score-card", content)
+        self.assertIn("cf69f-advisory-panel", content)
+        self.assertIn("cf69f-result-grid", content)
+        self.assertIn("cf69f-result-card", content)
+        self.assertContains(response, "Fit Score")
+        self.assertContains(response, "Matched Skills")
+        self.assertContains(response, "Risks")
+        self.assertContains(response, "Next Actions")
+
+    def test_job_posting_analyzer_phase_b_fit_score_is_advisory_not_prediction(self):
+        response = self._post_analysis()
+        content = response.content.decode().lower()
+
+        self.assertContains(response, "Fit score is an advisory signal")
+        self.assertContains(response, "not a hiring prediction")
+        self.assertIn("rule-based", content)
+        self.assertIn("manual review", content)
+        self.assertNotIn("hiring prediction score", content)
+        self.assertNotIn("guaranteed interview", content)
+        self.assertNotIn("verified employer data", content)
+
+    def test_job_posting_analyzer_phase_b_weak_fit_remains_manual_advisory(self):
+        response = self._post_analysis(
+            company_name="Unclear Co",
+            job_title="Senior Sales Manager",
+            location="Unspecified",
+            job_posting="Own enterprise sales targets and manage commercial pipeline.",
+        )
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("cf69f-result-warning", content)
+        self.assertContains(response, "Weak-fit caution")
+        self.assertContains(response, "Review carefully before proceeding")
+        self.assertContains(response, "No auto-apply")
+        self.assertContains(response, "No automatic submission")
+        self._assert_no_prefill_cta_link(response)
+
+    def test_job_posting_analyzer_phase_b_workflow_remains_visible_with_result(self):
+        response = self._post_analysis()
+        content = response.content.decode()
+        expected_phrases = [
+            "Analyze Job Posting",
+            "Review manually",
+            "Approve next step",
+            "Pre-fill Add&nbsp;Application",
+            "Manual Save",
+        ]
+
+        for phrase in expected_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, content)
+
+    def test_job_posting_analyzer_phase_b_result_unsafe_labels_and_claims_absent(self):
+        response = self._post_analysis()
+        content = response.content.decode()
+        lower_content = content.lower()
+
+        for label in ANALYZER_UNSAFE_ACTION_LABELS:
+            with self.subTest(label=label):
+                self.assertNotIn(label, content)
+
+        forbidden_claims = [
+            "scraped from live-market data",
+            "live-market data feed",
+            "verified employer data",
+            "employer verified",
+            "external verification provided",
+            "proof of employer verification",
+            "is a hiring prediction",
+            "hiring prediction score",
+            "guaranteed interview",
+        ]
+        for claim in forbidden_claims:
+            with self.subTest(claim=claim):
+                self.assertNotIn(claim, lower_content)
+
     def test_weak_fit_result_does_not_show_generate_draft_cta(self):
         response = self._post_analysis(
             company_name="Unclear Co",
