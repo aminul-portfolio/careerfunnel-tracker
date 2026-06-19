@@ -2,37 +2,507 @@
 {% block title %}AI Job Posting Analyzer | CareerFunnel Tracker{% endblock %}
 {% block page_heading %}AI Job Posting Analyzer{% endblock %}
 {% block content %}
-<div class="dashboard-grid">
-    <section class="hero-panel"><p class="eyebrow">AI Job Posting Analyzer</p><h1>Paste a role before applying.</h1><p>The analyzer provides an advisory-only, rule-based fit assessment across target fit, seniority, location, skills, deal-breakers, CV version, and portfolio projects.</p>{% include "ai_agents/_agent_nav.html" %}</section>
-    <section class="content-card form-card">
-        <form method="post" class="form-stack">{% csrf_token %}
+<style>
+    .cf69f-page {
+        --cf69f-canvas: #f0f2f5;
+        --cf69f-surface: #ffffff;
+        --cf69f-subtle: #f8fafc;
+        --cf69f-ink: #0f172a;
+        --cf69f-body: #334155;
+        --cf69f-muted: #64748b;
+        --cf69f-border: #e2e8f0;
+        --cf69f-primary: #1d4ed8;
+        --cf69f-primary-soft: #eff6ff;
+        --cf69f-manual: #0f766e;
+        --cf69f-manual-soft: #f0fdfa;
+        --cf69f-warning: #92400e;
+        --cf69f-warning-soft: #fffbeb;
+        --cf69f-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+        background: var(--cf69f-canvas);
+        border-radius: 18px;
+        color: var(--cf69f-body);
+        display: grid;
+        gap: 18px;
+        padding: 18px;
+    }
+
+    .cf69f-page * {
+        box-sizing: border-box;
+    }
+
+    .cf69f-card {
+        background: var(--cf69f-surface);
+        border: 1px solid var(--cf69f-border);
+        border-radius: 14px;
+        box-shadow: var(--cf69f-shadow);
+        padding: 22px;
+    }
+
+    .cf69f-hero {
+        overflow: hidden;
+        position: relative;
+    }
+
+    .cf69f-hero::before {
+        background: linear-gradient(135deg, rgba(29, 78, 216, 0.12), rgba(15, 118, 110, 0.08));
+        content: "";
+        inset: 0;
+        pointer-events: none;
+        position: absolute;
+    }
+
+    .cf69f-hero > * {
+        position: relative;
+    }
+
+    .cf69f-eyebrow {
+        color: var(--cf69f-primary);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        margin: 0 0 8px;
+        text-transform: uppercase;
+    }
+
+    .cf69f-title {
+        color: var(--cf69f-ink);
+        font-size: clamp(1.7rem, 4vw, 2.4rem);
+        line-height: 1.12;
+        margin: 0;
+    }
+
+    .cf69f-subtitle,
+    .cf69f-section-note,
+    .cf69f-step span,
+    .cf69f-safety-card span {
+        color: var(--cf69f-muted);
+        font-size: 0.92rem;
+        line-height: 1.6;
+    }
+
+    .cf69f-subtitle {
+        color: var(--cf69f-body);
+        margin: 10px 0 0;
+        max-width: 78ch;
+    }
+
+    .cf69f-workflow-strip,
+    .cf69f-safety-grid {
+        display: grid;
+        gap: 14px;
+    }
+
+    .cf69f-workflow-strip {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .cf69f-safety-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .cf69f-step,
+    .cf69f-safety-card {
+        background: var(--cf69f-surface);
+        border: 1px solid var(--cf69f-border);
+        border-radius: 12px;
+        padding: 16px;
+    }
+
+    .cf69f-step strong,
+    .cf69f-safety-card strong {
+        color: var(--cf69f-ink);
+        display: block;
+        margin-top: 5px;
+    }
+
+    .cf69f-step {
+        position: relative;
+    }
+
+    .cf69f-step-number {
+        align-items: center;
+        background: var(--cf69f-primary-soft);
+        border: 1px solid #bfdbfe;
+        border-radius: 999px;
+        color: var(--cf69f-primary);
+        display: inline-flex;
+        font-size: 0.78rem;
+        font-weight: 800;
+        height: 28px;
+        justify-content: center;
+        margin-bottom: 10px;
+        width: 28px;
+    }
+
+    .cf69f-label {
+        color: var(--cf69f-muted);
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .cf69f-safety-advisory {
+        background: var(--cf69f-primary-soft);
+        border-color: #bfdbfe;
+    }
+
+    .cf69f-safety-manual {
+        background: var(--cf69f-manual-soft);
+        border-color: #99f6e4;
+    }
+
+    .cf69f-safety-warning {
+        background: var(--cf69f-warning-soft);
+        border-color: #fde68a;
+    }
+
+    .cf69f-form-card {
+        background: linear-gradient(135deg, #ffffff, #f8fafc);
+    }
+
+    .cf69f-form-header {
+        margin-bottom: 18px;
+    }
+
+    .cf69f-form-title {
+        color: var(--cf69f-ink);
+        font-size: 1.35rem;
+        margin: 0 0 6px;
+    }
+
+    .cf69f-form-shell {
+        background: var(--cf69f-surface);
+        border: 1px solid var(--cf69f-border);
+        border-radius: 12px;
+        padding: 16px;
+    }
+
+    .cf69f-form-shell .form-actions {
+        align-items: center;
+        border-top: 1px solid var(--cf69f-border);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: space-between;
+        margin-top: 16px;
+        padding-top: 16px;
+    }
+
+    .cf69f-action-note {
+        color: var(--cf69f-muted);
+        font-size: 0.85rem;
+        line-height: 1.5;
+        margin: 0;
+        max-width: 46ch;
+    }
+
+    .cf69f-result-summary {
+        background: linear-gradient(135deg, #ffffff, #f8fafc);
+        border: 1px solid var(--cf69f-border);
+        border-radius: 14px;
+        box-shadow: var(--cf69f-shadow);
+        display: grid;
+        gap: 18px;
+        grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+        padding: 22px;
+    }
+
+    .cf69f-result-summary h2,
+    .cf69f-result-card h2,
+    .cf69f-advisory-panel h2 {
+        color: var(--cf69f-ink);
+    }
+
+    .cf69f-result-summary p,
+    .cf69f-result-card p,
+    .cf69f-advisory-panel p,
+    .cf69f-empty-result p {
+        color: var(--cf69f-body);
+        line-height: 1.6;
+    }
+
+    .cf69f-score-card {
+        background: var(--cf69f-primary-soft);
+        border: 1px solid #bfdbfe;
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+    }
+
+    .cf69f-score-card strong {
+        color: var(--cf69f-muted);
+        display: block;
+        font-size: 0.78rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .cf69f-score-card .agent-score {
+        color: var(--cf69f-primary);
+        margin: 6px 0;
+    }
+
+    .cf69f-score-note {
+        color: var(--cf69f-muted);
+        font-size: 0.84rem;
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    .cf69f-result-card,
+    .cf69f-advisory-panel {
+        background: var(--cf69f-surface);
+        border: 1px solid var(--cf69f-border);
+        border-radius: 14px;
+        box-shadow: var(--cf69f-shadow);
+        padding: 22px;
+    }
+
+    .cf69f-result-warning {
+        background: var(--cf69f-warning-soft);
+        border-color: #fde68a;
+    }
+
+    .cf69f-suppression-card {
+        display: grid;
+        gap: 12px;
+    }
+
+    .cf69f-suppression-note,
+    .cf69f-prefill-boundary {
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(146, 64, 14, 0.2);
+        border-radius: 12px;
+        color: var(--cf69f-body);
+        line-height: 1.6;
+        margin: 0;
+        padding: 14px;
+    }
+
+    .cf69f-prefill-card {
+        background:
+            linear-gradient(135deg, rgba(15, 118, 110, 0.11), rgba(29, 78, 216, 0.08)),
+            var(--cf69f-surface);
+        border: 1px solid #99f6e4;
+        box-shadow: var(--cf69f-shadow);
+    }
+
+    .cf69f-prefill-layout {
+        align-items: start;
+        display: grid;
+        gap: 18px;
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .cf69f-prefill-title {
+        color: var(--cf69f-ink);
+        margin: 0;
+    }
+
+    .cf69f-prefill-copy {
+        color: var(--cf69f-body);
+        line-height: 1.6;
+        margin: 10px 0 0;
+    }
+
+    .cf69f-prefill-steps {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+    }
+
+    .cf69f-prefill-steps span {
+        background: var(--cf69f-surface);
+        border: 1px solid var(--cf69f-border);
+        border-radius: 999px;
+        color: var(--cf69f-ink);
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 7px 10px;
+    }
+
+    .cf69f-prefill-action {
+        display: grid;
+        gap: 10px;
+        justify-items: start;
+    }
+
+    .cf69f-prefill-boundary {
+        background: var(--cf69f-manual-soft);
+        border-color: #99f6e4;
+        font-size: 0.9rem;
+        max-width: 34ch;
+    }
+
+    .cf69f-advisory-panel {
+        background: linear-gradient(135deg, rgba(29, 78, 216, 0.06), rgba(15, 118, 110, 0.06));
+    }
+
+    .cf69f-result-grid {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cf69f-result-grid .content-card {
+        box-shadow: var(--cf69f-shadow);
+    }
+
+    .cf69f-empty-result {
+        background: var(--cf69f-subtle);
+        border: 1px dashed var(--cf69f-border);
+        border-radius: 14px;
+        padding: 18px;
+    }
+
+    @media (max-width: 1100px) {
+        .cf69f-workflow-strip {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .cf69f-safety-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 680px) {
+        .cf69f-page {
+            padding: 12px;
+        }
+
+        .cf69f-card {
+            padding: 18px;
+        }
+
+        .cf69f-workflow-strip,
+        .cf69f-safety-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .cf69f-result-summary,
+        .cf69f-result-grid,
+        .cf69f-prefill-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="dashboard-grid cf69f-page">
+    <section class="cf69f-card cf69f-hero">
+        <p class="cf69f-eyebrow">AI Job Posting Analyzer</p>
+        <h1 class="cf69f-title">Paste a role before applying.</h1>
+        <p class="cf69f-subtitle">
+            The analyzer provides an advisory-only, rule-based fit assessment across target fit,
+            seniority, location, skills, deal-breakers, CV version, and portfolio projects.
+            It supports manual review before any application action happens outside the tracker.
+        </p>
+        {% include "ai_agents/_agent_nav.html" %}
+    </section>
+
+    <section class="cf69f-workflow-strip" aria-label="Analyzer manual workflow">
+        <article class="cf69f-step">
+            <span class="cf69f-step-number">1</span>
+            <span class="cf69f-label">Analyze</span>
+            <strong>Analyze Job Posting</strong>
+            <span>Run the rule-based advisory review on pasted job text.</span>
+        </article>
+        <article class="cf69f-step">
+            <span class="cf69f-step-number">2</span>
+            <span class="cf69f-label">Review</span>
+            <strong>Review manually</strong>
+            <span>Check fit score, risks, deal-breakers, and evidence before acting.</span>
+        </article>
+        <article class="cf69f-step">
+            <span class="cf69f-step-number">3</span>
+            <span class="cf69f-label">Approve</span>
+            <strong>Approve next step</strong>
+            <span>Decide whether the role is worth moving into the tracker.</span>
+        </article>
+        <article class="cf69f-step">
+            <span class="cf69f-step-number">4</span>
+            <span class="cf69f-label">Pre-fill</span>
+            <strong>Pre-fill Add&nbsp;Application</strong>
+            <span>When available, open Add Application with fields prepared for review.</span>
+        </article>
+        <article class="cf69f-step">
+            <span class="cf69f-step-number">5</span>
+            <span class="cf69f-label">Manual Save</span>
+            <strong>Manual Save</strong>
+            <span>Save only after reviewing the Add Application form yourself.</span>
+        </article>
+    </section>
+
+    <section class="cf69f-safety-grid" aria-label="Analyzer safety boundaries">
+        <article class="cf69f-safety-card cf69f-safety-advisory">
+            <span class="cf69f-label">Advisory</span>
+            <strong>Rule-based advisory review</strong>
+            <span>Manual review is required before using recommendations externally.</span>
+        </article>
+        <article class="cf69f-safety-card cf69f-safety-manual">
+            <span class="cf69f-label">Manual workflow only</span>
+            <strong>No automatic record creation</strong>
+            <span>Pre-fill opens Add Application for manual review and manual save.</span>
+        </article>
+        <article class="cf69f-safety-card cf69f-safety-warning">
+            <span class="cf69f-label">Automation boundary</span>
+            <strong>No auto-apply</strong>
+            <span>No automatic submission or employer submission by CareerFunnel.</span>
+        </article>
+        <article class="cf69f-safety-card cf69f-safety-warning">
+            <span class="cf69f-label">Evidence boundary</span>
+            <strong>Not external verification</strong>
+            <span>Not scraped live-market data or proof of employer interaction.</span>
+        </article>
+    </section>
+
+    <section class="cf69f-card cf69f-form-card form-card">
+        <div class="cf69f-form-header">
+            <p class="cf69f-eyebrow">Job posting input</p>
+            <h2 class="cf69f-form-title">Analyze pasted job details</h2>
+            <p class="cf69f-section-note">
+                Paste saved or copied job text. Application actions happen manually outside the tracker.
+            </p>
+        </div>
+        <form method="post" class="form-stack cf69f-form-shell">{% csrf_token %}
             <div class="form-grid">
                 <div class="form-group"><label>Company</label>{{ form.company_name }}</div>
                 <div class="form-group"><label>Job Title</label>{{ form.job_title }}</div>
                 <div class="form-group form-wide"><label>Location</label>{{ form.location }}</div>
                 <div class="form-group form-wide"><label>Job Posting Text</label>{{ form.job_posting }}{{ form.job_posting.errors }}</div>
             </div>
-            <div class="form-actions"><button class="btn btn-primary" type="submit">Analyze Job Posting</button></div>
+            <div class="form-actions">
+                <p class="cf69f-action-note">Advisory review only. No auto-apply. No automatic submission. No automatic application record creation.</p>
+                <button class="btn btn-primary" type="submit">Analyze Job Posting</button>
+            </div>
         </form>
     </section>
     {% if analysis %}
-    <section class="diagnosis-panel diagnosis-{{ analysis.severity }}">
+    <section class="diagnosis-panel diagnosis-{{ analysis.severity }} cf69f-result-summary">
         <div><p class="eyebrow">Advisory Recommendation</p><h2>{{ analysis.recommendation }}</h2><p>{{ analysis.explanation }}</p></div>
-        <div class="diagnosis-action"><strong>Fit Score</strong><p class="agent-score">{{ analysis.fit_score }}/100</p></div>
+        <div class="diagnosis-action cf69f-score-card">
+            <strong>Fit Score</strong>
+            <p class="agent-score">{{ analysis.fit_score }}/100</p>
+            <p class="cf69f-score-note">Fit score is an advisory signal, not a hiring prediction.</p>
+        </div>
     </section>
     {% if show_weak_fit_caution %}
-    <section class="content-card">
+    <section class="content-card cf69f-result-card cf69f-result-warning cf69f-suppression-card">
         <div class="card-header"><p class="eyebrow">Review Required</p><h2>Weak-fit caution</h2></div>
         <p class="muted-text">This role scored below the recommended threshold. Review carefully before proceeding. Claude go/no-go assessment is recommended before generating draft documents.</p>
+        <p class="cf69f-suppression-note">Weak-fit results require manual review before proceeding. Pre-fill Add Application is suppressed here; the fit score is advisory only and is not a hiring prediction.</p>
     </section>
     {% elif show_borderline_review_path %}
-    <section class="content-card">
+    <section class="content-card cf69f-result-card cf69f-result-warning cf69f-suppression-card">
         <div class="card-header"><p class="eyebrow">Review Path Only</p><h2>Review manually before pre-fill</h2></div>
         <p class="muted-text">This borderline result should be reviewed manually before creating an application record or generating draft documents.</p>
+        <p class="cf69f-suppression-note">Manual review is required before proceeding. Pre-fill Add Application stays unavailable until the existing analyzer context allows it.</p>
     </section>
     {% endif %}
     {% if ai_wrapper_result %}
-    <section class="content-card" id="rule-based-vs-ai-score-check">
+    <section class="content-card cf69f-advisory-panel" id="rule-based-vs-ai-score-check">
         <div class="card-header">
             <p class="eyebrow">Advisory Only | Mocked-First</p>
             <h2>Rule-Based vs AI Score Check</h2>
@@ -87,15 +557,15 @@
         {% endif %}
     </section>
     {% endif %}
-    <section class="dashboard-two-column">
-        <div class="content-card"><div class="card-header"><p class="eyebrow">Matched Skills</p><h2>Evidence found</h2></div><div class="tag-row">{% for skill in analysis.matched_skills %}<span>{{ skill }}</span>{% empty %}<span>No strong skill keywords found</span>{% endfor %}</div></div>
-        <div class="content-card"><div class="card-header"><p class="eyebrow">Risks</p><h2>Check before applying</h2></div><ul class="agent-list">{% for risk in analysis.risks %}<li>{{ risk }}</li>{% empty %}<li>No major risk detected.</li>{% endfor %}{% for breaker in analysis.deal_breakers %}<li>Deal-breaker signal: {{ breaker }}</li>{% endfor %}</ul></div>
+    <section class="dashboard-two-column cf69f-result-grid">
+        <div class="content-card cf69f-result-card"><div class="card-header"><p class="eyebrow">Matched Skills</p><h2>Evidence found</h2></div><div class="tag-row">{% for skill in analysis.matched_skills %}<span>{{ skill }}</span>{% empty %}<span>No strong skill keywords found</span>{% endfor %}</div></div>
+        <div class="content-card cf69f-result-card"><div class="card-header"><p class="eyebrow">Risks</p><h2>Check before applying</h2></div><ul class="agent-list">{% for risk in analysis.risks %}<li>{{ risk }}</li>{% empty %}<li>No major risk detected.</li>{% endfor %}{% for breaker in analysis.deal_breakers %}<li>Deal-breaker signal: {{ breaker }}</li>{% endfor %}</ul></div>
     </section>
-    <section class="dashboard-two-column">
-        <div class="content-card"><div class="card-header"><p class="eyebrow">Smart CV</p><h2>{{ analysis.recommended_cv }}</h2></div><ul class="agent-list">{% for item in analysis.cover_letter_focus %}<li>{{ item }}</li>{% endfor %}</ul></div>
-        <div class="content-card"><div class="card-header"><p class="eyebrow">Portfolio Match</p><h2>Recommended Projects</h2></div><ol class="agent-list">{% for project in analysis.recommended_projects %}<li>{{ project }}</li>{% endfor %}</ol></div>
+    <section class="dashboard-two-column cf69f-result-grid">
+        <div class="content-card cf69f-result-card"><div class="card-header"><p class="eyebrow">Smart CV</p><h2>{{ analysis.recommended_cv }}</h2></div><ul class="agent-list">{% for item in analysis.cover_letter_focus %}<li>{{ item }}</li>{% endfor %}</ul></div>
+        <div class="content-card cf69f-result-card"><div class="card-header"><p class="eyebrow">Portfolio Match</p><h2>Recommended Projects</h2></div><ol class="agent-list">{% for project in analysis.recommended_projects %}<li>{{ project }}</li>{% endfor %}</ol></div>
     </section>
-    <section class="content-card"><div class="card-header"><p class="eyebrow">Next Actions</p><h2>Application readiness steps</h2></div><ol class="agent-list">{% for action in analysis.next_actions %}<li>{{ action }}</li>{% endfor %}</ol></section>
+    <section class="content-card cf69f-result-card"><div class="card-header"><p class="eyebrow">Next Actions</p><h2>Application readiness steps</h2></div><ol class="agent-list">{% for action in analysis.next_actions %}<li>{{ action }}</li>{% endfor %}</ol></section>
     {% if show_strong_fit_actions %}
     <section class="content-card">
         <div class="card-header"><p class="eyebrow">Rule-Based Drafts</p><h2>Application Document Drafts</h2></div>
@@ -112,14 +582,28 @@
         </form>
     </section>
     {% include "job_intelligence/_application_document_drafts.html" %}
-    <section class="content-card">
-        <div class="card-header"><p class="eyebrow">Save to pipeline</p><h2>Pre-fill Add Application</h2></div>
-        <p>Review the analysis above before continuing. Pre-filling opens the Add Application form - you must save manually. No application is submitted externally.</p>
-        <a class="btn btn-primary" href="{% url 'applications:application_create' %}?company_name={{ form.company_name.value|urlencode }}&amp;job_title={{ form.job_title.value|urlencode }}&amp;location={{ form.location.value|urlencode }}&amp;fit_score={{ analysis.fit_score }}">Pre-fill Add Application</a>
+    <section class="content-card cf69f-prefill-card">
+        <div class="cf69f-prefill-layout">
+            <div>
+                <div class="card-header"><p class="eyebrow">Save to pipeline</p><h2 class="cf69f-prefill-title">Pre-fill Add Application</h2></div>
+                <p class="cf69f-prefill-copy">Review the analysis above before continuing. Pre-filling opens the Add Application form - you must save manually. No application is submitted externally.</p>
+                <div class="cf69f-prefill-steps" aria-label="Manual pre-fill workflow">
+                    <span>Analyze</span>
+                    <span>Review</span>
+                    <span>Approve</span>
+                    <span>Pre-fill Add Application</span>
+                    <span>Manual Save</span>
+                </div>
+            </div>
+            <div class="cf69f-prefill-action">
+                <a class="btn btn-primary" href="{% url 'applications:application_create' %}?company_name={{ form.company_name.value|urlencode }}&amp;job_title={{ form.job_title.value|urlencode }}&amp;location={{ form.location.value|urlencode }}&amp;fit_score={{ analysis.fit_score }}">Pre-fill Add Application</a>
+                <p class="cf69f-prefill-boundary">Internal pre-fill only. No auto-apply, no automatic submission, no automatic application record creation, and no employer submission by CareerFunnel.</p>
+            </div>
+        </div>
     </section>
     {% endif %}
     {% if tailoring_advisor %}
-    <section class="content-card" id="cv-tailoring-advisor">
+    <section class="content-card cf69f-advisory-panel" id="cv-tailoring-advisor">
         <div class="card-header">
             <p class="eyebrow">Rule-Based | Advisory Only</p>
             <h2>CV Tailoring Advisor</h2>
@@ -180,6 +664,12 @@
         <ul class="agent-list">{% for note in tailoring_advisor.claim_safety_notes %}<li>{{ note }}</li>{% endfor %}</ul>
     </section>
     {% endif %}
+    {% else %}
+    <section class="cf69f-empty-result" aria-label="Analyzer result status">
+        <p class="cf69f-eyebrow">Result status</p>
+        <h2 class="cf69f-form-title">No analysis run yet</h2>
+        <p>Paste a job posting and choose Analyze Job Posting to generate a rule-based advisory review. Manual review remains required before any external action.</p>
+    </section>
     {% endif %}
 </div>
 {% endblock %}
