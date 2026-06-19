@@ -38,6 +38,16 @@ from .services import (
     generate_interview_prep,
 )
 
+ANALYZER_UNSAFE_ACTION_LABELS = [
+    "Apply Now",
+    "Submit Application",
+    "Auto Apply",
+    "Send Application",
+    "Auto Submit",
+    "Send to Employer",
+    "Email Employer",
+]
+
 
 class RoleFitConstantsTests(TestCase):
     def test_canonical_constants_importable_from_job_intelligence(self):
@@ -274,8 +284,8 @@ class AiAgentViewTests(TestCase):
         self.assertContains(response, "Manual review is required")
         self.assertContains(response, "Advisory Only | Mocked-First")
         self.assertContains(response, "Yes - advisory only")
-        self.assertNotContains(response, "┬À")
-        self.assertNotContains(response, "ÔÇö")
+        self.assertNotContains(response, chr(0x252C) + chr(0x00C0))
+        self.assertNotContains(response, chr(0x00D4) + chr(0x00C7) + chr(0x00F6))
         from pathlib import Path
 
         template_path = (
@@ -1861,6 +1871,97 @@ class JobPostingAnalyzerGuardrailTests(TestCase):
         self.assertIsNotNone(match)
         return html.unescape(match.group(1))
 
+    def _assert_no_prefill_cta_link(self, response):
+        page_html = response.content.decode()
+        self.assertIsNone(
+            re.search(
+                r'<a[^>]+href="[^"]+"[^>]*>\s*Pre-fill Add Application\s*</a>',
+                page_html,
+            )
+        )
+
+    def test_job_posting_analyzer_phase_a_top_surface_loads(self):
+        response = self.client.get(self.analyzer_url)
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Paste a role before applying")
+        self.assertIn("cf69f-page", content)
+        self.assertIn("cf69f-hero", content)
+        self.assertIn("cf69f-workflow-strip", content)
+        self.assertIn("cf69f-safety-grid", content)
+        self.assertIn("cf69f-form-shell", content)
+
+    def test_job_posting_analyzer_phase_a_workflow_and_safety_copy(self):
+        response = self.client.get(self.analyzer_url)
+        content = response.content.decode()
+        expected_phrases = [
+            "Analyze Job Posting",
+            "Review manually",
+            "Approve next step",
+            "Pre-fill Add&nbsp;Application",
+            "Manual Save",
+            "Rule-based advisory review",
+            "Manual review is required",
+            "No auto-apply",
+            "No automatic submission",
+            "No automatic application record creation",
+            "No automatic record creation",
+            "No automatic submission or employer submission by CareerFunnel",
+            "Pre-fill opens Add Application for manual review and manual save",
+            "Application actions happen manually outside the tracker",
+            "Not scraped live-market data",
+            "proof of employer interaction",
+        ]
+
+        for phrase in expected_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, content)
+
+    def test_job_posting_analyzer_phase_a_form_contract_remains_present(self):
+        response = self.client.get(self.analyzer_url)
+        content = response.content.decode()
+
+        self.assertIn('<form method="post"', content)
+        self.assertIn("csrfmiddlewaretoken", content)
+        self.assertIn('name="company_name"', content)
+        self.assertIn('name="job_title"', content)
+        self.assertIn('name="location"', content)
+        self.assertIn('name="job_posting"', content)
+        self.assertContains(response, "Analyze Job Posting")
+
+    def test_job_posting_analyzer_phase_a_unsafe_labels_and_claims_absent(self):
+        response = self.client.get(self.analyzer_url)
+        content = response.content.decode()
+        lower_content = content.lower()
+
+        for label in ANALYZER_UNSAFE_ACTION_LABELS:
+            with self.subTest(label=label):
+                self.assertNotIn(label, content)
+
+        forbidden_claims = [
+            "scraped from live-market data",
+            "live-market data feed",
+            "verified employer data",
+            "employer verified",
+            "external verification provided",
+            "automatically creates an application record",
+        ]
+        for claim in forbidden_claims:
+            with self.subTest(claim=claim):
+                self.assertNotIn(claim, lower_content)
+
+    def test_job_posting_analyzer_get_does_not_create_application_records(self):
+        count_before = JobApplication.objects.filter(user=self.user).count()
+
+        response = self.client.get(self.analyzer_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            JobApplication.objects.filter(user=self.user).count(),
+            count_before,
+        )
+
     def test_weak_fit_result_does_not_show_generate_draft_cta(self):
         response = self._post_analysis(
             company_name="Unclear Co",
@@ -1899,7 +2000,7 @@ class JobPostingAnalyzerGuardrailTests(TestCase):
         self.assertGreaterEqual(score, ANALYZER_BORDERLINE_FIT_MIN_SCORE)
         self.assertLess(score, ANALYZER_STRONG_FIT_MIN_SCORE)
         self.assertContains(response, "Review manually before pre-fill")
-        self.assertNotContains(response, "Pre-fill Add Application", html=True)
+        self._assert_no_prefill_cta_link(response)
         self.assertNotContains(response, "Generate Draft Application Documents")
 
     def test_strong_fit_result_shows_prefill_cta(self):
@@ -1956,7 +2057,8 @@ class JobPostingAnalyzerGuardrailTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.context["analysis"])
-        self.assertNotContains(response, "Pre-fill Add Application")
+        self.assertContains(response, "Pre-fill Add&nbsp;Application")
+        self._assert_no_prefill_cta_link(response)
 
     def test_prefill_cta_does_not_appear_for_weak_fit_result(self):
         response = self._post_analysis(
@@ -1967,7 +2069,7 @@ class JobPostingAnalyzerGuardrailTests(TestCase):
         )
 
         self.assertLessEqual(response.context["analysis"].fit_score, ANALYZER_WEAK_FIT_MAX_SCORE)
-        self.assertNotContains(response, "Pre-fill Add Application")
+        self._assert_no_prefill_cta_link(response)
 
     def test_analyzer_result_does_not_contain_apply_now(self):
         response = self._post_analysis()
@@ -1979,12 +2081,12 @@ class JobPostingAnalyzerGuardrailTests(TestCase):
         page_text = response.content.decode()
 
         for forbidden_phrase in (
-            "auto-apply",
             "auto apply",
             "Auto Apply",
             "Auto-fill and Submit",
         ):
             self.assertNotIn(forbidden_phrase, page_text)
+        self.assertIn("No auto-apply", page_text)
 
     def test_analyzer_result_does_not_contain_submit_application(self):
         response = self._post_analysis()
