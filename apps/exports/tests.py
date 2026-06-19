@@ -84,6 +84,17 @@ PRIVATE_APPLICATION_FIELDS = [
     "notes",
 ]
 
+UNSAFE_EXPORT_ACTION_LABELS = [
+    "Apply Now",
+    "Submit Application",
+    "Auto Apply",
+    "Send Application",
+    "Auto Send",
+    "Auto Submit",
+    "Send to Employer",
+    "Email to Employer",
+]
+
 
 class ExportViewTests(TestCase):
     def setUp(self):
@@ -116,16 +127,84 @@ class ExportCentrePolishTests(TestCase):
             password="StrongPass12345",
         )
 
-    def test_export_centre_renders_manual_polish_copy(self):
+    def _get_export_centre(self):
         self.client.login(username="aminul", password="StrongPass12345")
-        response = self.client.get(reverse("exports:export_center"))
+        return self.client.get(reverse("exports:export_center"))
+
+    def test_export_centre_renders_sprint_69e_polish(self):
+        response = self._get_export_centre()
         self.assertEqual(response.status_code, 200)
         content = response.content.decode()
         self.assertIn("export_evidence", response.context)
-        self.assertIn("manual action", content.lower())
-        self.assertIn("no scheduled", content.lower())
+        self.assertIn("Download reviewer-ready tracker evidence", content)
+        self.assertIn("cf69e-page", content)
+        self.assertIn("cf69e-hero", content)
+        self.assertIn("cf69e-export-card", content)
+        self.assertIn("cf69e-safety-grid", content)
         self.assertIn("Download manually", content)
-        self.assertIn("Tableau and Power BI are not integrated", content)
+
+    def test_export_centre_keeps_export_links_and_safe_csv_wording(self):
+        response = self._get_export_centre()
+        content = response.content.decode()
+        expected_export_routes = [
+            "exports:export_full_tracker",
+            "exports:export_applications",
+            "exports:export_daily_logs",
+            "exports:export_weekly_reviews",
+            "exports:export_interviews",
+            "exports:export_notes",
+        ]
+        for route_name in expected_export_routes:
+            with self.subTest(route_name=route_name):
+                self.assertIn(reverse(route_name), content)
+
+        self.assertIn("Applications export", content)
+        self.assertIn("Daily logs export", content)
+        self.assertIn("Weekly reviews export", content)
+        self.assertIn("CSV export workflows where applicable", content)
+
+    def test_export_centre_keeps_manual_saved_record_safety_visible(self):
+        response = self._get_export_centre()
+        content = response.content.decode()
+        safety_phrases = [
+            "Saved tracker records",
+            "Manual download workflow",
+            "Export file for user review",
+            "No automatic submission",
+            "No employer delivery",
+            "No auto-apply",
+            "auto-submit",
+            "not proof of employer interaction",
+            "scraped live-market data",
+            "Application actions happen manually outside the tracker",
+        ]
+        for phrase in safety_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, content)
+
+    def test_export_centre_unsafe_positive_action_labels_are_absent(self):
+        response = self._get_export_centre()
+        content = response.content.decode()
+        for label in UNSAFE_EXPORT_ACTION_LABELS:
+            with self.subTest(label=label):
+                self.assertNotIn(label, content)
+
+    def test_export_centre_does_not_add_invented_external_delivery_claims(self):
+        response = self._get_export_centre()
+        content = response.content.decode().lower()
+        forbidden_claims = [
+            "automatically sent",
+            "automatically shared",
+            "automatically submitted",
+            "shared with employers",
+            "submitted to employers",
+            "emailed to employers",
+            "external verification provided",
+            "live-market data feed",
+        ]
+        for claim in forbidden_claims:
+            with self.subTest(claim=claim):
+                self.assertNotIn(claim, content)
 
     def test_export_actions_remain_manual_get_downloads(self):
         self.client.login(username="aminul", password="StrongPass12345")
@@ -152,11 +231,10 @@ class ExportCentrePolishTests(TestCase):
         )
 
     def test_export_centre_claims_no_background_jobs(self):
-        self.client.login(username="aminul", password="StrongPass12345")
-        response = self.client.get(reverse("exports:export_center"))
+        response = self._get_export_centre()
         content = response.content.decode()
         self.assertIn("background", content.lower())
-        self.assertNotIn("auto-apply", content.lower())
+        self.assertIn("No auto-apply", content)
 
     def test_export_routes_require_login(self):
         for route_name in EXPORT_ROUTE_NAMES:

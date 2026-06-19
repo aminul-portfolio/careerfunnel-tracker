@@ -5,96 +5,410 @@
 {% block page_heading %}Export Centre{% endblock %}
 
 {% block content %}
-<div class="dashboard-grid cf-export-centre">
-    <section class="hero-panel">
-        <p class="eyebrow">Export Evidence</p>
-        <h1>Download reviewer-ready tracker evidence.</h1>
-        <p>
-            Export authenticated tracker records for backup, structured review, offline spreadsheet
+<style>
+    .cf69e-page {
+        --cf69e-canvas: #f0f2f5;
+        --cf69e-surface: #ffffff;
+        --cf69e-subtle: #f8fafc;
+        --cf69e-ink: #0f172a;
+        --cf69e-body: #334155;
+        --cf69e-muted: #64748b;
+        --cf69e-border: #e2e8f0;
+        --cf69e-primary: #1d4ed8;
+        --cf69e-primary-soft: #eff6ff;
+        --cf69e-manual: #0f766e;
+        --cf69e-manual-soft: #f0fdfa;
+        --cf69e-warning: #92400e;
+        --cf69e-warning-soft: #fffbeb;
+        --cf69e-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+        background: var(--cf69e-canvas);
+        border-radius: 18px;
+        color: var(--cf69e-body);
+        display: grid;
+        gap: 18px;
+        padding: 18px;
+    }
+
+    .cf69e-page * {
+        box-sizing: border-box;
+    }
+
+    .cf69e-card {
+        background: var(--cf69e-surface);
+        border: 1px solid var(--cf69e-border);
+        border-radius: 14px;
+        box-shadow: var(--cf69e-shadow);
+        padding: 22px;
+    }
+
+    .cf69e-hero {
+        overflow: hidden;
+        position: relative;
+    }
+
+    .cf69e-hero::before {
+        background: linear-gradient(135deg, rgba(29, 78, 216, 0.12), rgba(15, 118, 110, 0.08));
+        content: "";
+        inset: 0;
+        pointer-events: none;
+        position: absolute;
+    }
+
+    .cf69e-hero > * {
+        position: relative;
+    }
+
+    .cf69e-eyebrow {
+        color: var(--cf69e-primary);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        margin: 0 0 8px;
+        text-transform: uppercase;
+    }
+
+    .cf69e-title {
+        color: var(--cf69e-ink);
+        font-size: clamp(1.7rem, 4vw, 2.4rem);
+        line-height: 1.12;
+        margin: 0;
+    }
+
+    .cf69e-subtitle,
+    .cf69e-note,
+    .cf69e-section-note,
+    .cf69e-safety-card span {
+        color: var(--cf69e-muted);
+        font-size: 0.92rem;
+        line-height: 1.6;
+    }
+
+    .cf69e-subtitle {
+        color: var(--cf69e-body);
+        margin: 10px 0 0;
+        max-width: 78ch;
+    }
+
+    .cf69e-evidence-strip,
+    .cf69e-action-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+    }
+
+    .cf69e-pill {
+        background: var(--cf69e-surface);
+        border: 1px solid var(--cf69e-border);
+        border-radius: 999px;
+        color: var(--cf69e-body);
+        font-size: 0.82rem;
+        font-weight: 700;
+        padding: 8px 12px;
+    }
+
+    .cf69e-safety-grid,
+    .cf69e-export-grid,
+    .cf69e-guidance-grid {
+        display: grid;
+        gap: 14px;
+    }
+
+    .cf69e-safety-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .cf69e-export-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cf69e-safety-card,
+    .cf69e-export-card,
+    .cf69e-guidance-card {
+        background: var(--cf69e-surface);
+        border: 1px solid var(--cf69e-border);
+        border-radius: 12px;
+        padding: 16px;
+    }
+
+    .cf69e-safety-card strong,
+    .cf69e-export-card h3,
+    .cf69e-guidance-card h3 {
+        color: var(--cf69e-ink);
+    }
+
+    .cf69e-safety-card strong {
+        display: block;
+        margin-top: 5px;
+    }
+
+    .cf69e-label {
+        color: var(--cf69e-muted);
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .cf69e-safety-info {
+        background: var(--cf69e-primary-soft);
+        border-color: #bfdbfe;
+    }
+
+    .cf69e-safety-manual {
+        background: var(--cf69e-manual-soft);
+        border-color: #99f6e4;
+    }
+
+    .cf69e-safety-warning {
+        background: var(--cf69e-warning-soft);
+        border-color: #fde68a;
+    }
+
+    .cf69e-section-title {
+        color: var(--cf69e-ink);
+        font-size: 1.35rem;
+        margin: 0 0 6px;
+    }
+
+    .cf69e-export-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 210px;
+    }
+
+    .cf69e-export-card h3 {
+        font-size: 1.05rem;
+        margin: 0 0 8px;
+    }
+
+    .cf69e-export-card p,
+    .cf69e-guidance-card p {
+        color: var(--cf69e-body);
+        line-height: 1.55;
+        margin: 0;
+    }
+
+    .cf69e-manual-notice {
+        background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), rgba(29, 78, 216, 0.06));
+        border: 1px solid #99f6e4;
+        border-radius: 12px;
+        color: var(--cf69e-body);
+        line-height: 1.6;
+        margin: 16px 0 0;
+        padding: 14px;
+    }
+
+    .cf69e-list {
+        display: grid;
+        gap: 10px;
+        list-style: none;
+        margin: 12px 0 0;
+        padding: 0;
+    }
+
+    .cf69e-list li {
+        background: var(--cf69e-subtle);
+        border: 1px solid var(--cf69e-border);
+        border-radius: 10px;
+        color: var(--cf69e-body);
+        line-height: 1.55;
+        padding: 11px 13px;
+    }
+
+    .cf69e-empty-state {
+        background: var(--cf69e-subtle);
+        border: 1px dashed var(--cf69e-border);
+        border-radius: 12px;
+        color: var(--cf69e-muted);
+        line-height: 1.55;
+        padding: 14px;
+    }
+
+    @media (max-width: 980px) {
+        .cf69e-safety-grid,
+        .cf69e-export-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 680px) {
+        .cf69e-page {
+            padding: 12px;
+        }
+
+        .cf69e-card {
+            padding: 18px;
+        }
+
+        .cf69e-safety-grid,
+        .cf69e-export-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="cf69e-page cf-export-centre">
+    <section class="cf69e-card cf69e-hero">
+        <p class="cf69e-eyebrow">Export Evidence</p>
+        <h1 class="cf69e-title">Download reviewer-ready tracker evidence.</h1>
+        <p class="cf69e-subtitle">
+            Export saved tracker records for backup, structured review, offline spreadsheet
             analysis, and portfolio walkthrough evidence that shows how the job search is being managed.
         </p>
-        <p class="trust-note cf-export-manual-notice">{{ export_evidence.manual_notice }}</p>
-        <div class="evidence-strip">
-            <span class="evidence-strip-item">Manual download</span>
-            <span class="evidence-strip-item">Reviewer evidence</span>
-            <span class="evidence-strip-item">Offline workbook</span>
+        <p class="cf69e-manual-notice cf-export-manual-notice">{{ export_evidence.manual_notice }}</p>
+        <div class="cf69e-evidence-strip" aria-label="Export Centre safety summary">
+            <span class="cf69e-pill">Saved tracker records</span>
+            <span class="cf69e-pill">Manual download workflow</span>
+            <span class="cf69e-pill">Export file for user review</span>
+            <span class="cf69e-pill">No automatic submission</span>
         </div>
     </section>
 
-    <section class="content-card">
-        <div class="card-header">
-            <p class="eyebrow">Full Backup</p>
-            <h2>Complete tracker workbook</h2>
-            <p>Click to download one Excel file containing all tracker sheets. You initiate each export manually.</p>
-        </div>
-        <a href="{% url 'exports:export_full_tracker' %}" class="btn btn-primary">Download full tracker (manual)</a>
+    <section class="cf69e-safety-grid" aria-label="Manual download safety">
+        <article class="cf69e-safety-card cf69e-safety-info">
+            <span class="cf69e-label">Source</span>
+            <strong>Saved records only</strong>
+            <span>Exports use signed-in tracker records already saved in CareerFunnel.</span>
+        </article>
+        <article class="cf69e-safety-card cf69e-safety-manual">
+            <span class="cf69e-label">Workflow</span>
+            <strong>Manual download</strong>
+            <span>You click each download and review the export file outside the tracker.</span>
+        </article>
+        <article class="cf69e-safety-card cf69e-safety-warning">
+            <span class="cf69e-label">Boundary</span>
+            <strong>No employer delivery</strong>
+            <span>CareerFunnel provides no employer delivery, auto-apply, or auto-submit workflow.</span>
+        </article>
+        <article class="cf69e-safety-card cf69e-safety-warning">
+            <span class="cf69e-label">Evidence</span>
+            <strong>No external verification</strong>
+            <span>Exports are not proof of employer interaction or scraped live-market data.</span>
+        </article>
     </section>
 
-    <section class="export-grid">
-        <article class="export-card">
+    <section class="cf69e-card">
+        <div>
+            <p class="cf69e-eyebrow">Full Backup</p>
+            <h2 class="cf69e-section-title">Complete tracker workbook</h2>
+            <p class="cf69e-section-note">
+                Click to download one Excel file containing all tracker sheets. You initiate each export manually.
+            </p>
+        </div>
+        <div class="cf69e-action-row">
+            <a href="{% url 'exports:export_full_tracker' %}" class="btn btn-primary">Download full tracker (manual)</a>
+        </div>
+    </section>
+
+    <section class="cf69e-export-grid" aria-label="Export options">
+        <article class="cf69e-export-card">
             <div>
-                <p class="eyebrow">Applications</p>
+                <p class="cf69e-eyebrow">Applications</p>
                 <h3>Applications export</h3>
                 <p>Download logged job applications, statuses, and reviewer evidence for funnel progress.</p>
             </div>
-            <a href="{% url 'exports:export_applications' %}" class="btn btn-secondary">Download manually</a>
+            <div class="cf69e-action-row">
+                <a href="{% url 'exports:export_applications' %}" class="btn btn-secondary">Download manually</a>
+            </div>
         </article>
 
-        <article class="export-card">
+        <article class="cf69e-export-card">
             <div>
-                <p class="eyebrow">Daily Log</p>
+                <p class="cf69e-eyebrow">Daily Log</p>
                 <h3>Daily logs export</h3>
                 <p>Download daily targets, actual applications, variance, and notes for activity evidence.</p>
             </div>
-            <a href="{% url 'exports:export_daily_logs' %}" class="btn btn-secondary">Download manually</a>
+            <div class="cf69e-action-row">
+                <a href="{% url 'exports:export_daily_logs' %}" class="btn btn-secondary">Download manually</a>
+            </div>
         </article>
 
-        <article class="export-card">
+        <article class="cf69e-export-card">
             <div>
-                <p class="eyebrow">Weekly Review</p>
+                <p class="cf69e-eyebrow">Weekly Review</p>
                 <h3>Weekly reviews export</h3>
                 <p>Download weekly diagnosis, conversion rates, and decision context for offline review.</p>
             </div>
-            <a href="{% url 'exports:export_weekly_reviews' %}" class="btn btn-secondary">Download manually</a>
+            <div class="cf69e-action-row">
+                <a href="{% url 'exports:export_weekly_reviews' %}" class="btn btn-secondary">Download manually</a>
+            </div>
         </article>
 
-        <article class="export-card">
+        <article class="cf69e-export-card">
             <div>
-                <p class="eyebrow">Interview Prep</p>
+                <p class="cf69e-eyebrow">Interview Prep</p>
                 <h3>Interview prep export</h3>
                 <p>Download interview-preparation records and supporting notes where available.</p>
             </div>
-            <a href="{% url 'exports:export_interviews' %}" class="btn btn-secondary">Download manually</a>
+            <div class="cf69e-action-row">
+                <a href="{% url 'exports:export_interviews' %}" class="btn btn-secondary">Download manually</a>
+            </div>
         </article>
 
-        <article class="export-card">
+        <article class="cf69e-export-card">
             <div>
-                <p class="eyebrow">Notes</p>
+                <p class="cf69e-eyebrow">Notes</p>
                 <h3>Notes and decisions export</h3>
                 <p>Download strategy notes, lessons, and decisions that support the reviewer narrative.</p>
             </div>
-            <a href="{% url 'exports:export_notes' %}" class="btn btn-secondary">Download manually</a>
+            <div class="cf69e-action-row">
+                <a href="{% url 'exports:export_notes' %}" class="btn btn-secondary">Download manually</a>
+            </div>
+        </article>
+
+        <article class="cf69e-export-card cf69e-empty-state">
+            <div>
+                <p class="cf69e-eyebrow">Safe Use</p>
+                <h3>Review outside the tracker</h3>
+                <p>
+                    Use downloaded export files for manual review, backup, CSV export workflows where applicable,
+                    and offline spreadsheet analysis. Application actions happen manually outside the tracker.
+                </p>
+            </div>
         </article>
     </section>
 
-    <section class="content-card cf-export-trust-panel">
-        <div class="card-header">
-            <p class="eyebrow">Trust and evidence</p>
-            <h2>Authenticated tracker records only</h2>
-            <p>Exports are generated from your signed-in user records when you click download.</p>
-            <ul class="page-proof-list">
+    <section class="cf69e-card">
+        <div>
+            <p class="cf69e-eyebrow">Trust and evidence</p>
+            <h2 class="cf69e-section-title">Authenticated tracker records only</h2>
+            <p class="cf69e-section-note">Exports are generated from your signed-in user records when you click download.</p>
+            <ul class="cf69e-list">
                 {% for point in export_evidence.trust_points %}
                 <li>{{ point }}</li>
                 {% endfor %}
             </ul>
-            <h3>What Export Centre does not do</h3>
-            <ul class="workflow-list">
-                {% for item in export_evidence.limitations %}
-                <li>{{ item }}</li>
-                {% endfor %}
-            </ul>
         </div>
-        <a href="{% url 'metrics:funnel_metrics' %}" class="cf-report-manual-link">{{ export_evidence.reporting_link_label }}</a>
+    </section>
+
+    <section class="cf69e-card">
+        <div class="cf69e-guidance-grid">
+            <article class="cf69e-guidance-card">
+                <p class="cf69e-eyebrow">Limitations</p>
+                <h3>What Export Centre does not do</h3>
+                <ul class="cf69e-list">
+                    {% for item in export_evidence.limitations %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                    <li>No auto-apply, auto-submit, employer delivery, or live-market scraping is performed.</li>
+                    <li>Exports are not proof of employer interaction or external verification.</li>
+                </ul>
+            </article>
+            <article class="cf69e-guidance-card">
+                <p class="cf69e-eyebrow">Reporting</p>
+                <h3>Manual analysis path</h3>
+                <p>
+                    Keep downloads as user-reviewed evidence files. For in-tracker metrics, use the manual
+                    reporting link without implying any external delivery.
+                </p>
+                <div class="cf69e-action-row">
+                    <a href="{% url 'metrics:funnel_metrics' %}" class="cf-report-manual-link">{{ export_evidence.reporting_link_label }}</a>
+                </div>
+            </article>
+        </div>
     </section>
 </div>
 {% endblock %}
