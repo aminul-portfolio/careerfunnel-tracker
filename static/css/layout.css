@@ -261,6 +261,16 @@ a {
     transition: margin-left var(--motion-fast), width var(--motion-fast);
 }
 
+.cf-shell-public-layout {
+    display: block;
+    min-height: 100vh;
+}
+
+.cf-shell-public-content {
+    width: 100%;
+    min-height: 100vh;
+}
+
 .topbar,
 .cf-topbar {
     background: var(--topbar-surface);
