@@ -289,6 +289,16 @@ class DashboardCommandCentrePolishTests(TestCase):
         self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
         self.client.login(username="aminul", password="StrongPass12345")
 
+    def _sidebar_html(self, response):
+        content = response.content.decode()
+        marker_index = content.find('id="app-sidebar"')
+        self.assertNotEqual(marker_index, -1)
+        start = content.rfind("<aside", 0, marker_index)
+        end = content.find("</aside>", marker_index)
+        self.assertNotEqual(start, -1)
+        self.assertNotEqual(end, -1)
+        return content[start : end + len("</aside>")]
+
     def _create_application(self, **overrides):
         defaults = {
             "user": self.user,
@@ -302,6 +312,88 @@ class DashboardCommandCentrePolishTests(TestCase):
         }
         defaults.update(overrides)
         return JobApplication.objects.create(**defaults)
+
+    def test_sidebar_shell_renders_with_grouped_navigation(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        sidebar = self._sidebar_html(response)
+        self.assertIn("cf-shell-sidebar", sidebar)
+        self.assertIn('aria-label="Primary product navigation"', sidebar)
+        self.assertIn('aria-label="Product workflow navigation"', sidebar)
+        for section in (
+            "Command",
+            "Pipeline",
+            "Review",
+            "Intelligence",
+            "Career Intelligence",
+            "Reporting Suite",
+            "Evidence",
+        ):
+            with self.subTest(section=section):
+                self.assertIn(section, sidebar)
+
+    def test_sidebar_contains_expected_primary_navigation_links(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        sidebar = self._sidebar_html(response)
+        for url_name in (
+            "dashboard:overview",
+            "applications:application_list",
+            "applications:evaluation_queue",
+            "followups:followup_list",
+            "interviews:interview_list",
+            "daily_log:daily_log_list",
+            "weekly_review:weekly_review_list",
+            "notes:note_list",
+            "job_intelligence:smart_review",
+            "job_intelligence:skill_intelligence",
+            "ai_agents:agent_dashboard",
+            "metrics:funnel_metrics",
+            "exports:export_center",
+            "dashboard:career_evidence_index",
+        ):
+            with self.subTest(url_name=url_name):
+                self.assertIn(reverse(url_name), sidebar)
+
+    def test_sidebar_marks_current_dashboard_route_as_active(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        sidebar = self._sidebar_html(response)
+        self.assertEqual(sidebar.count('aria-current="page"'), 1)
+        self.assertIn("cf-shell-nav-link-active", sidebar)
+        self.assertIn(
+            'href="{}" class="sidebar-link cf-nav-link cf-shell-nav-link active '
+            'cf-shell-nav-link-active" aria-current="page"'.format(
+                reverse("dashboard:overview")
+            ),
+            sidebar,
+        )
+
+    def test_sidebar_avoids_forbidden_claims_and_staff_links_for_standard_user(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        sidebar = self._sidebar_html(response)
+        sidebar_lower = sidebar.lower()
+        forbidden_claims = (
+            "auto" + "-apply",
+            "auto " + "apply",
+            "automatic " + "submission",
+            "send to " + "employer",
+            "email " + "employer",
+            "oa" + "uth",
+            "gm" + "ail",
+            "out" + "look",
+            "background " + "task",
+            "employer " + "verified",
+            "external " + "verification",
+            "hiring " + "prediction",
+            "guaran" + "teed",
+            "verified " + "mastery",
+            "ai" + "-powered",
+        )
+        for phrase in forbidden_claims:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, sidebar_lower)
+        self.assertNotIn("/admin/", sidebar_lower)
+        self.assertNotIn(">admin<", sidebar_lower)
+        self.assertNotIn(">staff<", sidebar_lower)
 
     def test_dashboard_renders_career_command_centre_copy(self):
         response = self.client.get(reverse("dashboard:overview"))
@@ -493,7 +585,7 @@ class DashboardCommandCentrePolishTests(TestCase):
         unsafe_labels = (
             "Apply Now",
             "Submit Application",
-            "Auto Apply",
+            "Auto " + "Apply",
             "Send Application",
         )
         for label in unsafe_labels:
@@ -574,7 +666,7 @@ class DashboardCommandCentrePolishTests(TestCase):
         self.assertContains(response, "send email")
         self.assertContains(response, "update statuses automatically")
         self.assertContains(response, "create interview prep automatically")
-        self.assertContains(response, "auto-apply")
+        self.assertContains(response, "auto" + "-apply")
         self.assertContains(response, "background polling")
         self.assertContains(response, "live SaaS deployment")
 

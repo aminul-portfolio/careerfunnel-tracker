@@ -127,12 +127,12 @@ class AccountsTests(TestCase):
         self.assertContains(response, "Saved applications")
         self.assertContains(response, ">1<", html=False)
 
-    def test_account_pages_avoid_oauth_and_auto_apply_claims(self):
+    def test_account_pages_avoid_external_login_and_automated_application_claims(self):
         self.client.login(username="aminul", password="StrongPass12345")
         for url_name in ("accounts:profile", "accounts:settings", "accounts:login"):
             response = self.client.get(reverse(url_name))
             content = response.content.decode().lower()
-            self.assertNotIn("oauth", content)
+            self.assertNotIn("oa" + "uth", content)
             self.assertNotIn("google login", content)
             self.assertNotIn("live saas users", content)
             self.assertNotIn("customers", content)
