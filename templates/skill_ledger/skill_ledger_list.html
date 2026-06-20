@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Skill Ledger | CareerFunnel Tracker{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    <div class="card-header">
+        <p class="eyebrow">Skill Ledger</p>
+        <h1>Skill Ledger</h1>
+        <p>Track skills, evidence level, and project references in one private workspace.</p>
+        <a href="{% url 'skill_ledger:create' %}" class="btn btn-primary">Add Entry</a>
+    </div>
+
+    {% if entries %}
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Skill</th>
+                    <th>Category</th>
+                    <th>Evidence Level</th>
+                    <th>Visibility</th>
+                    <th>Sprint</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td><a href="{% url 'skill_ledger:detail' entry.pk %}">{{ entry.skill_name }}</a></td>
+                    <td>{{ entry.get_category_display }}</td>
+                    <td>{{ entry.get_evidence_level_display }}</td>
+                    <td>{{ entry.get_visibility_display }}</td>
+                    <td>{{ entry.sprint_reference|default:"-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h2>No skill entries yet</h2>
+        <p>Add the first entry when you are ready to track a skill and its current evidence level.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

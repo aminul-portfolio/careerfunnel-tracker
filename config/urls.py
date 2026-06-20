@@ -21,6 +21,7 @@ urlpatterns = [
     path("smart-review/", include("apps.job_intelligence.urls")),
     path("ai-agents/", include("apps.ai_agents.urls")),
     path("skill-gaps/", include("apps.skill_gaps.urls")),
+    path("skill-ledger/", include("apps.skill_ledger.urls")),
     path("skills/", include("apps.skills.urls")),
 ]
 
