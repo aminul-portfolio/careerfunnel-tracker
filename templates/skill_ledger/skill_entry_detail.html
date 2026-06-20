@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}{{ entry.skill_name }} | Skill Ledger{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    <div class="card-header">
+        <p class="eyebrow">Skill Ledger</p>
+        <h1>{{ entry.skill_name }}</h1>
+        <a href="{% url 'skill_ledger:list' %}" class="btn btn-secondary">Back to Skill Ledger</a>
+    </div>
+
+    <dl class="detail-grid">
+        <div>
+            <dt>Category</dt>
+            <dd>{{ entry.get_category_display }}</dd>
+        </div>
+        <div>
+            <dt>Evidence Level</dt>
+            <dd>{{ entry.get_evidence_level_display }}</dd>
+        </div>
+        {% if entry.sprint_reference %}
+        <div>
+            <dt>Sprint Reference</dt>
+            <dd>{{ entry.sprint_reference }}</dd>
+        </div>
+        {% endif %}
+        {% if entry.project_link %}
+        <div>
+            <dt>Project Link</dt>
+            <dd><a href="{{ entry.project_link }}">{{ entry.project_link }}</a></dd>
+        </div>
+        {% endif %}
+        {% if entry.notes %}
+        <div>
+            <dt>Notes</dt>
+            <dd>{{ entry.notes|linebreaks }}</dd>
+        </div>
+        {% endif %}
+        <div>
+            <dt>Visibility</dt>
+            <dd>{{ entry.get_visibility_display }}</dd>
+        </div>
+        <div>
+            <dt>Date Added</dt>
+            <dd>{{ entry.date_added }}</dd>
+        </div>
+        <div>
+            <dt>Last Updated</dt>
+            <dd>{{ entry.last_updated }}</dd>
+        </div>
+    </dl>
+</div>
+{% endblock %}

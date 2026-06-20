@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "apps.job_intelligence",
     "apps.ai_agents",
     "apps.skill_gaps",
+    "apps.skill_ledger",
 ]
 
 MIDDLEWARE = [
