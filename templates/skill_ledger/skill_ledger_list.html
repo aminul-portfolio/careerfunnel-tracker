@@ -2,45 +2,231 @@
 
 {% block title %}Skill Ledger | CareerFunnel Tracker{% endblock %}
 
-{% block content %}
-<div class="content-card">
-    <div class="card-header">
-        <p class="eyebrow">Skill Ledger</p>
-        <h1>Skill Ledger</h1>
-        <p>Track skills, evidence level, and project references in one private workspace.</p>
-        <a href="{% url 'skill_ledger:create' %}" class="btn btn-primary">Add Entry</a>
-    </div>
+{% block extra_css %}
+<style>
+    .cf69-skill-ledger-page {
+        display: grid;
+        gap: 20px;
+    }
 
-    {% if entries %}
-    <div class="table-responsive">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Skill</th>
-                    <th>Category</th>
-                    <th>Evidence Level</th>
-                    <th>Visibility</th>
-                    <th>Sprint</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for entry in entries %}
-                <tr>
-                    <td><a href="{% url 'skill_ledger:detail' entry.pk %}">{{ entry.skill_name }}</a></td>
-                    <td>{{ entry.get_category_display }}</td>
-                    <td>{{ entry.get_evidence_level_display }}</td>
-                    <td>{{ entry.get_visibility_display }}</td>
-                    <td>{{ entry.sprint_reference|default:"-" }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <h2>No skill entries yet</h2>
-        <p>Add the first entry when you are ready to track a skill and its current evidence level.</p>
-    </div>
-    {% endif %}
+    .cf70-skill-hero {
+        background: linear-gradient(135deg, #eff6ff 0%, #ffffff 58%, #f0fdfa 100%);
+        border: 1px solid #dbeafe;
+        border-radius: 18px;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        padding: 28px;
+    }
+
+    .cf70-skill-hero-row,
+    .cf70-skill-section-header,
+    .cf70-skill-entry-row,
+    .cf70-skill-search-form {
+        align-items: center;
+        display: flex;
+        gap: 14px;
+    }
+
+    .cf70-skill-hero-row,
+    .cf70-skill-section-header {
+        justify-content: space-between;
+    }
+
+    .cf70-skill-hero-copy {
+        max-width: 760px;
+    }
+
+    .cf70-skill-hero-copy h1 {
+        margin-bottom: 8px;
+    }
+
+    .cf70-skill-advisory-stack {
+        display: grid;
+        gap: 12px;
+    }
+
+    .cf70-skill-kpi-strip {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .cf70-skill-kpi-card,
+    .cf70-skill-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+        padding: 18px;
+    }
+
+    .cf70-skill-kpi-value {
+        margin: 4px 0;
+    }
+
+    .cf70-skill-search-card {
+        display: grid;
+        gap: 12px;
+    }
+
+    .cf70-skill-search-form input[type="search"] {
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        flex: 1;
+        min-height: 42px;
+        padding: 8px 12px;
+    }
+
+    .cf70-skill-entry-groups {
+        display: grid;
+        gap: 18px;
+    }
+
+    .cf70-skill-entry-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .cf70-skill-entry-row {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        justify-content: space-between;
+        padding: 14px;
+    }
+
+    .cf70-skill-entry-main {
+        display: grid;
+        gap: 8px;
+    }
+
+    .cf70-skill-entry-meta {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    @media (max-width: 900px) {
+        .cf70-skill-kpi-strip {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .cf70-skill-hero-row,
+        .cf70-skill-section-header,
+        .cf70-skill-entry-row,
+        .cf70-skill-search-form {
+            align-items: stretch;
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cf69-skill-ledger-page">
+    <section class="content-card cf69-card-hero cf70-skill-hero">
+        <div class="cf70-skill-hero-row">
+            <div class="cf70-skill-hero-copy">
+                <p class="eyebrow">Private skill evidence</p>
+                <h1>Skill Ledger</h1>
+                <p>Track skill evidence, learning targets, and sprint references for your own review workflow.</p>
+            </div>
+            <a href="{% url 'skill_ledger:create' %}" class="btn btn-primary">Add Entry</a>
+        </div>
+    </section>
+
+    <section class="cf70-skill-advisory-stack" aria-label="Skill Ledger advisory notes">
+        <p class="cf69-advisory-manual">This ledger is private and for your personal reference only. Entries are not visible to employers or recruiters until you enable the public view in a future update.</p>
+        <p class="cf69-advisory-info">VERIFIED means portfolio evidence exists in a closed sprint, passing tests, or prior work experience. It does not mean externally certified or employer-verified.</p>
+    </section>
+
+    <section class="cf69-kpi-strip cf70-skill-kpi-strip" aria-label="Skill Ledger evidence counts">
+        <div class="cf69-kpi-card cf70-skill-kpi-card">
+            <p class="cf69-kpi-label">Verified</p>
+            <p class="cf69-kpi-value cf70-skill-kpi-value">{{ kpi_counts.VERIFIED }}</p>
+            <p class="cf69-kpi-note">Portfolio evidence recorded</p>
+        </div>
+        <div class="cf69-kpi-card cf70-skill-kpi-card">
+            <p class="cf69-kpi-label">Learning Target</p>
+            <p class="cf69-kpi-value cf70-skill-kpi-value">{{ kpi_counts.LEARNING_TARGET }}</p>
+            <p class="cf69-kpi-note">Developing skill</p>
+        </div>
+        <div class="cf69-kpi-card cf70-skill-kpi-card">
+            <p class="cf69-kpi-label">Studying</p>
+            <p class="cf69-kpi-value cf70-skill-kpi-value">{{ kpi_counts.STUDYING }}</p>
+            <p class="cf69-kpi-note">Personal study only</p>
+        </div>
+        <div class="cf69-kpi-card cf70-skill-kpi-card">
+            <p class="cf69-kpi-label">No Evidence</p>
+            <p class="cf69-kpi-value cf70-skill-kpi-value">{{ kpi_counts.NO_EVIDENCE }}</p>
+            <p class="cf69-kpi-note">Gap identified</p>
+        </div>
+    </section>
+
+    <section class="content-card cf69-card cf70-skill-card cf70-skill-search-card">
+        <div class="card-header">
+            <p class="eyebrow">Find a skill</p>
+            <h2>Search by skill name</h2>
+        </div>
+        <form method="get" class="cf70-skill-search-form">
+            <label for="skill-ledger-search" class="sr-only">Search skill name</label>
+            <input id="skill-ledger-search" type="search" name="q" value="{{ search_query }}" placeholder="Search skill name">
+            <button type="submit" class="btn btn-primary">Search</button>
+            {% if search_query %}
+            <a href="{% url 'skill_ledger:list' %}" class="btn btn-secondary">Clear</a>
+            {% endif %}
+        </form>
+    </section>
+
+    <section class="cf70-skill-entry-groups" aria-label="Skill Ledger entries grouped by evidence level">
+        {% if entries %}
+            {% for group in evidence_groups %}
+            <section class="content-card cf69-card cf70-skill-card">
+                <div class="cf70-skill-section-header">
+                    <div>
+                        <p class="eyebrow">{{ group.value }}</p>
+                        <h2>{{ group.label }}</h2>
+                    </div>
+                    <span class="cf69-badge">{{ group.entries|length }} entries</span>
+                </div>
+
+                {% if group.entries %}
+                <div class="cf70-skill-entry-list">
+                    {% for entry in group.entries %}
+                    <article class="cf70-skill-entry-row">
+                        <div class="cf70-skill-entry-main">
+                            <h3><a href="{% url 'skill_ledger:detail' entry.pk %}">{{ entry.skill_name }}</a></h3>
+                            <div class="cf70-skill-entry-meta">
+                                <span class="cf69-badge">{{ entry.get_category_display }}</span>
+                                <span>{{ entry.get_evidence_level_display }}</span>
+                                <span>{{ entry.get_visibility_display }}</span>
+                                {% if entry.sprint_reference %}
+                                <span>Sprint: {{ entry.sprint_reference }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <a href="{% url 'skill_ledger:detail' entry.pk %}" class="table-link">View detail</a>
+                    </article>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="cf69-empty">
+                    <p>No entries in this evidence level yet.</p>
+                </div>
+                {% endif %}
+            </section>
+            {% endfor %}
+        {% else %}
+            <div class="content-card cf69-card cf69-empty cf70-skill-card">
+                {% if search_query %}
+                <h2>No matching skill entries</h2>
+                <p>No skill names match "{{ search_query }}". Try a different skill name or clear the search.</p>
+                {% else %}
+                <h2>No skill entries yet</h2>
+                <p>Add the first entry when you are ready to track a skill and its current evidence level.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </section>
 </div>
 {% endblock %}

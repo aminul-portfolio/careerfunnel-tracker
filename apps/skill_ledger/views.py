@@ -21,11 +21,53 @@ class SkillEntryForm(forms.ModelForm):
 
 @login_required
 def skill_ledger_list(request):
-    entries = SkillEntry.objects.all().order_by("skill_name")
+    search_query = request.GET.get("q", "").strip()
+    all_entries = SkillEntry.objects.all()
+    entries = all_entries
+    if search_query:
+        entries = entries.filter(skill_name__icontains=search_query)
+    entries = entries.order_by("evidence_level", "category", "skill_name")
+
+    evidence_groups = [
+        {
+            "value": SkillEntry.EvidenceLevel.VERIFIED,
+            "label": "Verified",
+            "entries": [],
+        },
+        {
+            "value": SkillEntry.EvidenceLevel.LEARNING_TARGET,
+            "label": "Learning Target",
+            "entries": [],
+        },
+        {
+            "value": SkillEntry.EvidenceLevel.STUDYING,
+            "label": "Studying",
+            "entries": [],
+        },
+        {
+            "value": SkillEntry.EvidenceLevel.NO_EVIDENCE,
+            "label": "No Evidence",
+            "entries": [],
+        },
+    ]
+    entries_by_level = {group["value"]: group["entries"] for group in evidence_groups}
+    for entry in entries:
+        entries_by_level[entry.evidence_level].append(entry)
+
+    kpi_counts = {
+        group["value"]: all_entries.filter(evidence_level=group["value"]).count()
+        for group in evidence_groups
+    }
+
     return render(
         request,
         "skill_ledger/skill_ledger_list.html",
-        {"entries": entries},
+        {
+            "entries": entries,
+            "evidence_groups": evidence_groups,
+            "kpi_counts": kpi_counts,
+            "search_query": search_query,
+        },
     )
 
 
