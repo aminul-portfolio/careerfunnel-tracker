@@ -591,7 +591,7 @@ Expected current result:
 ```text
 System check identified no issues
 No changes detected
-999 tests passing
+900+ validated tests
 ```
 
 Use this to prove repository stability.

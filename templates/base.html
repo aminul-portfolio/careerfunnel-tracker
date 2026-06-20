@@ -10,13 +10,17 @@
     <link rel="stylesheet" href="{% static 'css/components.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
-<body class="cf-app">
+<body class="cf-app{% if user.is_authenticated %} cf-shell-auth-layout{% else %} cf-shell-public-layout{% endif %}">
     <a class="cf-skip-link" href="#main-content">Skip to main content</a>
+    {% if user.is_authenticated %}
     <div class="cf-sidebar-overlay" id="sidebar-overlay" hidden aria-hidden="true"></div>
+    {% endif %}
     <div id="cf-toast-root" class="cf-toast-root" aria-live="polite" aria-atomic="true"></div>
-    <div class="app-shell cf-app-shell">
+    <div class="{% if user.is_authenticated %}app-shell cf-app-shell cf-shell-auth-layout{% else %}cf-shell-public-layout{% endif %}">
+        {% if user.is_authenticated %}
         {% include "partials/sidebar.html" %}
-        <main class="main-content cf-main-content" id="main-content">
+        {% endif %}
+        <main class="{% if user.is_authenticated %}main-content cf-main-content cf-shell-auth-content{% else %}cf-shell-public-content{% endif %}" id="main-content">
             {% include "partials/navbar.html" %}
             {% include "partials/messages.html" %}
             <section class="page-content">{% block content %}{% endblock %}</section>

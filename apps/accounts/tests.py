@@ -27,14 +27,40 @@ class AccountsTests(TestCase):
         self.assertNotEqual(end, -1)
         return content[start : end + len("</header>")]
 
+    def _assert_no_authenticated_sidebar(self, response):
+        content = response.content.decode()
+        self.assertNotIn("cf-shell-sidebar", content)
+        self.assertNotIn('id="app-sidebar"', content)
+        self.assertNotIn("Product workflow navigation", content)
+        self.assertNotIn('href="{}"'.format(reverse("dashboard:overview")), content)
+        self.assertNotIn('href="{}"'.format(reverse("applications:application_list")), content)
+        self.assertNotIn(
+            'href="{}"'.format(reverse("job_intelligence:skill_intelligence")),
+            content,
+        )
+        self.assertNotIn('href="{}"'.format(reverse("ai_agents:agent_dashboard")), content)
+        self.assertNotIn("Career Intelligence", content)
+
     def test_register_page_loads(self):
         response = self.client.get(reverse("accounts:register"))
         self.assertEqual(response.status_code, 200)
+
+    def test_register_page_uses_public_shell_without_authenticated_sidebar(self):
+        response = self.client.get(reverse("accounts:register"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "cf-shell-public-layout")
+        self._assert_no_authenticated_sidebar(response)
 
     def test_login_page_loads(self):
         response = self.client.get(reverse("accounts:login"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Sign in to CareerFunnel")
+
+    def test_login_page_uses_public_shell_without_authenticated_sidebar(self):
+        response = self.client.get(reverse("accounts:login"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "cf-shell-public-layout")
+        self._assert_no_authenticated_sidebar(response)
 
     def test_user_can_register(self):
         response = self.client.post(
@@ -164,3 +190,6 @@ class AccountsTests(TestCase):
         self.client.login(username="aminul", password="StrongPass12345")
         response = self.client.get(reverse("dashboard:overview"))
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "cf-shell-auth-layout")
+        self.assertContains(response, "cf-shell-sidebar")
+        self.assertContains(response, reverse("dashboard:overview"))

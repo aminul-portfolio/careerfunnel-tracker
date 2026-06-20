@@ -5,7 +5,7 @@
 - **Branch reviewed:** `main`
 - **Latest Sprint 59 tag:** `sprint-59-final-career-intelligence-workflow-complete`
 - **Tests at Sprint 52-59 release review:** 771 passing
-- **Current Sprint 66A baseline:** 999 passing tests
+- **Current public baseline:** 900+ validated tests
 - **Ruff:** passed
 - **Django check:** passed
 - **Migration check:** passed (no changes detected)
@@ -59,7 +59,7 @@ The pipeline is deterministic, rule-based, manual, advisory, and evidence-based.
 
 ## Release readiness notes
 
-- Local validation passed at release review; Sprint 66A current baseline is Ruff, Django check, migration check, and 999 passing tests.
+- Local validation passed at release review; current public baseline is Ruff, Django check, migration check, and 900+ validated tests.
 - GitHub Actions manual browser check still required before external publishing (GitHub CLI was unavailable during terminal review).
 - Screenshots for Sprint 53-59 intelligence pages should be captured separately before external publishing.
 - README updated to reflect Sprint 59 state and claim-safe intelligence pipeline boundaries.
