@@ -1,5 +1,5 @@
-<aside class="sidebar cf-sidebar" id="app-sidebar" aria-label="Primary product navigation">
-    <div class="sidebar-brand cf-sidebar-brand">
+<aside class="sidebar cf-sidebar cf-shell-sidebar" id="app-sidebar" aria-label="Primary product navigation">
+    <div class="sidebar-brand cf-sidebar-brand cf-shell-sidebar-brand">
         <div class="cf-sidebar-brand-top">
             <div class="brand-mark cf-brand-mark" aria-hidden="true">CF</div>
 
@@ -27,40 +27,98 @@
             </button>
         </div>
     </div>
-    <nav class="sidebar-nav cf-sidebar-nav" aria-label="Product workflow">
-        <div class="sidebar-section-label cf-nav-group-label">Command</div>
-        <a href="{% url 'dashboard:overview' %}" class="sidebar-link cf-nav-link">Dashboard</a>
+    <nav class="sidebar-nav cf-sidebar-nav cf-shell-nav" aria-label="Product workflow navigation">
+        {% with active_view=request.resolver_match.view_name %}
+        <div class="cf-shell-sidebar-section" role="group" aria-labelledby="sidebar-section-command">
+            <div class="sidebar-section-label cf-nav-group-label cf-shell-sidebar-section-title" id="sidebar-section-command">Command</div>
+            <a href="{% url 'dashboard:overview' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'dashboard:overview' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'dashboard:overview' %} aria-current="page"{% endif %}>
+                <span class="cf-shell-nav-label">Dashboard</span>
+            </a>
+        </div>
 
-        <div class="sidebar-section-label cf-nav-group-label">Pipeline</div>
-        <a href="{% url 'applications:application_list' %}" class="sidebar-link cf-nav-link">Applications</a>
-        <a href="{% url 'applications:evaluation_queue' %}" class="sidebar-link cf-nav-link">Evaluation Queue</a>
-        <a href="{% url 'followups:followup_list' %}" class="sidebar-link cf-nav-link">Follow-ups</a>
-        <a href="{% url 'interviews:interview_list' %}" class="sidebar-link cf-nav-link">Interview Prep</a>
+        <div class="cf-shell-sidebar-section" role="group" aria-labelledby="sidebar-section-pipeline">
+            <div class="sidebar-section-label cf-nav-group-label cf-shell-sidebar-section-title" id="sidebar-section-pipeline">Pipeline</div>
+            <a href="{% url 'applications:application_list' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'applications:application_list' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'applications:application_list' %} aria-current="page"{% endif %}>
+                <span class="cf-shell-nav-label">Applications</span>
+            </a>
+            <a href="{% url 'applications:evaluation_queue' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'applications:evaluation_queue' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'applications:evaluation_queue' %} aria-current="page"{% endif %}>
+                <span class="cf-shell-nav-label">Evaluation Queue</span>
+            </a>
+            <a href="{% url 'followups:followup_list' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'followups:followup_list' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'followups:followup_list' %} aria-current="page"{% endif %}>
+                <span class="cf-shell-nav-label">Follow-ups</span>
+            </a>
+            <a href="{% url 'interviews:interview_list' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'interviews:interview_list' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'interviews:interview_list' %} aria-current="page"{% endif %}>
+                <span class="cf-shell-nav-label">Interview Prep</span>
+            </a>
+        </div>
 
-        <div class="sidebar-section-label cf-nav-group-label">Review</div>
-        <a href="{% url 'daily_log:daily_log_list' %}" class="sidebar-link cf-nav-link">Daily Log</a>
-        <a href="{% url 'weekly_review:weekly_review_list' %}" class="sidebar-link cf-nav-link">Weekly Review</a>
-        <a href="{% url 'notes:note_list' %}" class="sidebar-link cf-nav-link">Notes &amp; Decisions</a>
+        <div class="cf-shell-sidebar-section" role="group" aria-labelledby="sidebar-section-review">
+            <div class="sidebar-section-label cf-nav-group-label cf-shell-sidebar-section-title" id="sidebar-section-review">Review</div>
+            <a href="{% url 'daily_log:daily_log_list' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'daily_log:daily_log_list' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'daily_log:daily_log_list' %} aria-current="page"{% endif %}>
+                <span class="cf-shell-nav-label">Daily Log</span>
+            </a>
+            <a href="{% url 'weekly_review:weekly_review_list' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'weekly_review:weekly_review_list' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'weekly_review:weekly_review_list' %} aria-current="page"{% endif %}>
+                <span class="cf-shell-nav-label">Weekly Review</span>
+            </a>
+            <a href="{% url 'notes:note_list' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'notes:note_list' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'notes:note_list' %} aria-current="page"{% endif %}>
+                <span class="cf-shell-nav-label">Notes &amp; Decisions</span>
+            </a>
+        </div>
 
-        <div class="sidebar-section-label cf-nav-group-label">Intelligence</div>
-        <a href="{% url 'job_intelligence:smart_review' %}" class="sidebar-link cf-nav-link">Smart Review</a>
-        <a href="{% url 'job_intelligence:skill_intelligence' %}" class="sidebar-link cf-nav-link">Skill Intelligence</a>
-        <a href="{% url 'ai_agents:agent_dashboard' %}" class="sidebar-link cf-nav-link">AI Agents</a>
+        <div class="cf-shell-sidebar-section" role="group" aria-labelledby="sidebar-section-intelligence">
+            <div class="sidebar-section-label cf-nav-group-label cf-shell-sidebar-section-title" id="sidebar-section-intelligence">Intelligence</div>
+            <a href="{% url 'job_intelligence:smart_review' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'job_intelligence:smart_review' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'job_intelligence:smart_review' %} aria-current="page"{% endif %}>
+                <span class="cf-shell-nav-label">Smart Review</span>
+            </a>
+            <a href="{% url 'job_intelligence:skill_intelligence' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'job_intelligence:skill_intelligence' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'job_intelligence:skill_intelligence' %} aria-current="page"{% endif %}>
+                <span class="cf-shell-nav-label">Skill Intelligence</span>
+            </a>
+            <a href="{% url 'ai_agents:agent_dashboard' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'ai_agents:agent_dashboard' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'ai_agents:agent_dashboard' %} aria-current="page"{% endif %}>
+                <span class="cf-shell-nav-label">AI Agents</span>
+            </a>
 
-        <div class="sidebar-section-label cf-nav-subgroup-label">Career Intelligence</div>
-        <a href="{% url 'skills:ai_capability_framework' %}" class="sidebar-link cf-nav-link">AI Capability Framework</a>
-        <a href="{% url 'skills:ai_readiness_report' %}" class="sidebar-link cf-nav-link">AI Readiness Report</a>
-        <a href="{% url 'skills:job_ai_capability_match_report' %}" class="sidebar-link cf-nav-link">Job AI Capability Match</a>
-        <a href="{% url 'skills:learning_recommendations_report' %}" class="sidebar-link cf-nav-link">Learning Recommendations</a>
-        <a href="{% url 'skills:career_readiness_dashboard' %}" class="sidebar-link cf-nav-link">Career Readiness Dashboard</a>
-        <a href="{% url 'skills:career_strategy_action_plan' %}" class="sidebar-link cf-nav-link">Career Strategy Action Plan</a>
-        <a href="{% url 'skills:final_career_intelligence_workflow' %}" class="sidebar-link cf-nav-link">Final Career Intelligence Workflow</a>
+            <div class="cf-shell-nav-subgroup" role="group" aria-labelledby="sidebar-section-career-intelligence">
+                <div class="sidebar-section-label cf-nav-subgroup-label cf-shell-sidebar-subsection-title" id="sidebar-section-career-intelligence">Career Intelligence</div>
+                <a href="{% url 'skills:ai_capability_framework' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'skills:ai_capability_framework' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'skills:ai_capability_framework' %} aria-current="page"{% endif %}>
+                    <span class="cf-shell-nav-label">AI Capability Framework</span>
+                </a>
+                <a href="{% url 'skills:ai_readiness_report' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'skills:ai_readiness_report' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'skills:ai_readiness_report' %} aria-current="page"{% endif %}>
+                    <span class="cf-shell-nav-label">AI Readiness Report</span>
+                </a>
+                <a href="{% url 'skills:job_ai_capability_match_report' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'skills:job_ai_capability_match_report' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'skills:job_ai_capability_match_report' %} aria-current="page"{% endif %}>
+                    <span class="cf-shell-nav-label">Job AI Capability Match</span>
+                </a>
+                <a href="{% url 'skills:learning_recommendations_report' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'skills:learning_recommendations_report' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'skills:learning_recommendations_report' %} aria-current="page"{% endif %}>
+                    <span class="cf-shell-nav-label">Learning Recommendations</span>
+                </a>
+                <a href="{% url 'skills:career_readiness_dashboard' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'skills:career_readiness_dashboard' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'skills:career_readiness_dashboard' %} aria-current="page"{% endif %}>
+                    <span class="cf-shell-nav-label">Career Readiness Dashboard</span>
+                </a>
+                <a href="{% url 'skills:career_strategy_action_plan' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'skills:career_strategy_action_plan' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'skills:career_strategy_action_plan' %} aria-current="page"{% endif %}>
+                    <span class="cf-shell-nav-label">Career Strategy Action Plan</span>
+                </a>
+                <a href="{% url 'skills:final_career_intelligence_workflow' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'skills:final_career_intelligence_workflow' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'skills:final_career_intelligence_workflow' %} aria-current="page"{% endif %}>
+                    <span class="cf-shell-nav-label">Final Career Intelligence Workflow</span>
+                </a>
+            </div>
+        </div>
 
-        <div class="sidebar-section-label cf-nav-group-label">Reporting Suite</div>
-        <a href="{% url 'metrics:funnel_metrics' %}" class="sidebar-link cf-nav-link">Funnel Metrics</a>
-        <a href="{% url 'exports:export_center' %}" class="sidebar-link cf-nav-link">Export Centre</a>
+        <div class="cf-shell-sidebar-section" role="group" aria-labelledby="sidebar-section-reporting">
+            <div class="sidebar-section-label cf-nav-group-label cf-shell-sidebar-section-title" id="sidebar-section-reporting">Reporting Suite</div>
+            <a href="{% url 'metrics:funnel_metrics' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'metrics:funnel_metrics' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'metrics:funnel_metrics' %} aria-current="page"{% endif %}>
+                <span class="cf-shell-nav-label">Funnel Metrics</span>
+            </a>
+            <a href="{% url 'exports:export_center' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'exports:export_center' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'exports:export_center' %} aria-current="page"{% endif %}>
+                <span class="cf-shell-nav-label">Export Centre</span>
+            </a>
+        </div>
 
-        <div class="sidebar-section-label cf-nav-group-label">Evidence</div>
-        <a href="{% url 'dashboard:career_evidence_index' %}" class="sidebar-link cf-nav-link">Career Evidence</a>
+        <div class="cf-shell-sidebar-section" role="group" aria-labelledby="sidebar-section-evidence">
+            <div class="sidebar-section-label cf-nav-group-label cf-shell-sidebar-section-title" id="sidebar-section-evidence">Evidence</div>
+            <a href="{% url 'dashboard:career_evidence_index' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'dashboard:career_evidence_index' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'dashboard:career_evidence_index' %} aria-current="page"{% endif %}>
+                <span class="cf-shell-nav-label">Career Evidence</span>
+            </a>
+        </div>
+        {% endwith %}
     </nav>
 </aside>

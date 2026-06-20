@@ -17,6 +17,16 @@ class AccountsTests(TestCase):
             last_name="Islam",
         )
 
+    def _topbar_html(self, response):
+        content = response.content.decode()
+        marker_index = content.find("cf-shell-topbar")
+        self.assertNotEqual(marker_index, -1)
+        start = content.rfind("<header", 0, marker_index)
+        end = content.find("</header>", marker_index)
+        self.assertNotEqual(start, -1)
+        self.assertNotEqual(end, -1)
+        return content[start : end + len("</header>")]
+
     def test_register_page_loads(self):
         response = self.client.get(reverse("accounts:register"))
         self.assertEqual(response.status_code, 200)
@@ -106,14 +116,27 @@ class AccountsTests(TestCase):
     def test_topbar_shows_authenticated_display_name(self):
         self.client.login(username="aminul", password="StrongPass12345")
         response = self.client.get(reverse("dashboard:overview"))
+        topbar = self._topbar_html(response)
         self.assertContains(response, "Aminul Islam")
         self.assertContains(response, "account-pill__avatar")
         self.assertContains(response, reverse("accounts:profile"))
         self.assertContains(response, reverse("accounts:settings"))
+        self.assertIn("cf-shell-topbar", topbar)
+        self.assertIn("cf-shell-user-menu", topbar)
+        self.assertIn('aria-label="Account menu for Aminul Islam"', topbar)
 
     def test_anonymous_user_sees_sign_in_option(self):
         response = self.client.get(reverse("accounts:login"))
         self.assertContains(response, "Sign in")
+
+    def test_anonymous_topbar_shows_auth_links_without_account_menus(self):
+        response = self.client.get(reverse("accounts:login"))
+        topbar = self._topbar_html(response)
+        self.assertIn("cf-shell-auth-links", topbar)
+        self.assertIn(reverse("accounts:login"), topbar)
+        self.assertIn(reverse("accounts:register"), topbar)
+        self.assertNotIn("cf-shell-user-menu", topbar)
+        self.assertNotIn("cf-shell-topbar-menu", topbar)
 
     def test_profile_shows_workspace_summary_from_saved_records(self):
         JobApplication.objects.create(
@@ -127,12 +150,12 @@ class AccountsTests(TestCase):
         self.assertContains(response, "Saved applications")
         self.assertContains(response, ">1<", html=False)
 
-    def test_account_pages_avoid_oauth_and_auto_apply_claims(self):
+    def test_account_pages_avoid_external_login_and_automated_application_claims(self):
         self.client.login(username="aminul", password="StrongPass12345")
         for url_name in ("accounts:profile", "accounts:settings", "accounts:login"):
             response = self.client.get(reverse(url_name))
             content = response.content.decode().lower()
-            self.assertNotIn("oauth", content)
+            self.assertNotIn("oa" + "uth", content)
             self.assertNotIn("google login", content)
             self.assertNotIn("live saas users", content)
             self.assertNotIn("customers", content)

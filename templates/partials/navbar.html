@@ -1,9 +1,9 @@
-<header class="topbar cf-topbar cf-topbar-premium">
-    <div class="topbar__inner">
-        <div class="cf-topbar-start topbar__identity">
+<header class="topbar cf-topbar cf-topbar-premium cf-shell-topbar" aria-label="Application header">
+    <div class="topbar__inner cf-shell-topbar-inner">
+        <div class="cf-topbar-start topbar__identity cf-shell-topbar-main">
             <button
                 type="button"
-                class="cf-sidebar-reopen-btn"
+                class="cf-sidebar-reopen-btn cf-shell-topbar-button"
                 id="sidebar-reopen-btn"
                 aria-label="Expand sidebar"
                 aria-controls="app-sidebar"
@@ -21,7 +21,7 @@
             </button>
             <button
                 type="button"
-                class="cf-mobile-nav-toggle"
+                class="cf-mobile-nav-toggle cf-shell-topbar-button"
                 id="mobile-nav-toggle"
                 aria-controls="app-sidebar"
                 aria-expanded="false"
@@ -31,38 +31,39 @@
                 <span class="cf-mobile-nav-toggle-bar" aria-hidden="true"></span>
                 <span class="cf-mobile-nav-toggle-bar" aria-hidden="true"></span>
             </button>
-            <div class="cf-topbar-heading topbar__heading topbar__identity-block">
-                <nav class="cf-breadcrumb topbar__breadcrumb" aria-label="Breadcrumb">
+            <div class="cf-topbar-heading topbar__heading topbar__identity-block cf-shell-topbar-heading">
+                <nav class="cf-breadcrumb topbar__breadcrumb cf-shell-breadcrumb" aria-label="Breadcrumb">
                     <ol class="cf-breadcrumb-list">
                         <li class="cf-breadcrumb-item">CareerFunnel</li>
-                        <li class="cf-breadcrumb-item cf-breadcrumb-item-current topbar__title" aria-current="page">
+                        <li class="cf-breadcrumb-item cf-breadcrumb-item-current topbar__title cf-shell-topbar-title" aria-current="page">
                             {% block page_heading %}CareerFunnel Tracker{% endblock %}
                         </li>
                     </ol>
                 </nav>
                 {% block topbar_subtitle %}
-                <p class="cf-topbar-subtitle topbar__subtitle">Evidence-led job-search intelligence for role-fit decisions, CV evidence, follow-ups, and reporting confidence.</p>
+                <p class="cf-topbar-subtitle topbar__subtitle cf-shell-topbar-subtitle">Evidence-led job-search intelligence for role-fit decisions, CV evidence, follow-ups, and reporting confidence.</p>
                 {% endblock %}
                 {% block topbar_actions %}{% endblock %}
             </div>
         </div>
-        <div class="topbar-actions cf-topbar-actions topbar__actions">
-            <div class="topbar__actions-cluster">
-                <span class="topbar__environment cf-env-badge topbar__badge">
+        <div class="topbar-actions cf-topbar-actions topbar__actions cf-shell-topbar-actions" aria-label="Header actions">
+            <div class="topbar__actions-cluster cf-shell-topbar-actions-cluster">
+                <span class="topbar__environment cf-env-badge topbar__badge cf-shell-topbar-badge">
                     <span class="topbar__environment-dot" aria-hidden="true"></span>
                     Local Portfolio Demo
                 </span>
                 {% if request.user.is_authenticated %}
                     <div
-                        class="topbar__menu topbar__menu--quick-add cf-quick-add topbar__quick-add"
+                        class="topbar__menu topbar__menu--quick-add cf-quick-add topbar__quick-add cf-shell-topbar-menu"
                         data-topbar-menu
                     >
                         <button
                             type="button"
-                            class="topbar__button cf-menu-trigger btn btn-primary topbar__quick-add-trigger"
+                            class="topbar__button cf-menu-trigger btn btn-primary topbar__quick-add-trigger cf-shell-topbar-button"
                             data-topbar-menu-trigger
                             aria-expanded="false"
                             aria-haspopup="true"
+                            aria-label="Open quick add menu"
                         >
                             <span class="topbar__quick-add-icon" aria-hidden="true">+</span>
                             Quick Add
@@ -70,17 +71,17 @@
                                 <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
                         </button>
-                        <ul class="topbar__menu-panel cf-menu-panel" role="menu" hidden>
+                        <ul class="topbar__menu-panel cf-menu-panel cf-shell-topbar-menu-panel" role="menu" aria-label="Quick add" hidden>
                             <li role="none"><a href="{% url 'applications:application_create' %}" role="menuitem">Add Application</a></li>
                             <li role="none"><a href="{% url 'daily_log:daily_log_create' %}" role="menuitem">Add Daily Log</a></li>
                             <li role="none"><a href="{% url 'weekly_review:weekly_review_create' %}" role="menuitem">Add Weekly Review</a></li>
                             <li role="none"><a href="{% url 'notes:note_create' %}" role="menuitem">Add Note</a></li>
                         </ul>
                     </div>
-                    <div class="topbar__menu topbar__menu--user cf-user-menu topbar__user topbar__account" data-topbar-menu>
+                    <div class="topbar__menu topbar__menu--user cf-user-menu topbar__user topbar__account cf-shell-user-menu" data-topbar-menu>
                         <button
                             type="button"
-                            class="topbar__button cf-menu-trigger user-pill topbar__user-pill account-pill"
+                            class="topbar__button cf-menu-trigger user-pill topbar__user-pill account-pill cf-shell-topbar-button"
                             data-topbar-menu-trigger
                             aria-expanded="false"
                             aria-haspopup="true"
@@ -95,7 +96,7 @@
                                 <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
                         </button>
-                        <ul class="topbar__menu-panel cf-menu-panel account-menu-panel" role="menu" hidden>
+                        <ul class="topbar__menu-panel cf-menu-panel account-menu-panel cf-shell-topbar-menu-panel" role="menu" aria-label="Account" hidden>
                             <li class="account-menu-header" role="none">
                                 <span class="account-menu-header__label">Signed in as</span>
                                 <strong class="account-menu-header__name">{{ account_display_name }}</strong>
@@ -111,8 +112,10 @@
                         </ul>
                     </div>
                 {% else %}
-                    <a href="{% url 'accounts:login' %}" class="btn btn-secondary topbar__button topbar__auth-link">Sign in</a>
-                    <a href="{% url 'accounts:register' %}" class="btn btn-primary topbar__button topbar__auth-link">Create account</a>
+                    <div class="cf-shell-auth-links" aria-label="Authentication links">
+                        <a href="{% url 'accounts:login' %}" class="btn btn-secondary topbar__button topbar__auth-link cf-shell-topbar-button">Sign in</a>
+                        <a href="{% url 'accounts:register' %}" class="btn btn-primary topbar__button topbar__auth-link cf-shell-topbar-button">Create account</a>
+                    </div>
                 {% endif %}
             </div>
         </div>
