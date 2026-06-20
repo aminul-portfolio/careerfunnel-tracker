@@ -39,6 +39,13 @@
         margin-bottom: 8px;
     }
 
+    .cf70-skill-hero-actions {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
     .cf70-skill-advisory-stack {
         display: grid;
         gap: 12px;
@@ -114,7 +121,8 @@
         .cf70-skill-hero-row,
         .cf70-skill-section-header,
         .cf70-skill-entry-row,
-        .cf70-skill-search-form {
+        .cf70-skill-search-form,
+        .cf70-skill-hero-actions {
             align-items: stretch;
             flex-direction: column;
         }
@@ -131,7 +139,10 @@
                 <h1>Skill Ledger</h1>
                 <p>Track skill evidence, learning targets, and sprint references for your own review workflow.</p>
             </div>
-            <a href="{% url 'skill_ledger:create' %}" class="btn btn-primary">Add Entry</a>
+            <div class="cf70-skill-hero-actions">
+                <a href="{% url 'skill_ledger:public' %}" class="btn btn-secondary">View public ledger</a>
+                <a href="{% url 'skill_ledger:create' %}" class="btn btn-primary">Add Entry</a>
+            </div>
         </div>
     </section>
 

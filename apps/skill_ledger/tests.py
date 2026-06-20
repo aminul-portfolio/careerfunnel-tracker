@@ -337,3 +337,242 @@ class SkillLedgerSeedCommandTests(TestCase):
         self.assertEqual(entry.category, SkillEntry.Category.OTHER)
         self.assertEqual(entry.evidence_level, SkillEntry.EvidenceLevel.STUDYING)
         self.assertEqual(entry.notes, "User-edited notes.")
+
+
+class PublicSkillLedgerViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+
+    def test_public_skill_ledger_accessible_without_login(self):
+        response = self.client.get(reverse("skill_ledger:public"))
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_public_skill_ledger_returns_200(self):
+        response = self.client.get("/skill-ledger/public/")
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_private_skill_ledger_still_requires_login(self):
+        response = self.client.get(reverse("skill_ledger:list"))
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_public_view_shows_verified_public_entries(self):
+        SkillEntry.objects.create(
+            skill_name="Python",
+            visibility=SkillEntry.Visibility.PUBLIC,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+
+        response = self.client.get(reverse("skill_ledger:public"))
+
+        self.assertContains(response, "Python")
+        self.assertContains(response, "Verified - portfolio evidence confirmed")
+
+    def test_public_view_shows_learning_target_public_entries(self):
+        SkillEntry.objects.create(
+            skill_name="Snowflake",
+            visibility=SkillEntry.Visibility.PUBLIC,
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+
+        response = self.client.get(reverse("skill_ledger:public"))
+
+        self.assertContains(response, "Snowflake")
+        self.assertContains(response, "Developing - not yet portfolio-evidenced")
+
+    def test_public_view_does_not_show_private_entries(self):
+        SkillEntry.objects.create(
+            skill_name="Private Python",
+            visibility=SkillEntry.Visibility.PRIVATE,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        SkillEntry.objects.create(
+            skill_name="Private Snowflake",
+            visibility=SkillEntry.Visibility.PRIVATE,
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+
+        response = self.client.get(reverse("skill_ledger:public"))
+
+        self.assertNotContains(response, "Private Python")
+        self.assertNotContains(response, "Private Snowflake")
+
+    def test_public_view_does_not_show_studying_entries_even_if_public(self):
+        SkillEntry.objects.create(
+            skill_name="Statistics Study",
+            visibility=SkillEntry.Visibility.PUBLIC,
+            evidence_level=SkillEntry.EvidenceLevel.STUDYING,
+        )
+
+        response = self.client.get(reverse("skill_ledger:public"))
+
+        self.assertNotContains(response, "Statistics Study")
+        self.assertNotContains(response, "STUDYING")
+
+    def test_public_view_does_not_show_no_evidence_entries_even_if_public(self):
+        SkillEntry.objects.create(
+            skill_name="GraphQL Gap",
+            visibility=SkillEntry.Visibility.PUBLIC,
+            evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE,
+        )
+
+        response = self.client.get(reverse("skill_ledger:public"))
+
+        self.assertNotContains(response, "GraphQL Gap")
+        self.assertNotContains(response, "NO_EVIDENCE")
+
+    def test_public_kpi_shows_verified_count_only(self):
+        SkillEntry.objects.create(
+            skill_name="Python",
+            visibility=SkillEntry.Visibility.PUBLIC,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        SkillEntry.objects.create(
+            skill_name="Private SQL",
+            visibility=SkillEntry.Visibility.PRIVATE,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+
+        response = self.client.get(reverse("skill_ledger:public"))
+
+        self.assertEqual(response.context["kpi_counts"][SkillEntry.EvidenceLevel.VERIFIED], 1)
+
+    def test_public_kpi_shows_learning_target_count_only(self):
+        SkillEntry.objects.create(
+            skill_name="Snowflake",
+            visibility=SkillEntry.Visibility.PUBLIC,
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        SkillEntry.objects.create(
+            skill_name="Private Airflow",
+            visibility=SkillEntry.Visibility.PRIVATE,
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+
+        response = self.client.get(reverse("skill_ledger:public"))
+
+        self.assertEqual(
+            response.context["kpi_counts"][SkillEntry.EvidenceLevel.LEARNING_TARGET],
+            1,
+        )
+
+    def test_public_kpi_does_not_show_studying_count(self):
+        SkillEntry.objects.create(
+            skill_name="Statistics Study",
+            visibility=SkillEntry.Visibility.PUBLIC,
+            evidence_level=SkillEntry.EvidenceLevel.STUDYING,
+        )
+
+        response = self.client.get(reverse("skill_ledger:public"))
+
+        self.assertNotIn(SkillEntry.EvidenceLevel.STUDYING, response.context["kpi_counts"])
+        self.assertNotContains(response, "Studying")
+
+    def test_public_kpi_does_not_show_no_evidence_count(self):
+        SkillEntry.objects.create(
+            skill_name="GraphQL Gap",
+            visibility=SkillEntry.Visibility.PUBLIC,
+            evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE,
+        )
+
+        response = self.client.get(reverse("skill_ledger:public"))
+
+        self.assertNotIn(SkillEntry.EvidenceLevel.NO_EVIDENCE, response.context["kpi_counts"])
+        self.assertNotContains(response, "No Evidence")
+
+    def test_public_search_filters_by_skill_name(self):
+        SkillEntry.objects.create(
+            skill_name="dbt",
+            visibility=SkillEntry.Visibility.PUBLIC,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        SkillEntry.objects.create(
+            skill_name="Snowflake",
+            visibility=SkillEntry.Visibility.PUBLIC,
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        SkillEntry.objects.create(
+            skill_name="Private dbt",
+            visibility=SkillEntry.Visibility.PRIVATE,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        SkillEntry.objects.create(
+            skill_name="dbt Study",
+            visibility=SkillEntry.Visibility.PUBLIC,
+            evidence_level=SkillEntry.EvidenceLevel.STUDYING,
+        )
+
+        response = self.client.get(reverse("skill_ledger:public"), {"q": "dbt"})
+
+        self.assertContains(response, "dbt")
+        self.assertNotContains(response, "Snowflake")
+        self.assertNotContains(response, "Private dbt")
+        self.assertNotContains(response, "dbt Study")
+        self.assertEqual(response.context["search_query"], "dbt")
+
+    def test_public_view_verified_boundary_wording_present(self):
+        response = self.client.get(reverse("skill_ledger:public"))
+
+        self.assertContains(
+            response,
+            (
+                "VERIFIED means portfolio evidence exists in a closed sprint, passing tests, "
+                "or prior work experience. It does not mean externally certified or "
+                "employer-verified."
+            ),
+        )
+
+    def test_public_view_does_not_imply_employer_verification(self):
+        response = self.client.get(reverse("skill_ledger:public"))
+
+        self.assertNotContains(response, "employer verified")
+        self.assertNotContains(response, "recruiter verified")
+        self.assertNotContains(response, "automatically verified")
+        self.assertNotContains(response, "AI verified")
+
+    def test_public_view_does_not_imply_certification(self):
+        response = self.client.get(reverse("skill_ledger:public"))
+
+        self.assertContains(response, "It does not mean externally certified or employer-verified.")
+        self.assertNotContains(response, "is certified")
+        self.assertNotContains(response, "public endorsement")
+        self.assertNotContains(response, "guaranteed proficiency")
+        self.assertNotContains(response, "job-ready for every role")
+
+    def test_public_view_does_not_expose_private_notes(self):
+        SkillEntry.objects.create(
+            skill_name="Python",
+            visibility=SkillEntry.Visibility.PUBLIC,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+            notes="Distinctive private implementation note should stay hidden.",
+        )
+
+        response = self.client.get(reverse("skill_ledger:public"))
+
+        self.assertContains(response, "Python")
+        self.assertNotContains(response, "Distinctive private implementation note")
+
+    def test_public_view_noindex_meta_tag_present(self):
+        response = self.client.get(reverse("skill_ledger:public"))
+
+        self.assertContains(response, '<meta name="robots" content="noindex, nofollow">')
+
+    def test_private_ledger_contains_view_public_ledger_link(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(reverse("skill_ledger:list"))
+
+        self.assertContains(response, "View public ledger")
+        self.assertContains(response, reverse("skill_ledger:public"))
+
+    def test_sprint_70_private_ledger_unchanged(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(reverse("skill_ledger:list"))
+
+        self.assertContains(response, "Verified")
+        self.assertContains(response, "Learning Target")
+        self.assertContains(response, "Studying")
+        self.assertContains(response, "No Evidence")
