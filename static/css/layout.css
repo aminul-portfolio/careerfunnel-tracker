@@ -319,6 +319,170 @@ a {
     padding-top: 2px;
 }
 
+.cf-shell-topbar {
+    background: var(--cf-premium-surface);
+    border-bottom: 1px solid var(--cf-premium-border-soft);
+    box-shadow: var(--topbar-shadow);
+}
+
+.cf-shell-topbar-inner {
+    gap: 24px;
+}
+
+.cf-shell-topbar-main {
+    align-items: center;
+}
+
+.cf-shell-topbar-heading {
+    display: grid;
+    gap: 6px;
+}
+
+.cf-shell-breadcrumb .cf-breadcrumb-list {
+    margin: 0;
+    padding: 0;
+}
+
+.cf-shell-topbar-title {
+    color: var(--cf-premium-ink);
+}
+
+.cf-shell-topbar-subtitle {
+    color: var(--cf-premium-muted);
+    max-width: 760px;
+}
+
+.cf-shell-topbar-actions {
+    justify-content: flex-end;
+}
+
+.cf-shell-topbar-actions-cluster {
+    justify-content: flex-end;
+}
+
+.cf-shell-topbar-badge {
+    background: var(--cf-premium-success-bg);
+    color: var(--cf-premium-success-text);
+    border-color: var(--cf-premium-success-border);
+}
+
+.cf-shell-topbar-button {
+    transition:
+        background-color var(--motion-fast),
+        border-color var(--motion-fast),
+        color var(--motion-fast),
+        box-shadow var(--motion-fast),
+        transform var(--motion-fast);
+}
+
+.cf-shell-topbar-button:focus-visible {
+    outline: 0;
+    box-shadow: var(--focus-ring);
+}
+
+.cf-shell-topbar-menu {
+    position: relative;
+}
+
+.cf-shell-topbar-menu-panel {
+    background: var(--cf-premium-surface);
+    border-color: var(--cf-premium-border-soft);
+    box-shadow: var(--cf-premium-shadow-panel);
+}
+
+.cf-shell-user-menu .account-pill {
+    background: var(--cf-premium-surface);
+    border-color: var(--cf-premium-border-soft);
+}
+
+.cf-shell-user-menu .account-pill:hover,
+.cf-shell-user-menu .account-pill:focus-visible {
+    border-color: var(--cf-premium-border-strong);
+    box-shadow: var(--cf-premium-shadow-soft);
+}
+
+.cf-shell-auth-links {
+    display: flex;
+    align-items: center;
+    gap: var(--topbar-action-gap);
+    flex-wrap: wrap;
+}
+
+.cf-shell-messages {
+    display: grid;
+    gap: 10px;
+    margin: 0 0 18px;
+}
+
+.cf-shell-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    color: var(--cf-premium-neutral-text);
+    background: var(--cf-premium-neutral-bg);
+    border: 1px solid var(--cf-premium-neutral-border);
+    border-radius: var(--cf-premium-radius-md);
+    box-shadow: var(--cf-premium-shadow-soft);
+}
+
+.cf-shell-message::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    margin-top: 7px;
+    background: var(--cf-premium-muted);
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+
+.cf-shell-message-success {
+    color: var(--cf-premium-success-text);
+    background: var(--cf-premium-success-bg);
+    border-color: var(--cf-premium-success-border);
+}
+
+.cf-shell-message-success::before {
+    background: var(--color-success);
+}
+
+.cf-shell-message-warning {
+    color: var(--cf-premium-warning-text);
+    background: var(--cf-premium-warning-bg);
+    border-color: var(--cf-premium-warning-border);
+}
+
+.cf-shell-message-warning::before {
+    background: var(--color-warning);
+}
+
+.cf-shell-message-error {
+    color: var(--cf-premium-danger-text);
+    background: var(--cf-premium-danger-bg);
+    border-color: var(--cf-premium-danger-border);
+}
+
+.cf-shell-message-error::before {
+    background: var(--color-danger);
+}
+
+.cf-shell-message-info {
+    color: var(--cf-premium-info-text);
+    background: var(--cf-premium-info-bg);
+    border-color: var(--cf-premium-info-border);
+}
+
+.cf-shell-message-info::before {
+    background: var(--cf-premium-primary);
+}
+
+.cf-shell-message-content {
+    min-width: 0;
+    line-height: 1.5;
+    font-size: 14px;
+    font-weight: 650;
+}
+
 .cf-sidebar-overlay {
     position: fixed;
     inset: 0;
@@ -443,6 +607,14 @@ html.cf-sidebar-open {
     .topbar__actions-cluster {
         width: 100%;
         justify-content: flex-start;
+    }
+
+    .cf-shell-auth-links {
+        width: 100%;
+    }
+
+    .cf-shell-auth-links .topbar__auth-link {
+        flex: 1 1 160px;
     }
 }
 

@@ -3,6 +3,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.contrib.messages import constants
+from django.contrib.messages.storage.base import Message
+from django.template.loader import render_to_string
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -299,6 +302,16 @@ class DashboardCommandCentrePolishTests(TestCase):
         self.assertNotEqual(end, -1)
         return content[start : end + len("</aside>")]
 
+    def _topbar_html(self, response):
+        content = response.content.decode()
+        marker_index = content.find("cf-shell-topbar")
+        self.assertNotEqual(marker_index, -1)
+        start = content.rfind("<header", 0, marker_index)
+        end = content.find("</header>", marker_index)
+        self.assertNotEqual(start, -1)
+        self.assertNotEqual(end, -1)
+        return content[start : end + len("</header>")]
+
     def _create_application(self, **overrides):
         defaults = {
             "user": self.user,
@@ -312,6 +325,79 @@ class DashboardCommandCentrePolishTests(TestCase):
         }
         defaults.update(overrides)
         return JobApplication.objects.create(**defaults)
+
+    def test_topbar_shell_renders_account_and_quick_add_controls(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        self.assertEqual(response.status_code, 200)
+        topbar = self._topbar_html(response)
+        self.assertIn("cf-shell-topbar", topbar)
+        self.assertIn('aria-label="Application header"', topbar)
+        self.assertIn("cf-shell-topbar-actions", topbar)
+        self.assertIn("cf-shell-topbar-menu", topbar)
+        self.assertIn("cf-shell-user-menu", topbar)
+        self.assertIn('data-topbar-menu', topbar)
+        self.assertIn('data-topbar-menu-trigger', topbar)
+        self.assertIn('aria-label="Open quick add menu"', topbar)
+        self.assertIn('aria-label="Account menu for aminul"', topbar)
+        self.assertIn(reverse("applications:application_create"), topbar)
+        self.assertIn(reverse("daily_log:daily_log_create"), topbar)
+        self.assertIn(reverse("weekly_review:weekly_review_create"), topbar)
+        self.assertIn(reverse("notes:note_create"), topbar)
+        self.assertIn(reverse("accounts:profile"), topbar)
+        self.assertIn(reverse("accounts:settings"), topbar)
+
+    def test_topbar_avoids_forbidden_claims_and_staff_links_for_standard_user(self):
+        response = self.client.get(reverse("dashboard:overview"))
+        topbar = self._topbar_html(response).lower()
+        forbidden_claims = (
+            "auto" + "-apply",
+            "auto " + "apply",
+            "automatic " + "submission",
+            "send to " + "employer",
+            "email " + "employer",
+            "oa" + "uth",
+            "gm" + "ail",
+            "out" + "look",
+            "background " + "task",
+            "employer " + "verified",
+            "external " + "verification",
+            "hiring " + "prediction",
+            "guaran" + "teed",
+            "verified " + "mastery",
+            "ai" + "-powered",
+        )
+        for phrase in forbidden_claims:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, topbar)
+        self.assertNotIn("/admin/", topbar)
+        self.assertNotIn(">admin<", topbar)
+        self.assertNotIn(">staff<", topbar)
+
+    def test_messages_partial_preserves_tags_and_semantics(self):
+        html = render_to_string(
+            "partials/messages.html",
+            {
+                "messages": [
+                    Message(constants.SUCCESS, "Application saved.", ""),
+                    Message(constants.WARNING, "Review the evidence first.", ""),
+                    Message(constants.ERROR, "Action could not be completed.", ""),
+                    Message(constants.INFO, "Manual review reminder.", ""),
+                ]
+            },
+        )
+        self.assertIn("cf-shell-messages", html)
+        self.assertIn("message message-success", html)
+        self.assertIn("message message-warning", html)
+        self.assertIn("message message-error", html)
+        self.assertIn("message message-info", html)
+        self.assertIn("cf-shell-message-success", html)
+        self.assertIn("cf-shell-message-warning", html)
+        self.assertIn("cf-shell-message-error", html)
+        self.assertIn("cf-shell-message-info", html)
+        self.assertEqual(html.count('role="alert"'), 2)
+        self.assertEqual(html.count('role="status"'), 2)
+        self.assertIn("Application saved.", html)
+        self.assertIn("Review the evidence first.", html)
 
     def test_sidebar_shell_renders_with_grouped_navigation(self):
         response = self.client.get(reverse("dashboard:overview"))
