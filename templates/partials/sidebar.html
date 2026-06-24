@@ -108,6 +108,9 @@
             <a href="{% url 'metrics:funnel_metrics' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'metrics:funnel_metrics' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'metrics:funnel_metrics' %} aria-current="page"{% endif %}>
                 <span class="cf-shell-nav-label">Funnel Metrics</span>
             </a>
+            <a href="{% url 'applications:jd_gap_aggregation' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'applications:jd_gap_aggregation' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'applications:jd_gap_aggregation' %} aria-current="page"{% endif %}>
+                <span class="cf-shell-nav-label">JD Gap Signals</span>
+            </a>
             <a href="{% url 'exports:export_center' %}" class="sidebar-link cf-nav-link cf-shell-nav-link{% if active_view == 'exports:export_center' %} active cf-shell-nav-link-active{% endif %}"{% if active_view == 'exports:export_center' %} aria-current="page"{% endif %}>
                 <span class="cf-shell-nav-label">Export Centre</span>
             </a>

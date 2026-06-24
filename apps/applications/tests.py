@@ -3871,6 +3871,46 @@ class EvaluationQueueTests(TestCase):
         self.assertContains(response, "Evaluation Queue")
         self.assertContains(response, self.queue_url)
 
+    def test_jd_gap_aggregation_sidebar_link_renders_for_logged_in_user(self):
+        jd_gap_url = reverse("applications:jd_gap_aggregation")
+        self.client.login(username="queue", password="StrongPass12345")
+
+        response = self.client.get(self.queue_url)
+
+        self.assertContains(response, "JD Gap Signals")
+        self.assertContains(response, jd_gap_url)
+
+    def test_jd_gap_aggregation_sidebar_link_not_present_for_anonymous_user(self):
+        jd_gap_url = reverse("applications:jd_gap_aggregation")
+
+        response = self.client.get(self.queue_url)
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertNotIn("JD Gap Signals", content)
+        self.assertNotIn(jd_gap_url, content)
+
+    def test_jd_gap_aggregation_sidebar_link_does_not_imply_automation_or_scoring(self):
+        self.client.login(username="queue", password="StrongPass12345")
+
+        response = self.client.get(self.queue_url)
+        content = response.content.decode()
+
+        for unsafe_phrase in (
+            "AI Gap Analysis",
+            "Skill Recommendations",
+            "Gap Scoring",
+            "Career Gaps",
+            "Missing Skills",
+            "Auto",
+            "Auto Apply",
+            "Recommended Skills",
+            "Rank",
+            "Score",
+        ):
+            with self.subTest(unsafe_phrase=unsafe_phrase):
+                self.assertNotIn(unsafe_phrase, content)
+
 
 class MasterCvLockedClaimWordingTests(SimpleTestCase):
     def test_baseline_and_portfolio_use_locked_master_cv_claims(self):
