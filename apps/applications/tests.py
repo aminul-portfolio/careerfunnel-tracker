@@ -3428,6 +3428,26 @@ class ApplicationSaveQualityWarningViewTests(TestCase):
 
         self.assertRedirects(response, application.get_absolute_url())
 
+    def test_update_form_prepopulates_date_inputs_with_iso_values(self):
+        application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Example Ltd",
+            job_title="Junior Data Analyst",
+            date_applied=date(2026, 6, 18),
+            response_date=date(2026, 6, 20),
+            follow_up_date=date(2026, 6, 25),
+            last_contacted_date=date(2026, 6, 22),
+        )
+        update_url = reverse("applications:application_update", kwargs={"pk": application.pk})
+
+        response = self.client.get(update_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="2026-06-18"')
+        self.assertContains(response, 'value="2026-06-20"')
+        self.assertContains(response, 'value="2026-06-25"')
+        self.assertContains(response, 'value="2026-06-22"')
+
 
 class ApplicationCreatePrefillTests(TestCase):
     def setUp(self):

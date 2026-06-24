@@ -85,9 +85,15 @@ class JobApplicationForm(forms.ModelForm):
                     "placeholder": "Paste short job description or key requirements.",
                 }
             ),
-            "date_applied": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "date_applied": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"class": "form-control", "type": "date"},
+            ),
             "status": forms.Select(attrs={"class": "form-control"}),
-            "response_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "response_date": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"class": "form-control", "type": "date"},
+            ),
             "cv_version": forms.TextInput(
                 attrs={"class": "form-control", "placeholder": "Aminul_Islam_Data_Analyst_CV"}
             ),
@@ -98,9 +104,15 @@ class JobApplicationForm(forms.ModelForm):
             "is_cover_letter_tailored": forms.CheckboxInput(attrs={"class": "checkbox-input"}),
             "portfolio_project_included": forms.CheckboxInput(attrs={"class": "checkbox-input"}),
             "company_researched": forms.CheckboxInput(attrs={"class": "checkbox-input"}),
-            "follow_up_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "follow_up_date": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"class": "form-control", "type": "date"},
+            ),
             "follow_up_status": forms.Select(attrs={"class": "form-control"}),
-            "last_contacted_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "last_contacted_date": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"class": "form-control", "type": "date"},
+            ),
             "next_action": forms.TextInput(
                 attrs={
                     "class": "form-control",
