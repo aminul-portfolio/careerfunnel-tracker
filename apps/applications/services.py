@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 
 from django.db.models import Count
+from django.utils import timezone
 
 from apps.skill_ledger.models import SkillEntry
 
@@ -97,6 +98,20 @@ TRACKED_TERMS = (
         ),
     ),
 )
+
+
+def append_status_note(existing_notes: str, status_note: str, status: str) -> str:
+    clean_note = (status_note or "").strip()
+    if not clean_note:
+        return existing_notes or ""
+
+    timestamp = timezone.localtime(timezone.now()).strftime("%d %b %Y %H:%M")
+    status_display = dict(ApplicationStatus.choices).get(status, status)
+    note_block = f"[{timestamp} - Status: {status_display}]\n{clean_note}"
+    clean_existing = (existing_notes or "").strip()
+    if not clean_existing:
+        return note_block
+    return f"{clean_existing}\n\n{note_block}"
 
 
 @dataclass(frozen=True)

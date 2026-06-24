@@ -1,5 +1,5 @@
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from unittest.mock import patch
 from urllib.parse import quote
 
@@ -43,6 +43,7 @@ from .services import (
     READINESS_LABEL_MISSING_KEY,
     READINESS_LABEL_NEEDS_IMPROVEMENT,
     READINESS_LABEL_STRONG,
+    append_status_note,
     build_application_evidence_readiness,
     build_save_quality_warnings,
     calculate_response_rate,
@@ -747,6 +748,26 @@ class JobApplicationViewTests(TestCase):
             reverse("applications:application_detail", kwargs={"pk": application.pk}),
         )
 
+    def _get_status_update(self, application):
+        self._login()
+        return self.client.get(
+            reverse("applications:application_status_update", kwargs={"pk": application.pk}),
+        )
+
+    def _post_status_update(self, application, **overrides):
+        self._login()
+        data = {
+            "status": ApplicationStatus.INTERVIEW,
+            "pipeline_stage": PipelineStage.INTERVIEW,
+            "response_date": "2026-05-12",
+            "status_note": "Recruiter confirmed interview stage.",
+        }
+        data.update(overrides)
+        return self.client.post(
+            reverse("applications:application_status_update", kwargs={"pk": application.pk}),
+            data,
+        )
+
     def _get_data_quality_audit(self):
         self._login()
         return self.client.get(reverse("applications:application_data_quality_audit"))
@@ -792,6 +813,200 @@ class JobApplicationViewTests(TestCase):
     def test_application_list_requires_login(self):
         response = self.client.get(reverse("applications:application_list"))
         self.assertEqual(response.status_code, 302)
+
+    def test_status_update_form_loads_for_authenticated_owner(self):
+        application = self.create_application()
+
+        response = self._get_status_update(application)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Update tracking status")
+        self.assertContains(response, application.company_name)
+
+    def test_status_update_form_redirects_anonymous_user(self):
+        application = self.create_application()
+
+        response = self.client.get(
+            reverse("applications:application_status_update", kwargs={"pk": application.pk}),
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_status_update_form_returns_403_or_404_for_wrong_user(self):
+        other_user = User.objects.create_user(username="other", password="StrongPass12345")
+        application = self.create_application()
+        self.client.login(username="other", password="StrongPass12345")
+
+        get_response = self.client.get(
+            reverse("applications:application_status_update", kwargs={"pk": application.pk}),
+        )
+        post_response = self.client.post(
+            reverse("applications:application_status_update", kwargs={"pk": application.pk}),
+            {
+                "status": ApplicationStatus.INTERVIEW,
+                "pipeline_stage": PipelineStage.INTERVIEW,
+                "response_date": "2026-05-12",
+                "status_note": "Should not update.",
+            },
+        )
+
+        self.assertEqual(other_user.job_applications.count(), 0)
+        self.assertIn(get_response.status_code, {403, 404})
+        self.assertIn(post_response.status_code, {403, 404})
+        application.refresh_from_db()
+        self.assertNotEqual(application.status, ApplicationStatus.INTERVIEW)
+
+    def test_status_update_valid_post_updates_status(self):
+        application = self.create_application(status=ApplicationStatus.SUBMITTED)
+
+        response = self._post_status_update(application)
+
+        self.assertRedirects(response, application.get_absolute_url())
+        application.refresh_from_db()
+        self.assertEqual(application.status, ApplicationStatus.INTERVIEW)
+
+    def test_status_update_valid_post_updates_pipeline_stage(self):
+        application = self.create_application(pipeline_stage=PipelineStage.SUBMITTED)
+
+        self._post_status_update(application, pipeline_stage=PipelineStage.SCREENING_CALL)
+
+        application.refresh_from_db()
+        self.assertEqual(application.pipeline_stage, PipelineStage.SCREENING_CALL)
+
+    def test_status_update_valid_post_updates_response_date(self):
+        application = self.create_application(response_date=None)
+
+        self._post_status_update(application, response_date="2026-05-12")
+
+        application.refresh_from_db()
+        self.assertEqual(application.response_date, date(2026, 5, 12))
+
+    def test_status_update_status_note_appends_to_existing_notes(self):
+        application = self.create_application(notes="Existing note.")
+
+        self._post_status_update(
+            application,
+            status=ApplicationStatus.INTERVIEW,
+            status_note="Interview arranged for Friday.",
+        )
+
+        application.refresh_from_db()
+        self.assertIn("Existing note.", application.notes)
+        self.assertIn("Status: Interview", application.notes)
+        self.assertIn("Interview arranged for Friday.", application.notes)
+
+    def test_status_update_status_note_empty_does_not_corrupt_notes(self):
+        application = self.create_application(notes="Existing note.")
+
+        self._post_status_update(application, status_note="")
+
+        application.refresh_from_db()
+        self.assertEqual(application.notes, "Existing note.")
+
+    def test_status_update_response_date_before_date_applied_shows_error(self):
+        application = self.create_application(date_applied=date(2026, 5, 9))
+
+        response = self._post_status_update(application, response_date="2026-05-01")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Response date cannot be before the application date.")
+
+    def test_application_detail_shows_update_status_button(self):
+        application = self.create_application()
+
+        response = self._get_application_detail(application)
+
+        self.assertContains(response, "Update Status")
+        self.assertContains(
+            response,
+            reverse("applications:application_status_update", kwargs={"pk": application.pk}),
+        )
+
+    def test_status_update_template_shows_tracking_only_wording(self):
+        application = self.create_application()
+
+        response = self._get_status_update(application)
+
+        self.assertContains(
+            response,
+            (
+                "This updates your saved tracking record only. It does not update any "
+                "employer system or send any notification. Review recruiter emails and "
+                "employer messages manually before changing status."
+            ),
+        )
+        self.assertContains(
+            response,
+            (
+                "Optional - appended to your existing notes with a timestamp. "
+                "Previous notes are not deleted."
+            ),
+        )
+
+    def test_status_update_template_does_not_imply_employer_notification(self):
+        application = self.create_application()
+
+        response = self._get_status_update(application)
+        content = response.content.decode()
+
+        self.assertNotIn("Employer notified", content)
+        self.assertNotIn("Status sent to recruiter", content)
+        self.assertNotIn("Synced with", content)
+
+    def test_status_update_template_does_not_imply_auto_update(self):
+        application = self.create_application()
+
+        response = self._get_status_update(application)
+
+        self.assertNotContains(response, "Auto-updated")
+
+    def test_append_status_note_appends_to_existing_notes(self):
+        with patch(
+            "apps.applications.services.timezone.localtime",
+            return_value=datetime(2026, 6, 24, 20, 52),
+        ):
+            notes = append_status_note(
+                "Existing note.",
+                "Interview arranged.",
+                ApplicationStatus.INTERVIEW,
+            )
+
+        self.assertEqual(
+            notes,
+            "Existing note.\n\n[24 Jun 2026 20:52 - Status: Interview]\nInterview arranged.",
+        )
+
+    def test_append_status_note_handles_empty_existing_notes(self):
+        with patch(
+            "apps.applications.services.timezone.localtime",
+            return_value=datetime(2026, 6, 24, 20, 52),
+        ):
+            notes = append_status_note(
+                "",
+                "Screening call booked.",
+                ApplicationStatus.SCREENING_CALL,
+            )
+
+        self.assertEqual(
+            notes,
+            "[24 Jun 2026 20:52 - Status: Screening call]\nScreening call booked.",
+        )
+
+    def test_append_status_note_includes_timestamp_and_status(self):
+        with patch(
+            "apps.applications.services.timezone.localtime",
+            return_value=datetime(2026, 6, 24, 20, 52),
+        ):
+            notes = append_status_note("", "Offer received.", ApplicationStatus.OFFER)
+
+        self.assertIn("[24 Jun 2026 20:52 - Status: Offer]", notes)
+
+    def test_status_update_response_date_input_renders_iso_value(self):
+        application = self.create_application(response_date=date(2026, 6, 20))
+
+        response = self._get_status_update(application)
+
+        self.assertContains(response, 'value="2026-06-20"')
 
     def test_jd_gap_aggregation_page_loads_for_authenticated_user(self):
         response = self._get_jd_gap_aggregation()

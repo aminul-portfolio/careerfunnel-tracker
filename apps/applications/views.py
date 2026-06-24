@@ -38,6 +38,7 @@ from .evaluation_downloads import (
 )
 from .forms import (
     ApplicationDocumentSelectionForm,
+    ApplicationStatusUpdateForm,
     DocumentPackUploadForm,
     ExternalDocumentReferenceForm,
     JobApplicationForm,
@@ -45,6 +46,7 @@ from .forms import (
 from .models import ApplicationDocument, JobApplication
 from .selectors import get_user_applications
 from .services import (
+    append_status_note,
     build_analyzer_cv_version_display,
     build_application_cv_version_display,
     build_application_evidence_readiness,
@@ -642,6 +644,44 @@ def application_create(request):
                 company_name=form["company_name"].value() or "",
                 job_title=form["job_title"].value() or "",
             ),
+        },
+    )
+
+
+@login_required
+def application_status_update(request, pk):
+    application = get_object_or_404(JobApplication, pk=pk, user=request.user)
+    if request.method == "POST":
+        form = ApplicationStatusUpdateForm(request.POST, instance=application)
+        if form.is_valid():
+            updated_application = form.save(commit=False)
+            updated_application.notes = append_status_note(
+                application.notes,
+                form.cleaned_data.get("status_note", ""),
+                form.cleaned_data["status"],
+            )
+            updated_application.save(
+                update_fields=[
+                    "status",
+                    "pipeline_stage",
+                    "response_date",
+                    "notes",
+                    "updated_at",
+                ],
+            )
+            messages.success(
+                request,
+                "Tracking status updated. Your CareerFunnel record has been saved.",
+            )
+            return redirect(application.get_absolute_url())
+    else:
+        form = ApplicationStatusUpdateForm(instance=application)
+    return render(
+        request,
+        "applications/application_status_update.html",
+        {
+            "application": application,
+            "form": form,
         },
     )
 

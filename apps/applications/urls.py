@@ -33,6 +33,11 @@ urlpatterns = [
         views.evaluation_application_pack_download,
         name="evaluation_application_pack_download",
     ),
+    path(
+        "<int:pk>/update-status/",
+        views.application_status_update,
+        name="application_status_update",
+    ),
     path("<int:pk>/", views.application_detail, name="application_detail"),
     path(
         "<int:pk>/documents/<int:document_pk>/download/<str:file_format>/",

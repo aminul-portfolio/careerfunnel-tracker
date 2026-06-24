@@ -149,6 +149,40 @@ class JobApplicationForm(forms.ModelForm):
         return cleaned_data
 
 
+class ApplicationStatusUpdateForm(forms.ModelForm):
+    status_note = forms.CharField(
+        required=False,
+        help_text=(
+            "Optional - appended to your existing notes with a timestamp. "
+            "Previous notes are not deleted."
+        ),
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 4}),
+    )
+
+    class Meta:
+        model = JobApplication
+        fields = ["status", "pipeline_stage", "response_date"]
+        widgets = {
+            "status": forms.Select(attrs={"class": "form-control"}),
+            "pipeline_stage": forms.Select(attrs={"class": "form-control"}),
+            "response_date": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"class": "form-control", "type": "date"},
+            ),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        response_date = cleaned_data.get("response_date")
+        date_applied = self.instance.date_applied if self.instance else None
+        if response_date and date_applied and response_date < date_applied:
+            self.add_error(
+                "response_date",
+                "Response date cannot be before the application date.",
+            )
+        return cleaned_data
+
+
 class ExternalDocumentReferenceForm(forms.Form):
     name = forms.CharField(
         max_length=255,
