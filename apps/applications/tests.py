@@ -14,6 +14,7 @@ from django.utils.formats import date_format
 from apps.job_intelligence.services import build_smart_review
 from apps.recruiter_emails.choices import EmailType, ReplyStatus
 from apps.recruiter_emails.models import RecruiterEmail
+from apps.skill_ledger.models import SkillEntry
 
 from .choices import (
     DEFAULT_CV_BASELINE_NAME,
@@ -750,12 +751,449 @@ class JobApplicationViewTests(TestCase):
         self._login()
         return self.client.get(reverse("applications:application_data_quality_audit"))
 
+    def _get_jd_gap_aggregation(self):
+        self._login()
+        return self.client.get(reverse("applications:jd_gap_aggregation"))
+
     def _jd_text(self, length=750):
         return "A" * length
+
+    def _jd_gap_text(self, *terms, length=900):
+        intro = " ".join(terms)
+        filler = " planning context" * 120
+        text = f"{intro} {filler}".strip()
+        if len(text) >= length:
+            return text
+        return f"{text} {'A' * (length - len(text))}"
+
+    def _create_jd_ready_application(self, **overrides):
+        defaults = {
+            "company_name": "Ready Co",
+            "job_title": "Data Analyst",
+            "job_description": self._jd_gap_text("python"),
+            "date_applied": date(2026, 5, 9),
+        }
+        defaults.update(overrides)
+        return self.create_application(**defaults)
+
+    def _create_skill_entry(self, **overrides):
+        defaults = {
+            "skill_name": "Python analytics",
+            "category": SkillEntry.Category.PROGRAMMING,
+            "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+            "sprint_reference": "Sprint 70",
+            "project_link": "https://example.com/project",
+            "notes": "Existing ledger note.",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        defaults.update(overrides)
+        return SkillEntry.objects.create(**defaults)
 
     def test_application_list_requires_login(self):
         response = self.client.get(reverse("applications:application_list"))
         self.assertEqual(response.status_code, 302)
+
+    def test_jd_gap_aggregation_page_loads_for_authenticated_user(self):
+        response = self._get_jd_gap_aggregation()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "JD-gap Aggregation Planning")
+
+    def test_jd_gap_aggregation_page_requires_login(self):
+        response = self.client.get(reverse("applications:jd_gap_aggregation"))
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_jd_gap_aggregation_page_is_get_only(self):
+        self._create_jd_ready_application()
+        before_application_count = JobApplication.objects.count()
+        before_skill_count = SkillEntry.objects.count()
+        self._login()
+
+        response = self.client.post(reverse("applications:jd_gap_aggregation"))
+
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(JobApplication.objects.count(), before_application_count)
+        self.assertEqual(SkillEntry.objects.count(), before_skill_count)
+
+    def test_aggregation_uses_only_jd_ready_records(self):
+        self._create_jd_ready_application(job_description=self._jd_gap_text("python"))
+        self._create_jd_ready_application(
+            company_name="Ready Two",
+            job_description=self._jd_gap_text("python"),
+        )
+        self.create_application(
+            company_name="",
+            job_title="Data Analyst",
+            job_description=self._jd_gap_text("dbt"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+        content = response.content.decode()
+
+        self.assertEqual(response.context["aggregation"].jd_ready_count, 2)
+        self.assertContains(response, "python")
+        self.assertNotIn(">dbt<", content)
+
+    def test_aggregation_excludes_exact_url_duplicates(self):
+        duplicate_url = "https://example.com/repeated"
+        self._create_jd_ready_application(
+            job_url=duplicate_url,
+            job_description=self._jd_gap_text("dbt"),
+        )
+        self._create_jd_ready_application(
+            company_name="Duplicate Two",
+            job_url=duplicate_url,
+            job_description=self._jd_gap_text("dbt"),
+        )
+        self._create_jd_ready_application(
+            company_name="Unique One",
+            job_description=self._jd_gap_text("python"),
+        )
+        self._create_jd_ready_application(
+            company_name="Unique Two",
+            job_description=self._jd_gap_text("python"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+        content = response.content.decode()
+
+        self.assertEqual(response.context["aggregation"].jd_ready_count, 2)
+        self.assertContains(response, "python")
+        self.assertNotIn(">dbt<", content)
+
+    def test_aggregation_excludes_records_below_750_char_threshold(self):
+        self.create_application(
+            company_name="Short One",
+            job_title="Data Analyst",
+            job_description="python " * 20,
+        )
+        self.create_application(
+            company_name="Short Two",
+            job_title="BI Analyst",
+            job_description="python " * 20,
+        )
+
+        response = self._get_jd_gap_aggregation()
+
+        self.assertEqual(response.context["aggregation"].jd_ready_count, 0)
+        self.assertEqual(response.context["aggregation"].terms_found_count, 0)
+
+    def test_term_extraction_is_case_insensitive(self):
+        self._create_jd_ready_application(job_description=self._jd_gap_text("POWER BI"))
+        self._create_jd_ready_application(
+            company_name="BI Two",
+            job_description=self._jd_gap_text("powerbi"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+
+        self.assertContains(response, "power bi")
+        self.assertEqual(response.context["aggregation"].terms_found_count, 1)
+
+    def test_term_extraction_counts_per_jd_not_per_occurrence(self):
+        repeated_term = "Power BI Power BI Power BI Power BI Power BI"
+        self._create_jd_ready_application(job_description=self._jd_gap_text(repeated_term))
+        self._create_jd_ready_application(
+            company_name="BI Two",
+            job_description=self._jd_gap_text("Power BI"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+        power_bi_term = response.context["aggregation"].category_groups[0].terms[0]
+
+        self.assertEqual(power_bi_term.term, "power bi")
+        self.assertEqual(power_bi_term.frequency, 2)
+
+    def test_term_frequency_minimum_threshold_is_2(self):
+        self._create_jd_ready_application(job_description=self._jd_gap_text("python"))
+        self._create_jd_ready_application(
+            company_name="SQL Co",
+            job_description=self._jd_gap_text("sql"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+
+        self.assertEqual(response.context["aggregation"].terms_found_count, 0)
+        self.assertContains(response, "No tracked terms met the frequency threshold.")
+
+    def test_term_extraction_uses_tracked_terms_only(self):
+        self._create_jd_ready_application(
+            job_description=self._jd_gap_text("data analysis analytical"),
+        )
+        self._create_jd_ready_application(
+            company_name="Generic Two",
+            job_description=self._jd_gap_text("data analysis analytical"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+
+        self.assertEqual(response.context["aggregation"].terms_found_count, 0)
+
+    def test_skill_ledger_comparison_is_read_only(self):
+        self._create_skill_entry(skill_name="Python")
+        self._create_jd_ready_application(job_description=self._jd_gap_text("python"))
+        self._create_jd_ready_application(
+            company_name="Python Two",
+            job_description=self._jd_gap_text("python"),
+        )
+        before_entries = list(SkillEntry.objects.values_list("pk", "skill_name", "evidence_level"))
+
+        response = self._get_jd_gap_aggregation()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            list(SkillEntry.objects.values_list("pk", "skill_name", "evidence_level")),
+            before_entries,
+        )
+
+    def test_verified_skill_shows_verified_label(self):
+        self._create_skill_entry(
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._create_jd_ready_application(job_description=self._jd_gap_text("python"))
+        self._create_jd_ready_application(
+            company_name="Python Two",
+            job_description=self._jd_gap_text("python"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+
+        self.assertContains(
+            response,
+            "Your skill ledger shows: Verified - portfolio evidence confirmed",
+        )
+
+    def test_learning_target_skill_shows_learning_target_label(self):
+        self._create_skill_entry(
+            skill_name="Power BI dashboards",
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        self._create_jd_ready_application(job_description=self._jd_gap_text("power bi"))
+        self._create_jd_ready_application(
+            company_name="Power BI Two",
+            job_description=self._jd_gap_text("power bi"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+
+        self.assertContains(
+            response,
+            "Your skill ledger shows: Learning Target - developing, not yet evidenced",
+        )
+
+    def test_unmatched_term_shows_not_in_ledger_label(self):
+        self._create_jd_ready_application(job_description=self._jd_gap_text("snowflake"))
+        self._create_jd_ready_application(
+            company_name="Snowflake Two",
+            job_description=self._jd_gap_text("snowflake"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+
+        self.assertContains(response, "Not in your skill ledger")
+
+    def test_skill_ledger_comparison_does_not_create_entries(self):
+        self._create_jd_ready_application(job_description=self._jd_gap_text("tableau"))
+        self._create_jd_ready_application(
+            company_name="Tableau Two",
+            job_description=self._jd_gap_text("tableau"),
+        )
+        before_count = SkillEntry.objects.count()
+
+        response = self._get_jd_gap_aggregation()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(SkillEntry.objects.count(), before_count)
+
+    def test_skill_ledger_comparison_does_not_update_entries(self):
+        skill_entry = self._create_skill_entry(skill_name="SQL")
+        original_values = {
+            "skill_name": skill_entry.skill_name,
+            "evidence_level": skill_entry.evidence_level,
+            "notes": skill_entry.notes,
+            "visibility": skill_entry.visibility,
+        }
+        self._create_jd_ready_application(job_description=self._jd_gap_text("sql"))
+        self._create_jd_ready_application(
+            company_name="SQL Two",
+            job_description=self._jd_gap_text("sql"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+        skill_entry.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(skill_entry.skill_name, original_values["skill_name"])
+        self.assertEqual(skill_entry.evidence_level, original_values["evidence_level"])
+        self.assertEqual(skill_entry.notes, original_values["notes"])
+        self.assertEqual(skill_entry.visibility, original_values["visibility"])
+
+    def test_kpi_jd_ready_count_renders(self):
+        self._create_jd_ready_application()
+        self._create_jd_ready_application(company_name="Ready Two")
+
+        response = self._get_jd_gap_aggregation()
+
+        self.assertEqual(response.context["aggregation"].jd_ready_count, 2)
+        self.assertContains(response, "JD-ready Records")
+        self.assertContains(response, ">2<")
+
+    def test_kpi_terms_found_count_renders(self):
+        self._create_jd_ready_application(job_description=self._jd_gap_text("python"))
+        self._create_jd_ready_application(
+            company_name="Python Two",
+            job_description=self._jd_gap_text("python"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+
+        self.assertEqual(response.context["aggregation"].terms_found_count, 1)
+        self.assertContains(response, "Terms Found")
+
+    def test_kpi_unmatched_in_ledger_count_renders(self):
+        self._create_jd_ready_application(job_description=self._jd_gap_text("looker"))
+        self._create_jd_ready_application(
+            company_name="Looker Two",
+            job_description=self._jd_gap_text("looker"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+
+        self.assertEqual(response.context["aggregation"].unmatched_in_ledger_count, 1)
+        self.assertContains(response, "Unmatched in Ledger")
+
+    def test_advisory_panel_present(self):
+        response = self._get_jd_gap_aggregation()
+
+        self.assertContains(
+            response,
+            (
+                "Skill gap signals are advisory only. This page summarises repeated terms "
+                "found in saved job descriptions and does not rank applications, assess "
+                "suitability, generate documents, or update records."
+            ),
+        )
+
+    def test_results_interpretation_note_present(self):
+        response = self._get_jd_gap_aggregation()
+
+        self.assertContains(
+            response,
+            (
+                "Frequency counts show how many saved job descriptions mention each term. "
+                "Higher frequency means the term appeared more often across your applications "
+                "- it does not indicate a skill gap, a requirement, or a priority unless you "
+                "judge it to be one."
+            ),
+        )
+
+    def test_page_does_not_imply_skill_gap_confirmed(self):
+        response = self._get_jd_gap_aggregation()
+        content = response.content.decode().lower()
+
+        self.assertIn("skill gap signals are advisory only", content)
+        self.assertNotIn("confirmed skill gap", content)
+        self.assertNotIn("missing ability", content)
+
+    def test_page_does_not_imply_application_ranking(self):
+        response = self._get_jd_gap_aggregation()
+        content = response.content.decode().lower()
+
+        self.assertIn("does not rank applications", content)
+        self.assertNotIn("ranked applications", content)
+        self.assertNotIn("best application", content)
+
+    def test_page_does_not_imply_record_mutation(self):
+        response = self._get_jd_gap_aggregation()
+        content = response.content.decode().lower()
+
+        self.assertIn("no records have been changed", content)
+        self.assertNotIn(">edit<", content)
+        self.assertNotIn(">fix<", content)
+        self.assertNotIn(">create<", content)
+
+    def test_unmatched_section_note_does_not_imply_automatic_update(self):
+        response = self._get_jd_gap_aggregation()
+        content = response.content.decode()
+
+        self.assertIn(
+            (
+                "These terms appear frequently in your saved JDs and are not yet in your "
+                "Skill Ledger. Consider adding them for future tracking. Adding to ledger "
+                "is manual and optional. This page does not update your ledger."
+            ),
+            content,
+        )
+        self.assertNotIn("automatically update", content.lower())
+
+    def test_sprint_72a_data_quality_page_unaffected(self):
+        response = self._get_data_quality_audit()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Application Data Quality Audit")
+        self.assertContains(
+            response,
+            (
+                "This audit checks application record completeness only. It does not "
+                "analyse skill gaps, rank applications, generate documents, or update records."
+            ),
+        )
+
+    def test_top_term_renders(self):
+        for index in range(3):
+            self._create_jd_ready_application(
+                company_name=f"Python {index}",
+                job_description=self._jd_gap_text("python"),
+            )
+        for index in range(2):
+            self._create_jd_ready_application(
+                company_name=f"SQL {index}",
+                job_description=self._jd_gap_text("sql"),
+            )
+
+        response = self._get_jd_gap_aggregation()
+
+        self.assertEqual(response.context["aggregation"].top_term.term, "python")
+        self.assertContains(response, "Top Term")
+        self.assertContains(response, "python")
+
+    def test_sample_applications_are_limited_to_3(self):
+        for index in range(4):
+            self._create_jd_ready_application(
+                company_name=f"Python Sample {index}",
+                job_description=self._jd_gap_text("python"),
+            )
+
+        response = self._get_jd_gap_aggregation()
+        python_term = response.context["aggregation"].category_groups[0].terms[0]
+
+        self.assertEqual(python_term.term, "python")
+        self.assertEqual(len(python_term.sample_applications), 3)
+
+    def test_skill_ledger_matching_uses_substring_matching(self):
+        self._create_skill_entry(skill_name="Practical dbt modelling")
+        self._create_jd_ready_application(job_description=self._jd_gap_text("dbt"))
+        self._create_jd_ready_application(
+            company_name="dbt Two",
+            job_description=self._jd_gap_text("dbt"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+
+        self.assertContains(
+            response,
+            "Your skill ledger shows: Verified - portfolio evidence confirmed",
+        )
+
+    def test_no_terms_render_when_frequency_below_2(self):
+        self._create_jd_ready_application(job_description=self._jd_gap_text("airflow"))
+
+        response = self._get_jd_gap_aggregation()
+
+        self.assertEqual(response.context["aggregation"].terms_found_count, 0)
+        self.assertContains(response, "No tracked terms met the frequency threshold.")
 
     def test_data_quality_audit_page_loads_for_authenticated_user(self):
         response = self._get_data_quality_audit()
