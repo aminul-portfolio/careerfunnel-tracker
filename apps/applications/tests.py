@@ -746,9 +746,302 @@ class JobApplicationViewTests(TestCase):
             reverse("applications:application_detail", kwargs={"pk": application.pk}),
         )
 
+    def _get_data_quality_audit(self):
+        self._login()
+        return self.client.get(reverse("applications:application_data_quality_audit"))
+
+    def _jd_text(self, length=750):
+        return "A" * length
+
     def test_application_list_requires_login(self):
         response = self.client.get(reverse("applications:application_list"))
         self.assertEqual(response.status_code, 302)
+
+    def test_data_quality_audit_page_loads_for_authenticated_user(self):
+        response = self._get_data_quality_audit()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Application Data Quality Audit")
+
+    def test_data_quality_audit_page_requires_login(self):
+        response = self.client.get(reverse("applications:application_data_quality_audit"))
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_data_quality_audit_page_is_get_only(self):
+        self.create_application()
+        before_count = JobApplication.objects.filter(user=self.user).count()
+        self._login()
+
+        response = self.client.post(reverse("applications:application_data_quality_audit"))
+
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(JobApplication.objects.filter(user=self.user).count(), before_count)
+
+    def test_data_quality_audit_shows_total_record_count(self):
+        self.create_application(company_name="One")
+        self.create_application(company_name="Two")
+
+        response = self._get_data_quality_audit()
+
+        self.assertEqual(response.context["total_records"], 2)
+        self.assertContains(response, "Total Records")
+        self.assertContains(response, ">2<")
+
+    def test_data_quality_audit_shows_jd_ready_count(self):
+        self.create_application(
+            company_name="Ready Co",
+            job_title="Data Analyst",
+            job_description=self._jd_text(),
+        )
+        self.create_application(job_description="Short")
+
+        response = self._get_data_quality_audit()
+
+        self.assertEqual(response.context["jd_ready_count"], 1)
+        self.assertContains(response, "JD-ready")
+
+    def test_data_quality_audit_shows_missing_jd_text_count(self):
+        self.create_application(job_description="")
+        self.create_application(job_description=self._jd_text())
+
+        response = self._get_data_quality_audit()
+
+        self.assertEqual(response.context["missing_jd_text_count"], 1)
+        self.assertContains(response, "Missing JD Text")
+
+    def test_data_quality_audit_shows_possible_duplicate_count(self):
+        duplicate_url = "https://example.com/repeated-job"
+        self.create_application(job_url=duplicate_url, job_description=self._jd_text())
+        self.create_application(
+            company_name="Other",
+            job_url=duplicate_url,
+            job_description=self._jd_text(),
+        )
+        self.create_application(
+            company_name="Blank URL",
+            job_url="",
+            job_description=self._jd_text(),
+        )
+
+        response = self._get_data_quality_audit()
+
+        self.assertEqual(response.context["possible_duplicate_url_record_count"], 2)
+        self.assertContains(response, "Possible Duplicates")
+
+    def test_data_quality_audit_completeness_rate_renders(self):
+        self.create_application(
+            location="London",
+            job_url="https://example.com/complete",
+            job_description=self._jd_text(),
+        )
+        self.create_application(location="", job_url="", job_description="")
+
+        response = self._get_data_quality_audit()
+
+        self.assertEqual(response.context["completeness_rate"], 50)
+        self.assertContains(response, "Completeness Rate")
+        self.assertContains(response, "50%")
+
+    def test_jd_ready_requires_company_present(self):
+        self.create_application(company_name="   ", job_description=self._jd_text())
+
+        response = self._get_data_quality_audit()
+
+        self.assertEqual(response.context["jd_ready_count"], 0)
+        self.assertContains(response, "Company")
+
+    def test_jd_ready_requires_job_title_present(self):
+        self.create_application(job_title="   ", job_description=self._jd_text())
+
+        response = self._get_data_quality_audit()
+
+        self.assertEqual(response.context["jd_ready_count"], 0)
+        self.assertContains(response, "Job title")
+
+    def test_jd_ready_requires_jd_text_present(self):
+        self.create_application(job_description="   ")
+
+        response = self._get_data_quality_audit()
+
+        self.assertEqual(response.context["jd_ready_count"], 0)
+        self.assertContains(response, "JD text")
+
+    def test_jd_ready_requires_jd_text_above_threshold(self):
+        self.create_application(job_description=self._jd_text(749))
+
+        response = self._get_data_quality_audit()
+
+        self.assertEqual(response.context["jd_ready_count"], 0)
+        self.assertContains(response, "JD text &gt;= 750 chars")
+
+    def test_jd_ready_threshold_is_750_characters(self):
+        self.create_application(job_description=self._jd_text(750))
+
+        response = self._get_data_quality_audit()
+
+        self.assertEqual(response.context["jd_ready_count"], 1)
+        self.assertContains(response, "JD text length threshold: 750 chars")
+
+    def test_jd_ready_excludes_exact_url_duplicates(self):
+        duplicate_url = "https://example.com/exact-duplicate"
+        self.create_application(job_url=duplicate_url, job_description=self._jd_text())
+        self.create_application(
+            company_name="Second Co",
+            job_url=duplicate_url,
+            job_description=self._jd_text(),
+        )
+
+        response = self._get_data_quality_audit()
+
+        self.assertEqual(response.context["jd_ready_count"], 0)
+        self.assertEqual(response.context["possible_duplicate_url_record_count"], 2)
+        self.assertContains(response, "Possible duplicate - review manually")
+
+    def test_field_completeness_table_renders(self):
+        response = self._get_data_quality_audit()
+
+        self.assertContains(response, "Field completeness")
+        for heading in ("Field", "Present", "Missing", "Complete"):
+            with self.subTest(heading=heading):
+                self.assertContains(response, heading)
+
+    def test_field_completeness_shows_source_url_count(self):
+        self.create_application(
+            job_url="https://example.com/source",
+            job_description=self._jd_text(),
+        )
+        self.create_application(job_url="", job_description=self._jd_text())
+
+        response = self._get_data_quality_audit()
+        source_url_row = next(
+            row
+            for row in response.context["field_completeness_rows"]
+            if row["label"] == "Source URL"
+        )
+
+        self.assertEqual(source_url_row["present"], 1)
+        self.assertContains(response, "Source URL")
+
+    def test_field_completeness_shows_location_count(self):
+        self.create_application(location="London")
+        self.create_application(location="   ")
+
+        response = self._get_data_quality_audit()
+        location_row = next(
+            row for row in response.context["field_completeness_rows"] if row["label"] == "Location"
+        )
+
+        self.assertEqual(location_row["present"], 1)
+        self.assertContains(response, "Location")
+
+    def test_audit_advisory_panel_present(self):
+        response = self._get_data_quality_audit()
+
+        self.assertContains(
+            response,
+            (
+                "This audit checks application record completeness only. It does not "
+                "analyse skill gaps, rank applications, generate documents, or update records."
+            ),
+        )
+
+    def test_audit_does_not_imply_skill_gap_analysis(self):
+        response = self._get_data_quality_audit()
+        content = response.content.decode().lower()
+
+        self.assertIn("no analysis has been performed", content)
+        self.assertNotIn("skill extraction", content)
+        self.assertNotIn("skill recommendation", content)
+
+    def test_audit_does_not_imply_record_mutation(self):
+        response = self._get_data_quality_audit()
+        content = response.content.decode().lower()
+
+        self.assertIn("no records have been changed", content)
+        self.assertNotIn(">edit<", content)
+        self.assertNotIn(">fix<", content)
+        self.assertNotIn(">create<", content)
+
+    def test_audit_does_not_imply_ranking_or_scoring(self):
+        response = self._get_data_quality_audit()
+        content = response.content.decode().lower()
+
+        self.assertIn("does not analyse skill gaps, rank applications", content)
+        self.assertNotIn("score", content)
+        self.assertNotIn("ranked", content)
+        self.assertNotIn("best application", content)
+
+    def test_audit_jd_ready_boundary_note_present(self):
+        response = self._get_data_quality_audit()
+
+        self.assertContains(
+            response,
+            (
+                "JD-ready means the record has sufficient data for future analysis. "
+                "It does not indicate application quality or outcome."
+            ),
+        )
+
+    def test_existing_application_list_unaffected(self):
+        self.create_application(company_name="List Co", job_title="Reporting Analyst")
+
+        response = self._get_application_list()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "List Co")
+        self.assertContains(response, "Reporting Analyst")
+
+    def test_existing_application_detail_unaffected(self):
+        application = self.create_application(company_name="Detail Co", job_title="BI Analyst")
+
+        response = self._get_application_detail(application)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Detail Co")
+        self.assertContains(response, "BI Analyst")
+
+    def test_company_job_title_duplicate_count_is_informational_only(self):
+        self.create_application(
+            company_name="Repeat Co",
+            job_title="Data Analyst",
+            job_description=self._jd_text(),
+        )
+        self.create_application(
+            company_name="Repeat Co",
+            job_title="Data Analyst",
+            job_description=self._jd_text(),
+        )
+
+        response = self._get_data_quality_audit()
+
+        self.assertEqual(response.context["company_title_duplicate_record_count"], 2)
+        self.assertEqual(response.context["jd_ready_count"], 2)
+        self.assertContains(response, "Company + job title repeats are informational only")
+
+    def test_blank_job_url_does_not_disqualify_jd_ready_record(self):
+        self.create_application(job_url="", job_description=self._jd_text())
+        self.create_application(
+            company_name="Not Ready Co",
+            job_title="Data Analyst",
+            job_description="Short",
+        )
+
+        response = self._get_data_quality_audit()
+
+        self.assertEqual(response.context["jd_ready_count"], 1)
+        self.assertEqual(response.context["completeness_rate"], 50)
+        self.assertContains(response, "50%")
+
+    def test_records_needing_attention_list_renders_missing_field_badges(self):
+        self.create_application(company_name="", job_title="", job_description="Short")
+
+        response = self._get_data_quality_audit()
+
+        self.assertContains(response, "Records needing attention")
+        self.assertContains(response, "Company")
+        self.assertContains(response, "Job title")
+        self.assertContains(response, "JD text &gt;= 750 chars")
 
     def test_application_list_loads_for_logged_in_user(self):
         response = self._get_application_list()

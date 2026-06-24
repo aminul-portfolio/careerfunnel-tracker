@@ -7,6 +7,11 @@ app_name = "applications"
 urlpatterns = [
     path("", views.application_list, name="application_list"),
     path("add/", views.application_create, name="application_create"),
+    path(
+        "data-quality/",
+        views.application_data_quality_audit,
+        name="application_data_quality_audit",
+    ),
     path("evaluation/", views.evaluation_queue, name="evaluation_queue"),
     path(
         "<int:pk>/evaluation/download/cv/<str:file_format>/",

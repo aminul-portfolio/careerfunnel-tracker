@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}Application Data Quality Audit | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Application Data Quality Audit{% endblock %}
+
+{% block content %}
+<style>
+    .cf72a-page {
+        --cf72a-surface: #ffffff;
+        --cf72a-subtle: #f8fafc;
+        --cf72a-ink: #0f172a;
+        --cf72a-body: #334155;
+        --cf72a-muted: #64748b;
+        --cf72a-border: #e2e8f0;
+        --cf72a-primary-soft: #eff6ff;
+        --cf72a-warning-soft: #fffbeb;
+        display: grid;
+        gap: 18px;
+    }
+
+    .cf72a-hero-copy {
+        max-width: 78ch;
+    }
+
+    .cf72a-hero-copy h1,
+    .cf72a-section-header h2 {
+        color: var(--cf72a-ink);
+        margin: 0;
+    }
+
+    .cf72a-hero-copy p,
+    .cf72a-section-note,
+    .cf72a-small-note,
+    .cf72a-empty-note {
+        color: var(--cf72a-muted);
+        line-height: 1.6;
+    }
+
+    .cf72a-advisory-stack {
+        display: grid;
+        gap: 10px;
+    }
+
+    .cf72a-kpi-strip {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .cf72a-kpi-card,
+    .cf72a-table-card {
+        background: var(--cf72a-surface);
+        border: 1px solid var(--cf72a-border);
+        border-radius: 14px;
+        padding: 18px;
+    }
+
+    .cf72a-section-header {
+        display: flex;
+        gap: 14px;
+        justify-content: space-between;
+        margin-bottom: 14px;
+    }
+
+    .cf72a-table-wrap {
+        border: 1px solid var(--cf72a-border);
+        border-radius: 12px;
+        overflow-x: auto;
+    }
+
+    .cf72a-table {
+        border-collapse: collapse;
+        min-width: 760px;
+        width: 100%;
+    }
+
+    .cf72a-table th,
+    .cf72a-table td {
+        border-bottom: 1px solid var(--cf72a-border);
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .cf72a-table th {
+        background: var(--cf72a-subtle);
+        color: var(--cf72a-ink);
+        font-size: 0.78rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .cf72a-table tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .cf72a-url-text {
+        color: var(--cf72a-body);
+        overflow-wrap: anywhere;
+    }
+
+    .cf72a-missing-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 0;
+        padding: 0;
+    }
+
+    .cf72a-missing-list li {
+        list-style: none;
+    }
+
+    .cf72a-warning-note {
+        background: var(--cf72a-warning-soft);
+        border: 1px solid #fde68a;
+        border-radius: 10px;
+        color: #92400e;
+        margin-top: 12px;
+        padding: 10px 12px;
+    }
+
+    @media (max-width: 1100px) {
+        .cf72a-kpi-strip {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 720px) {
+        .cf72a-kpi-strip {
+            grid-template-columns: 1fr;
+        }
+
+        .cf72a-section-header {
+            display: grid;
+        }
+    }
+</style>
+
+<div class="cf72a-page">
+    <section class="content-card cf69-card-hero">
+        <div class="cf72a-hero-copy">
+            <p class="eyebrow">Private completeness check</p>
+            <h1>Application Data Quality Audit</h1>
+            <p>This audit checks saved application records for completeness and readiness for future analysis.</p>
+        </div>
+    </section>
+
+    <section class="cf72a-advisory-stack" aria-label="Application data quality advisory notes">
+        <p class="cf69-advisory-info">This audit checks application record completeness only. It does not analyse skill gaps, rank applications, generate documents, or update records.</p>
+        <p class="cf69-advisory-manual">JD-ready means the record has sufficient data for future analysis. It does not indicate application quality or outcome.</p>
+        <p class="cf69-advisory-warning">Possible duplicate - review manually. No records have been changed.</p>
+    </section>
+
+    <section class="cf69-kpi-strip cf72a-kpi-strip" aria-label="Application data quality totals">
+        <div class="cf69-kpi-card cf72a-kpi-card">
+            <p class="cf69-kpi-label">Total Records</p>
+            <p class="cf69-kpi-value">{{ total_records }}</p>
+            <p class="cf69-kpi-note">Saved records checked</p>
+        </div>
+        <div class="cf69-kpi-card cf72a-kpi-card">
+            <p class="cf69-kpi-label">JD-ready</p>
+            <p class="cf69-kpi-value">{{ jd_ready_count }}</p>
+            <p class="cf69-kpi-note">Meets data threshold</p>
+        </div>
+        <div class="cf69-kpi-card cf72a-kpi-card">
+            <p class="cf69-kpi-label">Missing JD Text</p>
+            <p class="cf69-kpi-value">{{ missing_jd_text_count }}</p>
+            <p class="cf69-kpi-note">No saved description text</p>
+        </div>
+        <div class="cf69-kpi-card cf72a-kpi-card">
+            <p class="cf69-kpi-label">Complete Records</p>
+            <p class="cf69-kpi-value">{{ complete_records_count }}</p>
+            <p class="cf69-kpi-note">Core fields present</p>
+        </div>
+        <div class="cf69-kpi-card cf72a-kpi-card">
+            <p class="cf69-kpi-label">Possible Duplicates</p>
+            <p class="cf69-kpi-value">{{ possible_duplicate_url_record_count }}</p>
+            <p class="cf69-kpi-note">Exact source URL repeats</p>
+        </div>
+        <div class="cf69-kpi-card cf72a-kpi-card">
+            <p class="cf69-kpi-label">Completeness Rate</p>
+            <p class="cf69-kpi-value">{{ completeness_rate }}%</p>
+            <p class="cf69-kpi-note">JD-ready / total records</p>
+        </div>
+    </section>
+
+    <section class="content-card cf69-card cf72a-table-card">
+        <div class="cf72a-section-header">
+            <div>
+                <p class="eyebrow">Field completeness</p>
+                <h2>Core application fields</h2>
+            </div>
+            <p class="cf72a-small-note">JD text length threshold: {{ jd_ready_text_threshold }} chars</p>
+        </div>
+        <div class="cf72a-table-wrap">
+            <table class="cf72a-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Field</th>
+                        <th scope="col">Present</th>
+                        <th scope="col">Missing</th>
+                        <th scope="col">Complete</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in field_completeness_rows %}
+                    <tr>
+                        <td>{{ row.label }}</td>
+                        <td>{{ row.present }}</td>
+                        <td>{{ row.missing }}</td>
+                        <td>{{ row.percent_complete }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="cf72a-small-note">Company + job title repeats are informational only: {{ company_title_duplicate_record_count }} records.</p>
+    </section>
+
+    <section class="content-card cf69-card cf72a-table-card">
+        <div class="cf72a-section-header">
+            <div>
+                <p class="eyebrow">Section 2</p>
+                <h2>JD-ready records</h2>
+            </div>
+        </div>
+        <p class="cf72a-section-note">These records meet the data threshold for future JD-gap aggregation. No analysis has been performed.</p>
+        {% if jd_ready_records %}
+        <div class="cf72a-table-wrap">
+            <table class="cf72a-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Company</th>
+                        <th scope="col">Job title</th>
+                        <th scope="col">JD text length</th>
+                        <th scope="col">Source URL</th>
+                        <th scope="col">Date applied</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in jd_ready_records %}
+                    <tr>
+                        <td>{{ row.company_name }}</td>
+                        <td>{{ row.job_title }}</td>
+                        <td>{{ row.jd_text_length }}</td>
+                        <td class="cf72a-url-text">{{ row.job_url|default:"No source URL saved" }}</td>
+                        <td>{{ row.date_applied|date:"M j, Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="cf69-empty">
+            <p class="cf72a-empty-note">No JD-ready records yet.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <section class="content-card cf69-card cf72a-table-card">
+        <div class="cf72a-section-header">
+            <div>
+                <p class="eyebrow">Manual review</p>
+                <h2>Records needing attention</h2>
+            </div>
+        </div>
+        {% if attention_records %}
+        <div class="cf72a-table-wrap">
+            <table class="cf72a-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Company</th>
+                        <th scope="col">Job title</th>
+                        <th scope="col">Missing fields</th>
+                        <th scope="col">JD text length</th>
+                        <th scope="col">Duplicate flag if relevant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in attention_records %}
+                    <tr>
+                        <td>{{ row.company_name }}</td>
+                        <td>{{ row.job_title }}</td>
+                        <td>
+                            {% if row.missing_fields %}
+                            <ul class="cf72a-missing-list">
+                                {% for field in row.missing_fields %}
+                                <li><span class="cf69-badge">{{ field }}</span></li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <span class="cf72a-small-note">No required JD-ready fields missing</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ row.jd_text_length }}</td>
+                        <td>
+                            {% if row.possible_duplicate_url %}
+                            <span class="cf69-badge">Possible duplicate - review manually</span>
+                            {% elif row.company_title_duplicate %}
+                            <span class="cf69-badge">Company + job title repeat only</span>
+                            {% else %}
+                            <span class="cf72a-small-note">None</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="cf72a-warning-note">Possible duplicate - review manually. No records have been changed.</p>
+        {% else %}
+        <div class="cf69-empty">
+            <p class="cf72a-empty-note">No records need JD-ready attention.</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
