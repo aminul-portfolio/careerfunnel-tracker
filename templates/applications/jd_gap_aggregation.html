@@ -121,6 +121,60 @@
         padding: 10px 12px;
     }
 
+    .cf72d-table-header {
+        background: #f8f9fb;
+        border-bottom: 1px solid #e2e8f0;
+        color: #64748b;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .cf72d-table-header th {
+        background: #f8f9fb;
+        border-bottom: 1px solid #e2e8f0;
+        color: #64748b;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .cf72d-category-card {
+        margin-bottom: 1.25rem;
+    }
+
+    .cf72d-category-header {
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .cf72d-category-title {
+        color: #0d1526;
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .cf72d-not-in-ledger-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-left: 3px solid #d97706;
+        border-radius: 0 12px 12px 0;
+        margin-bottom: 1.5rem;
+        padding: 1.5rem;
+    }
+
+    .cf72d-badge-note {
+        color: #64748b;
+        display: inline-block;
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+    }
+
     @media (max-width: 960px) {
         .cf72b-kpi-strip {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -133,7 +187,8 @@
         }
 
         .cf72b-section-header,
-        .cf72b-category-header {
+        .cf72b-category-header,
+        .cf72d-category-header {
             display: grid;
         }
     }
@@ -155,25 +210,33 @@
     </section>
 
     <section class="cf69-kpi-strip cf72b-kpi-strip" aria-label="JD-gap aggregation totals">
-        <div class="cf69-kpi-card cf72b-kpi-card">
-            <p class="cf69-kpi-label">JD-ready Records</p>
-            <p class="cf69-kpi-value">{{ aggregation.jd_ready_count }}</p>
-            <p class="cf69-kpi-note">Records included in this planning view</p>
+        <div class="cf69-kpi-card cf72b-kpi-card" aria-label="JD-ready Records">
+            <div class="cf69-kpi">
+                <div class="cf69-kpi-label">JD-READY RECORDS</div>
+                <div class="cf69-kpi-value">{{ aggregation.jd_ready_count }}</div>
+                <div class="cf69-kpi-note">Records included in this planning view</div>
+            </div>
         </div>
-        <div class="cf69-kpi-card cf72b-kpi-card">
-            <p class="cf69-kpi-label">Terms Found</p>
-            <p class="cf69-kpi-value">{{ aggregation.terms_found_count }}</p>
-            <p class="cf69-kpi-note">Tracked terms at frequency {{ aggregation.min_term_frequency }}+</p>
+        <div class="cf69-kpi-card cf72b-kpi-card" aria-label="Terms Found">
+            <div class="cf69-kpi">
+                <div class="cf69-kpi-label">TERMS FOUND</div>
+                <div class="cf69-kpi-value">{{ aggregation.terms_found_count }}</div>
+                <div class="cf69-kpi-note">Tracked terms at frequency {{ aggregation.min_term_frequency }}+</div>
+            </div>
         </div>
-        <div class="cf69-kpi-card cf72b-kpi-card">
-            <p class="cf69-kpi-label">Top Term</p>
-            <p class="cf69-kpi-value">{% if aggregation.top_term %}{{ aggregation.top_term.term }}{% else %}None{% endif %}</p>
-            <p class="cf69-kpi-note">Highest repeated tracked term</p>
+        <div class="cf69-kpi-card cf72b-kpi-card" aria-label="Top Term">
+            <div class="cf69-kpi">
+                <div class="cf69-kpi-label">TOP TERM</div>
+                <div class="cf69-kpi-value">{% if aggregation.top_term %}{{ aggregation.top_term.term }}{% else %}None{% endif %}</div>
+                <div class="cf69-kpi-note">Highest repeated tracked term</div>
+            </div>
         </div>
-        <div class="cf69-kpi-card cf72b-kpi-card">
-            <p class="cf69-kpi-label">Unmatched in Ledger</p>
-            <p class="cf69-kpi-value">{{ aggregation.unmatched_in_ledger_count }}</p>
-            <p class="cf69-kpi-note">Not in your skill ledger</p>
+        <div class="cf69-kpi-card cf72b-kpi-card" aria-label="Unmatched in Ledger">
+            <div class="cf69-kpi">
+                <div class="cf69-kpi-label">UNMATCHED IN LEDGER</div>
+                <div class="cf69-kpi-value">{{ aggregation.unmatched_in_ledger_count }}</div>
+                <div class="cf69-kpi-note">Not in your skill ledger</div>
+            </div>
         </div>
     </section>
 
@@ -188,14 +251,14 @@
         {% if aggregation.category_groups %}
         <div class="cf72b-category-list">
             {% for group in aggregation.category_groups %}
-            <section class="cf72b-category-card">
-                <div class="cf72b-category-header">
-                    <h3 class="cf72b-category-title">{{ group.category }}</h3>
-                    <span class="cf69-badge">{{ group.terms|length }} terms</span>
+            <div class="cf69-card cf69-card-compact cf72d-category-card">
+                <div class="cf72d-category-header">
+                    <h3 class="cf72d-category-title">{{ group.category }}</h3>
+                    <span class="cf69-badge cf69-badge-neutral">{{ group.terms|length }} terms</span>
                 </div>
                 <div class="cf72b-table-wrap">
                     <table class="cf72b-table">
-                        <thead>
+                        <thead class="cf72d-table-header">
                             <tr>
                                 <th scope="col">Term</th>
                                 <th scope="col">Frequency</th>
@@ -208,7 +271,20 @@
                             <tr>
                                 <td>{{ term.term }}</td>
                                 <td>{{ term.frequency }}</td>
-                                <td>{{ term.skill_ledger_status }}</td>
+                                <td>
+                                    {% if term.skill_ledger_match and term.skill_ledger_match.evidence_level == "VERIFIED" %}
+                                    <span class="cf69-badge cf69-badge-success">VERIFIED</span><br>
+                                    <span class="cf72d-badge-note">Portfolio evidence confirmed</span>
+                                    {% elif term.skill_ledger_match and term.skill_ledger_match.evidence_level == "LEARNING_TARGET" %}
+                                    <span class="cf69-badge cf69-badge-warning">LEARNING TARGET</span><br>
+                                    <span class="cf72d-badge-note">Developing - not yet evidenced</span>
+                                    {% elif term.skill_ledger_match and term.skill_ledger_match.evidence_level == "STUDYING" %}
+                                    <span class="cf69-badge cf69-badge-neutral">STUDYING</span><br>
+                                    <span class="cf72d-badge-note">Personal study only</span>
+                                    {% else %}
+                                    <span class="cf69-badge cf69-badge-neutral">NOT IN LEDGER</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     <ul class="cf72b-sample-list">
                                         {% for sample in term.sample_applications %}
@@ -221,7 +297,7 @@
                         </tbody>
                     </table>
                 </div>
-            </section>
+            </div>
             {% endfor %}
         </div>
         {% else %}
@@ -231,19 +307,19 @@
         {% endif %}
     </section>
 
-    <section class="content-card cf69-card cf72b-table-card">
+    <section class="content-card cf69-card cf72b-table-card cf72d-not-in-ledger-card">
         <div class="cf72b-section-header">
             <div>
                 <p class="eyebrow">Not in skill ledger</p>
                 <h2>Frequent tracked terms without a Skill Ledger match</h2>
             </div>
         </div>
-        <p class="cf72b-safe-note">These terms appear frequently in your saved JDs and are not yet in your Skill Ledger. Consider adding them for future tracking. Adding to ledger is manual and optional. This page does not update your ledger.</p>
+        <p class="cf69-advisory-info">These terms appear frequently in your saved JDs and are not yet in your Skill Ledger. Consider adding them for future tracking. Adding to ledger is manual and optional. This page does not update your ledger.</p>
 
         {% if aggregation.unmatched_terms %}
         <div class="cf72b-table-wrap">
             <table class="cf72b-table">
-                <thead>
+                <thead class="cf72d-table-header">
                     <tr>
                         <th scope="col">Term</th>
                         <th scope="col">Category</th>
@@ -287,7 +363,7 @@
         {% if aggregation.verified_terms %}
         <div class="cf72b-table-wrap">
             <table class="cf72b-table">
-                <thead>
+                <thead class="cf72d-table-header">
                     <tr>
                         <th scope="col">Term</th>
                         <th scope="col">Category</th>
@@ -301,7 +377,10 @@
                         <td>{{ term.term }}</td>
                         <td>{{ term.category }}</td>
                         <td>{{ term.frequency }}</td>
-                        <td>{{ term.skill_ledger_status }}</td>
+                        <td>
+                            <span class="cf69-badge cf69-badge-success">VERIFIED</span><br>
+                            <span class="cf72d-badge-note">Portfolio evidence confirmed</span>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

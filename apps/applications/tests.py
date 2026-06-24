@@ -960,10 +960,8 @@ class JobApplicationViewTests(TestCase):
 
         response = self._get_jd_gap_aggregation()
 
-        self.assertContains(
-            response,
-            "Your skill ledger shows: Verified - portfolio evidence confirmed",
-        )
+        self.assertContains(response, "VERIFIED")
+        self.assertContains(response, "Portfolio evidence confirmed")
 
     def test_learning_target_skill_shows_learning_target_label(self):
         self._create_skill_entry(
@@ -978,10 +976,8 @@ class JobApplicationViewTests(TestCase):
 
         response = self._get_jd_gap_aggregation()
 
-        self.assertContains(
-            response,
-            "Your skill ledger shows: Learning Target - developing, not yet evidenced",
-        )
+        self.assertContains(response, "LEARNING TARGET")
+        self.assertContains(response, "Developing - not yet evidenced")
 
     def test_unmatched_term_shows_not_in_ledger_label(self):
         self._create_jd_ready_application(job_description=self._jd_gap_text("snowflake"))
@@ -1182,10 +1178,8 @@ class JobApplicationViewTests(TestCase):
 
         response = self._get_jd_gap_aggregation()
 
-        self.assertContains(
-            response,
-            "Your skill ledger shows: Verified - portfolio evidence confirmed",
-        )
+        self.assertContains(response, "VERIFIED")
+        self.assertContains(response, "Portfolio evidence confirmed")
 
     def test_no_terms_render_when_frequency_below_2(self):
         self._create_jd_ready_application(job_description=self._jd_gap_text("airflow"))
@@ -1194,6 +1188,127 @@ class JobApplicationViewTests(TestCase):
 
         self.assertEqual(response.context["aggregation"].terms_found_count, 0)
         self.assertContains(response, "No tracked terms met the frequency threshold.")
+
+    def test_sprint_72d_kpi_hierarchy_classes_labels_and_notes_render(self):
+        response = self._get_jd_gap_aggregation()
+        content = response.content.decode()
+
+        self.assertIn('class="cf69-kpi"', content)
+        for expected in (
+            "JD-READY RECORDS",
+            "TERMS FOUND",
+            "TOP TERM",
+            "UNMATCHED IN LEDGER",
+            "Records included in this planning view",
+            "Tracked terms at frequency 2+",
+            "Highest repeated tracked term",
+            "Not in your skill ledger",
+        ):
+            with self.subTest(expected=expected):
+                self.assertContains(response, expected)
+
+    def test_sprint_72d_category_cards_header_and_badge_structure_render(self):
+        self._create_jd_ready_application(job_description=self._jd_gap_text("python"))
+        self._create_jd_ready_application(
+            company_name="Python Two",
+            job_description=self._jd_gap_text("python"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+        content = response.content.decode()
+
+        self.assertIn("cf69-card cf69-card-compact cf72d-category-card", content)
+        self.assertIn("cf72d-category-header", content)
+        self.assertIn("cf72d-category-title", content)
+        self.assertIn("cf69-badge cf69-badge-neutral", content)
+        self.assertContains(response, "1 terms")
+
+    def test_sprint_72d_not_in_skill_ledger_card_prominence_and_note_render(self):
+        response = self._get_jd_gap_aggregation()
+        expected_note = (
+            "These terms appear frequently in your saved JDs and are not yet in your "
+            "Skill Ledger. Consider adding them for future tracking. Adding to ledger "
+            "is manual and optional. This page does not update your ledger."
+        )
+        content = response.content.decode()
+
+        self.assertIn("cf72d-not-in-ledger-card", content)
+        self.assertIn("cf69-advisory-info", content)
+        self.assertContains(response, "Frequent tracked terms without a Skill Ledger match")
+        self.assertContains(response, expected_note)
+
+    def test_sprint_72d_skill_ledger_status_badges_render_exact_labels_and_notes(self):
+        self._create_skill_entry(
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._create_skill_entry(
+            skill_name="Power BI dashboards",
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        self._create_skill_entry(
+            skill_name="SQL practice",
+            evidence_level=SkillEntry.EvidenceLevel.STUDYING,
+        )
+        for term in ("python", "power bi", "sql", "looker"):
+            self._create_jd_ready_application(
+                company_name=f"{term} one",
+                job_description=self._jd_gap_text(term),
+            )
+            self._create_jd_ready_application(
+                company_name=f"{term} two",
+                job_description=self._jd_gap_text(term),
+            )
+
+        response = self._get_jd_gap_aggregation()
+
+        for expected in (
+            "VERIFIED",
+            "Portfolio evidence confirmed",
+            "LEARNING TARGET",
+            "Developing - not yet evidenced",
+            "STUDYING",
+            "Personal study only",
+            "NOT IN LEDGER",
+        ):
+            with self.subTest(expected=expected):
+                self.assertContains(response, expected)
+        for forbidden in (
+            "Your skill ledger shows:",
+            "Skill Confirmed",
+            "Confirmed",
+            "In Progress",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotContains(response, forbidden)
+
+    def test_sprint_72d_locked_safety_wording_survives_and_unsafe_labels_absent(self):
+        response = self._get_jd_gap_aggregation()
+        content = response.content.decode()
+
+        for expected in (
+            "Skill gap signals are advisory only.",
+            "This page does not update your ledger.",
+            "Adding to ledger is manual and optional.",
+            "No records have been changed.",
+            "Skill Ledger comparison is read-only.",
+            "Frequency counts show how many saved job descriptions mention each term.",
+            (
+                "it does not indicate a skill gap, a requirement, or a priority unless "
+                "you judge it to be one"
+            ),
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, content)
+        for forbidden in (
+            "Your skill ledger shows:",
+            "Missing Skills",
+            "Gap Scoring",
+            "AI Gap Analysis",
+            "Skill Recommendations",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, content)
 
     def test_data_quality_audit_page_loads_for_authenticated_user(self):
         response = self._get_data_quality_audit()
