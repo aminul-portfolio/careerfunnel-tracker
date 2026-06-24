@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from apps.ai_agents.services import (
     ANALYZER_BORDERLINE_FIT_MIN_SCORE,
@@ -57,6 +57,8 @@ from .services import (
     get_status_badge_class,
 )
 
+JD_READY_TEXT_THRESHOLD = 750
+
 
 @login_required
 def application_list(request):
@@ -83,6 +85,205 @@ def application_list(request):
         "search_query": search_query or "",
     }
     return render(request, "applications/application_list.html", context)
+
+
+@login_required
+@require_GET
+def application_data_quality_audit(request):
+    applications = list(
+        JobApplication.objects.filter(user=request.user).order_by("-date_applied", "-pk"),
+    )
+    context = _build_application_data_quality_context(applications)
+    return render(request, "applications/data_quality_audit.html", context)
+
+
+def _clean_application_value(value) -> str:
+    return (value or "").strip()
+
+
+def _audit_percentage(present_count: int, total_records: int) -> int:
+    if total_records == 0:
+        return 0
+    return round((present_count / total_records) * 100)
+
+
+def _build_field_completeness_row(label: str, present_count: int, total_records: int) -> dict:
+    return {
+        "label": label,
+        "present": present_count,
+        "missing": total_records - present_count,
+        "percent_complete": _audit_percentage(present_count, total_records),
+    }
+
+
+def _build_application_data_quality_context(applications: list[JobApplication]) -> dict:
+    total_records = len(applications)
+    url_counts: dict[str, int] = {}
+    company_title_counts: dict[tuple[str, str], int] = {}
+
+    cleaned_records = []
+    for application in applications:
+        company_name = _clean_application_value(application.company_name)
+        job_title = _clean_application_value(application.job_title)
+        location = _clean_application_value(application.location)
+        job_url = _clean_application_value(application.job_url)
+        job_description = _clean_application_value(application.job_description)
+        company_title_key = (company_name, job_title)
+
+        if job_url:
+            url_counts[job_url] = url_counts.get(job_url, 0) + 1
+        if company_name and job_title:
+            company_title_counts[company_title_key] = (
+                company_title_counts.get(company_title_key, 0) + 1
+            )
+
+        cleaned_records.append(
+            {
+                "application": application,
+                "company_name": company_name,
+                "job_title": job_title,
+                "location": location,
+                "job_url": job_url,
+                "job_description": job_description,
+                "jd_text_length": len(job_description),
+                "company_title_key": company_title_key,
+            },
+        )
+
+    duplicate_urls = {job_url for job_url, count in url_counts.items() if count > 1}
+    duplicate_company_titles = {
+        key for key, count in company_title_counts.items() if count > 1
+    }
+
+    jd_ready_records = []
+    attention_records = []
+    complete_records_count = 0
+    missing_jd_text_count = 0
+    possible_duplicate_url_record_count = 0
+    company_title_duplicate_record_count = 0
+
+    field_present_counts = {
+        "company": 0,
+        "job_title": 0,
+        "location": 0,
+        "source_url": 0,
+        "jd_text": 0,
+        "jd_text_sufficient": 0,
+    }
+
+    for record in cleaned_records:
+        company_present = bool(record["company_name"])
+        job_title_present = bool(record["job_title"])
+        location_present = bool(record["location"])
+        source_url_present = bool(record["job_url"])
+        jd_text_present = bool(record["job_description"])
+        jd_text_sufficient = record["jd_text_length"] >= JD_READY_TEXT_THRESHOLD
+        possible_duplicate_url = record["job_url"] in duplicate_urls if record["job_url"] else False
+        company_title_duplicate = (
+            record["company_title_key"] in duplicate_company_titles
+            if company_present and job_title_present
+            else False
+        )
+
+        field_present_counts["company"] += int(company_present)
+        field_present_counts["job_title"] += int(job_title_present)
+        field_present_counts["location"] += int(location_present)
+        field_present_counts["source_url"] += int(source_url_present)
+        field_present_counts["jd_text"] += int(jd_text_present)
+        field_present_counts["jd_text_sufficient"] += int(jd_text_sufficient)
+
+        complete_records_count += int(
+            company_present
+            and job_title_present
+            and location_present
+            and source_url_present
+            and jd_text_present,
+        )
+        missing_jd_text_count += int(not jd_text_present)
+        possible_duplicate_url_record_count += int(possible_duplicate_url)
+        company_title_duplicate_record_count += int(company_title_duplicate)
+
+        row = {
+            "company_name": record["company_name"] or "Missing company",
+            "job_title": record["job_title"] or "Missing job title",
+            "job_url": record["job_url"],
+            "date_applied": record["application"].date_applied,
+            "jd_text_length": record["jd_text_length"],
+            "possible_duplicate_url": possible_duplicate_url,
+            "company_title_duplicate": company_title_duplicate,
+            "missing_fields": [],
+        }
+
+        if not company_present:
+            row["missing_fields"].append("Company")
+        if not job_title_present:
+            row["missing_fields"].append("Job title")
+        if not jd_text_present:
+            row["missing_fields"].append("JD text")
+        elif not jd_text_sufficient:
+            row["missing_fields"].append("JD text >= 750 chars")
+
+        is_jd_ready = (
+            company_present
+            and job_title_present
+            and jd_text_present
+            and jd_text_sufficient
+            and not possible_duplicate_url
+        )
+        if is_jd_ready:
+            jd_ready_records.append(row)
+        else:
+            attention_records.append(row)
+
+    field_completeness_rows = [
+        _build_field_completeness_row(
+            "Company",
+            field_present_counts["company"],
+            total_records,
+        ),
+        _build_field_completeness_row(
+            "Job title",
+            field_present_counts["job_title"],
+            total_records,
+        ),
+        _build_field_completeness_row(
+            "Location",
+            field_present_counts["location"],
+            total_records,
+        ),
+        _build_field_completeness_row(
+            "Source URL",
+            field_present_counts["source_url"],
+            total_records,
+        ),
+        _build_field_completeness_row(
+            "JD text",
+            field_present_counts["jd_text"],
+            total_records,
+        ),
+        _build_field_completeness_row(
+            "JD text >= 750 chars",
+            field_present_counts["jd_text_sufficient"],
+            total_records,
+        ),
+    ]
+
+    jd_ready_count = len(jd_ready_records)
+    completeness_rate = _audit_percentage(jd_ready_count, total_records)
+
+    return {
+        "total_records": total_records,
+        "jd_ready_count": jd_ready_count,
+        "missing_jd_text_count": missing_jd_text_count,
+        "complete_records_count": complete_records_count,
+        "possible_duplicate_url_record_count": possible_duplicate_url_record_count,
+        "company_title_duplicate_record_count": company_title_duplicate_record_count,
+        "completeness_rate": completeness_rate,
+        "field_completeness_rows": field_completeness_rows,
+        "jd_ready_records": jd_ready_records,
+        "attention_records": attention_records,
+        "jd_ready_text_threshold": JD_READY_TEXT_THRESHOLD,
+    }
 
 
 @login_required
