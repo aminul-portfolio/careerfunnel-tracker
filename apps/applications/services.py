@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from django.db.models import Count
+
+from apps.skill_ledger.models import SkillEntry
 
 from .choices import (
     DEFAULT_COVER_LETTER_DRAFT_LABEL,
@@ -19,6 +22,270 @@ from .file_storage import build_professional_cv_basename
 from .file_storage import sanitize_filename_part as _sanitize_filename_part
 from .models import ApplicationDocument, JobApplication
 from .selectors import get_user_applications
+
+JD_READY_TEXT_THRESHOLD = 750
+MIN_TERM_FREQUENCY = 2
+
+TRACKED_TERMS = (
+    (
+        "Analytics Engineering",
+        (
+            ("dbt", ("dbt", "data build tool")),
+            ("airflow", ("airflow", "apache airflow")),
+            ("spark", ("apache spark", "pyspark")),
+            ("bigquery", ("bigquery", "big query")),
+            ("snowflake", ("snowflake",)),
+            ("databricks", ("databricks",)),
+            ("redshift", ("redshift",)),
+        ),
+    ),
+    (
+        "Business Intelligence",
+        (
+            ("power bi", ("power bi", "powerbi")),
+            ("tableau", ("tableau",)),
+            ("looker", ("looker",)),
+            ("ssrs", ("ssrs", "sql server reporting")),
+            ("qlik", ("qlik", "qlikview", "qliksense")),
+            ("microsoft fabric", ("microsoft fabric", "ms fabric")),
+        ),
+    ),
+    (
+        "Programming",
+        (
+            ("python", ("python",)),
+            ("sql", ("sql", "t-sql", "pl/sql")),
+            ("r", ("r programming", "rstudio")),
+            ("excel", ("excel", "advanced excel")),
+            ("pandas", ("pandas",)),
+            ("numpy", ("numpy",)),
+        ),
+    ),
+    (
+        "Cloud Platform",
+        (
+            ("azure", ("azure", "microsoft azure")),
+            ("aws", ("aws", "amazon web services")),
+            ("gcp", ("gcp", "google cloud")),
+        ),
+    ),
+    (
+        "Data Engineering",
+        (
+            ("etl", ("etl", "elt", "extract transform load")),
+            ("data warehouse", ("data warehouse", "data warehousing")),
+            ("data lake", ("data lake", "data lakehouse")),
+            ("kafka", ("kafka", "apache kafka")),
+        ),
+    ),
+    (
+        "Governance",
+        (
+            ("dimensional modelling", ("dimensional model", "star schema", "snowflake schema")),
+            ("data governance", ("data governance",)),
+            ("data quality", ("data quality",)),
+        ),
+    ),
+    (
+        "Domain / reporting",
+        (
+            ("stakeholder", ("stakeholder",)),
+            ("dashboard", ("dashboard",)),
+            ("kpi", ("kpi", "key performance indicator")),
+            ("reporting", ("reporting", "report writing")),
+            ("data storytelling", ("data storytelling", "data narrative")),
+        ),
+    ),
+)
+
+
+@dataclass(frozen=True)
+class JdGapSampleApplication:
+    company_name: str
+    job_title: str
+    date_applied: object
+
+
+@dataclass(frozen=True)
+class AggregatedTrackedTerm:
+    term: str
+    category: str
+    frequency: int
+    sample_applications: tuple[JdGapSampleApplication, ...]
+    skill_ledger_match: SkillEntry | None = None
+    skill_ledger_status: str = "Not in your skill ledger"
+    skill_ledger_display: str = "Not in your skill ledger"
+    is_verified: bool = False
+    is_unmatched: bool = True
+
+
+@dataclass(frozen=True)
+class JdGapCategoryGroup:
+    category: str
+    terms: tuple[AggregatedTrackedTerm, ...]
+
+
+@dataclass(frozen=True)
+class JdGapAggregationContext:
+    jd_ready_count: int
+    terms_found_count: int
+    top_term: AggregatedTrackedTerm | None
+    unmatched_in_ledger_count: int
+    category_groups: tuple[JdGapCategoryGroup, ...]
+    unmatched_terms: tuple[AggregatedTrackedTerm, ...]
+    verified_terms: tuple[AggregatedTrackedTerm, ...]
+    min_term_frequency: int
+
+
+def _clean_jd_gap_value(value: str | None) -> str:
+    return (value or "").strip()
+
+
+def get_jd_ready_applications_for_gap_aggregation(user) -> list[JobApplication]:
+    applications = list(
+        JobApplication.objects.filter(user=user).order_by("-date_applied", "-pk"),
+    )
+    url_counts: dict[str, int] = {}
+    for application in applications:
+        job_url = _clean_jd_gap_value(application.job_url)
+        if job_url:
+            url_counts[job_url] = url_counts.get(job_url, 0) + 1
+
+    duplicate_urls = {job_url for job_url, count in url_counts.items() if count > 1}
+    jd_ready_applications: list[JobApplication] = []
+    for application in applications:
+        company_name = _clean_jd_gap_value(application.company_name)
+        job_title = _clean_jd_gap_value(application.job_title)
+        job_description = _clean_jd_gap_value(application.job_description)
+        job_url = _clean_jd_gap_value(application.job_url)
+        if not company_name or not job_title or not job_description:
+            continue
+        if len(job_description) < JD_READY_TEXT_THRESHOLD:
+            continue
+        if job_url and job_url in duplicate_urls:
+            continue
+        jd_ready_applications.append(application)
+    return jd_ready_applications
+
+
+def _term_alias_is_present(description: str, alias: str) -> bool:
+    pattern = rf"(?<!\w){re.escape(alias.lower())}(?!\w)"
+    return re.search(pattern, description.lower()) is not None
+
+
+def _application_mentions_term(application: JobApplication, aliases: tuple[str, ...]) -> bool:
+    description = _clean_jd_gap_value(application.job_description)
+    return any(_term_alias_is_present(description, alias) for alias in aliases)
+
+
+def _build_jd_gap_sample(application: JobApplication) -> JdGapSampleApplication:
+    return JdGapSampleApplication(
+        company_name=_clean_jd_gap_value(application.company_name),
+        job_title=_clean_jd_gap_value(application.job_title),
+        date_applied=application.date_applied,
+    )
+
+
+def aggregate_tracked_jd_terms(
+    applications: list[JobApplication],
+) -> tuple[AggregatedTrackedTerm, ...]:
+    aggregated_terms: list[AggregatedTrackedTerm] = []
+    for category, term_group in TRACKED_TERMS:
+        for term, aliases in term_group:
+            matching_applications = [
+                application
+                for application in applications
+                if _application_mentions_term(application, aliases)
+            ]
+            frequency = len(matching_applications)
+            if frequency < MIN_TERM_FREQUENCY:
+                continue
+            aggregated_terms.append(
+                AggregatedTrackedTerm(
+                    term=term,
+                    category=category,
+                    frequency=frequency,
+                    sample_applications=tuple(
+                        _build_jd_gap_sample(application)
+                        for application in matching_applications[:3]
+                    ),
+                ),
+            )
+
+    return tuple(
+        sorted(
+            aggregated_terms,
+            key=lambda tracked_term: (
+                -tracked_term.frequency,
+                tracked_term.category,
+                tracked_term.term,
+            ),
+        ),
+    )
+
+
+def _find_skill_ledger_match(term: str, skill_entries: list[SkillEntry]) -> SkillEntry | None:
+    normalized_term = term.lower()
+    for entry in skill_entries:
+        if normalized_term in _clean_jd_gap_value(entry.skill_name).lower():
+            return entry
+    return None
+
+
+def compare_aggregated_terms_with_skill_ledger(
+    aggregated_terms: tuple[AggregatedTrackedTerm, ...],
+) -> tuple[AggregatedTrackedTerm, ...]:
+    skill_entries = list(SkillEntry.objects.all().order_by("skill_name", "pk"))
+    compared_terms: list[AggregatedTrackedTerm] = []
+    for aggregated_term in aggregated_terms:
+        skill_entry = _find_skill_ledger_match(aggregated_term.term, skill_entries)
+        if skill_entry is None:
+            compared_terms.append(aggregated_term)
+            continue
+        skill_ledger_display = skill_entry.get_evidence_level_display()
+        compared_terms.append(
+            AggregatedTrackedTerm(
+                term=aggregated_term.term,
+                category=aggregated_term.category,
+                frequency=aggregated_term.frequency,
+                sample_applications=aggregated_term.sample_applications,
+                skill_ledger_match=skill_entry,
+                skill_ledger_status=f"Your skill ledger shows: {skill_ledger_display}",
+                skill_ledger_display=skill_ledger_display,
+                is_verified=skill_entry.evidence_level == SkillEntry.EvidenceLevel.VERIFIED,
+                is_unmatched=False,
+            ),
+        )
+    return tuple(compared_terms)
+
+
+def _build_jd_gap_category_groups(
+    aggregated_terms: tuple[AggregatedTrackedTerm, ...],
+) -> tuple[JdGapCategoryGroup, ...]:
+    groups: list[JdGapCategoryGroup] = []
+    for category, _term_group in TRACKED_TERMS:
+        category_terms = tuple(term for term in aggregated_terms if term.category == category)
+        if category_terms:
+            groups.append(JdGapCategoryGroup(category=category, terms=category_terms))
+    return tuple(groups)
+
+
+def build_jd_gap_aggregation_context(user) -> JdGapAggregationContext:
+    jd_ready_applications = get_jd_ready_applications_for_gap_aggregation(user)
+    aggregated_terms = aggregate_tracked_jd_terms(jd_ready_applications)
+    compared_terms = compare_aggregated_terms_with_skill_ledger(aggregated_terms)
+    unmatched_terms = tuple(term for term in compared_terms if term.is_unmatched)
+    verified_terms = tuple(term for term in compared_terms if term.is_verified)
+    return JdGapAggregationContext(
+        jd_ready_count=len(jd_ready_applications),
+        terms_found_count=len(compared_terms),
+        top_term=compared_terms[0] if compared_terms else None,
+        unmatched_in_ledger_count=len(unmatched_terms),
+        category_groups=_build_jd_gap_category_groups(compared_terms),
+        unmatched_terms=unmatched_terms,
+        verified_terms=verified_terms,
+        min_term_frequency=MIN_TERM_FREQUENCY,
+    )
 
 
 def export_cv_version_label(cv_version: str) -> str:

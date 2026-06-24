@@ -50,6 +50,7 @@ from .services import (
     build_application_evidence_readiness,
     build_application_summary,
     build_application_table_rows,
+    build_jd_gap_aggregation_context,
     build_save_quality_warnings,
     calculate_interview_rate,
     calculate_offer_rate,
@@ -95,6 +96,17 @@ def application_data_quality_audit(request):
     )
     context = _build_application_data_quality_context(applications)
     return render(request, "applications/data_quality_audit.html", context)
+
+
+@login_required
+@require_GET
+def jd_gap_aggregation(request):
+    context = build_jd_gap_aggregation_context(request.user)
+    return render(
+        request,
+        "applications/jd_gap_aggregation.html",
+        {"aggregation": context},
+    )
 
 
 def _clean_application_value(value) -> str:

@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+{% block title %}JD-gap Aggregation Planning | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}JD-gap Aggregation Planning{% endblock %}
+
+{% block content %}
+<style>
+    .cf72b-page {
+        --cf72b-surface: #ffffff;
+        --cf72b-subtle: #f8fafc;
+        --cf72b-ink: #0f172a;
+        --cf72b-body: #334155;
+        --cf72b-muted: #64748b;
+        --cf72b-border: #e2e8f0;
+        --cf72b-warning-soft: #fffbeb;
+        display: grid;
+        gap: 18px;
+    }
+
+    .cf72b-hero-copy {
+        max-width: 78ch;
+    }
+
+    .cf72b-hero-copy h1,
+    .cf72b-section-header h2,
+    .cf72b-category-title {
+        color: var(--cf72b-ink);
+        margin: 0;
+    }
+
+    .cf72b-hero-copy p,
+    .cf72b-section-note,
+    .cf72b-small-note,
+    .cf72b-empty-note {
+        color: var(--cf72b-muted);
+        line-height: 1.6;
+    }
+
+    .cf72b-advisory-stack {
+        display: grid;
+        gap: 10px;
+    }
+
+    .cf72b-kpi-strip {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .cf72b-kpi-card,
+    .cf72b-table-card,
+    .cf72b-category-card {
+        background: var(--cf72b-surface);
+        border: 1px solid var(--cf72b-border);
+        border-radius: 14px;
+        padding: 18px;
+    }
+
+    .cf72b-category-list {
+        display: grid;
+        gap: 16px;
+    }
+
+    .cf72b-section-header,
+    .cf72b-category-header {
+        display: flex;
+        gap: 14px;
+        justify-content: space-between;
+        margin-bottom: 14px;
+    }
+
+    .cf72b-table-wrap {
+        border: 1px solid var(--cf72b-border);
+        border-radius: 12px;
+        overflow-x: auto;
+    }
+
+    .cf72b-table {
+        border-collapse: collapse;
+        min-width: 820px;
+        width: 100%;
+    }
+
+    .cf72b-table th,
+    .cf72b-table td {
+        border-bottom: 1px solid var(--cf72b-border);
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .cf72b-table th {
+        background: var(--cf72b-subtle);
+        color: var(--cf72b-ink);
+        font-size: 0.78rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .cf72b-table tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .cf72b-sample-list {
+        display: grid;
+        gap: 6px;
+        margin: 0;
+        padding: 0;
+    }
+
+    .cf72b-sample-list li {
+        color: var(--cf72b-body);
+        list-style: none;
+    }
+
+    .cf72b-safe-note {
+        background: var(--cf72b-warning-soft);
+        border: 1px solid #fde68a;
+        border-radius: 10px;
+        color: #92400e;
+        padding: 10px 12px;
+    }
+
+    @media (max-width: 960px) {
+        .cf72b-kpi-strip {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 720px) {
+        .cf72b-kpi-strip {
+            grid-template-columns: 1fr;
+        }
+
+        .cf72b-section-header,
+        .cf72b-category-header {
+            display: grid;
+        }
+    }
+</style>
+
+<div class="cf72b-page">
+    <section class="content-card cf69-card-hero">
+        <div class="cf72b-hero-copy">
+            <p class="eyebrow">Private planning view</p>
+            <h1>JD-gap Aggregation Planning</h1>
+            <p>Review repeated tracked terms from saved JD-ready application records and compare them with existing Skill Ledger entries.</p>
+        </div>
+    </section>
+
+    <section class="cf72b-advisory-stack" aria-label="JD-gap aggregation advisory notes">
+        <p class="cf69-advisory-info">Skill gap signals are advisory only. This page summarises repeated terms found in saved job descriptions and does not rank applications, assess suitability, generate documents, or update records.</p>
+        <p class="cf69-advisory-manual">Frequency counts show how many saved job descriptions mention each term. Higher frequency means the term appeared more often across your applications - it does not indicate a skill gap, a requirement, or a priority unless you judge it to be one.</p>
+        <p class="cf69-advisory-warning">No records have been changed. Skill Ledger comparison is read-only.</p>
+    </section>
+
+    <section class="cf69-kpi-strip cf72b-kpi-strip" aria-label="JD-gap aggregation totals">
+        <div class="cf69-kpi-card cf72b-kpi-card">
+            <p class="cf69-kpi-label">JD-ready Records</p>
+            <p class="cf69-kpi-value">{{ aggregation.jd_ready_count }}</p>
+            <p class="cf69-kpi-note">Records included in this planning view</p>
+        </div>
+        <div class="cf69-kpi-card cf72b-kpi-card">
+            <p class="cf69-kpi-label">Terms Found</p>
+            <p class="cf69-kpi-value">{{ aggregation.terms_found_count }}</p>
+            <p class="cf69-kpi-note">Tracked terms at frequency {{ aggregation.min_term_frequency }}+</p>
+        </div>
+        <div class="cf69-kpi-card cf72b-kpi-card">
+            <p class="cf69-kpi-label">Top Term</p>
+            <p class="cf69-kpi-value">{% if aggregation.top_term %}{{ aggregation.top_term.term }}{% else %}None{% endif %}</p>
+            <p class="cf69-kpi-note">Highest repeated tracked term</p>
+        </div>
+        <div class="cf69-kpi-card cf72b-kpi-card">
+            <p class="cf69-kpi-label">Unmatched in Ledger</p>
+            <p class="cf69-kpi-value">{{ aggregation.unmatched_in_ledger_count }}</p>
+            <p class="cf69-kpi-note">Not in your skill ledger</p>
+        </div>
+    </section>
+
+    <section class="content-card cf69-card cf72b-table-card">
+        <div class="cf72b-section-header">
+            <div>
+                <p class="eyebrow">Aggregation results by category</p>
+                <h2>Repeated tracked terms</h2>
+            </div>
+        </div>
+
+        {% if aggregation.category_groups %}
+        <div class="cf72b-category-list">
+            {% for group in aggregation.category_groups %}
+            <section class="cf72b-category-card">
+                <div class="cf72b-category-header">
+                    <h3 class="cf72b-category-title">{{ group.category }}</h3>
+                    <span class="cf69-badge">{{ group.terms|length }} terms</span>
+                </div>
+                <div class="cf72b-table-wrap">
+                    <table class="cf72b-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Term</th>
+                                <th scope="col">Frequency</th>
+                                <th scope="col">Skill Ledger status</th>
+                                <th scope="col">Sample applications</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for term in group.terms %}
+                            <tr>
+                                <td>{{ term.term }}</td>
+                                <td>{{ term.frequency }}</td>
+                                <td>{{ term.skill_ledger_status }}</td>
+                                <td>
+                                    <ul class="cf72b-sample-list">
+                                        {% for sample in term.sample_applications %}
+                                        <li>{{ sample.company_name }} - {{ sample.job_title }}{% if sample.date_applied %}, {{ sample.date_applied|date:"M j, Y" }}{% endif %}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="cf69-empty">
+            <p class="cf72b-empty-note">No tracked terms met the frequency threshold.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <section class="content-card cf69-card cf72b-table-card">
+        <div class="cf72b-section-header">
+            <div>
+                <p class="eyebrow">Not in skill ledger</p>
+                <h2>Frequent tracked terms without a Skill Ledger match</h2>
+            </div>
+        </div>
+        <p class="cf72b-safe-note">These terms appear frequently in your saved JDs and are not yet in your Skill Ledger. Consider adding them for future tracking. Adding to ledger is manual and optional. This page does not update your ledger.</p>
+
+        {% if aggregation.unmatched_terms %}
+        <div class="cf72b-table-wrap">
+            <table class="cf72b-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Term</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Frequency</th>
+                        <th scope="col">Sample applications</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for term in aggregation.unmatched_terms %}
+                    <tr>
+                        <td>{{ term.term }}</td>
+                        <td>{{ term.category }}</td>
+                        <td>{{ term.frequency }}</td>
+                        <td>
+                            <ul class="cf72b-sample-list">
+                                {% for sample in term.sample_applications %}
+                                <li>{{ sample.company_name }} - {{ sample.job_title }}{% if sample.date_applied %}, {{ sample.date_applied|date:"M j, Y" }}{% endif %}</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="cf69-empty">
+            <p class="cf72b-empty-note">No frequent tracked terms are unmatched in the Skill Ledger.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <section class="content-card cf69-card cf72b-table-card">
+        <div class="cf72b-section-header">
+            <div>
+                <p class="eyebrow">Already verified</p>
+                <h2>Frequent tracked terms with verified ledger entries</h2>
+            </div>
+        </div>
+
+        {% if aggregation.verified_terms %}
+        <div class="cf72b-table-wrap">
+            <table class="cf72b-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Term</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Frequency</th>
+                        <th scope="col">Skill Ledger status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for term in aggregation.verified_terms %}
+                    <tr>
+                        <td>{{ term.term }}</td>
+                        <td>{{ term.category }}</td>
+                        <td>{{ term.frequency }}</td>
+                        <td>{{ term.skill_ledger_status }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="cf69-empty">
+            <p class="cf72b-empty-note">No frequent tracked terms currently show verified Skill Ledger entries.</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

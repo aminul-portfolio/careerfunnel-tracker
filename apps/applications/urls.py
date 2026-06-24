@@ -12,6 +12,11 @@ urlpatterns = [
         views.application_data_quality_audit,
         name="application_data_quality_audit",
     ),
+    path(
+        "jd-gap-aggregation/",
+        views.jd_gap_aggregation,
+        name="jd_gap_aggregation",
+    ),
     path("evaluation/", views.evaluation_queue, name="evaluation_queue"),
     path(
         "<int:pk>/evaluation/download/cv/<str:file_format>/",
