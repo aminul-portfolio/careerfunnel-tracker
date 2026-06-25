@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Update tracking status | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Update tracking status{% endblock %}
+
+{% block content %}
+<style>
+    .cf73-page {
+        display: grid;
+        gap: 18px;
+    }
+
+    .cf73-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 22px;
+    }
+
+    .cf73-form {
+        display: grid;
+        gap: 16px;
+    }
+
+    .cf73-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+</style>
+
+<div class="cf73-page">
+    <section class="content-card cf69-card-hero cf73-card">
+        <p class="eyebrow">Manual tracking update</p>
+        <h1>Update tracking status</h1>
+        <p>{{ application.company_name }} - {{ application.job_title }}</p>
+    </section>
+
+    <p class="cf69-advisory-manual">This updates your saved tracking record only. It does not update any employer system or send any notification. Review recruiter emails and employer messages manually before changing status.</p>
+
+    <section class="content-card cf69-card cf73-card">
+        <form method="post" class="cf73-form">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="form-error">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="form-group">
+                <label for="{{ form.status.id_for_label }}">Status</label>
+                {{ form.status }}
+                {% if form.status.errors %}<p class="form-error">{{ form.status.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.pipeline_stage.id_for_label }}">Pipeline stage</label>
+                {{ form.pipeline_stage }}
+                {% if form.pipeline_stage.errors %}<p class="form-error">{{ form.pipeline_stage.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.response_date.id_for_label }}">Response date</label>
+                {{ form.response_date }}
+                {% if form.response_date.errors %}<p class="form-error">{{ form.response_date.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.status_note.id_for_label }}">Status note</label>
+                {{ form.status_note }}
+                <p class="help-text">{{ form.status_note.help_text }}</p>
+                {% if form.status_note.errors %}<p class="form-error">{{ form.status_note.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div class="form-actions cf73-actions">
+                <button type="submit" class="btn btn-primary">Save tracking status</button>
+                <a href="{{ application.get_absolute_url }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
