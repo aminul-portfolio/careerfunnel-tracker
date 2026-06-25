@@ -47,6 +47,7 @@ from .services import (
     build_application_evidence_readiness,
     build_save_quality_warnings,
     calculate_response_rate,
+    parse_status_history,
 )
 
 
@@ -82,6 +83,39 @@ class JobApplicationModelTests(TestCase):
             status=ApplicationStatus.SUBMITTED,
         )
         self.assertIsNone(application.days_to_response)
+
+
+class StatusHistoryParserTests(SimpleTestCase):
+    def test_parse_status_history_extracts_entries_correctly(self):
+        history = parse_status_history(
+            "[24 Jun 2026 20:52 - Status: Interview]\nInterview arranged for Friday.",
+        )
+
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0].timestamp, "24 Jun 2026 20:52")
+        self.assertEqual(history[0].status, "Interview")
+        self.assertEqual(history[0].note, "Interview arranged for Friday.")
+
+    def test_parse_status_history_handles_multiple_entries(self):
+        history = parse_status_history(
+            "[24 Jun 2026 20:52 - Status: Submitted]\nSubmitted manually.\n\n"
+            "[25 Jun 2026 09:15 - Status: Screening call]\nScreening call booked.",
+        )
+
+        self.assertEqual([entry.status for entry in history], ["Screening call", "Submitted"])
+        self.assertEqual(history[0].timestamp, "25 Jun 2026 09:15")
+        self.assertEqual(history[0].note, "Screening call booked.")
+        self.assertEqual(history[1].note, "Submitted manually.")
+
+    def test_parse_status_history_handles_empty_notes(self):
+        self.assertEqual(parse_status_history(""), [])
+        self.assertEqual(parse_status_history(None), [])
+
+    def test_parse_status_history_handles_notes_without_status_blocks(self):
+        self.assertEqual(
+            parse_status_history("Plain manual note without a structured status header."),
+            [],
+        )
 
 
 class ApplicationDocumentModelTests(TestCase):
@@ -921,6 +955,192 @@ class JobApplicationViewTests(TestCase):
             response,
             reverse("applications:application_status_update", kwargs={"pk": application.pk}),
         )
+
+    def test_detail_page_update_status_is_primary_action(self):
+        application = self.create_application()
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+        status_url = reverse(
+            "applications:application_status_update",
+            kwargs={"pk": application.pk},
+        )
+
+        self.assertIn("cf74-action-tier-primary", content)
+        self.assertIn(
+            (
+                f'href="{status_url}" '
+                'class="btn btn-primary cf74-action-primary">Update Status</a>'
+            ),
+            content,
+        )
+
+    def test_detail_page_edit_application_is_secondary_action(self):
+        application = self.create_application()
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+        update_url = reverse("applications:application_update", kwargs={"pk": application.pk})
+        list_url = reverse("applications:application_list")
+
+        self.assertIn("cf74-action-tier-secondary", content)
+        self.assertIn(
+            (
+                f'href="{update_url}" '
+                'class="btn btn-secondary cf74-action-secondary">Edit Application</a>'
+            ),
+            content,
+        )
+        self.assertIn(
+            (
+                f'href="{list_url}" '
+                'class="btn btn-secondary cf74-action-secondary"><span>Back</span> to list</a>'
+            ),
+            content,
+        )
+
+    def test_detail_page_smart_review_is_advisory_action(self):
+        application = self.create_application()
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+        smart_review_url = reverse(
+            "job_intelligence:application_smart_review",
+            args=[application.pk],
+        )
+        ai_pack_url = reverse("ai_agents:application_agent_pack", args=[application.pk])
+        interview_url = reverse("interviews:interview_create")
+
+        self.assertIn("cf74-action-tier-advisory", content)
+        self.assertIn("ADVISORY TOOLS", content)
+        for expected in (
+            (
+                f'href="{smart_review_url}" '
+                'class="btn btn-secondary cf74-action-advisory">Smart Review</a>'
+            ),
+            (
+                f'href="{ai_pack_url}" '
+                'class="btn btn-secondary cf74-action-advisory">'
+                "Open AI Pack / CV Tailoring Advisor</a>"
+            ),
+            (
+                f'href="{interview_url}?application={application.pk}" '
+                'class="btn btn-secondary cf74-action-advisory">Create Interview Prep</a>'
+            ),
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, content)
+
+    def test_detail_page_delete_remains_in_danger_zone(self):
+        application = self.create_application()
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+        hero_content = content.split('class="cf69d-safety-grid"', 1)[0]
+        danger_zone = content.split('class="danger-zone cf69d-danger-zone"', 1)[1]
+        delete_url = reverse("applications:application_delete", kwargs={"pk": application.pk})
+
+        self.assertNotIn(delete_url, hero_content)
+        self.assertIn(delete_url, danger_zone)
+        self.assertIn('class="btn btn-danger">Delete</a>', danger_zone)
+
+    def test_detail_page_action_cluster_does_not_imply_automation(self):
+        application = self.create_application()
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+        action_cluster = content.split('aria-label="Application action hierarchy"', 1)[1].split(
+            'class="cf69d-safety-grid"',
+            1,
+        )[0]
+
+        for phrase in (
+            "Employer notified",
+            "Auto-updated",
+            "Synced with recruiter",
+            "Email read",
+            "Confirmed by employer",
+            "Sent to",
+            "Automatically",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase.lower(), action_cluster.lower())
+
+    def test_detail_page_status_history_section_renders(self):
+        application = self.create_application(notes="Plain manual note.")
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+
+        self.assertContains(response, "Status History")
+        self.assertContains(
+            response,
+            (
+                "Status history is derived from your manual tracking notes. "
+                "It reflects your own record updates only."
+            ),
+        )
+        self.assertIn('id="status-history"', content)
+        self.assertIn("cf74-history-section", content)
+        self.assertIn(
+            (
+                "No status history recorded yet. Use Update Status to log stage changes "
+                "with timestamped notes."
+            ),
+            content,
+        )
+
+    def test_detail_page_status_history_shows_most_recent_first(self):
+        application = self.create_application(
+            notes=(
+                "[24 Jun 2026 20:52 - Status: Submitted]\n"
+                "Submitted application manually.\n\n"
+                "[25 Jun 2026 09:15 - Status: Screening call]\n"
+                "Screening call booked."
+            ),
+        )
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+        history_section = content.split('id="status-history"', 1)[1].split(
+            'id="evidence"',
+            1,
+        )[0]
+
+        self.assertLess(
+            history_section.find("Screening call"),
+            history_section.find("Submitted"),
+        )
+        self.assertLess(
+            history_section.find("Screening call booked."),
+            history_section.find("Submitted application manually."),
+        )
+        self.assertIn("<details", history_section)
+        self.assertIn("<summary", history_section)
+
+    def test_detail_page_status_history_does_not_imply_employer_sync(self):
+        application = self.create_application(
+            notes="[24 Jun 2026 20:52 - Status: Interview]\nInterview arranged manually.",
+        )
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+        history_section = content.split('id="status-history"', 1)[1].split(
+            'id="evidence"',
+            1,
+        )[0]
+
+        for phrase in (
+            "Employer notified",
+            "Auto-updated",
+            "Synced with recruiter",
+            "Email read",
+            "Confirmed by employer",
+            "Sent to",
+            "Automatically",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase.lower(), history_section.lower())
 
     def test_status_update_template_shows_tracking_only_wording(self):
         application = self.create_application()

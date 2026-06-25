@@ -58,6 +58,7 @@ from .services import (
     calculate_offer_rate,
     calculate_response_rate,
     get_status_badge_class,
+    parse_status_history,
 )
 
 JD_READY_TEXT_THRESHOLD = 750
@@ -516,6 +517,7 @@ def application_detail(request, pk):
             "followup_email_draft": build_followup_email_draft(application),
             "evidence_readiness": build_application_evidence_readiness(application),
             "smart_review": build_smart_review(application),
+            "status_history": parse_status_history(application.notes),
             "cv_version_display": build_application_cv_version_display(application),
             "document_selection_form": document_selection_form,
             "external_cv_form": external_cv_form,
