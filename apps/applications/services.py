@@ -26,6 +26,10 @@ from .selectors import get_user_applications
 
 JD_READY_TEXT_THRESHOLD = 750
 MIN_TERM_FREQUENCY = 2
+STATUS_HISTORY_HEADER_RE = re.compile(
+    r"^\[(\d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}) - Status: ([^\]\n]+)\]\s*",
+    re.MULTILINE,
+)
 
 TRACKED_TERMS = (
     (
@@ -112,6 +116,35 @@ def append_status_note(existing_notes: str, status_note: str, status: str) -> st
     if not clean_existing:
         return note_block
     return f"{clean_existing}\n\n{note_block}"
+
+
+@dataclass(frozen=True)
+class StatusHistoryEntry:
+    timestamp: str
+    status: str
+    note: str
+
+
+def parse_status_history(notes_text: str | None) -> list[StatusHistoryEntry]:
+    notes = (notes_text or "").strip()
+    if not notes:
+        return []
+
+    matches = list(STATUS_HISTORY_HEADER_RE.finditer(notes))
+    if not matches:
+        return []
+
+    entries: list[StatusHistoryEntry] = []
+    for index, match in enumerate(matches):
+        next_start = matches[index + 1].start() if index + 1 < len(matches) else len(notes)
+        entries.append(
+            StatusHistoryEntry(
+                timestamp=match.group(1).strip(),
+                status=match.group(2).strip(),
+                note=notes[match.end() : next_start].strip(),
+            ),
+        )
+    return list(reversed(entries))
 
 
 @dataclass(frozen=True)

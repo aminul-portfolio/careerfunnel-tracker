@@ -304,6 +304,86 @@
         padding: 14px;
     }
 
+    .cf74-history-section {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        box-shadow: var(--cf69d-shadow);
+        padding: 22px;
+    }
+
+    .cf74-history-advisory {
+        background: #f0fdfa;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        color: #1e293b;
+        line-height: 1.6;
+        margin: 14px 0 0;
+        padding: 12px 14px;
+    }
+
+    .cf74-history-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 16px;
+    }
+
+    .cf74-history-entry {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .cf74-history-summary {
+        align-items: center;
+        color: #1e293b;
+        cursor: pointer;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        padding: 13px 15px;
+    }
+
+    .cf74-history-meta {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .cf74-history-status {
+        background: #f0fdfa;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        color: #0d6e63;
+        font-weight: 800;
+        padding: 4px 10px;
+    }
+
+    .cf74-history-time {
+        color: #64748b;
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+
+    .cf74-history-note {
+        color: #1e293b;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0 15px 15px;
+    }
+
+    .cf74-history-empty {
+        background: #f0f2f5;
+        border: 1px dashed #e2e8f0;
+        border-radius: 12px;
+        color: #64748b;
+        line-height: 1.55;
+        margin: 16px 0 0;
+        padding: 14px;
+    }
+
     .cf69d-danger-zone {
         background: #fff7ed;
         border: 1px solid #fed7aa;
@@ -332,6 +412,11 @@
         .cf69d-material-grid {
             grid-template-columns: 1fr;
         }
+
+        .cf74-history-summary {
+            align-items: flex-start;
+            flex-direction: column;
+        }
     }
 </style>
 <div class="dashboard-grid cf69d-page">
@@ -340,8 +425,9 @@
 <div class="cf69d-safety-grid" aria-label="Application Detail safety boundaries"><div class="cf69d-safety-card cf69d-safety-info"><strong>Saved application record</strong><span>This page shows saved tracker fields for this one application.</span></div><div class="cf69d-safety-card cf69d-safety-manual"><strong>Manual tracking workflow</strong><span>Tracking record only: application actions happen manually outside the tracker.</span></div><div class="cf69d-safety-card cf69d-safety-manual"><strong>No automatic submission</strong><span>No auto-apply and no employer submission by CareerFunnel.</span></div><div class="cf69d-safety-card cf69d-safety-warning"><strong>Evidence limits</strong><span>Not scraped live-market data and not proof of employer interaction or external verification.</span></div></div>
 </section>
 <section class="cf69d-zone cf69d-zone-core" aria-label="Core application identity"><div class="cf69d-card"><p class="cf69d-eyebrow">Core Record</p><h2 class="cf69d-section-title">Application identity</h2><p class="cf69d-section-note">These fields come from the saved application record. A stored job URL remains a reference only, not an application-submission action.</p><div class="cf69d-identity-grid"><div class="cf69d-identity-card"><span class="cf69d-label">Company</span><strong>{{ application.company_name }}</strong></div><div class="cf69d-identity-card"><span class="cf69d-label">Role</span><strong>{{ application.job_title }}</strong></div><div class="cf69d-identity-card"><span class="cf69d-label">Location</span><strong>{{ application.location|default:"Not specified" }}</strong></div><div class="cf69d-identity-card"><span class="cf69d-label">Source</span><strong>{{ application.get_source_display }}</strong></div><div class="cf69d-identity-card"><span class="cf69d-label">Status</span><strong class="badge {{ badge_class }}">{{ application.get_status_display }}</strong></div><div class="cf69d-identity-card"><span class="cf69d-label">Role Fit</span><strong>{{ application.get_role_fit_display }}</strong></div>{% if application.job_url %}<div class="cf69d-identity-card"><span class="cf69d-label">Stored job URL</span><a href="{{ application.job_url }}" target="_blank" rel="noopener" class="table-link">Open job post reference</a></div>{% endif %}</div></div></section>
-<nav class="section-nav cf69d-nav" aria-label="Application sections"><a href="#status">Status</a><a href="#evidence">Evidence</a><a href="#fit">Fit Review</a><a href="#followup">Follow-Up</a><a href="#recruiter-emails">Recruiter Emails</a><a href="#role">Role Info</a><a href="#assets">Assets</a><a href="#document-pack">Document Pack</a><a href="#notes">Notes</a></nav>
+<nav class="section-nav cf69d-nav" aria-label="Application sections"><a href="#status">Status</a><a href="#status-history">Status History</a><a href="#evidence">Evidence</a><a href="#fit">Fit Review</a><a href="#followup">Follow-Up</a><a href="#recruiter-emails">Recruiter Emails</a><a href="#role">Role Info</a><a href="#assets">Assets</a><a href="#document-pack">Document Pack</a><a href="#notes">Notes</a></nav>
 <section id="status" class="content-card cf69d-card"><div class="card-header"><p class="cf69d-eyebrow">Status</p><h2 class="cf69d-section-title">Current Outcome</h2><p class="cf69d-section-note">Status and follow-up fields are manual saved-record fields, not employer-system updates.</p></div><div class="cf69d-detail-grid"><div class="cf69d-detail-card"><span class="cf69d-label">Status</span><strong class="badge {{ badge_class }}">{{ application.get_status_display }}</strong></div><div class="cf69d-detail-card"><span class="cf69d-label">Pipeline Stage</span><strong>{{ application.get_pipeline_stage_display }}</strong></div><div class="cf69d-detail-card"><span class="cf69d-label">Date Applied</span><strong>{{ application.date_applied }}</strong></div><div class="cf69d-detail-card"><span class="cf69d-label">Response Date</span><strong>{{ application.response_date|default:"Not received yet" }}</strong></div><div class="cf69d-detail-card"><span class="cf69d-label">Days to Response</span><strong>{% if application.days_to_response is not None %}{{ application.days_to_response }} days{% else %}Not available{% endif %}</strong></div><div class="cf69d-detail-card"><span class="cf69d-label">Next Action</span><strong>{{ application.next_action|default:"Use Smart Review" }}</strong></div></div></section>
+<section id="status-history" class="content-card cf74-history-section"><div class="card-header"><p class="cf69d-eyebrow">Manual Timeline</p><h2 class="cf69d-section-title">Status History</h2><p class="cf69d-section-note">Status history is derived from your manual tracking notes. It reflects your own record updates only.</p></div>{% if status_history %}<div class="cf74-history-list" aria-label="Status history timeline">{% for entry in status_history %}<details class="cf74-history-entry"><summary class="cf74-history-summary"><span class="cf74-history-meta"><span class="cf74-history-status">{{ entry.status }}</span><span class="cf74-history-time">{{ entry.timestamp }}</span></span>{% if entry.note %}<span>{{ entry.note|truncatechars:96 }}</span>{% endif %}</summary>{% if entry.note %}<p class="cf74-history-note">{{ entry.note|linebreaksbr }}</p>{% else %}<p class="cf74-history-note">No note content recorded for this status change.</p>{% endif %}</details>{% endfor %}</div>{% else %}<p class="cf74-history-empty">No status history recorded yet. Use Update Status to log stage changes with timestamped notes.</p>{% endif %}</section>
 <section id="evidence" class="content-card cf69d-card"><div class="card-header"><p class="cf69d-eyebrow">Preparation</p><h2 class="cf69d-section-title">Evidence Readiness</h2></div><p class="cf69d-note">Rule-based summary of evidence and preparation data already saved on this application record.</p><div class="cf69d-detail-grid"><div class="cf69d-detail-card"><span class="cf69d-label">Overall</span><strong>{{ evidence_readiness.readiness_label }}</strong></div></div><h3>Ready</h3>{% if evidence_readiness.ready_items %}<ul class="workflow-list cf69d-list">{% for item in evidence_readiness.ready_items %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted-text">No evidence items recorded yet.</p>{% endif %}<h3>Still missing</h3>{% if evidence_readiness.missing_items %}<ul class="workflow-list cf69d-list">{% for item in evidence_readiness.missing_items %}<li><strong>{{ item }}</strong></li>{% endfor %}</ul>{% else %}<div class="diagnosis-box cf69d-complete-box"><strong>All evidence items complete</strong><p>No missing preparation items for this application. Keep the record updated as follow-up or interview stages progress.</p></div>{% endif %}<h3>Recommended next improvement</h3><p class="note-text">{{ evidence_readiness.recommended_next_improvement }}</p></section>
 <section id="fit" class="content-card cf69d-card"><div class="card-header"><p class="cf69d-eyebrow">Rule-Based Fit</p><h2 class="cf69d-section-title">Fit Review</h2></div><p class="cf69d-section-note">Compact summary from the local Smart Review rules for this application record.</p><div class="cf69d-detail-grid"><div class="cf69d-detail-card"><span class="cf69d-label">Fit label</span><strong>{{ smart_review.job_fit_label }}</strong></div><div class="cf69d-detail-card"><span class="cf69d-label">Fit score</span><strong>{{ smart_review.job_fit_score }}/100</strong></div><div class="cf69d-detail-card"><span class="cf69d-label">Recommended CV</span><strong>{{ smart_review.recommended_cv }}</strong></div><div class="cf69d-detail-card"><span class="cf69d-label">Readiness</span><strong>{{ smart_review.readiness_score }}%</strong></div><div class="cf69d-detail-card"><span class="cf69d-label">Next action</span><strong>{{ smart_review.next_action }}</strong></div></div>{% if smart_review.job_fit_reasons %}<h3>Fit reasons</h3><ul class="workflow-list cf69d-list">{% for reason in smart_review.job_fit_reasons %}<li>{{ reason }}</li>{% endfor %}</ul>{% endif %}<div class="hero-actions cf69d-fit-actions"><a href="{% url 'job_intelligence:application_smart_review' application.pk %}" class="btn btn-secondary">Full Smart Review</a></div></section>
 <section class="cf69d-zone cf69d-zone-lower-safety" aria-label="Lower page manual action safety"><div class="cf69d-action-safety"><strong>Lower-page action safety</strong><p>Document pack, follow-up, recruiter email, assets, and notes are saved application record tools for manual review. Document pack materials are for review/use outside the tracker; no auto-apply, no automatic submission, no automatic email sending, and no employer submission by CareerFunnel.</p></div></section>

@@ -47,6 +47,7 @@ from .services import (
     build_application_evidence_readiness,
     build_save_quality_warnings,
     calculate_response_rate,
+    parse_status_history,
 )
 
 
@@ -82,6 +83,39 @@ class JobApplicationModelTests(TestCase):
             status=ApplicationStatus.SUBMITTED,
         )
         self.assertIsNone(application.days_to_response)
+
+
+class StatusHistoryParserTests(SimpleTestCase):
+    def test_parse_status_history_extracts_entries_correctly(self):
+        history = parse_status_history(
+            "[24 Jun 2026 20:52 - Status: Interview]\nInterview arranged for Friday.",
+        )
+
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0].timestamp, "24 Jun 2026 20:52")
+        self.assertEqual(history[0].status, "Interview")
+        self.assertEqual(history[0].note, "Interview arranged for Friday.")
+
+    def test_parse_status_history_handles_multiple_entries(self):
+        history = parse_status_history(
+            "[24 Jun 2026 20:52 - Status: Submitted]\nSubmitted manually.\n\n"
+            "[25 Jun 2026 09:15 - Status: Screening call]\nScreening call booked.",
+        )
+
+        self.assertEqual([entry.status for entry in history], ["Screening call", "Submitted"])
+        self.assertEqual(history[0].timestamp, "25 Jun 2026 09:15")
+        self.assertEqual(history[0].note, "Screening call booked.")
+        self.assertEqual(history[1].note, "Submitted manually.")
+
+    def test_parse_status_history_handles_empty_notes(self):
+        self.assertEqual(parse_status_history(""), [])
+        self.assertEqual(parse_status_history(None), [])
+
+    def test_parse_status_history_handles_notes_without_status_blocks(self):
+        self.assertEqual(
+            parse_status_history("Plain manual note without a structured status header."),
+            [],
+        )
 
 
 class ApplicationDocumentModelTests(TestCase):
@@ -1031,6 +1065,82 @@ class JobApplicationViewTests(TestCase):
         ):
             with self.subTest(phrase=phrase):
                 self.assertNotIn(phrase.lower(), action_cluster.lower())
+
+    def test_detail_page_status_history_section_renders(self):
+        application = self.create_application(notes="Plain manual note.")
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+
+        self.assertContains(response, "Status History")
+        self.assertContains(
+            response,
+            (
+                "Status history is derived from your manual tracking notes. "
+                "It reflects your own record updates only."
+            ),
+        )
+        self.assertIn('id="status-history"', content)
+        self.assertIn("cf74-history-section", content)
+        self.assertIn(
+            (
+                "No status history recorded yet. Use Update Status to log stage changes "
+                "with timestamped notes."
+            ),
+            content,
+        )
+
+    def test_detail_page_status_history_shows_most_recent_first(self):
+        application = self.create_application(
+            notes=(
+                "[24 Jun 2026 20:52 - Status: Submitted]\n"
+                "Submitted application manually.\n\n"
+                "[25 Jun 2026 09:15 - Status: Screening call]\n"
+                "Screening call booked."
+            ),
+        )
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+        history_section = content.split('id="status-history"', 1)[1].split(
+            'id="evidence"',
+            1,
+        )[0]
+
+        self.assertLess(
+            history_section.find("Screening call"),
+            history_section.find("Submitted"),
+        )
+        self.assertLess(
+            history_section.find("Screening call booked."),
+            history_section.find("Submitted application manually."),
+        )
+        self.assertIn("<details", history_section)
+        self.assertIn("<summary", history_section)
+
+    def test_detail_page_status_history_does_not_imply_employer_sync(self):
+        application = self.create_application(
+            notes="[24 Jun 2026 20:52 - Status: Interview]\nInterview arranged manually.",
+        )
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+        history_section = content.split('id="status-history"', 1)[1].split(
+            'id="evidence"',
+            1,
+        )[0]
+
+        for phrase in (
+            "Employer notified",
+            "Auto-updated",
+            "Synced with recruiter",
+            "Email read",
+            "Confirmed by employer",
+            "Sent to",
+            "Automatically",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase.lower(), history_section.lower())
 
     def test_status_update_template_shows_tracking_only_wording(self):
         application = self.create_application()
