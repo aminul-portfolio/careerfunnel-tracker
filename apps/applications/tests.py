@@ -922,6 +922,116 @@ class JobApplicationViewTests(TestCase):
             reverse("applications:application_status_update", kwargs={"pk": application.pk}),
         )
 
+    def test_detail_page_update_status_is_primary_action(self):
+        application = self.create_application()
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+        status_url = reverse(
+            "applications:application_status_update",
+            kwargs={"pk": application.pk},
+        )
+
+        self.assertIn("cf74-action-tier-primary", content)
+        self.assertIn(
+            (
+                f'href="{status_url}" '
+                'class="btn btn-primary cf74-action-primary">Update Status</a>'
+            ),
+            content,
+        )
+
+    def test_detail_page_edit_application_is_secondary_action(self):
+        application = self.create_application()
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+        update_url = reverse("applications:application_update", kwargs={"pk": application.pk})
+        list_url = reverse("applications:application_list")
+
+        self.assertIn("cf74-action-tier-secondary", content)
+        self.assertIn(
+            (
+                f'href="{update_url}" '
+                'class="btn btn-secondary cf74-action-secondary">Edit Application</a>'
+            ),
+            content,
+        )
+        self.assertIn(
+            (
+                f'href="{list_url}" '
+                'class="btn btn-secondary cf74-action-secondary"><span>Back</span> to list</a>'
+            ),
+            content,
+        )
+
+    def test_detail_page_smart_review_is_advisory_action(self):
+        application = self.create_application()
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+        smart_review_url = reverse(
+            "job_intelligence:application_smart_review",
+            args=[application.pk],
+        )
+        ai_pack_url = reverse("ai_agents:application_agent_pack", args=[application.pk])
+        interview_url = reverse("interviews:interview_create")
+
+        self.assertIn("cf74-action-tier-advisory", content)
+        self.assertIn("ADVISORY TOOLS", content)
+        for expected in (
+            (
+                f'href="{smart_review_url}" '
+                'class="btn btn-secondary cf74-action-advisory">Smart Review</a>'
+            ),
+            (
+                f'href="{ai_pack_url}" '
+                'class="btn btn-secondary cf74-action-advisory">'
+                "Open AI Pack / CV Tailoring Advisor</a>"
+            ),
+            (
+                f'href="{interview_url}?application={application.pk}" '
+                'class="btn btn-secondary cf74-action-advisory">Create Interview Prep</a>'
+            ),
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, content)
+
+    def test_detail_page_delete_remains_in_danger_zone(self):
+        application = self.create_application()
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+        hero_content = content.split('class="cf69d-safety-grid"', 1)[0]
+        danger_zone = content.split('class="danger-zone cf69d-danger-zone"', 1)[1]
+        delete_url = reverse("applications:application_delete", kwargs={"pk": application.pk})
+
+        self.assertNotIn(delete_url, hero_content)
+        self.assertIn(delete_url, danger_zone)
+        self.assertIn('class="btn btn-danger">Delete</a>', danger_zone)
+
+    def test_detail_page_action_cluster_does_not_imply_automation(self):
+        application = self.create_application()
+
+        response = self._get_application_detail(application)
+        content = response.content.decode()
+        action_cluster = content.split('aria-label="Application action hierarchy"', 1)[1].split(
+            'class="cf69d-safety-grid"',
+            1,
+        )[0]
+
+        for phrase in (
+            "Employer notified",
+            "Auto-updated",
+            "Synced with recruiter",
+            "Email read",
+            "Confirmed by employer",
+            "Sent to",
+            "Automatically",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase.lower(), action_cluster.lower())
+
     def test_status_update_template_shows_tracking_only_wording(self):
         application = self.create_application()
 
