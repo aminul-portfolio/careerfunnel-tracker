@@ -1338,6 +1338,11 @@
                 <option value="no"{% if resolved_filter == "no" %} selected{% endif %}>Unresolved</option>
                 <option value="yes"{% if resolved_filter == "yes" %} selected{% endif %}>Resolved</option>
             </select>
+            <select name="evidence_filter" class="form-control" aria-label="Filter by Skill Ledger evidence status">
+                {% for option in evidence_filter_options %}
+                <option value="{{ option.value }}"{% if evidence_filter == option.value %} selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
             <button type="submit" class="btn btn-secondary">Apply filters</button>
             <a href="{% url 'skill_gaps:dashboard' %}" class="btn btn-secondary">Reset</a>
         </form>
