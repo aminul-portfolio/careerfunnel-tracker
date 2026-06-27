@@ -304,6 +304,67 @@
         margin: 0;
     }
 
+    .cf78-gap-ledger-safety {
+        background: rgba(240, 253, 250, 0.82);
+        border: 1px solid #99f6e4;
+        border-radius: 12px;
+        color: var(--cf69g-body);
+        line-height: 1.6;
+        margin: 0 0 14px;
+        padding: 14px;
+    }
+
+    .cf78-gap-ledger-empty-note {
+        background: var(--cf69g-subtle);
+        border: 1px dashed var(--cf69g-border);
+        border-radius: 12px;
+        color: var(--cf69g-muted);
+        line-height: 1.6;
+        margin: 0 0 14px;
+        padding: 14px;
+    }
+
+    .cf78-gap-ledger-status {
+        border-radius: 999px;
+        display: inline-block;
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        padding: 5px 9px;
+    }
+
+    .cf78-gap-ledger-status-neutral {
+        background: #f8fafc;
+        border: 1px solid var(--cf69g-border);
+        color: var(--cf69g-muted);
+    }
+
+    .cf78-gap-ledger-status-warning {
+        background: var(--cf69g-warning-soft);
+        border: 1px solid #fde68a;
+        color: var(--cf69g-warning);
+    }
+
+    .cf78-gap-ledger-status-learning {
+        background: var(--cf69g-primary-soft);
+        border: 1px solid #bfdbfe;
+        color: var(--cf69g-primary);
+    }
+
+    .cf78-gap-ledger-status-verified {
+        background: var(--cf69g-manual-soft);
+        border: 1px solid #99f6e4;
+        color: var(--cf69g-manual);
+    }
+
+    .cf78-gap-ledger-match-name {
+        color: var(--cf69g-muted);
+        display: block;
+        font-size: 0.84rem;
+        line-height: 1.5;
+        margin-top: 6px;
+    }
+
     @media (max-width: 1100px) {
         .cf69g-kpi-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1282,6 +1343,14 @@
         </form>
 
         {% if skill_gaps %}
+        <p class="cf78-gap-ledger-safety">
+            Gap signals are advisory only. Skill Ledger status reflects your own manually maintained records. A VERIFIED status means portfolio evidence exists - it does not mean you meet any employer requirement. This table does not score suitability, verify proficiency, or create Skill Ledger entries. Use human judgement before claiming a skill against a specific role.
+        </p>
+        {% if not skill_ledger_summary.total_entries %}
+        <p class="cf78-gap-ledger-empty-note">
+            Your Skill Ledger has no entries yet. Matching is read-only and does not create Skill Ledger records.
+        </p>
+        {% endif %}
         <div class="table-wrap cf69g-table-wrap">
             <table class="data-table">
                 <thead>
@@ -1293,11 +1362,13 @@
                         <th>Priority</th>
                         <th>Priority score</th>
                         <th>Resolved</th>
+                        <th>Skill Ledger Status</th>
                         <th>Suggested action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for gap in skill_gaps %}
+                    {% for row in skill_gap_ledger_match_rows %}
+                    {% with gap=row.gap %}
                     <tr>
                         <td><strong>{{ gap.skill_name }}</strong></td>
                         <td>
@@ -1315,8 +1386,23 @@
                             <span class="badge badge-warning">Open</span>
                             {% endif %}
                         </td>
+                        <td>
+                            {% if not row.is_in_ledger %}
+                            <span class="cf78-gap-ledger-status cf78-gap-ledger-status-neutral">{{ row.display_label }}</span>
+                            {% elif row.ledger_status == "NO_EVIDENCE" %}
+                            <span class="cf78-gap-ledger-status cf78-gap-ledger-status-warning">{{ row.display_label }}</span>
+                            {% elif row.ledger_status == "VERIFIED" %}
+                            <span class="cf78-gap-ledger-status cf78-gap-ledger-status-verified">{{ row.display_label }}</span>
+                            {% else %}
+                            <span class="cf78-gap-ledger-status cf78-gap-ledger-status-learning">{{ row.display_label }}</span>
+                            {% endif %}
+                            {% if row.matched_skill_name %}
+                            <span class="cf78-gap-ledger-match-name">Matched Skill Ledger skill: {{ row.matched_skill_name }}</span>
+                            {% endif %}
+                        </td>
                         <td>{{ gap.suggested_action|default:"-" }}</td>
                     </tr>
+                    {% endwith %}
                     {% endfor %}
                 </tbody>
             </table>

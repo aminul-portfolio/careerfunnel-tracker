@@ -966,9 +966,297 @@ class SkillGapDashboardTests(TestCase):
         content = response.content.decode().lower()
 
         self.assertContains(response, "Python")
-        self.assertNotIn("matched skill ledger", content)
         self.assertNotIn("ledger match", content)
         self.assertNotIn("gap-to-ledger", content)
+
+    def test_dashboard_includes_skill_gap_ledger_match_rows_context(self):
+        self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.HIGH)
+        self._create_skill_entry(
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertIn("skill_gap_ledger_match_rows", response.context)
+        rows = response.context["skill_gap_ledger_match_rows"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["term"], "Python")
+        self.assertEqual(rows[0]["ledger_status"], SkillEntry.EvidenceLevel.VERIFIED)
+
+    def test_dashboard_renders_skill_ledger_status_column(self):
+        self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.HIGH)
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Skill Ledger Status")
+
+    def test_dashboard_renders_verified_skill_ledger_status(self):
+        self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.HIGH)
+        self._create_skill_entry(
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "VERIFIED")
+        self.assertContains(response, "Matched Skill Ledger skill: Python")
+
+    def test_dashboard_renders_not_in_skill_ledger_status(self):
+        self._create_gap(application=self.app, skill_name="Airflow", priority=SkillGapPriority.LOW)
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Not in Skill Ledger")
+        rows = response.context["skill_gap_ledger_match_rows"]
+        self.assertFalse(rows[0]["is_in_ledger"])
+
+    def test_dashboard_renders_gap_ledger_matching_safety_wording(self):
+        self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.HIGH)
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            (
+                "Gap signals are advisory only. Skill Ledger status reflects your own manually "
+                "maintained records. A VERIFIED status means portfolio evidence exists - it does "
+                "not mean you meet any employer requirement. This table does not score "
+                "suitability, verify proficiency, or create Skill Ledger entries. Use human "
+                "judgement before claiming a skill against a specific role."
+            ),
+        )
+
+    def test_dashboard_preserves_existing_skill_gap_table_content(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="Power BI",
+            priority=SkillGapPriority.HIGH,
+            stage=SkillGapStage.TECHNICAL,
+        )
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Power BI")
+        self.assertContains(response, "Acme")
+        self.assertContains(response, "Data Analyst")
+        self.assertContains(response, "Technical")
+        self.assertContains(response, "Priority score")
+        self.assertContains(response, "Suggested action")
+
+    def test_dashboard_preserves_sprint_77_skill_ledger_summary(self):
+        self._create_skill_entry(
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Skill Ledger Evidence Summary")
+        self.assertContains(
+            response,
+            (
+                "Skill Ledger evidence is manually maintained and supports portfolio planning. "
+                "It does not verify a skill by itself."
+            ),
+        )
+        self.assertContains(response, "Open private Skill Ledger")
+
+    def test_dashboard_gap_ledger_matching_empty_state_when_no_gap_terms_exist(self):
+        self._create_skill_entry(
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "No saved skill gaps to show.")
+        self.assertEqual(response.context["skill_gap_ledger_match_rows"], ())
+
+    def test_dashboard_gap_ledger_matching_handles_empty_skill_ledger(self):
+        self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.HIGH)
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            (
+                "Your Skill Ledger has no entries yet. Matching is read-only and does not "
+                "create Skill Ledger records."
+            ),
+        )
+        self.assertContains(response, "Not in Skill Ledger")
+
+    def test_dashboard_gap_ledger_matching_does_not_imply_employer_requirement_met(self):
+        self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.HIGH)
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        self.assertIn("does not mean you meet any employer requirement", content)
+        for phrase in (
+            "employer-ready",
+            "guaranteed readiness",
+            "verified skill mastery",
+            "meets employer requirements",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_dashboard_gap_ledger_matching_does_not_mutate_skill_ledger_entries(self):
+        entry = self._create_skill_entry(
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.HIGH)
+        before = SkillEntry.objects.values(
+            "skill_name",
+            "category",
+            "evidence_level",
+            "sprint_reference",
+            "project_link",
+            "notes",
+            "visibility",
+            "last_updated",
+        ).get(pk=entry.pk)
+        self._login()
+
+        response = self.client.get(self.url)
+
+        after = SkillEntry.objects.values(
+            "skill_name",
+            "category",
+            "evidence_level",
+            "sprint_reference",
+            "project_link",
+            "notes",
+            "visibility",
+            "last_updated",
+        ).get(pk=entry.pk)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(after, before)
+
+    def test_dashboard_gap_ledger_matching_does_not_mutate_skill_gap_records(self):
+        gap = self._create_gap(
+            application=self.app,
+            skill_name="Python",
+            priority=SkillGapPriority.HIGH,
+        )
+        self._create_skill_entry(
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        before = ApplicationSkillGap.objects.values(
+            "skill_name",
+            "priority",
+            "priority_score",
+            "resolved",
+            "suggested_action",
+        ).get(pk=gap.pk)
+        self._login()
+
+        response = self.client.get(self.url)
+
+        after = ApplicationSkillGap.objects.values(
+            "skill_name",
+            "priority",
+            "priority_score",
+            "resolved",
+            "suggested_action",
+        ).get(pk=gap.pk)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(after, before)
+
+    def test_dashboard_gap_ledger_matching_does_not_create_skill_ledger_entries(self):
+        self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.HIGH)
+        before = SkillEntry.objects.count()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(SkillEntry.objects.count(), before)
+
+    def test_dashboard_renders_matched_skill_name_for_alias_match(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="SQL Server",
+            priority=SkillGapPriority.HIGH,
+        )
+        self._create_skill_entry(skill_name="SQL", evidence_level=SkillEntry.EvidenceLevel.VERIFIED)
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "<td><strong>SQL Server</strong></td>", html=True)
+        self.assertContains(response, "Matched Skill Ledger skill: SQL")
+        rows = response.context["skill_gap_ledger_match_rows"]
+        self.assertEqual(rows[0]["term"], "SQL Server")
+        self.assertEqual(rows[0]["matched_skill_name"], "SQL")
+
+    def test_dashboard_distinguishes_not_in_ledger_from_no_evidence(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="GraphQL",
+            priority=SkillGapPriority.LOW,
+        )
+        self._create_gap(application=self.app, skill_name="Airflow", priority=SkillGapPriority.LOW)
+        self._create_skill_entry(
+            skill_name="GraphQL",
+            evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE,
+        )
+        self._login()
+
+        response = self.client.get(self.url)
+        rows_by_term = {
+            row["term"]: row for row in response.context["skill_gap_ledger_match_rows"]
+        }
+
+        self.assertContains(response, "NO_EVIDENCE")
+        self.assertContains(response, "Not in Skill Ledger")
+        self.assertTrue(rows_by_term["GraphQL"]["is_in_ledger"])
+        self.assertEqual(
+            rows_by_term["GraphQL"]["ledger_status"],
+            SkillEntry.EvidenceLevel.NO_EVIDENCE,
+        )
+        self.assertFalse(rows_by_term["Airflow"]["is_in_ledger"])
+
+    def test_dashboard_preserves_cf69g_table_wrapper_class(self):
+        self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.HIGH)
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "cf69g-table-wrap")
+
+    def test_dashboard_does_not_render_ai_or_scoring_claims(self):
+        self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.HIGH)
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        for phrase in (
+            "ai scored",
+            "ai scoring",
+            "job-fit scoring",
+            "automatically verified",
+            "meets employer requirements",
+            "employer-ready",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
 
     def test_sprint_69g_dashboard_preserves_manual_advisory_read_only_framing(self):
         self._login()
