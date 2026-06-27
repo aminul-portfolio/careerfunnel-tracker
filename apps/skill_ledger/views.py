@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET
@@ -18,6 +19,12 @@ class SkillEntryForm(forms.ModelForm):
             "notes",
             "visibility",
         ]
+        help_texts = {
+            "evidence_level": (
+                "VERIFIED means portfolio evidence exists in a closed sprint, passing tests, "
+                "or prior work experience - not external certification."
+            ),
+        }
 
 
 @login_required
@@ -132,6 +139,28 @@ def skill_entry_detail(request, pk):
 
 
 @login_required
+def skill_entry_edit(request, pk):
+    entry = get_object_or_404(SkillEntry, pk=pk)
+    if request.method == "POST":
+        form = SkillEntryForm(request.POST, instance=entry)
+        if form.is_valid():
+            entry = form.save()
+            messages.success(
+                request,
+                "Skill entry updated. Your private Skill Ledger record has been saved.",
+            )
+            return redirect("skill_ledger:detail", pk=entry.pk)
+    else:
+        form = SkillEntryForm(instance=entry)
+
+    return render(
+        request,
+        "skill_ledger/skill_entry_form.html",
+        {"form": form, "entry": entry, "is_edit": True},
+    )
+
+
+@login_required
 def skill_entry_create(request):
     if request.method == "POST":
         form = SkillEntryForm(request.POST)
@@ -144,5 +173,5 @@ def skill_entry_create(request):
     return render(
         request,
         "skill_ledger/skill_entry_form.html",
-        {"form": form},
+        {"form": form, "is_edit": False},
     )

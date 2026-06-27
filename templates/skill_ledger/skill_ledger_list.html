@@ -216,7 +216,10 @@
                                 {% endif %}
                             </div>
                         </div>
-                        <a href="{% url 'skill_ledger:detail' entry.pk %}" class="table-link">View detail</a>
+                        <div class="cf70-skill-hero-actions">
+                            <a href="{% url 'skill_ledger:detail' entry.pk %}" class="table-link">View detail</a>
+                            <a href="{% url 'skill_ledger:edit' entry.pk %}" class="table-link">Edit</a>
+                        </div>
                     </article>
                     {% endfor %}
                 </div>

@@ -2,6 +2,7 @@ from io import StringIO
 
 from django.contrib import admin
 from django.contrib.auth.models import User
+from django.contrib.messages import get_messages
 from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
@@ -47,6 +48,43 @@ class SkillEntryModelTests(TestCase):
 class SkillLedgerViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+
+    def _create_skill_entry(self, **overrides):
+        defaults = {
+            "skill_name": "Power BI",
+            "category": SkillEntry.Category.BUSINESS_INTELLIGENCE,
+            "evidence_level": SkillEntry.EvidenceLevel.STUDYING,
+            "sprint_reference": "Sprint 70",
+            "project_link": "https://example.com/project",
+            "notes": "Existing private note.",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        defaults.update(overrides)
+        return SkillEntry.objects.create(**defaults)
+
+    def _valid_edit_data(self, **overrides):
+        data = {
+            "skill_name": "Power BI",
+            "category": SkillEntry.Category.BUSINESS_INTELLIGENCE,
+            "evidence_level": SkillEntry.EvidenceLevel.STUDYING,
+            "sprint_reference": "Sprint 70",
+            "project_link": "https://example.com/project",
+            "notes": "Existing private note.",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        data.update(overrides)
+        return data
+
+    def _get_edit(self, entry):
+        self.client.login(username="aminul", password="StrongPass12345")
+        return self.client.get(reverse("skill_ledger:edit", kwargs={"pk": entry.pk}))
+
+    def _post_edit(self, entry, **overrides):
+        self.client.login(username="aminul", password="StrongPass12345")
+        return self.client.post(
+            reverse("skill_ledger:edit", kwargs={"pk": entry.pk}),
+            self._valid_edit_data(**overrides),
+        )
 
     def test_skill_ledger_list_view_requires_login(self):
         response = self.client.get(reverse("skill_ledger:list"))
@@ -105,6 +143,157 @@ class SkillLedgerViewTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(SkillEntry.objects.filter(skill_name="dbt").exists())
+
+    def test_skill_entry_edit_loads_for_authenticated_user(self):
+        entry = self._create_skill_entry()
+
+        response = self._get_edit(entry)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Edit Skill Entry")
+
+    def test_skill_entry_edit_redirects_anonymous_user(self):
+        entry = self._create_skill_entry()
+
+        response = self.client.get(reverse("skill_ledger:edit", kwargs={"pk": entry.pk}))
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_skill_entry_edit_returns_404_for_nonexistent_entry(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(reverse("skill_ledger:edit", kwargs={"pk": 99999}))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_skill_entry_edit_prepopulates_existing_values(self):
+        entry = self._create_skill_entry(
+            skill_name="dbt",
+            category=SkillEntry.Category.ANALYTICS_ENGINEERING,
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+            sprint_reference="Sprint 71",
+            project_link="https://example.com/dbt",
+            notes="Existing analytics engineering note.",
+            visibility=SkillEntry.Visibility.PUBLIC,
+        )
+
+        response = self._get_edit(entry)
+        form = response.context["form"]
+
+        self.assertEqual(form["skill_name"].value(), "dbt")
+        self.assertEqual(form["category"].value(), SkillEntry.Category.ANALYTICS_ENGINEERING)
+        self.assertEqual(form["evidence_level"].value(), SkillEntry.EvidenceLevel.LEARNING_TARGET)
+        self.assertEqual(form["sprint_reference"].value(), "Sprint 71")
+        self.assertEqual(form["project_link"].value(), "https://example.com/dbt")
+        self.assertEqual(form["notes"].value(), "Existing analytics engineering note.")
+        self.assertEqual(form["visibility"].value(), SkillEntry.Visibility.PUBLIC)
+
+    def test_skill_entry_edit_valid_post_updates_skill_name(self):
+        entry = self._create_skill_entry()
+
+        response = self._post_edit(entry, skill_name="Advanced SQL")
+
+        self.assertRedirects(response, reverse("skill_ledger:detail", kwargs={"pk": entry.pk}))
+        entry.refresh_from_db()
+        self.assertEqual(entry.skill_name, "Advanced SQL")
+
+    def test_skill_entry_edit_valid_post_updates_evidence_level(self):
+        entry = self._create_skill_entry(evidence_level=SkillEntry.EvidenceLevel.STUDYING)
+
+        self._post_edit(entry, evidence_level=SkillEntry.EvidenceLevel.VERIFIED)
+
+        entry.refresh_from_db()
+        self.assertEqual(entry.evidence_level, SkillEntry.EvidenceLevel.VERIFIED)
+
+    def test_skill_entry_edit_valid_post_updates_visibility(self):
+        entry = self._create_skill_entry(visibility=SkillEntry.Visibility.PRIVATE)
+
+        self._post_edit(entry, visibility=SkillEntry.Visibility.PUBLIC)
+
+        entry.refresh_from_db()
+        self.assertEqual(entry.visibility, SkillEntry.Visibility.PUBLIC)
+
+    def test_skill_entry_edit_valid_post_updates_sprint_reference(self):
+        entry = self._create_skill_entry(sprint_reference="Sprint 70")
+
+        self._post_edit(entry, sprint_reference="Sprint 75")
+
+        entry.refresh_from_db()
+        self.assertEqual(entry.sprint_reference, "Sprint 75")
+
+    def test_skill_entry_edit_form_does_not_include_date_added(self):
+        entry = self._create_skill_entry()
+
+        response = self._get_edit(entry)
+
+        self.assertNotIn("date_added", response.context["form"].fields)
+        self.assertNotContains(response, 'name="date_added"')
+
+    def test_skill_entry_edit_form_does_not_include_last_updated(self):
+        entry = self._create_skill_entry()
+
+        response = self._get_edit(entry)
+
+        self.assertNotIn("last_updated", response.context["form"].fields)
+        self.assertNotContains(response, 'name="last_updated"')
+
+    def test_skill_entry_edit_advisory_panel_present(self):
+        entry = self._create_skill_entry()
+
+        response = self._get_edit(entry)
+
+        self.assertContains(
+            response,
+            (
+                "Changing evidence level updates your private Skill Ledger record only. "
+                "It does not verify a skill by itself."
+            ),
+        )
+        self.assertContains(
+            response,
+            (
+                "VERIFIED means portfolio evidence exists in a closed sprint, passing tests, "
+                "or prior work experience - not external certification."
+            ),
+        )
+
+    def test_skill_entry_edit_does_not_imply_automatic_verification(self):
+        entry = self._create_skill_entry()
+
+        response = self._get_edit(entry)
+
+        for phrase in (
+            "Skill " + "verified",
+            "Automatically " + "verified",
+            "Employer " + "confirmed",
+            "Cert" + "ified",
+            "Syn" + "ced",
+            "Auto " + "verification",
+            "Employer " + "validation",
+            "Recruiter " + "confirmation",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotContains(response, phrase)
+
+    def test_skill_ledger_list_shows_edit_link_per_entry(self):
+        entry = self._create_skill_entry()
+        self.client.login(username="aminul", password="StrongPass12345")
+
+        response = self.client.get(reverse("skill_ledger:list"))
+
+        self.assertContains(response, reverse("skill_ledger:edit", kwargs={"pk": entry.pk}))
+        self.assertContains(response, ">Edit<")
+
+    def test_skill_entry_edit_success_message_present(self):
+        entry = self._create_skill_entry()
+
+        response = self._post_edit(entry, skill_name="Updated Power BI")
+        messages = [message.message for message in get_messages(response.wsgi_request)]
+
+        self.assertIn(
+            "Skill entry updated. Your private Skill Ledger record has been saved.",
+            messages,
+        )
 
     def test_skill_entry_admin_registered(self):
         self.assertIn(SkillEntry, admin.site._registry)

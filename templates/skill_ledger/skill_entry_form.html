@@ -1,14 +1,38 @@
 {% extends "base.html" %}
 
-{% block title %}Add Skill Entry | CareerFunnel Tracker{% endblock %}
+{% block title %}{% if is_edit %}Edit Skill Entry{% else %}Add Skill Entry{% endif %} | CareerFunnel Tracker{% endblock %}
 
 {% block content %}
+<style>
+    .cf75-edit-advisory {
+        background: #f0fdfa;
+        border: 1px solid #99f6e4;
+        border-radius: 12px;
+        color: #1e293b;
+        line-height: 1.6;
+        margin: 0 0 18px;
+        padding: 14px;
+    }
+
+    .cf75-field-help {
+        color: #64748b;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin: 6px 0 0;
+    }
+</style>
 <div class="content-card form-card">
     <div class="card-header">
         <p class="eyebrow">Skill Ledger</p>
-        <h1>Add Skill Entry</h1>
-        <p>Record the skill, current evidence level, and any project notes you want to keep.</p>
+        <h1>{% if is_edit %}Edit Skill Entry{% else %}Add Skill Entry{% endif %}</h1>
+        <p>{% if is_edit %}Update the saved private skill evidence record for your own review workflow.{% else %}Record the skill, current evidence level, and any project notes you want to keep.{% endif %}</p>
     </div>
+
+    {% if is_edit %}
+    <div class="cf75-edit-advisory">
+        Changing evidence level updates your private Skill Ledger record only. It does not verify a skill by itself.
+    </div>
+    {% endif %}
 
     <form method="post" class="form-stack">
         {% csrf_token %}
@@ -20,12 +44,15 @@
             <div class="form-group {% if field.name == 'notes' %}form-wide{% endif %}">
                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {{ field }}
+                {% if field.help_text %}
+                <p class="cf75-field-help">{{ field.help_text }}</p>
+                {% endif %}
                 {{ field.errors }}
             </div>
             {% endfor %}
         </div>
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Save Skill Entry</button>
+            <button type="submit" class="btn btn-primary">{% if is_edit %}Save Changes{% else %}Save Skill Entry{% endif %}</button>
             <a href="{% url 'skill_ledger:list' %}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
