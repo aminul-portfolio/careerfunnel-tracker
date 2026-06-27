@@ -5,6 +5,7 @@ from django.views.decorators.http import require_http_methods
 from apps.skill_ledger.models import SkillEntry
 from apps.skill_ledger.selectors import get_skill_ledger_evidence_summary
 
+from . import ai_career_coach
 from .services import build_skill_gap_dashboard_context, build_skill_gap_ledger_match_rows
 
 FILTER_NEEDS_EVIDENCE = [
@@ -95,5 +96,59 @@ def dashboard(request):
             "skill_gap_ledger_match_rows": skill_gap_ledger_match_rows,
             "evidence_filter": evidence_filter,
             "evidence_filter_options": EVIDENCE_FILTER_OPTIONS,
+        },
+    )
+
+
+@login_required
+@require_http_methods(["GET"])
+def ai_career_coach_view(request):
+    context = build_skill_gap_dashboard_context(
+        user=request.user,
+        query_params={},
+    )
+    skill_gap_ledger_matches = build_skill_gap_ledger_match_rows(
+        (
+            {
+                "term": gap.skill_name,
+                "frequency": gap.failure_count,
+            }
+            for gap in context.gaps
+        ),
+        SkillEntry.objects.only("skill_name", "evidence_level"),
+    )
+    matched_gap_rows = tuple(
+        {
+            "term": match_row["term"],
+            "ledger_status": match_row["ledger_status"],
+            "display_label": match_row["display_label"],
+            "matched_skill_name": match_row["matched_skill_name"],
+            "is_in_ledger": match_row["is_in_ledger"],
+        }
+        for match_row in skill_gap_ledger_matches
+    )
+    evidence_payload = ai_career_coach.build_evidence_payload(
+        matched_gap_rows=matched_gap_rows,
+    )
+    controlled_prompt = ai_career_coach.build_controlled_prompt(evidence_payload)
+    mocked_response = ai_career_coach.build_mocked_career_coach_response(
+        evidence_payload,
+    )
+    validation_result = ai_career_coach.validate_career_coach_response(
+        mocked_response,
+        evidence_payload=evidence_payload,
+    )
+    safe_output = validation_result.safe_response if validation_result.is_valid else None
+    return render(
+        request,
+        "skill_gaps/ai_career_coach.html",
+        {
+            "career_coach_output": safe_output,
+            "validation_result": validation_result,
+            "prompt_built": bool(controlled_prompt),
+            "has_evidence_rows": bool(evidence_payload["matched_gap_rows"]),
+            "has_skill_ledger_entries": bool(
+                get_skill_ledger_evidence_summary()["total_entries"],
+            ),
         },
     )

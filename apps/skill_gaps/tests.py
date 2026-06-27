@@ -3,6 +3,7 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.db import IntegrityError
@@ -18,6 +19,7 @@ from .ai_career_coach import (
     REQUIRED_PROMPT_SAFETY_RULES,
     build_controlled_prompt,
     build_evidence_payload,
+    build_mocked_career_coach_response,
     expected_response_schema,
     validate_career_coach_response,
 )
@@ -3197,3 +3199,339 @@ class SkillGapAiCareerCoachArchitectureTests(TestCase):
         for term in forbidden_terms:
             with self.subTest(term=term):
                 self.assertNotIn(term, module_source.lower())
+
+
+class SkillGapMockedAiCareerCoachPageTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="coachuser",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skill_gaps:ai_career_coach")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Hidden Employer",
+            job_title="Private Role",
+            date_applied=date(2026, 6, 1),
+            required_skills="Python Snowflake GraphQL",
+        )
+
+    def _login(self):
+        self.client.login(username="coachuser", password="StrongPass12345")
+
+    def _create_gap(self, skill_name, priority=SkillGapPriority.MEDIUM):
+        return ApplicationSkillGap.objects.create(
+            application=self.application,
+            stage=SkillGapStage.APPLICATION,
+            skill_name=skill_name,
+            current_tier=SkillTier.MISSING,
+            priority=priority,
+            goal_weight=Decimal("1.00"),
+            failure_count=1,
+            stage_weight=Decimal("1.00"),
+            priority_score=Decimal("4.00"),
+            identified_by=SkillGapIdentifiedBy.MANUAL,
+            suggested_action=f"Review {skill_name} manually.",
+        )
+
+    def _create_skill_entry(self, skill_name, evidence_level):
+        return SkillEntry.objects.create(
+            skill_name=skill_name,
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=evidence_level,
+            sprint_reference="Sprint 81",
+            project_link="https://example.com/private-evidence",
+            notes="Private note must not render.",
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+
+    def _seed_evidence(self):
+        self._create_gap("Python", priority=SkillGapPriority.HIGH)
+        self._create_gap("Snowflake")
+        self._create_gap("GraphQL")
+        self._create_skill_entry("Python", SkillEntry.EvidenceLevel.VERIFIED)
+        self._create_skill_entry("Snowflake", SkillEntry.EvidenceLevel.LEARNING_TARGET)
+        self._create_skill_entry("GraphQL", SkillEntry.EvidenceLevel.NO_EVIDENCE)
+
+    def _payload(self):
+        return build_evidence_payload(
+            matched_gap_rows=(
+                {
+                    "term": "Python",
+                    "ledger_status": SkillEntry.EvidenceLevel.VERIFIED,
+                    "display_label": "VERIFIED",
+                    "matched_skill_name": "Python",
+                    "is_in_ledger": True,
+                },
+                {
+                    "term": "Snowflake",
+                    "ledger_status": SkillEntry.EvidenceLevel.LEARNING_TARGET,
+                    "display_label": "LEARNING_TARGET",
+                    "matched_skill_name": "Snowflake",
+                    "is_in_ledger": True,
+                },
+                {
+                    "term": "GraphQL",
+                    "ledger_status": SkillEntry.EvidenceLevel.NO_EVIDENCE,
+                    "display_label": "NO_EVIDENCE",
+                    "matched_skill_name": "GraphQL",
+                    "is_in_ledger": True,
+                },
+            ),
+        )
+
+    def test_ai_career_coach_page_loads_for_authenticated_user(self):
+        self._seed_evidence()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Evidence-grounded career review")
+        self.assertContains(response, "Skill and gap planning output")
+
+    def test_ai_career_coach_page_redirects_anonymous_user(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response["Location"])
+
+    def test_ai_career_coach_page_is_get_only(self):
+        self._login()
+
+        response = self.client.post(self.url, {"prompt": "save"})
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_ai_career_coach_view_calls_evidence_payload_builder(self):
+        self._seed_evidence()
+        self._login()
+
+        with patch(
+            "apps.skill_gaps.views.ai_career_coach.build_evidence_payload",
+            wraps=build_evidence_payload,
+        ) as mocked_builder:
+            response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(mocked_builder.called)
+
+    def test_ai_career_coach_view_calls_prompt_builder(self):
+        self._seed_evidence()
+        self._login()
+
+        with patch(
+            "apps.skill_gaps.views.ai_career_coach.build_controlled_prompt",
+            wraps=build_controlled_prompt,
+        ) as mocked_prompt_builder:
+            response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(mocked_prompt_builder.called)
+
+    def test_ai_career_coach_view_passes_response_through_validator(self):
+        self._seed_evidence()
+        self._login()
+
+        with patch(
+            "apps.skill_gaps.views.ai_career_coach.validate_career_coach_response",
+            wraps=validate_career_coach_response,
+        ) as mocked_validator:
+            response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(mocked_validator.called)
+
+    def test_ai_career_coach_mocked_response_passes_validator(self):
+        payload = self._payload()
+        mocked_response = build_mocked_career_coach_response(payload)
+
+        result = validate_career_coach_response(
+            mocked_response,
+            evidence_payload=payload,
+        )
+
+        self.assertTrue(result.is_valid)
+        self.assertTrue(result.safe_response["manual_review_required"])
+
+    def test_ai_career_coach_view_renders_validated_output_only(self):
+        self._seed_evidence()
+        self._login()
+        unsafe_response = build_mocked_career_coach_response(self._payload())
+        unsafe_response["recommended_next_actions"][0]["skill"] = "UNSAFE_SENTINEL"
+        unsafe_response["recommended_next_actions"][0][
+            "summary"
+        ] = "UNSAFE_SENTINEL should not render."
+
+        with patch(
+            "apps.skill_gaps.views.ai_career_coach.build_mocked_career_coach_response",
+            return_value=unsafe_response,
+        ):
+            response = self.client.get(self.url)
+
+        self.assertContains(response, "Career planning summary unavailable")
+        self.assertNotContains(response, "UNSAFE_SENTINEL")
+
+    def test_ai_career_coach_advisory_panel_present(self):
+        self._seed_evidence()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            (
+                "This is a private planning tool. Output is generated from your manually "
+                "maintained Skill Ledger and saved job description signals only. It does "
+                "not assess employer requirements, verify proficiency, predict job "
+                "outcomes, or guarantee employability. All output is advisory. Use your "
+                "own judgement."
+            ),
+        )
+        self.assertContains(
+            response,
+            (
+                "This output was generated from structured career data using a "
+                "controlled workflow. It does not constitute professional career advice."
+            ),
+        )
+
+    def test_ai_career_coach_does_not_imply_employer_requirement_met(self):
+        self._seed_evidence()
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode()
+
+        for phrase in (
+            "Employer confirmed",
+            "Skill verified",
+            "You are ready for this role",
+            "You meet the requirements",
+            "employer requirement is met",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_ai_career_coach_does_not_imply_live_ai_generating_output(self):
+        self._seed_evidence()
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode()
+
+        self.assertContains(
+            response,
+            (
+                "Output is generated from a controlled example workflow. "
+                "No live AI model is used in this version."
+            ),
+        )
+        self.assertNotIn("AI recommends", content)
+        self.assertNotIn("Automatically generated by AI", content)
+
+    def test_ai_career_coach_read_only_wording_present(self):
+        self._seed_evidence()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "No output is saved.")
+        self.assertContains(response, "No application is submitted.")
+        self.assertContains(response, "No CV/profile is updated.")
+
+    def test_ai_career_coach_manual_review_wording_present(self):
+        self._seed_evidence()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Manual review is required.")
+        self.assertContains(response, "Manual review is required before using any wording")
+
+    def test_ai_career_coach_no_auto_apply_or_submission_implied(self):
+        self._seed_evidence()
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        self.assertIn("no application is submitted", content)
+        self.assertNotIn("auto-apply", content)
+        self.assertNotIn("submitted to employer", content)
+        self.assertNotIn("gmail", content)
+        self.assertNotIn("oauth", content)
+
+    def test_ai_career_coach_does_not_make_external_api_call(self):
+        source = (
+            REPO_ROOT / "apps" / "skill_gaps" / "ai_career_coach.py"
+        ).read_text(encoding="utf-8")
+        view_source = (REPO_ROOT / "apps" / "skill_gaps" / "views.py").read_text(
+            encoding="utf-8",
+        )
+        forbidden_terms = ("openai", "anthropic", "gemini", "httpx", "aiohttp")
+
+        for term in forbidden_terms:
+            with self.subTest(term=term):
+                self.assertNotIn(term, source.lower())
+                self.assertNotIn(term, view_source.lower())
+
+    def test_ai_career_coach_uses_mocked_provider_only(self):
+        source = (
+            REPO_ROOT / "apps" / "skill_gaps" / "ai_career_coach.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("build_mocked_career_coach_response", source)
+        self.assertNotIn("ai_providers", source)
+        self.assertNotIn("provider abstraction", source.lower())
+
+    def test_ai_career_coach_validator_would_reject_unsafe_claim(self):
+        payload = self._payload()
+        response = build_mocked_career_coach_response(payload)
+        response["recommended_next_actions"][0][
+            "summary"
+        ] = "This meets employer requirement and predicts a hiring outcome."
+
+        result = validate_career_coach_response(response, evidence_payload=payload)
+
+        self.assertFalse(result.is_valid)
+        self.assertIn("forbidden_outcome_prediction", result.errors)
+
+    def test_ai_career_coach_handles_empty_skill_ledger_gracefully(self):
+        self._create_gap("Airflow")
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Your Skill Ledger has no entries available")
+        self.assertContains(response, "Skill and gap planning output")
+
+    def test_ai_career_coach_handles_no_jd_ready_records_gracefully(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No JD-ready Skill Ledger match rows are available")
+        self.assertContains(response, "No supplied Skill Ledger or gap rows were available")
+
+    def test_ai_career_coach_does_not_render_private_record_details(self):
+        self._seed_evidence()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertNotContains(response, "Hidden Employer")
+        self.assertNotContains(response, "Private Role")
+        self.assertNotContains(response, "Private note must not render.")
+
+    def test_ai_career_coach_no_model_or_migration_change_required(self):
+        migration_dir = REPO_ROOT / "apps" / "skill_gaps" / "migrations"
+        migration_files = [
+            path.name
+            for path in migration_dir.glob("*.py")
+            if path.name != "__init__.py"
+        ]
+
+        self.assertEqual(migration_files, ["0001_initial.py"])

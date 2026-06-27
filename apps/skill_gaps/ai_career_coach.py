@@ -205,6 +205,125 @@ def expected_response_schema() -> dict[str, Any]:
     }
 
 
+def build_mocked_career_coach_response(evidence_payload: dict[str, Any]) -> dict[str, Any]:
+    response = expected_response_schema()
+
+    if evidence_payload.get("verified_skills"):
+        skill = evidence_payload["verified_skills"][0]
+        response["evidence_backed_strengths"].append(
+            {
+                "skill": skill["skill_name"],
+                "summary": (
+                    "This skill can be discussed as Skill Ledger evidence exists. "
+                    "Keep the claim tied to the supplied portfolio proof."
+                ),
+                "evidence_reference": skill["evidence_reference"],
+            },
+        )
+
+    if evidence_payload.get("no_evidence_skills"):
+        skill = evidence_payload["no_evidence_skills"][0]
+        response["skills_needing_evidence"].append(
+            {
+                "skill": skill["skill_name"],
+                "summary": (
+                    "Treat this as a planning gap until project proof, tests, "
+                    "screenshots, or prior work examples are added manually."
+                ),
+                "evidence_reference": skill["evidence_reference"],
+            },
+        )
+    elif evidence_payload.get("not_in_ledger_terms"):
+        row = _first_row_for_status(evidence_payload, "NOT_IN_LEDGER")
+        if row:
+            response["skills_needing_evidence"].append(
+                {
+                    "skill": row["term"],
+                    "summary": (
+                        "This term is not present in the supplied Skill Ledger rows. "
+                        "Review it manually before using it in public materials."
+                    ),
+                    "evidence_reference": row["evidence_reference"],
+                },
+            )
+
+    if evidence_payload.get("learning_target_skills"):
+        skill = evidence_payload["learning_target_skills"][0]
+        response["learning_targets"].append(
+            {
+                "skill": skill["skill_name"],
+                "summary": (
+                    "Keep this framed as a learning target and avoid presenting it "
+                    "as already demonstrated ability."
+                ),
+                "evidence_reference": skill["evidence_reference"],
+            },
+        )
+
+    action_skill = _first_referenced_skill(evidence_payload)
+    if action_skill:
+        response["recommended_next_actions"].append(
+            {
+                "skill": action_skill["skill_name"],
+                "summary": (
+                    "Review the linked evidence, then decide manually whether the "
+                    "skill belongs in CV, profile, or interview notes."
+                ),
+                "evidence_reference": action_skill["evidence_reference"],
+            },
+        )
+
+    if not any(response[key] for key in RESPONSE_LIST_KEYS if key != "claim_safety_warnings"):
+        response["claim_safety_warnings"].append(
+            {
+                "summary": (
+                    "No supplied Skill Ledger or gap rows were available for this "
+                    "mocked planning run. Add manual evidence before making claims."
+                ),
+            },
+        )
+    else:
+        response["claim_safety_warnings"].append(
+            {
+                "summary": (
+                    "Manual review is required before using any wording in a CV, "
+                    "profile, application, or interview preparation."
+                ),
+            },
+        )
+
+    response["manual_review_required"] = True
+    return response
+
+
+def _first_row_for_status(
+    evidence_payload: dict[str, Any],
+    status: str,
+) -> dict[str, Any] | None:
+    for row in evidence_payload.get("matched_gap_rows", []):
+        if row.get("ledger_status") == status:
+            return row
+    return None
+
+
+def _first_referenced_skill(evidence_payload: dict[str, Any]) -> dict[str, str] | None:
+    for key in (
+        "verified_skills",
+        "learning_target_skills",
+        "studying_skills",
+        "no_evidence_skills",
+    ):
+        if evidence_payload.get(key):
+            return evidence_payload[key][0]
+    row = _first_row_for_status(evidence_payload, "NOT_IN_LEDGER")
+    if row:
+        return {
+            "skill_name": row["term"],
+            "evidence_reference": row["evidence_reference"],
+        }
+    return None
+
+
 def _parse_response(
     response: str | dict[str, Any],
 ) -> tuple[dict[str, Any] | None, str | None]:
