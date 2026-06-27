@@ -521,6 +521,42 @@ class SkillGapDashboardTests(TestCase):
             resolved=resolved,
         )
 
+    def _create_evidence_filter_rows(self):
+        for skill_name in (
+            "Python",
+            "Snowflake",
+            "Statistics",
+            "GraphQL",
+            "Airflow",
+        ):
+            self._create_gap(
+                application=self.app,
+                skill_name=skill_name,
+                priority=SkillGapPriority.LOW,
+            )
+        self._create_skill_entry(
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._create_skill_entry(
+            skill_name="Snowflake",
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        self._create_skill_entry(
+            skill_name="Statistics",
+            evidence_level=SkillEntry.EvidenceLevel.STUDYING,
+        )
+        self._create_skill_entry(
+            skill_name="GraphQL",
+            evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE,
+        )
+
+    def _response_row_terms(self, response):
+        return {
+            row["term"]
+            for row in response.context["skill_gap_ledger_match_rows"]
+        }
+
     def test_dashboard_requires_login(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 302)
@@ -628,6 +664,154 @@ class SkillGapDashboardTests(TestCase):
         content = response.content.decode()
         self.assertIn("<td><strong>Closed skill</strong></td>", content)
         self.assertNotIn("<td><strong>Open skill</strong></td>", content)
+
+    def test_dashboard_evidence_filter_defaults_to_all(self):
+        self._create_evidence_filter_rows()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.context["evidence_filter"], "all")
+        self.assertEqual(
+            self._response_row_terms(response),
+            {"Python", "Snowflake", "Statistics", "GraphQL", "Airflow"},
+        )
+
+    def test_dashboard_evidence_filter_invalid_value_falls_back_to_all(self):
+        self._create_evidence_filter_rows()
+        self._login()
+
+        response = self.client.get(self.url, {"evidence_filter": "external_verified"})
+
+        self.assertEqual(response.context["evidence_filter"], "all")
+        self.assertEqual(
+            self._response_row_terms(response),
+            {"Python", "Snowflake", "Statistics", "GraphQL", "Airflow"},
+        )
+
+    def test_dashboard_evidence_filter_verified_only(self):
+        self._create_evidence_filter_rows()
+        self._login()
+
+        response = self.client.get(self.url, {"evidence_filter": "verified"})
+
+        self.assertEqual(self._response_row_terms(response), {"Python"})
+        rows = response.context["skill_gap_ledger_match_rows"]
+        self.assertEqual(rows[0]["ledger_status"], SkillEntry.EvidenceLevel.VERIFIED)
+
+    def test_dashboard_evidence_filter_learning_target_only(self):
+        self._create_evidence_filter_rows()
+        self._login()
+
+        response = self.client.get(self.url, {"evidence_filter": "learning_target"})
+
+        self.assertEqual(self._response_row_terms(response), {"Snowflake"})
+        rows = response.context["skill_gap_ledger_match_rows"]
+        self.assertEqual(
+            rows[0]["ledger_status"],
+            SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+
+    def test_dashboard_evidence_filter_studying_only(self):
+        self._create_evidence_filter_rows()
+        self._login()
+
+        response = self.client.get(self.url, {"evidence_filter": "studying"})
+
+        self.assertEqual(self._response_row_terms(response), {"Statistics"})
+        rows = response.context["skill_gap_ledger_match_rows"]
+        self.assertEqual(rows[0]["ledger_status"], SkillEntry.EvidenceLevel.STUDYING)
+
+    def test_dashboard_evidence_filter_no_evidence_only(self):
+        self._create_evidence_filter_rows()
+        self._login()
+
+        response = self.client.get(self.url, {"evidence_filter": "no_evidence"})
+
+        self.assertEqual(self._response_row_terms(response), {"GraphQL"})
+        rows = response.context["skill_gap_ledger_match_rows"]
+        self.assertEqual(rows[0]["ledger_status"], SkillEntry.EvidenceLevel.NO_EVIDENCE)
+
+    def test_dashboard_evidence_filter_not_in_ledger_only(self):
+        self._create_evidence_filter_rows()
+        self._login()
+
+        response = self.client.get(self.url, {"evidence_filter": "not_in_ledger"})
+
+        self.assertEqual(self._response_row_terms(response), {"Airflow"})
+        rows = response.context["skill_gap_ledger_match_rows"]
+        self.assertEqual(rows[0]["ledger_status"], "NOT_IN_LEDGER")
+
+    def test_dashboard_evidence_filter_needs_evidence_combines_no_evidence_and_not_in_ledger(
+        self,
+    ):
+        self._create_evidence_filter_rows()
+        self._login()
+
+        response = self.client.get(self.url, {"evidence_filter": "needs_evidence"})
+
+        self.assertEqual(self._response_row_terms(response), {"GraphQL", "Airflow"})
+        statuses = {
+            row["ledger_status"]
+            for row in response.context["skill_gap_ledger_match_rows"]
+        }
+        self.assertEqual(
+            statuses,
+            {SkillEntry.EvidenceLevel.NO_EVIDENCE, "NOT_IN_LEDGER"},
+        )
+
+    def test_dashboard_evidence_filter_preserves_matched_skill_name(self):
+        self._create_evidence_filter_rows()
+        self._login()
+
+        response = self.client.get(self.url, {"evidence_filter": "verified"})
+
+        rows = response.context["skill_gap_ledger_match_rows"]
+        self.assertEqual(rows[0]["matched_skill_name"], "Python")
+        self.assertContains(response, "Matched Skill Ledger skill: Python")
+
+    def test_dashboard_evidence_filter_is_read_only(self):
+        self._create_evidence_filter_rows()
+        skill_entry_count = SkillEntry.objects.count()
+        skill_gap_count = ApplicationSkillGap.objects.count()
+        self._login()
+
+        response = self.client.get(self.url, {"evidence_filter": "needs_evidence"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(SkillEntry.objects.count(), skill_entry_count)
+        self.assertEqual(ApplicationSkillGap.objects.count(), skill_gap_count)
+
+    def test_dashboard_evidence_filter_renders_safety_wording(self):
+        self._create_evidence_filter_rows()
+        self._login()
+
+        response = self.client.get(self.url, {"evidence_filter": "no_evidence"})
+
+        self.assertContains(
+            response,
+            (
+                "Gap signals are advisory only. Skill Ledger status reflects your own manually "
+                "maintained records. A VERIFIED status means portfolio evidence exists - it does "
+                "not mean you meet any employer requirement. This table does not score "
+                "suitability, verify proficiency, or create Skill Ledger entries. Use human "
+                "judgement before claiming a skill against a specific role."
+            ),
+        )
+
+    def test_dashboard_evidence_filter_control_renders_selected_option(self):
+        self._create_evidence_filter_rows()
+        self._login()
+
+        response = self.client.get(self.url, {"evidence_filter": "studying"})
+
+        self.assertContains(response, 'name="evidence_filter"')
+        self.assertContains(response, "All Skill Ledger statuses")
+        self.assertContains(response, "Needs evidence")
+        self.assertContains(
+            response,
+            '<option value="studying" selected>STUDYING</option>',
+        )
 
     def test_dashboard_is_read_only(self):
         self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.LOW)
