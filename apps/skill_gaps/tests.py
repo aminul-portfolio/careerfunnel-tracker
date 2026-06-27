@@ -19,6 +19,7 @@ from . import ai_providers
 from .ai_career_coach import (
     EVIDENCE_PAYLOAD_KEYS,
     REQUIRED_PROMPT_SAFETY_RULES,
+    PrivateEvidenceFieldError,
     build_controlled_prompt,
     build_evidence_payload,
     build_mocked_career_coach_response,
@@ -2996,9 +2997,6 @@ class SkillGapAiCareerCoachArchitectureTests(TestCase):
                     "title": "Portfolio dashboard",
                     "evidence_type": "project",
                     "summary": "Dashboard evidence for Python analytics work.",
-                    "company_name": "Hidden Employer",
-                    "private_notes": "Do not expose this note.",
-                    "email": "private@example.com",
                 },
             ),
         )
@@ -3076,6 +3074,124 @@ class SkillGapAiCareerCoachArchitectureTests(TestCase):
         self.assertNotIn("Hidden Employer", prompt)
         self.assertNotIn("private@example.com", prompt)
         self.assertNotIn("Do not expose this note.", prompt)
+
+    def test_build_evidence_payload_rejects_private_fields(self):
+        with self.assertRaisesMessage(
+            PrivateEvidenceFieldError,
+            "Provider-bound evidence contains private fields: notes",
+        ):
+            build_evidence_payload(
+                matched_gap_rows=(
+                    {
+                        "term": "Python",
+                        "ledger_status": SkillEntry.EvidenceLevel.VERIFIED,
+                        "matched_skill_name": "Python",
+                        "notes": "Do not send this private note.",
+                    },
+                ),
+            )
+
+    def test_build_evidence_payload_rejects_private_notes_field(self):
+        with self.assertRaisesMessage(
+            PrivateEvidenceFieldError,
+            "Provider-bound evidence contains private fields: private_notes",
+        ):
+            build_evidence_payload(
+                matched_gap_rows=(
+                    {
+                        "term": "Python",
+                        "ledger_status": SkillEntry.EvidenceLevel.VERIFIED,
+                        "matched_skill_name": "Python",
+                        "private_notes": "Private coaching context.",
+                    },
+                ),
+            )
+
+    def test_build_evidence_payload_rejects_employer_and_email_fields(self):
+        private_row = {
+            "term": "Python",
+            "ledger_status": SkillEntry.EvidenceLevel.VERIFIED,
+            "matched_skill_name": "Python",
+            "company_name": "Sensitive Employer",
+            "email": "person@example.com",
+        }
+
+        with self.assertRaisesMessage(
+            PrivateEvidenceFieldError,
+            "Provider-bound evidence contains private fields: company_name, email",
+        ):
+            build_evidence_payload(matched_gap_rows=(private_row,))
+
+    def test_private_field_rejection_does_not_expose_private_value(self):
+        private_value = "salary 12345 for Sensitive Employer"
+
+        with self.assertRaises(PrivateEvidenceFieldError) as context:
+            build_evidence_payload(
+                matched_gap_rows=(
+                    {
+                        "term": "Python",
+                        "ledger_status": SkillEntry.EvidenceLevel.VERIFIED,
+                        "matched_skill_name": "Python",
+                        "salary": private_value,
+                    },
+                ),
+            )
+
+        self.assertIn("salary", str(context.exception))
+        self.assertNotIn(private_value, str(context.exception))
+        self.assertNotIn("12345", str(context.exception))
+        self.assertNotIn("Sensitive Employer", str(context.exception))
+
+    def test_build_provider_evidence_payload_allows_safe_fields_only(self):
+        payload = build_provider_evidence_payload(
+            matched_gap_rows=(
+                {
+                    "term": "Python",
+                    "frequency": 2,
+                    "ledger_status": SkillEntry.EvidenceLevel.VERIFIED,
+                    "display_label": "VERIFIED",
+                    "matched_skill_name": "Python",
+                    "is_in_ledger": True,
+                },
+            ),
+        )
+
+        self.assertEqual(payload["verified_skills"][0]["skill_name"], "Python")
+        self.assertEqual(payload["matched_gap_rows"][0]["term"], "Python")
+
+    def test_build_provider_evidence_payload_rejects_required_private_fields(self):
+        private_fields = (
+            "notes",
+            "private_notes",
+            "email",
+            "company_name",
+            "job_description",
+            "jd_requirement",
+            "suggested_action",
+            "salary",
+            "contact",
+            "raw_provider_response",
+        )
+
+        for field_name in private_fields:
+            with self.subTest(field_name=field_name):
+                with self.assertRaisesMessage(
+                    PrivateEvidenceFieldError,
+                    f"Provider-bound evidence contains private fields: {field_name}",
+                ):
+                    build_provider_evidence_payload(
+                        matched_gap_rows=(
+                            {
+                                "term": "Python",
+                                "frequency": 2,
+                                "ledger_status": SkillEntry.EvidenceLevel.VERIFIED,
+                                "display_label": "VERIFIED",
+                                "matched_skill_name": "Python",
+                                "is_in_ledger": True,
+                                field_name: "PRIVATE_SENTINEL_VALUE",
+                            },
+                        ),
+                    )
 
     def test_ai_career_coach_prompt_is_deterministic(self):
         payload = self._payload()
@@ -3714,53 +3830,60 @@ class SkillGapLiveProviderSpikeTests(TestCase):
         self.assertNotContains(response, "API key not configured")
 
     def test_ai_career_coach_payload_excludes_notes_field(self):
-        payload = build_provider_evidence_payload(
-            matched_gap_rows=(
-                {
-                    "term": "Python",
-                    "frequency": 1,
-                    "ledger_status": "VERIFIED",
-                    "matched_skill_name": "Python",
-                    "notes": "Private note",
-                    "private_notes": "Hidden note",
-                },
-            ),
-        )
-        payload_text = json.dumps(payload)
-
-        self.assertNotIn("Private note", payload_text)
-        self.assertNotIn("Hidden note", payload_text)
-        self.assertNotIn("notes", payload_text)
+        with self.assertRaisesMessage(
+            PrivateEvidenceFieldError,
+            "Provider-bound evidence contains private fields: notes, private_notes",
+        ):
+            build_provider_evidence_payload(
+                matched_gap_rows=(
+                    {
+                        "term": "Python",
+                        "frequency": 1,
+                        "ledger_status": "VERIFIED",
+                        "matched_skill_name": "Python",
+                        "notes": "Private note",
+                        "private_notes": "Hidden note",
+                    },
+                ),
+            )
 
     def test_ai_career_coach_payload_excludes_email_addresses(self):
-        payload = build_provider_evidence_payload(
-            matched_gap_rows=(
-                {
-                    "term": "SQL",
-                    "frequency": 1,
-                    "ledger_status": "NO_EVIDENCE",
-                    "matched_skill_name": "SQL",
-                    "email": "person@example.com",
-                },
-            ),
-        )
+        with self.assertRaisesMessage(
+            PrivateEvidenceFieldError,
+            "Provider-bound evidence contains private fields: email",
+        ) as context:
+            build_provider_evidence_payload(
+                matched_gap_rows=(
+                    {
+                        "term": "SQL",
+                        "frequency": 1,
+                        "ledger_status": "NO_EVIDENCE",
+                        "matched_skill_name": "SQL",
+                        "email": "person@example.com",
+                    },
+                ),
+            )
 
-        self.assertNotIn("person@example.com", json.dumps(payload))
+        self.assertNotIn("person@example.com", str(context.exception))
 
     def test_ai_career_coach_payload_excludes_employer_names(self):
-        payload = build_provider_evidence_payload(
-            matched_gap_rows=(
-                {
-                    "term": "Python",
-                    "frequency": 1,
-                    "ledger_status": "VERIFIED",
-                    "matched_skill_name": "Python",
-                    "company_name": "Sensitive Employer",
-                },
-            ),
-        )
+        with self.assertRaisesMessage(
+            PrivateEvidenceFieldError,
+            "Provider-bound evidence contains private fields: company_name",
+        ) as context:
+            build_provider_evidence_payload(
+                matched_gap_rows=(
+                    {
+                        "term": "Python",
+                        "frequency": 1,
+                        "ledger_status": "VERIFIED",
+                        "matched_skill_name": "Python",
+                        "company_name": "Sensitive Employer",
+                    },
+                ),
+            )
 
-        self.assertNotIn("Sensitive Employer", json.dumps(payload))
+        self.assertNotIn("Sensitive Employer", str(context.exception))
 
     def test_ai_career_coach_advisory_panel_present_in_live_mode(self):
         self._seed_evidence()
