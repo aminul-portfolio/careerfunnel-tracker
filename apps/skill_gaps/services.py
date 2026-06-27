@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -29,6 +30,15 @@ GOAL_WEIGHTS: dict[str, Decimal] = {
     SkillGapLongTermGoal.ANALYTICS_ENGINEER: Decimal("1.10"),
     SkillGapLongTermGoal.DATA_ENGINEER: Decimal("1.15"),
     SkillGapLongTermGoal.GENERAL: Decimal("0.90"),
+}
+
+SKILL_ALIAS_MAP: dict[str, str] = {
+    "powerbi": "power bi",
+    "power-bi": "power bi",
+    "sql server": "sql",
+    "stakeholders": "stakeholder",
+    "ms fabric": "microsoft fabric",
+    "dbt core": "dbt",
 }
 
 PRIORITY_BANDS: tuple[tuple[Decimal, str], ...] = (
@@ -169,6 +179,69 @@ HIGH_PRIORITY_VALUES = (
 )
 
 MEDIUM_PRIORITY_VALUES = (SkillGapPriority.MEDIUM,)
+NOT_IN_LEDGER_STATUS = "NOT_IN_LEDGER"
+
+
+def _read_mapping_or_attr(value, key: str, default=""):
+    if isinstance(value, dict):
+        return value.get(key, default)
+    return getattr(value, key, default)
+
+
+def normalise_skill_match_key(value: str) -> str:
+    raw_value = "" if value is None else str(value)
+    cleaned = " ".join(raw_value.strip().lower().split())
+    if not cleaned:
+        return ""
+    if cleaned in SKILL_ALIAS_MAP:
+        return SKILL_ALIAS_MAP[cleaned]
+
+    punctuation_normalised = re.sub(r"[^\w\s]+", " ", cleaned)
+    punctuation_normalised = punctuation_normalised.replace("_", " ")
+    canonical = " ".join(punctuation_normalised.split())
+    return SKILL_ALIAS_MAP.get(canonical, canonical)
+
+
+def build_skill_gap_ledger_match_rows(gap_terms, skill_entries) -> list[dict]:
+    ledger_by_key: dict[str, object] = {}
+    for entry in skill_entries:
+        skill_name = _read_mapping_or_attr(entry, "skill_name")
+        match_key = normalise_skill_match_key(skill_name)
+        if match_key and match_key not in ledger_by_key:
+            ledger_by_key[match_key] = entry
+
+    rows: list[dict] = []
+    for gap_term in gap_terms:
+        original_term = _read_mapping_or_attr(gap_term, "term")
+        frequency = _read_mapping_or_attr(gap_term, "frequency", 0)
+        match_key = normalise_skill_match_key(original_term)
+        matched_entry = ledger_by_key.get(match_key)
+        if matched_entry is None:
+            rows.append(
+                {
+                    "term": original_term,
+                    "frequency": frequency,
+                    "ledger_status": NOT_IN_LEDGER_STATUS,
+                    "display_label": "Not in Skill Ledger",
+                    "matched_skill_name": "",
+                    "is_in_ledger": False,
+                },
+            )
+            continue
+
+        evidence_level = _read_mapping_or_attr(matched_entry, "evidence_level")
+        matched_skill_name = _read_mapping_or_attr(matched_entry, "skill_name")
+        rows.append(
+            {
+                "term": original_term,
+                "frequency": frequency,
+                "ledger_status": evidence_level,
+                "display_label": evidence_level,
+                "matched_skill_name": matched_skill_name,
+                "is_in_ledger": True,
+            },
+        )
+    return rows
 
 
 def get_stage_weight(stage: str) -> Decimal:

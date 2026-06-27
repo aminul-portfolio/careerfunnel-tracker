@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
 
 from django.contrib.auth.models import User
 from django.db import IntegrityError
@@ -28,6 +29,7 @@ from .services import (
     build_skill_gap_evidence_readiness_context,
     build_skill_gap_interview_story_mapping_context,
     build_skill_gap_learning_plan_context,
+    build_skill_gap_ledger_match_rows,
     build_skill_gap_portfolio_evidence_mapping_context,
     compute_priority_score,
     create_or_update_gap,
@@ -41,6 +43,7 @@ from .services import (
     get_portfolio_evidence_mapping_items,
     get_stage_weight,
     mark_gap_resolved,
+    normalise_skill_match_key,
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -144,6 +147,154 @@ class SkillGapServiceScoringTests(TestCase):
             get_goal_weight(SkillGapLongTermGoal.DATA_ENGINEER),
             Decimal("1.15"),
         )
+
+
+class SkillGapLedgerMatchingServiceTests(TestCase):
+    def _entry(self, skill_name, evidence_level):
+        return SimpleNamespace(skill_name=skill_name, evidence_level=evidence_level)
+
+    def _rows(self, gap_terms, skill_entries):
+        return build_skill_gap_ledger_match_rows(gap_terms, skill_entries)
+
+    def test_normalise_skill_match_key_handles_empty_string(self):
+        self.assertEqual(normalise_skill_match_key(""), "")
+        self.assertEqual(normalise_skill_match_key("   "), "")
+        self.assertEqual(normalise_skill_match_key(None), "")
+
+    def test_normalise_skill_match_key_applies_alias_map(self):
+        self.assertEqual(normalise_skill_match_key("PowerBI"), "power bi")
+        self.assertEqual(normalise_skill_match_key("power-bi"), "power bi")
+        self.assertEqual(normalise_skill_match_key("SQL Server"), "sql")
+
+    def test_normalise_skill_match_key_covers_all_aliases(self):
+        expected_aliases = {
+            "powerbi": "power bi",
+            "power-bi": "power bi",
+            "sql server": "sql",
+            "stakeholders": "stakeholder",
+            "ms fabric": "microsoft fabric",
+            "dbt core": "dbt",
+        }
+
+        for alias, canonical in expected_aliases.items():
+            with self.subTest(alias=alias):
+                self.assertEqual(normalise_skill_match_key(alias), canonical)
+
+    def test_build_skill_gap_ledger_match_rows_marks_verified_entry(self):
+        rows = self._rows(
+            [{"term": "Python", "frequency": 3}],
+            [self._entry("Python", SkillEntry.EvidenceLevel.VERIFIED)],
+        )
+
+        self.assertEqual(rows[0]["ledger_status"], SkillEntry.EvidenceLevel.VERIFIED)
+        self.assertEqual(rows[0]["display_label"], SkillEntry.EvidenceLevel.VERIFIED)
+        self.assertTrue(rows[0]["is_in_ledger"])
+
+    def test_build_skill_gap_ledger_match_rows_marks_learning_target_entry(self):
+        rows = self._rows(
+            [{"term": "Snowflake", "frequency": 2}],
+            [self._entry("Snowflake", SkillEntry.EvidenceLevel.LEARNING_TARGET)],
+        )
+
+        self.assertEqual(rows[0]["ledger_status"], SkillEntry.EvidenceLevel.LEARNING_TARGET)
+        self.assertEqual(rows[0]["display_label"], SkillEntry.EvidenceLevel.LEARNING_TARGET)
+        self.assertTrue(rows[0]["is_in_ledger"])
+
+    def test_build_skill_gap_ledger_match_rows_marks_studying_entry(self):
+        rows = self._rows(
+            [{"term": "Statistics", "frequency": 1}],
+            [self._entry("Statistics", SkillEntry.EvidenceLevel.STUDYING)],
+        )
+
+        self.assertEqual(rows[0]["ledger_status"], SkillEntry.EvidenceLevel.STUDYING)
+        self.assertEqual(rows[0]["display_label"], SkillEntry.EvidenceLevel.STUDYING)
+        self.assertTrue(rows[0]["is_in_ledger"])
+
+    def test_build_skill_gap_ledger_match_rows_marks_no_evidence_entry(self):
+        rows = self._rows(
+            [{"term": "GraphQL", "frequency": 1}],
+            [self._entry("GraphQL", SkillEntry.EvidenceLevel.NO_EVIDENCE)],
+        )
+
+        self.assertEqual(rows[0]["ledger_status"], SkillEntry.EvidenceLevel.NO_EVIDENCE)
+        self.assertEqual(rows[0]["display_label"], SkillEntry.EvidenceLevel.NO_EVIDENCE)
+        self.assertTrue(rows[0]["is_in_ledger"])
+
+    def test_build_skill_gap_ledger_match_rows_marks_not_in_ledger_when_no_match_exists(self):
+        rows = self._rows(
+            [{"term": "Airflow", "frequency": 2}],
+            [self._entry("Python", SkillEntry.EvidenceLevel.VERIFIED)],
+        )
+
+        self.assertEqual(rows[0]["ledger_status"], "NOT_IN_LEDGER")
+        self.assertEqual(rows[0]["display_label"], "Not in Skill Ledger")
+        self.assertEqual(rows[0]["matched_skill_name"], "")
+        self.assertFalse(rows[0]["is_in_ledger"])
+
+    def test_build_skill_gap_ledger_match_rows_uses_normalised_exact_match(self):
+        rows = self._rows(
+            [{"term": "  POWER   BI  ", "frequency": 4}],
+            [self._entry("power bi", SkillEntry.EvidenceLevel.VERIFIED)],
+        )
+
+        self.assertEqual(rows[0]["ledger_status"], SkillEntry.EvidenceLevel.VERIFIED)
+        self.assertEqual(rows[0]["matched_skill_name"], "power bi")
+
+    def test_build_skill_gap_ledger_match_rows_uses_explicit_alias_mapping(self):
+        rows = self._rows(
+            [{"term": "sql server", "frequency": 5}],
+            [self._entry("SQL", SkillEntry.EvidenceLevel.VERIFIED)],
+        )
+
+        self.assertEqual(rows[0]["term"], "sql server")
+        self.assertEqual(rows[0]["ledger_status"], SkillEntry.EvidenceLevel.VERIFIED)
+        self.assertEqual(rows[0]["matched_skill_name"], "SQL")
+
+    def test_build_skill_gap_ledger_match_rows_does_not_use_substring_false_positive(self):
+        rows = self._rows(
+            [{"term": "sql", "frequency": 5}],
+            [self._entry("NoSQL", SkillEntry.EvidenceLevel.VERIFIED)],
+        )
+
+        self.assertEqual(rows[0]["ledger_status"], "NOT_IN_LEDGER")
+        self.assertFalse(rows[0]["is_in_ledger"])
+
+    def test_build_skill_gap_ledger_match_rows_returns_matched_skill_name(self):
+        rows = self._rows(
+            [{"term": "dbt core", "frequency": 2}],
+            [self._entry("dbt", SkillEntry.EvidenceLevel.LEARNING_TARGET)],
+        )
+
+        self.assertEqual(rows[0]["matched_skill_name"], "dbt")
+
+    def test_build_skill_gap_ledger_match_rows_distinguishes_not_in_ledger_from_no_evidence(self):
+        rows = self._rows(
+            [
+                {"term": "GraphQL", "frequency": 1},
+                {"term": "Airflow", "frequency": 1},
+            ],
+            [self._entry("GraphQL", SkillEntry.EvidenceLevel.NO_EVIDENCE)],
+        )
+
+        self.assertTrue(rows[0]["is_in_ledger"])
+        self.assertEqual(rows[0]["ledger_status"], SkillEntry.EvidenceLevel.NO_EVIDENCE)
+        self.assertFalse(rows[1]["is_in_ledger"])
+        self.assertEqual(rows[1]["ledger_status"], "NOT_IN_LEDGER")
+
+    def test_build_skill_gap_ledger_match_rows_preserves_gap_term_order(self):
+        rows = self._rows(
+            [
+                {"term": "Airflow", "frequency": 3},
+                {"term": "Python", "frequency": 2},
+                {"term": "SQL", "frequency": 1},
+            ],
+            [
+                self._entry("SQL", SkillEntry.EvidenceLevel.VERIFIED),
+                self._entry("Python", SkillEntry.EvidenceLevel.VERIFIED),
+            ],
+        )
+
+        self.assertEqual([row["term"] for row in rows], ["Airflow", "Python", "SQL"])
 
 
 class SkillGapFailureCountTests(TestCase):
