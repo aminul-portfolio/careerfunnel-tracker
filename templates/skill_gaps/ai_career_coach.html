@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Evidence-Grounded Career Review | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Evidence-grounded career review{% endblock %}
+
+{% block content %}
+<style>
+    .cf81-page {
+        --cf81-border: #e2e8f0;
+        --cf81-ink: #0f172a;
+        --cf81-muted: #64748b;
+        --cf81-surface: #ffffff;
+        --cf81-subtle: #f8fafc;
+        --cf81-safe: #f0fdfa;
+        --cf81-safe-border: #99f6e4;
+        display: grid;
+        gap: 16px;
+    }
+
+    .cf81-panel,
+    .cf81-output-card {
+        background: var(--cf81-surface);
+        border: 1px solid var(--cf81-border);
+        border-radius: 14px;
+        padding: 18px;
+    }
+
+    .cf81-advisory {
+        background: var(--cf81-safe);
+        border-color: var(--cf81-safe-border);
+    }
+
+    .cf81-panel h1,
+    .cf81-panel h2,
+    .cf81-output-card h3 {
+        color: var(--cf81-ink);
+        margin-top: 0;
+    }
+
+    .cf81-panel p,
+    .cf81-output-card p,
+    .cf81-output-card li {
+        line-height: 1.6;
+    }
+
+    .cf81-output-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cf81-reference {
+        color: var(--cf81-muted);
+        display: block;
+        font-size: 0.86rem;
+        margin-top: 6px;
+    }
+
+    .cf81-empty {
+        background: var(--cf81-subtle);
+        border: 1px dashed var(--cf81-border);
+        border-radius: 12px;
+        color: var(--cf81-muted);
+        padding: 14px;
+    }
+
+    @media (max-width: 780px) {
+        .cf81-output-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="cf81-page">
+    <section class="cf81-panel cf81-advisory" aria-label="Career review advisory">
+        <h1>Evidence-grounded career review</h1>
+        <p>Output is generated from a controlled example workflow. No live AI model is used in this version.</p>
+        <p>
+            This is a private planning tool. Output is generated from your manually maintained Skill Ledger and saved job description signals only. It does not assess employer requirements, verify proficiency, predict job outcomes, or guarantee employability. All output is advisory. Use your own judgement.
+        </p>
+    </section>
+
+    <section class="cf81-panel" aria-label="Read-only boundaries">
+        <h2>Private mocked planning run</h2>
+        <p>
+            No output is saved. No application is submitted. No CV/profile is updated. Manual review is required.
+        </p>
+        {% if not has_skill_ledger_entries %}
+        <p class="cf81-empty">
+            Your Skill Ledger has no entries available for this private mocked workflow. The page remains available for planning, but it will not invent evidence.
+        </p>
+        {% endif %}
+        {% if not has_evidence_rows %}
+        <p class="cf81-empty">
+            No JD-ready Skill Ledger match rows are available for this mocked workflow. Add saved skill-gap records and manual Skill Ledger evidence to see structured planning output.
+        </p>
+        {% endif %}
+    </section>
+
+    {% if career_coach_output %}
+    <section class="cf81-panel" aria-label="Validated mocked output">
+        <h2>Skill and gap planning output</h2>
+        <div class="cf81-output-grid">
+            <article class="cf81-output-card">
+                <h3>Evidence-backed strengths</h3>
+                {% if career_coach_output.evidence_backed_strengths %}
+                <ul>
+                    {% for item in career_coach_output.evidence_backed_strengths %}
+                    <li>
+                        <strong>{{ item.skill }}</strong>: {{ item.summary }}
+                        <span class="cf81-reference">Evidence reference: {{ item.evidence_reference }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="cf81-empty">No evidence-backed strengths are available from the supplied structured data.</p>
+                {% endif %}
+            </article>
+
+            <article class="cf81-output-card">
+                <h3>Skills needing evidence</h3>
+                {% if career_coach_output.skills_needing_evidence %}
+                <ul>
+                    {% for item in career_coach_output.skills_needing_evidence %}
+                    <li>
+                        <strong>{{ item.skill }}</strong>: {{ item.summary }}
+                        <span class="cf81-reference">Evidence reference: {{ item.evidence_reference }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="cf81-empty">No additional evidence-needed items are available from the supplied structured data.</p>
+                {% endif %}
+            </article>
+
+            <article class="cf81-output-card">
+                <h3>Learning targets</h3>
+                {% if career_coach_output.learning_targets %}
+                <ul>
+                    {% for item in career_coach_output.learning_targets %}
+                    <li>
+                        <strong>{{ item.skill }}</strong>: {{ item.summary }}
+                        <span class="cf81-reference">Evidence reference: {{ item.evidence_reference }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="cf81-empty">No learning targets are available from the supplied structured data.</p>
+                {% endif %}
+            </article>
+
+            <article class="cf81-output-card">
+                <h3>Recommended next actions</h3>
+                {% if career_coach_output.recommended_next_actions %}
+                <ul>
+                    {% for item in career_coach_output.recommended_next_actions %}
+                    <li>
+                        <strong>{{ item.skill }}</strong>: {{ item.summary }}
+                        <span class="cf81-reference">Evidence reference: {{ item.evidence_reference }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="cf81-empty">No next actions are available from the supplied structured data.</p>
+                {% endif %}
+            </article>
+
+            <article class="cf81-output-card">
+                <h3>Claim-safety warnings</h3>
+                {% if career_coach_output.claim_safety_warnings %}
+                <ul>
+                    {% for item in career_coach_output.claim_safety_warnings %}
+                    <li>{{ item.summary }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="cf81-empty">No additional claim-safety warnings were returned by the validated mocked workflow.</p>
+                {% endif %}
+            </article>
+        </div>
+    </section>
+    <section class="cf81-panel cf81-advisory" aria-label="Professional advice boundary">
+        <p>This output was generated from structured career data using a controlled workflow. It does not constitute professional career advice.</p>
+    </section>
+    {% else %}
+    <section class="cf81-panel cf81-advisory" aria-label="Unavailable output">
+        <h2>Career planning summary unavailable</h2>
+        <p>
+            The mocked output did not pass validation, so no generated planning output is shown. Manual review is required before using any career-planning wording.
+        </p>
+        <p>This output was generated from structured career data using a controlled workflow. It does not constitute professional career advice.</p>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
