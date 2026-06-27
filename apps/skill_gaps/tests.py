@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -14,12 +15,14 @@ from apps.applications.choices import ApplicationStatus
 from apps.applications.models import JobApplication
 from apps.skill_ledger.models import SkillEntry
 
+from . import ai_providers
 from .ai_career_coach import (
     EVIDENCE_PAYLOAD_KEYS,
     REQUIRED_PROMPT_SAFETY_RULES,
     build_controlled_prompt,
     build_evidence_payload,
     build_mocked_career_coach_response,
+    build_provider_evidence_payload,
     expected_response_schema,
     validate_career_coach_response,
 )
@@ -3535,3 +3538,356 @@ class SkillGapMockedAiCareerCoachPageTests(TestCase):
         ]
 
         self.assertEqual(migration_files, ["0001_initial.py"])
+
+
+class SkillGapLiveProviderSpikeTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="provideruser",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skill_gaps:ai_career_coach")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Sensitive Employer",
+            job_title="Private Analyst Role",
+            date_applied=date(2026, 6, 2),
+            required_skills="Python Snowflake GraphQL",
+            job_description="Contact person@example.com about salary 12345.",
+        )
+
+    def _login(self):
+        self.client.login(username="provideruser", password="StrongPass12345")
+
+    def _create_gap(self, skill_name, priority=SkillGapPriority.MEDIUM):
+        return ApplicationSkillGap.objects.create(
+            application=self.application,
+            stage=SkillGapStage.APPLICATION,
+            skill_name=skill_name,
+            current_tier=SkillTier.MISSING,
+            priority=priority,
+            goal_weight=Decimal("1.00"),
+            failure_count=2,
+            stage_weight=Decimal("1.00"),
+            priority_score=Decimal("4.00"),
+            identified_by=SkillGapIdentifiedBy.MANUAL,
+            jd_requirement="Do not include private JD sentence.",
+            suggested_action="Do not include private notes.",
+        )
+
+    def _create_skill_entry(self, skill_name, evidence_level):
+        return SkillEntry.objects.create(
+            skill_name=skill_name,
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=evidence_level,
+            sprint_reference="Sprint 82",
+            project_link="https://example.com/private",
+            notes="Private SkillEntry note with email private@example.com",
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+
+    def _seed_evidence(self):
+        self._create_gap("Python", priority=SkillGapPriority.HIGH)
+        self._create_gap("Snowflake")
+        self._create_gap("GraphQL")
+        self._create_skill_entry("Python", SkillEntry.EvidenceLevel.VERIFIED)
+        self._create_skill_entry("Snowflake", SkillEntry.EvidenceLevel.LEARNING_TARGET)
+        self._create_skill_entry("GraphQL", SkillEntry.EvidenceLevel.NO_EVIDENCE)
+
+    def _payload(self):
+        return build_provider_evidence_payload(
+            matched_gap_rows=(
+                {
+                    "term": "Python",
+                    "frequency": 2,
+                    "ledger_status": SkillEntry.EvidenceLevel.VERIFIED,
+                    "display_label": "VERIFIED",
+                    "matched_skill_name": "Python",
+                    "is_in_ledger": True,
+                },
+                {
+                    "term": "Snowflake",
+                    "frequency": 1,
+                    "ledger_status": SkillEntry.EvidenceLevel.LEARNING_TARGET,
+                    "display_label": "LEARNING_TARGET",
+                    "matched_skill_name": "Snowflake",
+                    "is_in_ledger": True,
+                },
+                {
+                    "term": "GraphQL",
+                    "frequency": 1,
+                    "ledger_status": SkillEntry.EvidenceLevel.NO_EVIDENCE,
+                    "display_label": "NO_EVIDENCE",
+                    "matched_skill_name": "GraphQL",
+                    "is_in_ledger": True,
+                },
+            ),
+        )
+
+    def _safe_response(self):
+        return build_mocked_career_coach_response(self._payload())
+
+    def test_ai_career_coach_uses_mocked_provider_when_env_absent(self):
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(ai_providers.select_provider_name(), "mocked")
+
+    def test_ai_career_coach_uses_mocked_provider_when_env_is_mocked(self):
+        with patch.dict(os.environ, {"COACH_PROVIDER": "mocked"}, clear=True):
+            self.assertEqual(ai_providers.select_provider_name(), "mocked")
+
+    def test_ai_career_coach_uses_live_provider_when_env_is_live(self):
+        with patch.dict(os.environ, {"COACH_PROVIDER": "live"}, clear=True):
+            self.assertEqual(ai_providers.select_provider_name(), "live")
+
+    def test_ai_career_coach_live_response_passes_through_validator(self):
+        self._seed_evidence()
+        self._login()
+        with patch.dict(os.environ, {"COACH_PROVIDER": "live"}, clear=True):
+            with patch(
+                "apps.skill_gaps.ai_providers.get_live_response",
+                return_value=self._safe_response(),
+            ) as live_response:
+                with patch(
+                    "apps.skill_gaps.views.ai_career_coach.validate_career_coach_response",
+                    wraps=validate_career_coach_response,
+                ) as validator:
+                    response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(live_response.called)
+        self.assertTrue(validator.called)
+        self.assertContains(response, "Output is generated by a language model")
+        self.assertContains(response, "Skill and gap planning output")
+
+    def test_ai_career_coach_live_response_rejected_by_validator_shows_fallback(self):
+        self._seed_evidence()
+        self._login()
+        unsafe_response = self._safe_response()
+        unsafe_response["recommended_next_actions"][0]["skill"] = "UnsupportedSkill"
+        with patch.dict(os.environ, {"COACH_PROVIDER": "live"}, clear=True):
+            with patch(
+                "apps.skill_gaps.ai_providers.get_live_response",
+                return_value=unsafe_response,
+            ):
+                response = self.client.get(self.url)
+
+        self.assertContains(response, "Career planning summary unavailable")
+        self.assertNotContains(response, "UnsupportedSkill")
+
+    def test_ai_career_coach_live_provider_timeout_shows_fallback(self):
+        self._seed_evidence()
+        self._login()
+        with patch.dict(os.environ, {"COACH_PROVIDER": "live"}, clear=True):
+            with patch(
+                "apps.skill_gaps.ai_providers.get_live_response",
+                side_effect=ai_providers.CoachProviderError("Provider timeout"),
+            ):
+                response = self.client.get(self.url)
+
+        self.assertContains(response, "safe fallback state")
+        self.assertContains(response, "Career planning summary unavailable")
+
+    def test_ai_career_coach_live_provider_invalid_json_shows_fallback(self):
+        self._seed_evidence()
+        self._login()
+        with patch.dict(os.environ, {"COACH_PROVIDER": "live"}, clear=True):
+            with patch(
+                "apps.skill_gaps.ai_providers.get_live_response",
+                side_effect=ai_providers.CoachProviderError("Invalid provider JSON"),
+            ):
+                response = self.client.get(self.url)
+
+        self.assertContains(response, "Career planning summary unavailable")
+        self.assertNotContains(response, "Invalid provider JSON")
+
+    def test_ai_career_coach_live_provider_error_shows_fallback(self):
+        self._seed_evidence()
+        self._login()
+        with patch.dict(os.environ, {"COACH_PROVIDER": "live"}, clear=True):
+            with patch(
+                "apps.skill_gaps.ai_providers.get_live_response",
+                side_effect=ai_providers.CoachProviderError("API key not configured"),
+            ):
+                response = self.client.get(self.url)
+
+        self.assertContains(response, "Career planning summary unavailable")
+        self.assertNotContains(response, "API key not configured")
+
+    def test_ai_career_coach_payload_excludes_notes_field(self):
+        payload = build_provider_evidence_payload(
+            matched_gap_rows=(
+                {
+                    "term": "Python",
+                    "frequency": 1,
+                    "ledger_status": "VERIFIED",
+                    "matched_skill_name": "Python",
+                    "notes": "Private note",
+                    "private_notes": "Hidden note",
+                },
+            ),
+        )
+        payload_text = json.dumps(payload)
+
+        self.assertNotIn("Private note", payload_text)
+        self.assertNotIn("Hidden note", payload_text)
+        self.assertNotIn("notes", payload_text)
+
+    def test_ai_career_coach_payload_excludes_email_addresses(self):
+        payload = build_provider_evidence_payload(
+            matched_gap_rows=(
+                {
+                    "term": "SQL",
+                    "frequency": 1,
+                    "ledger_status": "NO_EVIDENCE",
+                    "matched_skill_name": "SQL",
+                    "email": "person@example.com",
+                },
+            ),
+        )
+
+        self.assertNotIn("person@example.com", json.dumps(payload))
+
+    def test_ai_career_coach_payload_excludes_employer_names(self):
+        payload = build_provider_evidence_payload(
+            matched_gap_rows=(
+                {
+                    "term": "Python",
+                    "frequency": 1,
+                    "ledger_status": "VERIFIED",
+                    "matched_skill_name": "Python",
+                    "company_name": "Sensitive Employer",
+                },
+            ),
+        )
+
+        self.assertNotIn("Sensitive Employer", json.dumps(payload))
+
+    def test_ai_career_coach_advisory_panel_present_in_live_mode(self):
+        self._seed_evidence()
+        self._login()
+        with patch.dict(os.environ, {"COACH_PROVIDER": "live"}, clear=True):
+            with patch(
+                "apps.skill_gaps.ai_providers.get_live_response",
+                return_value=self._safe_response(),
+            ):
+                response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            (
+                "This is a private planning tool. Output is generated from your manually "
+                "maintained Skill Ledger and saved job description signals only. It does "
+                "not assess employer requirements, verify proficiency, predict job "
+                "outcomes, or guarantee employability. All output is advisory. Use your "
+                "own judgement."
+            ),
+        )
+
+    def test_ai_career_coach_does_not_imply_live_ai_as_authoritative(self):
+        self._seed_evidence()
+        self._login()
+        with patch.dict(os.environ, {"COACH_PROVIDER": "live"}, clear=True):
+            with patch(
+                "apps.skill_gaps.ai_providers.get_live_response",
+                return_value=self._safe_response(),
+            ):
+                response = self.client.get(self.url)
+
+        self.assertContains(response, "Responses may contain errors or outdated information")
+        self.assertNotContains(response, "AI recommends")
+        self.assertNotContains(response, "Automatically generated by AI")
+
+    def test_ai_career_coach_live_output_not_saved_to_database(self):
+        self._seed_evidence()
+        skill_entry_count = SkillEntry.objects.count()
+        gap_count = ApplicationSkillGap.objects.count()
+        self._login()
+        with patch.dict(os.environ, {"COACH_PROVIDER": "live"}, clear=True):
+            with patch(
+                "apps.skill_gaps.ai_providers.get_live_response",
+                return_value=self._safe_response(),
+            ):
+                response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(SkillEntry.objects.count(), skill_entry_count)
+        self.assertEqual(ApplicationSkillGap.objects.count(), gap_count)
+
+    def test_ai_career_coach_live_output_not_saved_to_session(self):
+        self._seed_evidence()
+        self._login()
+        with patch.dict(os.environ, {"COACH_PROVIDER": "live"}, clear=True):
+            with patch(
+                "apps.skill_gaps.ai_providers.get_live_response",
+                return_value=self._safe_response(),
+            ):
+                self.client.get(self.url)
+
+        session_keys = set(self.client.session.keys())
+        self.assertNotIn("career_coach_output", session_keys)
+        self.assertNotIn("provider_response", session_keys)
+
+    def test_ai_career_coach_mocked_workflow_still_passes_in_sprint_82(self):
+        self._seed_evidence()
+        self._login()
+        with patch.dict(os.environ, {}, clear=True):
+            response = self.client.get(self.url)
+
+        self.assertContains(response, "No live AI model is used in this version.")
+        self.assertContains(response, "Skill and gap planning output")
+
+    def test_ai_provider_missing_api_key_raises_provider_error(self):
+        with patch.dict(os.environ, {"COACH_PROVIDER": "live"}, clear=True):
+            with self.assertRaisesMessage(
+                ai_providers.CoachProviderError,
+                "API key not configured",
+            ):
+                ai_providers.get_live_response(self._payload())
+
+    def test_ai_provider_response_too_large_raises_provider_error(self):
+        large_text = json.dumps(self._safe_response()) + (" " * 20001)
+        provider_body = json.dumps(
+            {"content": [{"type": "text", "text": large_text}]},
+        ).encode("utf-8")
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                return False
+
+            def read(self):
+                return provider_body
+
+        with patch.dict(os.environ, {"COACH_API_KEY": "test-key"}, clear=True):
+            with patch("urllib.request.urlopen", return_value=FakeResponse()):
+                with self.assertRaisesMessage(
+                    ai_providers.CoachProviderError,
+                    "Provider response too large",
+                ):
+                    ai_providers.get_live_response(self._payload())
+
+    def test_ai_provider_module_does_not_contain_api_key_literal(self):
+        source = (REPO_ROOT / "apps" / "skill_gaps" / "ai_providers.py").read_text(
+            encoding="utf-8",
+        )
+
+        self.assertNotIn("sk" + "-ant", source.lower())
+        self.assertNotIn("test-key", source)
+        self.assertIn("COACH_API_KEY", source)
+
+    def test_ai_career_coach_template_never_receives_raw_provider_response(self):
+        self._seed_evidence()
+        self._login()
+        response_with_extra_raw_value = self._safe_response()
+        response_with_extra_raw_value["raw_provider_response"] = "RAW_SENTINEL"
+        with patch.dict(os.environ, {"COACH_PROVIDER": "live"}, clear=True):
+            with patch(
+                "apps.skill_gaps.ai_providers.get_live_response",
+                return_value=response_with_extra_raw_value,
+            ):
+                response = self.client.get(self.url)
+
+        self.assertContains(response, "Career planning summary unavailable")
+        self.assertNotContains(response, "RAW_SENTINEL")

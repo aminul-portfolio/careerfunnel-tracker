@@ -74,31 +74,36 @@
 <div class="cf81-page">
     <section class="cf81-panel cf81-advisory" aria-label="Career review advisory">
         <h1>Evidence-grounded career review</h1>
-        <p>Output is generated from a controlled example workflow. No live AI model is used in this version.</p>
+        <p>{{ provider_notice }}</p>
         <p>
             This is a private planning tool. Output is generated from your manually maintained Skill Ledger and saved job description signals only. It does not assess employer requirements, verify proficiency, predict job outcomes, or guarantee employability. All output is advisory. Use your own judgement.
         </p>
     </section>
 
     <section class="cf81-panel" aria-label="Read-only boundaries">
-        <h2>Private mocked planning run</h2>
+        <h2>Private planning run</h2>
         <p>
             No output is saved. No application is submitted. No CV/profile is updated. Manual review is required.
         </p>
+        {% if provider_error %}
+        <p class="cf81-empty">
+            The provider output is unavailable, so this page is showing a safe fallback state. No generated output is displayed.
+        </p>
+        {% endif %}
         {% if not has_skill_ledger_entries %}
         <p class="cf81-empty">
-            Your Skill Ledger has no entries available for this private mocked workflow. The page remains available for planning, but it will not invent evidence.
+            Your Skill Ledger has no entries available for this private workflow. The page remains available for planning, but it will not invent evidence.
         </p>
         {% endif %}
         {% if not has_evidence_rows %}
         <p class="cf81-empty">
-            No JD-ready Skill Ledger match rows are available for this mocked workflow. Add saved skill-gap records and manual Skill Ledger evidence to see structured planning output.
+            No JD-ready Skill Ledger match rows are available for this workflow. Add saved skill-gap records and manual Skill Ledger evidence to see structured planning output.
         </p>
         {% endif %}
     </section>
 
     {% if career_coach_output %}
-    <section class="cf81-panel" aria-label="Validated mocked output">
+    <section class="cf81-panel" aria-label="Validated planning output">
         <h2>Skill and gap planning output</h2>
         <div class="cf81-output-grid">
             <article class="cf81-output-card">
@@ -186,7 +191,7 @@
     <section class="cf81-panel cf81-advisory" aria-label="Unavailable output">
         <h2>Career planning summary unavailable</h2>
         <p>
-            The mocked output did not pass validation, so no generated planning output is shown. Manual review is required before using any career-planning wording.
+            The provider output did not pass validation or was unavailable, so no generated planning output is shown. Manual review is required before using any career-planning wording.
         </p>
         <p>This output was generated from structured career data using a controlled workflow. It does not constitute professional career advice.</p>
     </section>
