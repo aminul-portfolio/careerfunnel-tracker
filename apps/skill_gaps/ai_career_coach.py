@@ -180,6 +180,25 @@ def build_evidence_payload(
     return payload
 
 
+def build_provider_evidence_payload(
+    *,
+    matched_gap_rows: list[dict[str, Any]] | tuple[dict[str, Any], ...],
+) -> dict[str, Any]:
+    safe_rows = []
+    for row in matched_gap_rows:
+        safe_rows.append(
+            {
+                "term": _normalise_text(row.get("term") or row.get("skill_name")),
+                "frequency": int(row.get("frequency") or 0),
+                "ledger_status": _normalise_text(row.get("ledger_status")),
+                "display_label": _normalise_text(row.get("display_label")),
+                "matched_skill_name": _normalise_text(row.get("matched_skill_name")),
+                "is_in_ledger": bool(row.get("is_in_ledger")),
+            },
+        )
+    return build_evidence_payload(matched_gap_rows=tuple(safe_rows))
+
+
 def build_controlled_prompt(evidence_payload: dict[str, Any]) -> str:
     payload = {key: evidence_payload.get(key, []) for key in EVIDENCE_PAYLOAD_KEYS}
     payload["safety_rules"] = list(
