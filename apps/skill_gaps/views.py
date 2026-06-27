@@ -2,6 +2,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
+from apps.skill_ledger.selectors import get_skill_ledger_evidence_summary
+
 from .services import build_skill_gap_dashboard_context
 
 
@@ -28,5 +30,6 @@ def dashboard(request):
             "portfolio_evidence_mapping": context.portfolio_evidence_mapping,
             "interview_story_mapping": context.interview_story_mapping,
             "cv_bullet_mapping": context.cv_bullet_mapping,
+            "skill_ledger_summary": get_skill_ledger_evidence_summary(),
         },
     )

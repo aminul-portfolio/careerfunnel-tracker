@@ -9,6 +9,7 @@ from django.urls import reverse
 
 from apps.applications.choices import ApplicationStatus
 from apps.applications.models import JobApplication
+from apps.skill_ledger.models import SkillEntry
 
 from .models import (
     ApplicationSkillGap,
@@ -332,6 +333,19 @@ class SkillGapDashboardTests(TestCase):
     def _login(self):
         self.client.login(username="dashuser", password="StrongPass12345")
 
+    def _create_skill_entry(self, **overrides):
+        defaults = {
+            "skill_name": "Python",
+            "category": SkillEntry.Category.PROGRAMMING,
+            "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+            "sprint_reference": "Sprint 76",
+            "project_link": "https://example.com/project",
+            "notes": "Private evidence note.",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        defaults.update(overrides)
+        return SkillEntry.objects.create(**defaults)
+
     def _create_gap(
         self,
         *,
@@ -529,6 +543,281 @@ class SkillGapDashboardTests(TestCase):
         for class_name in expected_classes:
             with self.subTest(class_name=class_name):
                 self.assertIn(class_name, content)
+
+    def test_skill_gaps_dashboard_includes_skill_ledger_summary_context(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertIn("skill_ledger_summary", response.context)
+        self.assertEqual(response.context["skill_ledger_summary"]["total_entries"], 1)
+
+    def test_skill_gaps_dashboard_renders_skill_ledger_evidence_summary_section(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Skill Ledger Evidence Summary")
+
+    def test_skill_gaps_dashboard_renders_verified_count(self):
+        self._create_skill_entry(evidence_level=SkillEntry.EvidenceLevel.VERIFIED)
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "VERIFIED")
+        self.assertContains(response, "Python")
+        self.assertEqual(
+            response.context["skill_ledger_summary"]["counts"][SkillEntry.EvidenceLevel.VERIFIED],
+            1,
+        )
+
+    def test_skill_gaps_dashboard_renders_learning_target_count(self):
+        self._create_skill_entry(
+            skill_name="Snowflake",
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "LEARNING_TARGET")
+        self.assertEqual(
+            response.context["skill_ledger_summary"]["counts"][
+                SkillEntry.EvidenceLevel.LEARNING_TARGET
+            ],
+            1,
+        )
+
+    def test_skill_gaps_dashboard_renders_studying_count(self):
+        self._create_skill_entry(
+            skill_name="Statistics",
+            evidence_level=SkillEntry.EvidenceLevel.STUDYING,
+        )
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "STUDYING")
+        self.assertEqual(
+            response.context["skill_ledger_summary"]["counts"][SkillEntry.EvidenceLevel.STUDYING],
+            1,
+        )
+
+    def test_skill_gaps_dashboard_renders_no_evidence_count(self):
+        self._create_skill_entry(
+            skill_name="GraphQL",
+            evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE,
+        )
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "NO_EVIDENCE")
+        self.assertEqual(
+            response.context["skill_ledger_summary"]["counts"][
+                SkillEntry.EvidenceLevel.NO_EVIDENCE
+            ],
+            1,
+        )
+
+    def test_skill_gaps_dashboard_renders_private_skill_ledger_link(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, reverse("skill_ledger:list"))
+        self.assertContains(response, "Open private Skill Ledger")
+
+    def test_skill_gaps_dashboard_skill_ledger_advisory_wording_present(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            (
+                "Skill Ledger evidence is manually maintained and supports portfolio planning. "
+                "It does not verify a skill by itself."
+            ),
+        )
+
+    def test_skill_gaps_dashboard_verified_boundary_wording_present(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            (
+                "VERIFIED means portfolio evidence exists in a closed sprint, passing tests, "
+                "or prior work experience - not external certification."
+            ),
+        )
+
+    def test_skill_gaps_dashboard_read_only_note_present(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            "This summary is read-only. To update your Skill Ledger, use the private Skill Ledger.",
+        )
+
+    def test_skill_gaps_dashboard_renders_empty_state_when_no_entries(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "No Skill Ledger entries recorded yet.")
+
+    def test_skill_gaps_dashboard_renders_empty_state_when_no_verified_entries(self):
+        self._create_skill_entry(
+            skill_name="Snowflake",
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "No VERIFIED Skill Ledger entries recorded yet.")
+
+    def test_skill_gaps_dashboard_does_not_imply_automatic_verification(self):
+        self._login()
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        for phrase in (
+            "automatic verification",
+            "automatic skill syncing",
+            "ai scoring",
+            "ml scoring",
+            "job-fit scoring",
+            "auto-apply",
+            "scraping",
+            "background task processing",
+            "guaranteed readiness",
+            "verified skill mastery",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_skill_gaps_dashboard_does_not_imply_employer_confirmation_or_certification(
+        self,
+    ):
+        self._login()
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        for phrase in (
+            "employer verification",
+            "employer confirmation",
+            "cert" + "ified",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_skill_gaps_dashboard_preserves_existing_skill_gap_heading(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Skill Intelligence Dashboard")
+        self.assertContains(response, "Application skill gaps")
+
+    def test_skill_gaps_dashboard_preserves_existing_advisory_only_wording(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            "Advisory only. This read-only view surfaces manually saved application skill-gap",
+        )
+        self.assertContains(response, "Based on manually saved application skill-gap records")
+
+    def test_skill_gaps_dashboard_get_does_not_mutate_skill_ledger_entries(self):
+        entry = self._create_skill_entry(
+            skill_name="Power BI",
+            evidence_level=SkillEntry.EvidenceLevel.STUDYING,
+        )
+        before = SkillEntry.objects.values(
+            "skill_name",
+            "category",
+            "evidence_level",
+            "sprint_reference",
+            "project_link",
+            "notes",
+            "visibility",
+            "last_updated",
+        ).get(pk=entry.pk)
+        self._login()
+
+        response = self.client.get(self.url)
+
+        after = SkillEntry.objects.values(
+            "skill_name",
+            "category",
+            "evidence_level",
+            "sprint_reference",
+            "project_link",
+            "notes",
+            "visibility",
+            "last_updated",
+        ).get(pk=entry.pk)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(after, before)
+
+    def test_skill_gaps_dashboard_preserves_existing_saved_gap_records(self):
+        self._create_gap(
+            application=self.app,
+            skill_name="Power BI",
+            priority=SkillGapPriority.HIGH,
+        )
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Power BI")
+        self.assertContains(response, "Acme")
+        self.assertContains(response, "Data Analyst")
+
+    def test_skill_gaps_dashboard_preserves_existing_cf69g_classes(self):
+        self._login()
+        response = self.client.get(self.url)
+        content = response.content.decode()
+
+        for class_name in (
+            "cf69g-page",
+            "cf69g-hero",
+            "cf69g-safety-note",
+            "cf69g-kpi-grid",
+            "cf69g-kpi-card",
+            "cf69g-section",
+            "cf69g-filter-bar",
+            "cf69g-table-wrap",
+            "cf69g-empty-state",
+        ):
+            with self.subTest(class_name=class_name):
+                self.assertIn(class_name, content)
+
+    def test_skill_gaps_dashboard_does_not_match_individual_gaps_to_ledger_entries(self):
+        self._create_gap(application=self.app, skill_name="Python", priority=SkillGapPriority.HIGH)
+        self._create_skill_entry(
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        self.assertContains(response, "Python")
+        self.assertNotIn("matched skill ledger", content)
+        self.assertNotIn("ledger match", content)
+        self.assertNotIn("gap-to-ledger", content)
 
     def test_sprint_69g_dashboard_preserves_manual_advisory_read_only_framing(self):
         self._login()
