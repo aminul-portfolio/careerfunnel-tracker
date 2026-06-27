@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -12,6 +13,14 @@ from apps.applications.choices import ApplicationStatus
 from apps.applications.models import JobApplication
 from apps.skill_ledger.models import SkillEntry
 
+from .ai_career_coach import (
+    EVIDENCE_PAYLOAD_KEYS,
+    REQUIRED_PROMPT_SAFETY_RULES,
+    build_controlled_prompt,
+    build_evidence_payload,
+    expected_response_schema,
+    validate_career_coach_response,
+)
 from .models import (
     ApplicationSkillGap,
     SkillGapIdentifiedBy,
@@ -2931,3 +2940,260 @@ class SkillGapSprint51ReviewerWalkthroughTests(TestCase):
                 all(ord(char) < 128 for char in content),
                 msg=f"Non-ASCII character found in {path}",
             )
+
+
+class SkillGapAiCareerCoachArchitectureTests(TestCase):
+    def _matched_rows(self):
+        return (
+            {
+                "term": "Python",
+                "ledger_status": SkillEntry.EvidenceLevel.VERIFIED,
+                "display_label": "VERIFIED",
+                "matched_skill_name": "Python",
+                "is_in_ledger": True,
+            },
+            {
+                "term": "Snowflake",
+                "ledger_status": SkillEntry.EvidenceLevel.LEARNING_TARGET,
+                "display_label": "LEARNING_TARGET",
+                "matched_skill_name": "Snowflake",
+                "is_in_ledger": True,
+            },
+            {
+                "term": "Statistics",
+                "ledger_status": SkillEntry.EvidenceLevel.STUDYING,
+                "display_label": "STUDYING",
+                "matched_skill_name": "Statistics",
+                "is_in_ledger": True,
+            },
+            {
+                "term": "GraphQL",
+                "ledger_status": SkillEntry.EvidenceLevel.NO_EVIDENCE,
+                "display_label": "NO_EVIDENCE",
+                "matched_skill_name": "GraphQL",
+                "is_in_ledger": True,
+            },
+            {
+                "term": "Airflow",
+                "ledger_status": "NOT_IN_LEDGER",
+                "display_label": "Not in Skill Ledger",
+                "matched_skill_name": "",
+                "is_in_ledger": False,
+            },
+        )
+
+    def _payload(self):
+        return build_evidence_payload(
+            matched_gap_rows=self._matched_rows(),
+            project_evidence=(
+                {
+                    "evidence_reference": "project:portfolio-dashboard",
+                    "title": "Portfolio dashboard",
+                    "evidence_type": "project",
+                    "summary": "Dashboard evidence for Python analytics work.",
+                    "company_name": "Hidden Employer",
+                    "private_notes": "Do not expose this note.",
+                    "email": "private@example.com",
+                },
+            ),
+        )
+
+    def _safe_response(self):
+        return {
+            "evidence_backed_strengths": [
+                {
+                    "skill": "Python",
+                    "summary": "Python can be discussed as portfolio-evidenced.",
+                    "evidence_reference": "VERIFIED:python",
+                },
+            ],
+            "skills_needing_evidence": [
+                {
+                    "skill": "GraphQL",
+                    "summary": "GraphQL needs more supplied evidence before claiming.",
+                    "evidence_reference": "NO_EVIDENCE:graphql",
+                },
+                {
+                    "skill": "Airflow",
+                    "summary": "Airflow is not in the supplied Skill Ledger rows.",
+                    "evidence_reference": "NOT_IN_LEDGER:airflow",
+                },
+            ],
+            "learning_targets": [
+                {
+                    "skill": "Snowflake",
+                    "summary": "Snowflake should stay framed as a learning target.",
+                    "evidence_reference": "LEARNING_TARGET:snowflake",
+                },
+            ],
+            "claim_safety_warnings": [
+                {
+                    "skill": "GraphQL",
+                    "summary": "Do not present GraphQL as supported by supplied proof.",
+                },
+            ],
+            "recommended_next_actions": [
+                {
+                    "skill": "Statistics",
+                    "summary": "Review study notes and add project evidence manually.",
+                    "evidence_reference": "STUDYING:statistics",
+                },
+            ],
+            "manual_review_required": True,
+        }
+
+    def test_ai_career_coach_builds_expected_evidence_payload_keys(self):
+        payload = self._payload()
+
+        self.assertEqual(tuple(payload.keys()), EVIDENCE_PAYLOAD_KEYS)
+
+    def test_ai_career_coach_payload_separates_evidence_levels(self):
+        payload = self._payload()
+
+        self.assertEqual(payload["verified_skills"][0]["skill_name"], "Python")
+        self.assertEqual(payload["learning_target_skills"][0]["skill_name"], "Snowflake")
+        self.assertEqual(payload["studying_skills"][0]["skill_name"], "Statistics")
+        self.assertEqual(payload["no_evidence_skills"][0]["skill_name"], "GraphQL")
+
+    def test_ai_career_coach_payload_tracks_not_in_ledger_terms(self):
+        payload = self._payload()
+
+        self.assertEqual(payload["not_in_ledger_terms"], ["Airflow"])
+        self.assertEqual(payload["no_evidence_skills"][0]["skill_name"], "GraphQL")
+
+    def test_ai_career_coach_prompt_includes_required_safety_rules(self):
+        prompt = build_controlled_prompt(self._payload())
+
+        for rule in REQUIRED_PROMPT_SAFETY_RULES:
+            with self.subTest(rule=rule):
+                self.assertIn(rule, prompt)
+        self.assertIn("Return JSON only.", prompt)
+        self.assertNotIn("Hidden Employer", prompt)
+        self.assertNotIn("private@example.com", prompt)
+        self.assertNotIn("Do not expose this note.", prompt)
+
+    def test_ai_career_coach_prompt_is_deterministic(self):
+        payload = self._payload()
+
+        self.assertEqual(build_controlled_prompt(payload), build_controlled_prompt(payload))
+
+    def test_ai_career_coach_expected_response_schema_requires_manual_review(self):
+        schema = expected_response_schema()
+
+        self.assertTrue(schema["manual_review_required"])
+        for key in (
+            "evidence_backed_strengths",
+            "skills_needing_evidence",
+            "learning_targets",
+            "claim_safety_warnings",
+            "recommended_next_actions",
+        ):
+            with self.subTest(key=key):
+                self.assertEqual(schema[key], [])
+
+    def test_ai_career_coach_validator_accepts_safe_evidence_referenced_response(self):
+        result = validate_career_coach_response(
+            json.dumps(self._safe_response()),
+            evidence_payload=self._payload(),
+        )
+
+        self.assertTrue(result.is_valid)
+        self.assertEqual(result.errors, ())
+        self.assertEqual(result.safe_response, self._safe_response())
+
+    def test_ai_career_coach_validator_rejects_non_json_response(self):
+        result = validate_career_coach_response(
+            "Here is career guidance.",
+            evidence_payload=self._payload(),
+        )
+
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.errors, ("non_json_response",))
+
+    def test_ai_career_coach_validator_rejects_empty_response(self):
+        result = validate_career_coach_response("", evidence_payload=self._payload())
+
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.errors, ("empty_response",))
+
+    def test_ai_career_coach_validator_rejects_unsafe_response_shape(self):
+        response = self._safe_response()
+        response.pop("manual_review_required")
+
+        result = validate_career_coach_response(response, evidence_payload=self._payload())
+
+        self.assertFalse(result.is_valid)
+        self.assertIn("unsafe_response_shape", result.errors)
+
+    def test_ai_career_coach_validator_rejects_manual_review_false(self):
+        response = self._safe_response()
+        response["manual_review_required"] = False
+
+        result = validate_career_coach_response(response, evidence_payload=self._payload())
+
+        self.assertFalse(result.is_valid)
+        self.assertIn("manual_review_required_false", result.errors)
+
+    def test_ai_career_coach_validator_rejects_unsupported_skill(self):
+        response = self._safe_response()
+        response["recommended_next_actions"][0]["skill"] = "Kubernetes"
+
+        result = validate_career_coach_response(response, evidence_payload=self._payload())
+
+        self.assertFalse(result.is_valid)
+        self.assertIn("unsupported_skill", result.errors)
+
+    def test_ai_career_coach_validator_rejects_learning_target_as_current_proficiency(
+        self,
+    ):
+        response = self._safe_response()
+        response["learning_targets"][0][
+            "summary"
+        ] = "Snowflake is current proficiency for the user."
+
+        result = validate_career_coach_response(response, evidence_payload=self._payload())
+
+        self.assertFalse(result.is_valid)
+        self.assertIn("learning_target_current_proficiency_overclaim", result.errors)
+
+    def test_ai_career_coach_validator_rejects_no_evidence_as_evidence_backed(self):
+        response = self._safe_response()
+        response["skills_needing_evidence"][0][
+            "summary"
+        ] = "GraphQL is evidence-backed and ready to claim."
+
+        result = validate_career_coach_response(response, evidence_payload=self._payload())
+
+        self.assertFalse(result.is_valid)
+        self.assertIn("no_evidence_backed_overclaim", result.errors)
+
+    def test_ai_career_coach_validator_rejects_missing_evidence_reference(self):
+        response = self._safe_response()
+        response["recommended_next_actions"][0]["evidence_reference"] = ""
+
+        result = validate_career_coach_response(response, evidence_payload=self._payload())
+
+        self.assertFalse(result.is_valid)
+        self.assertIn("missing_evidence_reference", result.errors)
+
+    def test_ai_career_coach_module_has_no_live_provider_or_external_call_terms(self):
+        module_source = (
+            REPO_ROOT / "apps" / "skill_gaps" / "ai_career_coach.py"
+        ).read_text(encoding="utf-8")
+        forbidden_terms = (
+            "openai",
+            "anthropic",
+            "gemini",
+            "requests",
+            "httpx",
+            "aiohttp",
+            "api_key",
+            "os.environ",
+            "streaming",
+            "timeout",
+            "retry",
+        )
+
+        for term in forbidden_terms:
+            with self.subTest(term=term):
+                self.assertNotIn(term, module_source.lower())
