@@ -68,12 +68,18 @@ STATUS_TO_PAYLOAD_KEY = {
 
 PRIVATE_EVIDENCE_FIELDS = {
     "company_name",
-    "employer_name",
+    "contact",
+    "cover_letter",
+    "cv_content",
     "email",
+    "employer_name",
+    "jd_requirement",
+    "job_description",
     "notes",
     "private_notes",
-    "cv_content",
-    "cover_letter",
+    "raw_provider_response",
+    "salary",
+    "suggested_action",
 }
 
 PROFICIENCY_OVERCLAIM_TERMS = (
@@ -109,6 +115,10 @@ class CareerCoachValidationResult:
     errors: tuple[str, ...]
     parsed_response: dict[str, Any] | None = None
     safe_response: dict[str, Any] | None = None
+
+
+class PrivateEvidenceFieldError(ValueError):
+    """Raised before private evidence can enter provider-bound payloads."""
 
 
 def _normalise_text(value: Any) -> str:
@@ -147,12 +157,36 @@ def _safe_gap_row(row: dict[str, Any]) -> dict[str, str | bool]:
     }
 
 
+def _private_evidence_fields_in_items(
+    items: list[dict[str, Any]] | tuple[dict[str, Any], ...],
+) -> tuple[str, ...]:
+    private_fields: set[str] = set()
+    for item in items:
+        private_fields.update(set(item) & PRIVATE_EVIDENCE_FIELDS)
+    return tuple(sorted(private_fields))
+
+
+def _reject_private_evidence_fields(
+    *item_groups: list[dict[str, Any]] | tuple[dict[str, Any], ...],
+) -> None:
+    private_fields: set[str] = set()
+    for items in item_groups:
+        private_fields.update(_private_evidence_fields_in_items(items))
+    if private_fields:
+        field_list = ", ".join(sorted(private_fields))
+        raise PrivateEvidenceFieldError(
+            f"Provider-bound evidence contains private fields: {field_list}",
+        )
+
+
 def build_evidence_payload(
     *,
     matched_gap_rows: list[dict[str, Any]] | tuple[dict[str, Any], ...],
     project_evidence: list[dict[str, Any]] | tuple[dict[str, Any], ...] = (),
     safety_rules: list[str] | tuple[str, ...] = (),
 ) -> dict[str, Any]:
+    _reject_private_evidence_fields(matched_gap_rows, project_evidence)
+
     payload: dict[str, Any] = {key: [] for key in EVIDENCE_PAYLOAD_KEYS}
     payload["safety_rules"] = list(
         dict.fromkeys((*DEFAULT_SAFETY_RULES, *safety_rules)),
@@ -184,6 +218,8 @@ def build_provider_evidence_payload(
     *,
     matched_gap_rows: list[dict[str, Any]] | tuple[dict[str, Any], ...],
 ) -> dict[str, Any]:
+    _reject_private_evidence_fields(matched_gap_rows)
+
     safe_rows = []
     for row in matched_gap_rows:
         safe_rows.append(

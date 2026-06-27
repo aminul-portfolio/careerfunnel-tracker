@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from django.db.models import Count
 from django.utils import timezone
 
+from apps.skill_gaps.services import normalise_skill_match_key
 from apps.skill_ledger.models import SkillEntry
 
 from .choices import (
@@ -273,9 +274,11 @@ def aggregate_tracked_jd_terms(
 
 
 def _find_skill_ledger_match(term: str, skill_entries: list[SkillEntry]) -> SkillEntry | None:
-    normalized_term = term.lower()
+    normalized_term = normalise_skill_match_key(term)
+    if not normalized_term:
+        return None
     for entry in skill_entries:
-        if normalized_term in _clean_jd_gap_value(entry.skill_name).lower():
+        if normalise_skill_match_key(_clean_jd_gap_value(entry.skill_name)) == normalized_term:
             return entry
     return None
 

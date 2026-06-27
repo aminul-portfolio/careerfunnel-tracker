@@ -14,6 +14,7 @@ from django.utils.formats import date_format
 from apps.job_intelligence.services import build_smart_review
 from apps.recruiter_emails.choices import EmailType, ReplyStatus
 from apps.recruiter_emails.models import RecruiterEmail
+from apps.skill_gaps.services import normalise_skill_match_key
 from apps.skill_ledger.models import SkillEntry
 
 from .choices import (
@@ -1400,7 +1401,7 @@ class JobApplicationViewTests(TestCase):
 
     def test_learning_target_skill_shows_learning_target_label(self):
         self._create_skill_entry(
-            skill_name="Power BI dashboards",
+            skill_name="PowerBI",
             evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
         )
         self._create_jd_ready_application(job_description=self._jd_gap_text("power bi"))
@@ -1603,8 +1604,77 @@ class JobApplicationViewTests(TestCase):
         self.assertEqual(python_term.term, "python")
         self.assertEqual(len(python_term.sample_applications), 3)
 
-    def test_skill_ledger_matching_uses_substring_matching(self):
-        self._create_skill_entry(skill_name="Practical dbt modelling")
+    def test_application_gap_matching_uses_alias_normalised_exact_match(self):
+        self._create_skill_entry(skill_name="SQL Server")
+        self._create_jd_ready_application(job_description=self._jd_gap_text("sql"))
+        self._create_jd_ready_application(
+            company_name="SQL Two",
+            job_description=self._jd_gap_text("sql"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+        sql_term = next(
+            term
+            for group in response.context["aggregation"].category_groups
+            for term in group.terms
+            if term.term == "sql"
+        )
+
+        self.assertFalse(sql_term.is_unmatched)
+        self.assertEqual(sql_term.skill_ledger_match.skill_name, "SQL Server")
+        self.assertContains(response, "VERIFIED")
+
+    def test_application_gap_matching_rejects_substring_false_positive(self):
+        self._create_skill_entry(skill_name="NoSQL")
+        self._create_jd_ready_application(job_description=self._jd_gap_text("sql"))
+        self._create_jd_ready_application(
+            company_name="SQL Two",
+            job_description=self._jd_gap_text("sql"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+        sql_term = next(
+            term
+            for group in response.context["aggregation"].category_groups
+            for term in group.terms
+            if term.term == "sql"
+        )
+
+        self.assertTrue(sql_term.is_unmatched)
+        self.assertIsNone(sql_term.skill_ledger_match)
+        self.assertEqual(response.context["aggregation"].unmatched_in_ledger_count, 1)
+        self.assertContains(response, "Not in your skill ledger")
+
+    def test_application_gap_matching_preserves_tracked_term_counts(self):
+        self._create_jd_ready_application(job_description=self._jd_gap_text("python", "sql"))
+        self._create_jd_ready_application(
+            company_name="Mixed Two",
+            job_description=self._jd_gap_text("python", "sql"),
+        )
+        self._create_jd_ready_application(
+            company_name="Power BI One",
+            job_description=self._jd_gap_text("power bi"),
+        )
+        self._create_jd_ready_application(
+            company_name="Power BI Two",
+            job_description=self._jd_gap_text("powerbi"),
+        )
+
+        response = self._get_jd_gap_aggregation()
+        terms_by_name = {
+            term.term: term
+            for group in response.context["aggregation"].category_groups
+            for term in group.terms
+        }
+
+        self.assertEqual(response.context["aggregation"].terms_found_count, 3)
+        self.assertEqual(terms_by_name["python"].frequency, 2)
+        self.assertEqual(terms_by_name["sql"].frequency, 2)
+        self.assertEqual(terms_by_name["power bi"].frequency, 2)
+
+    def test_application_gap_matching_uses_skill_gap_alias_normalisation_reference(self):
+        self.assertEqual(normalise_skill_match_key("dbt core"), "dbt")
+        self._create_skill_entry(skill_name="dbt")
         self._create_jd_ready_application(job_description=self._jd_gap_text("dbt"))
         self._create_jd_ready_application(
             company_name="dbt Two",
@@ -1612,9 +1682,15 @@ class JobApplicationViewTests(TestCase):
         )
 
         response = self._get_jd_gap_aggregation()
+        dbt_term = next(
+            term
+            for group in response.context["aggregation"].category_groups
+            for term in group.terms
+            if term.term == normalise_skill_match_key("dbt core")
+        )
 
-        self.assertContains(response, "VERIFIED")
-        self.assertContains(response, "Portfolio evidence confirmed")
+        self.assertFalse(dbt_term.is_unmatched)
+        self.assertEqual(dbt_term.skill_ledger_match.skill_name, "dbt")
 
     def test_no_terms_render_when_frequency_below_2(self):
         self._create_jd_ready_application(job_description=self._jd_gap_text("airflow"))
@@ -1678,11 +1754,11 @@ class JobApplicationViewTests(TestCase):
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
         )
         self._create_skill_entry(
-            skill_name="Power BI dashboards",
+            skill_name="PowerBI",
             evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
         )
         self._create_skill_entry(
-            skill_name="SQL practice",
+            skill_name="SQL Server",
             evidence_level=SkillEntry.EvidenceLevel.STUDYING,
         )
         for term in ("python", "power bi", "sql", "looker"):
