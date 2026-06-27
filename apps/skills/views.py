@@ -2,6 +2,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
+from apps.skill_ledger.selectors import get_skill_ledger_evidence_summary
+
 from .services.ai_capability_framework import (
     FRAMEWORK_CLAIM_SAFETY_NOTE,
     TOOL_EXAMPLES_DISCLAIMER,
@@ -102,6 +104,7 @@ def final_career_intelligence_workflow(request):
         request,
         "skills/final_career_intelligence_workflow.html",
         {
+            "skill_ledger_summary": get_skill_ledger_evidence_summary(),
             "workflow": build_final_career_intelligence_workflow(),
         },
     )

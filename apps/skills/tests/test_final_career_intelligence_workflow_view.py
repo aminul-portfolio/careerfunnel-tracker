@@ -1,7 +1,11 @@
+import inspect
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
+from apps.skill_ledger.models import SkillEntry
+from apps.skills import views as skill_views
 from apps.skills.services.final_career_intelligence_workflow import (
     build_final_career_intelligence_workflow,
 )
@@ -43,6 +47,19 @@ class FinalCareerIntelligenceWorkflowViewTests(TestCase):
     def _get(self):
         self._login()
         return self.client.get(self.url)
+
+    def _create_skill_entry(self, **overrides):
+        defaults = {
+            "skill_name": "Python",
+            "category": SkillEntry.Category.PROGRAMMING,
+            "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+            "sprint_reference": "Sprint 75",
+            "project_link": "https://example.com/project",
+            "notes": "Private evidence note.",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        defaults.update(overrides)
+        return SkillEntry.objects.create(**defaults)
 
     def test_page_requires_login(self):
         response = self.client.get(self.url)
@@ -212,3 +229,143 @@ class FinalCareerIntelligenceWorkflowViewTests(TestCase):
         content = response.content.decode().lower()
         for phrase in FORBIDDEN_PAGE_PHRASES:
             self.assertNotIn(phrase, content, msg=f"Page contains forbidden phrase: {phrase}")
+
+    def test_final_workflow_context_includes_skill_ledger_summary(self):
+        self._create_skill_entry()
+
+        response = self._get()
+
+        self.assertIn("skill_ledger_summary", response.context)
+        self.assertEqual(response.context["skill_ledger_summary"]["total_entries"], 1)
+
+    def test_final_workflow_renders_skill_ledger_evidence_summary_section(self):
+        response = self._get()
+
+        self.assertContains(response, "Skill Ledger evidence summary")
+        self.assertContains(response, "Private Skill Ledger evidence snapshot")
+
+    def test_final_workflow_renders_skill_ledger_verified_count(self):
+        self._create_skill_entry(evidence_level=SkillEntry.EvidenceLevel.VERIFIED)
+
+        response = self._get()
+
+        self.assertContains(response, "VERIFIED")
+        self.assertContains(response, "Python")
+        self.assertContains(response, "Sprint: Sprint 75")
+
+    def test_final_workflow_renders_skill_ledger_learning_target_count(self):
+        self._create_skill_entry(
+            skill_name="Snowflake",
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+
+        response = self._get()
+
+        self.assertContains(response, "LEARNING_TARGET")
+        self.assertContains(response, "No VERIFIED Skill Ledger entries recorded yet.")
+        self.assertEqual(
+            response.context["skill_ledger_summary"]["counts"][
+                SkillEntry.EvidenceLevel.LEARNING_TARGET
+            ],
+            1,
+        )
+
+    def test_final_workflow_renders_private_skill_ledger_link(self):
+        response = self._get()
+
+        self.assertContains(response, reverse("skill_ledger:list"))
+        self.assertContains(response, "Open private Skill Ledger")
+
+    def test_final_workflow_skill_ledger_advisory_wording_present(self):
+        response = self._get()
+
+        self.assertContains(
+            response,
+            (
+                "Skill Ledger evidence is manually maintained and supports portfolio planning. "
+                "It does not verify a skill by itself."
+            ),
+        )
+
+    def test_final_workflow_verified_boundary_wording_present(self):
+        response = self._get()
+
+        self.assertContains(
+            response,
+            (
+                "VERIFIED means portfolio evidence exists in a closed sprint, passing tests, "
+                "or prior work experience - not external certification."
+            ),
+        )
+
+    def test_final_workflow_read_only_note_present(self):
+        response = self._get()
+
+        self.assertContains(
+            response,
+            "This summary is read-only. To update your Skill Ledger, use the private Skill Ledger.",
+        )
+
+    def test_final_workflow_does_not_imply_automatic_verification(self):
+        response = self._get()
+        content = response.content.decode().lower()
+
+        for phrase in (
+            "automatic " + "verification",
+            "auto-sync",
+            "auto update",
+            "auto apply",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_final_workflow_does_not_imply_employer_confirmation(self):
+        response = self._get()
+        content = response.content.decode().lower()
+
+        for phrase in (
+            "employer " + "verified",
+            "employer " + "confirmation",
+            "cert" + "ified",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_final_workflow_does_not_import_or_display_jd_gap_data(self):
+        response = self._get()
+        content = response.content.decode().lower()
+        workflow_content = content.split("cf-final-career-intelligence-workflow", 1)[1]
+        view_source = inspect.getsource(skill_views)
+
+        self.assertNotIn("apps.applications", view_source)
+        self.assertNotIn("jd gap", workflow_content)
+        self.assertNotIn("job description gap", workflow_content)
+
+    def test_final_workflow_get_does_not_mutate_skill_ledger_entries(self):
+        entry = self._create_skill_entry(
+            skill_name="Power BI",
+            evidence_level=SkillEntry.EvidenceLevel.STUDYING,
+        )
+        before = SkillEntry.objects.values(
+            "skill_name",
+            "category",
+            "evidence_level",
+            "sprint_reference",
+            "project_link",
+            "notes",
+            "visibility",
+        ).get(pk=entry.pk)
+
+        response = self._get()
+
+        after = SkillEntry.objects.values(
+            "skill_name",
+            "category",
+            "evidence_level",
+            "sprint_reference",
+            "project_link",
+            "notes",
+            "visibility",
+        ).get(pk=entry.pk)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(after, before)

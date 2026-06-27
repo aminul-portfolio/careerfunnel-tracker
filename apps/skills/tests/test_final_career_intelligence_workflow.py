@@ -1,5 +1,7 @@
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 
+from apps.skill_ledger.models import SkillEntry
+from apps.skill_ledger.selectors import get_skill_ledger_evidence_summary
 from apps.skills.services.ai_readiness_scoring import (
     build_empty_ai_readiness_score,
     build_portfolio_baseline_ai_readiness_score,
@@ -211,3 +213,115 @@ class FinalCareerIntelligenceWorkflowTests(SimpleTestCase):
         combined = self._combined_text(self.workflow)
         self.assertNotIn("api call", combined)
         self.assertNotIn("api key", combined)
+
+
+class SkillLedgerEvidenceSummarySelectorTests(TestCase):
+    def _create_skill_entry(self, **overrides):
+        defaults = {
+            "skill_name": "Python",
+            "category": SkillEntry.Category.PROGRAMMING,
+            "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+            "sprint_reference": "Sprint 75",
+            "project_link": "https://example.com/project",
+            "notes": "Private evidence note.",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        defaults.update(overrides)
+        return SkillEntry.objects.create(**defaults)
+
+    def test_skill_ledger_evidence_summary_handles_empty_ledger(self):
+        summary = get_skill_ledger_evidence_summary()
+
+        self.assertEqual(summary["total_entries"], 0)
+        self.assertEqual(summary["verified_entries"], [])
+        self.assertEqual(
+            summary["counts"],
+            {
+                SkillEntry.EvidenceLevel.VERIFIED: 0,
+                SkillEntry.EvidenceLevel.LEARNING_TARGET: 0,
+                SkillEntry.EvidenceLevel.STUDYING: 0,
+                SkillEntry.EvidenceLevel.NO_EVIDENCE: 0,
+            },
+        )
+
+    def test_skill_ledger_evidence_summary_returns_verified_count(self):
+        self._create_skill_entry(evidence_level=SkillEntry.EvidenceLevel.VERIFIED)
+
+        summary = get_skill_ledger_evidence_summary()
+
+        self.assertEqual(summary["counts"][SkillEntry.EvidenceLevel.VERIFIED], 1)
+
+    def test_skill_ledger_evidence_summary_returns_learning_target_count(self):
+        self._create_skill_entry(evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET)
+
+        summary = get_skill_ledger_evidence_summary()
+
+        self.assertEqual(summary["counts"][SkillEntry.EvidenceLevel.LEARNING_TARGET], 1)
+
+    def test_skill_ledger_evidence_summary_returns_studying_count(self):
+        self._create_skill_entry(evidence_level=SkillEntry.EvidenceLevel.STUDYING)
+
+        summary = get_skill_ledger_evidence_summary()
+
+        self.assertEqual(summary["counts"][SkillEntry.EvidenceLevel.STUDYING], 1)
+
+    def test_skill_ledger_evidence_summary_returns_no_evidence_count(self):
+        self._create_skill_entry(evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE)
+
+        summary = get_skill_ledger_evidence_summary()
+
+        self.assertEqual(summary["counts"][SkillEntry.EvidenceLevel.NO_EVIDENCE], 1)
+
+    def test_skill_ledger_evidence_summary_returns_verified_entries_only(self):
+        verified = self._create_skill_entry(
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._create_skill_entry(
+            skill_name="Snowflake",
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+
+        summary = get_skill_ledger_evidence_summary()
+
+        self.assertEqual(summary["verified_entries"], [verified])
+
+    def test_skill_ledger_evidence_summary_verified_entries_capped_at_five(self):
+        for index in range(6):
+            self._create_skill_entry(
+                skill_name=f"Verified skill {index}",
+                evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+            )
+
+        summary = get_skill_ledger_evidence_summary()
+
+        self.assertEqual(len(summary["verified_entries"]), 5)
+        self.assertEqual(summary["counts"][SkillEntry.EvidenceLevel.VERIFIED], 6)
+
+    def test_skill_ledger_evidence_summary_does_not_mutate_entries(self):
+        entry = self._create_skill_entry(
+            skill_name="Power BI",
+            evidence_level=SkillEntry.EvidenceLevel.STUDYING,
+        )
+        before = SkillEntry.objects.values(
+            "skill_name",
+            "category",
+            "evidence_level",
+            "sprint_reference",
+            "project_link",
+            "notes",
+            "visibility",
+        ).get(pk=entry.pk)
+
+        get_skill_ledger_evidence_summary()
+
+        after = SkillEntry.objects.values(
+            "skill_name",
+            "category",
+            "evidence_level",
+            "sprint_reference",
+            "project_link",
+            "notes",
+            "visibility",
+        ).get(pk=entry.pk)
+        self.assertEqual(after, before)

@@ -196,9 +196,87 @@
         text-transform: uppercase;
     }
 
+    .cf69i-route7-skill-ledger-summary {
+        display: grid;
+        gap: 16px;
+    }
+
+    .cf69i-route7-skill-ledger-note {
+        background: rgba(240, 253, 250, 0.84);
+        border: 1px solid #99f6e4;
+        border-radius: 12px;
+        color: var(--cf69i-body);
+        line-height: 1.6;
+        margin: 0;
+        padding: 14px;
+    }
+
+    .cf69i-route7-skill-ledger-count-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .cf69i-route7-skill-ledger-count-card,
+    .cf69i-route7-skill-ledger-entry,
+    .cf69i-route7-skill-ledger-empty {
+        background: var(--cf69i-subtle);
+        border: 1px solid var(--cf69i-border);
+        border-radius: 12px;
+        padding: 14px;
+    }
+
+    .cf69i-route7-skill-ledger-count-label {
+        color: var(--cf69i-muted);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        margin: 0 0 6px;
+        text-transform: uppercase;
+    }
+
+    .cf69i-route7-skill-ledger-count-value {
+        color: var(--cf69i-primary);
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .cf69i-route7-skill-ledger-entry-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .cf69i-route7-skill-ledger-entry {
+        display: grid;
+        gap: 8px;
+    }
+
+    .cf69i-route7-skill-ledger-entry h3 {
+        color: var(--cf69i-ink);
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    .cf69i-route7-skill-ledger-entry-meta {
+        align-items: center;
+        color: var(--cf69i-muted);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        line-height: 1.5;
+    }
+
+    .cf69i-route7-skill-ledger-empty {
+        color: var(--cf69i-muted);
+        line-height: 1.6;
+        margin: 0;
+    }
+
     @media (max-width: 1100px) {
         .cf69i-route7-kpi-grid,
-        .cf69i-route7-trust-list {
+        .cf69i-route7-trust-list,
+        .cf69i-route7-skill-ledger-count-grid {
             grid-template-columns: 1fr;
         }
     }
@@ -286,6 +364,69 @@
         <div class="kpi-card cf69i-route7-kpi-card">
             <p>Workflow Stages</p>
             <h2>{{ workflow.workflow_stages|length }}</h2>
+        </div>
+    </section>
+
+    <section class="content-card cf-ai-readiness-section cf69i-route7-section">
+        <div class="card-header">
+            <p class="eyebrow">Skill Ledger evidence summary</p>
+            <h2>Private Skill Ledger evidence snapshot</h2>
+            <p class="section-note">
+                Skill Ledger evidence is manually maintained and supports portfolio planning. It does not verify a skill by itself.
+            </p>
+        </div>
+        <div class="cf69i-route7-skill-ledger-summary">
+            <p class="cf69i-route7-skill-ledger-note">
+                VERIFIED means portfolio evidence exists in a closed sprint, passing tests, or prior work experience - not external certification.
+            </p>
+            <div class="cf69i-route7-skill-ledger-count-grid" aria-label="Skill Ledger evidence counts">
+                <div class="cf69i-route7-skill-ledger-count-card">
+                    <p class="cf69i-route7-skill-ledger-count-label">VERIFIED</p>
+                    <p class="cf69i-route7-skill-ledger-count-value">{{ skill_ledger_summary.counts.VERIFIED }}</p>
+                </div>
+                <div class="cf69i-route7-skill-ledger-count-card">
+                    <p class="cf69i-route7-skill-ledger-count-label">LEARNING_TARGET</p>
+                    <p class="cf69i-route7-skill-ledger-count-value">{{ skill_ledger_summary.counts.LEARNING_TARGET }}</p>
+                </div>
+                <div class="cf69i-route7-skill-ledger-count-card">
+                    <p class="cf69i-route7-skill-ledger-count-label">STUDYING</p>
+                    <p class="cf69i-route7-skill-ledger-count-value">{{ skill_ledger_summary.counts.STUDYING }}</p>
+                </div>
+                <div class="cf69i-route7-skill-ledger-count-card">
+                    <p class="cf69i-route7-skill-ledger-count-label">NO_EVIDENCE</p>
+                    <p class="cf69i-route7-skill-ledger-count-value">{{ skill_ledger_summary.counts.NO_EVIDENCE }}</p>
+                </div>
+            </div>
+            {% if skill_ledger_summary.total_entries %}
+                {% if skill_ledger_summary.verified_entries %}
+                <div class="cf69i-route7-skill-ledger-entry-list" aria-label="Verified Skill Ledger entries">
+                    {% for entry in skill_ledger_summary.verified_entries %}
+                    <article class="cf69i-route7-skill-ledger-entry">
+                        <h3>{{ entry.skill_name }}</h3>
+                        <div class="cf69i-route7-skill-ledger-entry-meta">
+                            <span>{{ entry.get_category_display }}</span>
+                            {% if entry.sprint_reference %}
+                            <span>Sprint: {{ entry.sprint_reference }}</span>
+                            {% endif %}
+                            {% if entry.project_link %}
+                            <a href="{{ entry.project_link }}" target="_blank" rel="noopener" class="table-link">Project evidence</a>
+                            {% endif %}
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="cf69i-route7-skill-ledger-empty">No VERIFIED Skill Ledger entries recorded yet.</p>
+                {% endif %}
+            {% else %}
+            <p class="cf69i-route7-skill-ledger-empty">No Skill Ledger entries recorded yet.</p>
+            {% endif %}
+            <p class="cf69i-route7-skill-ledger-note">
+                This summary is read-only. To update your Skill Ledger, use the private Skill Ledger.
+            </p>
+            <div class="cf69i-route7-actions">
+                <a href="{% url 'skill_ledger:list' %}" class="cf-report-manual-link">Open private Skill Ledger</a>
+            </div>
         </div>
     </section>
 
