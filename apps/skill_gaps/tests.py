@@ -308,6 +308,311 @@ class JdRequirementEnrichmentContractTests(TestCase):
         self.assertEqual(SkillEntry.objects.count(), before_skill_count)
 
 
+class JdRequirementEnrichmentPageTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="enrichmentuser",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skill_gaps:jd_requirement_enrichment")
+
+    def _login(self):
+        self.client.login(username="enrichmentuser", password="StrongPass12345")
+
+    def _jd_text(self):
+        return (
+            "The analyst will build Python data pipelines and SQL reporting checks. "
+            "Power BI dashboard development is required for stakeholder reporting. "
+            "Experience with Snowflake data models is useful for analytics delivery."
+        )
+
+    def _create_application(self, **overrides):
+        defaults = {
+            "user": self.user,
+            "company_name": "Sensitive Employer",
+            "job_title": "Private Analyst Role",
+            "date_applied": date(2026, 6, 28),
+            "job_url": "https://example.com/private-job",
+            "contact_email": "contact@example.com",
+            "salary_range": "GBP 55,000",
+            "job_description": self._jd_text(),
+            "notes": "Private application note.",
+        }
+        defaults.update(overrides)
+        return JobApplication.objects.create(**defaults)
+
+    def _candidate(self, **overrides):
+        candidate = {
+            "term": "Python",
+            "excerpt": "The analyst will build Python data pipelines and SQL reporting checks",
+            "confidence": "high",
+            "provenance": "rule_based",
+            "is_excerpt_verified": True,
+            "rejection_reason": None,
+        }
+        candidate.update(overrides)
+        return candidate
+
+    def test_enrichment_page_loads_for_authenticated_user(self):
+        self._create_application()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "JD Requirement Enrichment")
+        self.assertContains(response, "Provider mode: mocked")
+
+    def test_enrichment_page_redirects_anonymous_user(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response["Location"])
+
+    def test_enrichment_page_is_get_only(self):
+        self._login()
+
+        response = self.client.post(self.url, {"term": "Python"})
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_enrichment_page_shows_advisory_wording(self):
+        self._create_application()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        for wording in REQUIRED_ENRICHMENT_SAFETY_WORDING:
+            with self.subTest(wording=wording):
+                self.assertContains(response, wording)
+
+    def test_enrichment_page_shows_deterministic_terms_unchanged(self):
+        self._create_application()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Deterministic tracked terms remain unchanged.")
+
+    def test_enrichment_page_shows_only_verified_excerpt_candidates(self):
+        self._create_application()
+        self._login()
+        provider_response = {
+            "candidates": [
+                self._candidate(),
+                self._candidate(
+                    term="Airflow",
+                    excerpt="Airflow orchestration experience is strongly preferred",
+                    confidence="medium",
+                    provenance="llm_candidate",
+                    is_excerpt_verified=True,
+                ),
+            ],
+        }
+
+        with patch(
+            "apps.skill_gaps.views.ai_providers.get_jd_enrichment_provider_response",
+            return_value=("mocked", provider_response),
+        ):
+            response = self.client.get(self.url)
+
+        self.assertContains(response, "Python")
+        self.assertContains(
+            response,
+            "The analyst will build Python data pipelines and SQL reporting checks",
+        )
+        self.assertNotContains(response, "Airflow")
+        self.assertNotContains(response, "Airflow orchestration experience")
+
+    def test_enrichment_page_does_not_imply_proficiency(self):
+        self._create_application()
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        for forbidden in (
+            "proficient",
+            "expert",
+            "mastery",
+            "employer-ready",
+            "employer ready",
+            "meets employer requirement",
+            "ready to claim",
+            "offer prediction",
+            "interview prediction",
+            "hiring outcome",
+            "will get hired",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, content)
+        self.assertIn(
+            "does not mean the skill is verified, claim-ready, or required by every employer",
+            content,
+        )
+
+    def test_enrichment_page_does_not_save_output(self):
+        application = self._create_application()
+        skill_entry = SkillEntry.objects.create(
+            skill_name="Python",
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+            sprint_reference="Sprint 84",
+            project_link="https://example.com/evidence",
+            notes="Private Skill Ledger note.",
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+        before_application_values = JobApplication.objects.values().get(pk=application.pk)
+        before_skill_values = SkillEntry.objects.values().get(pk=skill_entry.pk)
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(JobApplication.objects.count(), 1)
+        self.assertEqual(SkillEntry.objects.count(), 1)
+        self.assertEqual(
+            JobApplication.objects.values().get(pk=application.pk),
+            before_application_values,
+        )
+        self.assertEqual(
+            SkillEntry.objects.values().get(pk=skill_entry.pk),
+            before_skill_values,
+        )
+        self.assertNotIn("jd_enrichment_output", self.client.session.keys())
+        self.assertNotIn("raw_provider_response", self.client.session.keys())
+
+    def test_enrichment_page_fallback_when_no_jd_ready_records(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "No saved job descriptions are available")
+
+    def test_enrichment_page_shows_excerpt_for_each_candidate(self):
+        self._create_application()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            "The analyst will build Python data pipelines and SQL reporting checks",
+        )
+        self.assertContains(
+            response,
+            "Power BI dashboard development is required for stakeholder reporting",
+        )
+        self.assertContains(response, "Confidence:")
+        self.assertContains(response, "Provenance:")
+
+    def test_jd_enrichment_provider_uses_separate_contract(self):
+        payload = build_enrichment_prompt_payload(
+            jd_text=self._jd_text(),
+            tracked_terms=("Python",),
+        )
+        provider_body = json.dumps(
+            {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps({"candidates": [self._candidate()]}),
+                    },
+                ],
+            },
+        ).encode("utf-8")
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                return False
+
+            def read(self):
+                return provider_body
+
+        with patch.dict(
+            os.environ,
+            {"COACH_PROVIDER": "live", "COACH_API_KEY": "test-key"},
+            clear=True,
+        ):
+            with patch(
+                "apps.skill_gaps.ai_career_coach.build_controlled_prompt",
+                side_effect=AssertionError("career coach prompt must not be used"),
+            ):
+                with patch("urllib.request.urlopen", return_value=FakeResponse()) as urlopen:
+                    provider_name, response = ai_providers.get_jd_enrichment_provider_response(
+                        payload,
+                    )
+
+        request_body = json.loads(urlopen.call_args.args[0].data.decode("utf-8"))
+        prompt = request_body["messages"][0]["content"]
+        self.assertEqual(provider_name, "live")
+        self.assertEqual(response["candidates"][0]["term"], "Python")
+        self.assertIn("JD Requirement Enrichment contract.", prompt)
+        self.assertNotIn("AI Career Coach architecture contract.", prompt)
+
+    def test_jd_enrichment_live_provider_is_environment_gated(self):
+        payload = build_enrichment_prompt_payload(
+            jd_text=self._jd_text(),
+            tracked_terms=("Python",),
+        )
+
+        with patch.dict(os.environ, {}, clear=True):
+            with patch("urllib.request.urlopen") as urlopen:
+                provider_name, response = ai_providers.get_jd_enrichment_provider_response(
+                    payload,
+                )
+
+        self.assertEqual(provider_name, "mocked")
+        self.assertIn("candidates", response)
+        self.assertFalse(urlopen.called)
+
+    def test_jd_enrichment_provider_payload_excludes_application_metadata(self):
+        self._create_application(
+            job_description=(
+                "Contact person@example.com or visit https://example.com/private-job. "
+                "Call +44 7700 900123. Python reporting and SQL checks are required."
+            ),
+        )
+        captured_payloads = []
+
+        def fake_provider(payload):
+            captured_payloads.append(payload)
+            return "mocked", {"candidates": []}
+
+        self._login()
+        with patch(
+            "apps.skill_gaps.views.ai_providers.get_jd_enrichment_provider_response",
+            side_effect=fake_provider,
+        ):
+            response = self.client.get(self.url)
+
+        payload_text = json.dumps(captured_payloads)
+        content = response.content.decode()
+        for forbidden in (
+            "Sensitive Employer",
+            "Private Analyst Role",
+            "contact@example.com",
+            "person@example.com",
+            "https://example.com/private-job",
+            "+44 7700 900123",
+            "GBP 55,000",
+            "Private application note.",
+            "raw_provider_response",
+            "company_name",
+            "job_title",
+            "contact_email",
+            "job_url",
+            "salary_range",
+            "date_applied",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, payload_text)
+                self.assertNotIn(forbidden, content)
+
+
 class ApplicationSkillGapModelTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
