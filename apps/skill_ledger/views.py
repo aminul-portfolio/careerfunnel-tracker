@@ -12,6 +12,12 @@ from .advisory import (
     build_skill_advisory_rows,
     collect_jd_candidate_terms,
 )
+from .ai_explanation import (
+    REQUIRED_EXPLANATION_SAFETY_WARNING,
+    SPRINT_87_PROVIDER_MODE_MOCKED,
+    build_skill_advisory_explanations,
+    explanation_to_dict,
+)
 from .models import SkillEntry
 
 
@@ -152,6 +158,27 @@ def skill_ledger_advisory(request):
             "jd_signal_safety_wording": REQUIRED_JD_SIGNAL_SAFETY_WORDING,
             "classifications": ADVISORY_CLASSIFICATIONS,
             "has_jd_candidate_terms": bool(jd_candidate_terms),
+        },
+    )
+
+
+@login_required
+@require_GET
+def skill_ledger_advisory_explanations(request):
+    entries = SkillEntry.objects.all().order_by("evidence_level", "category", "skill_name")
+    jd_candidate_terms = collect_jd_candidate_terms(request.user)
+    advisory_rows = build_skill_advisory_rows(entries, jd_candidate_terms=jd_candidate_terms)
+    explanations = build_skill_advisory_explanations(advisory_rows)
+    explanation_rows = tuple(explanation_to_dict(explanation) for explanation in explanations)
+    return render(
+        request,
+        "skill_ledger/skill_advisory_explanations.html",
+        {
+            "explanation_rows": explanation_rows,
+            "required_explanation_safety_warning": REQUIRED_EXPLANATION_SAFETY_WARNING,
+            "provider_mode": SPRINT_87_PROVIDER_MODE_MOCKED,
+            "jd_signal_safety_wording": REQUIRED_JD_SIGNAL_SAFETY_WORDING,
+            "skill_advisory_safety_wording": REQUIRED_SKILL_ADVISORY_SAFETY_WORDING,
         },
     )
 
