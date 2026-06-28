@@ -2,10 +2,16 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
+from apps.applications.models import JobApplication
 from apps.skill_ledger.models import SkillEntry
 from apps.skill_ledger.selectors import get_skill_ledger_evidence_summary
 
 from . import ai_career_coach, ai_providers
+from .jd_requirement_enrichment import (
+    REQUIRED_ENRICHMENT_SAFETY_WORDING,
+    build_enrichment_prompt_payload,
+    validate_enrichment_candidates,
+)
 from .services import build_skill_gap_dashboard_context, build_skill_gap_ledger_match_rows
 
 FILTER_NEEDS_EVIDENCE = [
@@ -178,4 +184,50 @@ def _career_coach_provider_notice(provider_name):
     return (
         "Output is generated from a controlled example workflow. No live AI model is "
         "used in this version."
+    )
+
+
+@login_required
+@require_http_methods(["GET"])
+def jd_requirement_enrichment_view(request):
+    applications = tuple(
+        JobApplication.objects.filter(user=request.user)
+        .exclude(job_description="")
+        .only("job_description", "date_applied", "pk")
+        .order_by("-date_applied", "-pk")[:3],
+    )
+    provider_name = ai_providers.select_provider_name()
+    provider_error = False
+    candidate_groups = []
+
+    for application in applications:
+        payload = build_enrichment_prompt_payload(
+            jd_text=application.job_description,
+            tracked_terms=(),
+        )
+        try:
+            provider_name, provider_response = ai_providers.get_jd_enrichment_provider_response(
+                payload,
+            )
+            provider_candidates = provider_response.get("candidates", ())
+            candidates = validate_enrichment_candidates(
+                tuple(provider_candidates),
+                jd_text=application.job_description,
+            )
+        except ai_providers.CoachProviderError:
+            provider_error = True
+            candidates = ()
+        if candidates:
+            candidate_groups.append({"candidates": candidates})
+
+    return render(
+        request,
+        "skill_gaps/jd_requirement_enrichment.html",
+        {
+            "candidate_groups": tuple(candidate_groups),
+            "has_jd_records": bool(applications),
+            "provider_name": provider_name,
+            "provider_error": provider_error,
+            "safety_wording": REQUIRED_ENRICHMENT_SAFETY_WORDING,
+        },
     )

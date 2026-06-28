@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}JD Requirement Enrichment | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}JD Requirement Enrichment{% endblock %}
+
+{% block content %}
+<div class="cf84-page">
+    <section class="cf84-panel" aria-label="JD requirement enrichment advisory">
+        <h1>JD Requirement Enrichment</h1>
+        <p>Provider mode: {{ provider_name|default:"mocked" }}</p>
+        <p>Deterministic tracked terms remain unchanged.</p>
+        {% if provider_error %}
+        <p class="cf84-empty">Provider output was unavailable, so no generated candidate requirements are shown.</p>
+        {% endif %}
+    </section>
+
+    <section class="cf84-panel" aria-label="Safety wording">
+        <h2>Safety boundaries</h2>
+        <ul>
+            {% for wording in safety_wording %}
+            <li>{{ wording }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="cf84-panel" aria-label="Read-only boundary">
+        <h2>Private planning overlay</h2>
+        <p>No output is saved. No application record is changed. No Skill Ledger record is changed.</p>
+        <p>Candidate requirements are shown only when their exact excerpt was verified against saved JD text.</p>
+    </section>
+
+    {% if not has_jd_records %}
+    <section class="cf84-panel cf84-empty" aria-label="No saved JD text">
+        <h2>No saved JD text available</h2>
+        <p>No saved job descriptions are available for enrichment review yet.</p>
+    </section>
+    {% elif candidate_groups %}
+    <section class="cf84-panel" aria-label="Verified candidate requirements">
+        <h2>Candidate requirements with verified excerpts</h2>
+        {% for group in candidate_groups %}
+            {% for candidate in group.candidates %}
+            <article class="cf84-candidate">
+                <h3>{{ candidate.term }}</h3>
+                <p>Confidence: {{ candidate.confidence }}</p>
+                <p>Provenance: {{ candidate.provenance }}</p>
+                <blockquote>{{ candidate.excerpt }}</blockquote>
+            </article>
+            {% endfor %}
+        {% endfor %}
+    </section>
+    {% else %}
+    <section class="cf84-panel cf84-empty" aria-label="No verified candidates">
+        <h2>No verified candidate requirements</h2>
+        <p>No candidate requirements passed exact excerpt verification for the selected saved job descriptions.</p>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
