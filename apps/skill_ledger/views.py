@@ -6,9 +6,11 @@ from django.views.decorators.http import require_GET
 
 from .advisory import (
     ADVISORY_CLASSIFICATIONS,
+    REQUIRED_JD_SIGNAL_SAFETY_WORDING,
     REQUIRED_SKILL_ADVISORY_SAFETY_WORDING,
     advisory_row_to_template_dict,
     build_skill_advisory_rows,
+    collect_jd_candidate_terms,
 )
 from .models import SkillEntry
 
@@ -138,7 +140,8 @@ def skill_ledger_public(request):
 @require_GET
 def skill_ledger_advisory(request):
     entries = SkillEntry.objects.all().order_by("evidence_level", "category", "skill_name")
-    advisory_rows = build_skill_advisory_rows(entries, jd_candidate_terms=())
+    jd_candidate_terms = collect_jd_candidate_terms(request.user)
+    advisory_rows = build_skill_advisory_rows(entries, jd_candidate_terms=jd_candidate_terms)
     template_rows = tuple(advisory_row_to_template_dict(row) for row in advisory_rows)
     return render(
         request,
@@ -146,7 +149,9 @@ def skill_ledger_advisory(request):
         {
             "advisory_rows": template_rows,
             "safety_wording": REQUIRED_SKILL_ADVISORY_SAFETY_WORDING,
+            "jd_signal_safety_wording": REQUIRED_JD_SIGNAL_SAFETY_WORDING,
             "classifications": ADVISORY_CLASSIFICATIONS,
+            "has_jd_candidate_terms": bool(jd_candidate_terms),
         },
     )
 

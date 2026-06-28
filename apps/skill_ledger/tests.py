@@ -12,11 +12,13 @@ from django.utils import timezone
 from .advisory import (
     ADVISORY_CLASSIFICATIONS,
     ADVISORY_ROW_FIELDS,
+    REQUIRED_JD_SIGNAL_SAFETY_WORDING,
     REQUIRED_SKILL_ADVISORY_SAFETY_WORDING,
     SkillAdvisoryValidationError,
     advisory_row_to_template_dict,
     build_skill_advisory_row,
     build_skill_advisory_rows,
+    collect_jd_candidate_terms,
     validate_advisory_classification,
     validate_skill_advisory_row_schema,
 )
@@ -447,10 +449,269 @@ class SkillLedgerAdvisoryPageTests(TestCase):
         self.assertContains(response, "JD candidate match: No - advisory context only.")
         self.assertContains(
             response,
-            "No JD enrichment candidate context is connected in this advisory view.",
+            "No JD signal candidate terms met the deterministic frequency threshold.",
         )
         self.assertContains(response, "JD requirement signals do not prove proficiency.")
         self.assertNotContains(response, "This proves proficiency")
+
+
+class SkillLedgerJdSignalContextTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="jdcontext", password="StrongPass12345")
+        self.url = reverse("skill_ledger:advisory")
+        self.JobApplication = apps.get_model("applications", "JobApplication")
+
+    def _login(self):
+        self.client.login(username="jdcontext", password="StrongPass12345")
+
+    def _jd_text(self, *terms, marker=""):
+        intro = " ".join((*terms, marker)).strip()
+        filler = " deterministic planning context" * 140
+        return f"{intro} {filler}".strip()
+
+    def _create_application(self, **overrides):
+        defaults = {
+            "user": self.user,
+            "company_name": "Private Employer",
+            "job_title": "Private Analyst",
+            "date_applied": timezone.localdate(),
+            "job_description": self._jd_text("python"),
+            "job_url": "",
+            "salary_range": "Private salary",
+            "contact_name": "Private Contact",
+            "contact_email": "private@example.com",
+            "notes": "Private application note.",
+        }
+        defaults.update(overrides)
+        return self.JobApplication.objects.create(**defaults)
+
+    def _create_skill_entry(self, **overrides):
+        defaults = {
+            "skill_name": "python",
+            "category": SkillEntry.Category.PROGRAMMING,
+            "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+            "sprint_reference": "Sprint 84",
+            "project_link": "https://example.com/python",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        defaults.update(overrides)
+        return SkillEntry.objects.create(**defaults)
+
+    def _create_jd_ready_pair(self, term="python", marker=""):
+        self._create_application(job_description=self._jd_text(term, marker=marker))
+        self._create_application(
+            company_name="Private Employer Two",
+            job_description=self._jd_text(term, marker=marker),
+        )
+
+    def test_collect_jd_candidate_terms_returns_tuple_of_strings(self):
+        self._create_jd_ready_pair("python")
+
+        terms = collect_jd_candidate_terms(self.user)
+
+        self.assertIsInstance(terms, tuple)
+        self.assertIn("python", terms)
+        self.assertTrue(all(isinstance(term, str) for term in terms))
+
+    def test_collect_jd_candidate_terms_returns_empty_when_no_jd_ready_records(self):
+        self.assertEqual(collect_jd_candidate_terms(self.user), ())
+
+    def test_collect_jd_candidate_terms_applies_min_frequency_threshold(self):
+        self._create_jd_ready_pair("python")
+
+        self.assertEqual(collect_jd_candidate_terms(self.user, min_frequency=3), ())
+        self.assertEqual(collect_jd_candidate_terms(self.user, min_frequency=2), ("python",))
+
+    def test_collect_jd_candidate_terms_deduplicates_terms(self):
+        self._create_application(job_description=self._jd_text("power bi"))
+        self._create_application(
+            company_name="Private Employer Two",
+            job_description=self._jd_text("powerbi"),
+        )
+
+        terms = collect_jd_candidate_terms(self.user)
+
+        self.assertEqual(terms.count("power bi"), 1)
+
+    def test_collect_jd_candidate_terms_does_not_expose_raw_jd_text(self):
+        self._create_jd_ready_pair("python", marker="UNIQUE_PRIVATE_JD_SENTENCE")
+
+        terms = collect_jd_candidate_terms(self.user)
+        rendered_terms = " ".join(terms)
+
+        self.assertIn("python", terms)
+        self.assertNotIn("UNIQUE_PRIVATE_JD_SENTENCE", rendered_terms)
+        self.assertNotIn("deterministic planning context", rendered_terms)
+
+    def test_collect_jd_candidate_terms_does_not_write_to_database(self):
+        self._create_jd_ready_pair("python")
+        before_skill_count = SkillEntry.objects.count()
+        before_application_count = self.JobApplication.objects.count()
+        before_application_values = tuple(self.JobApplication.objects.values())
+
+        terms = collect_jd_candidate_terms(self.user)
+
+        self.assertEqual(terms, ("python",))
+        self.assertEqual(SkillEntry.objects.count(), before_skill_count)
+        self.assertEqual(self.JobApplication.objects.count(), before_application_count)
+        self.assertEqual(tuple(self.JobApplication.objects.values()), before_application_values)
+
+    def test_advisory_rows_show_jd_match_true_when_term_in_candidate_terms(self):
+        row = build_skill_advisory_rows(
+            ({"skill_name": "Python", "evidence_level": "VERIFIED"},),
+            jd_candidate_terms=("python",),
+        )[0]
+
+        self.assertTrue(row.jd_candidate_match)
+
+    def test_advisory_rows_show_jd_match_false_when_term_absent(self):
+        row = build_skill_advisory_rows(
+            ({"skill_name": "Python", "evidence_level": "VERIFIED"},),
+            jd_candidate_terms=("sql",),
+        )[0]
+
+        self.assertFalse(row.jd_candidate_match)
+
+    def test_advisory_rows_handle_empty_jd_candidate_terms_gracefully(self):
+        rows = build_skill_advisory_rows(
+            ({"skill_name": "Python", "evidence_level": "VERIFIED"},),
+            jd_candidate_terms=(),
+        )
+
+        self.assertEqual(len(rows), 1)
+        self.assertFalse(rows[0].jd_candidate_match)
+
+    def test_advisory_page_shows_jd_signal_context(self):
+        self._create_skill_entry()
+        self._create_jd_ready_pair("python")
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "JD signal context is connected")
+        self.assertContains(response, "JD candidate match: Yes - advisory context only.")
+
+    def test_advisory_page_jd_signal_wording_present(self):
+        self._create_skill_entry()
+        self._create_jd_ready_pair("python")
+        self._login()
+
+        response = self.client.get(self.url)
+
+        for wording in REQUIRED_JD_SIGNAL_SAFETY_WORDING:
+            with self.subTest(wording=wording):
+                self.assertContains(response, wording)
+        for wording in REQUIRED_SKILL_ADVISORY_SAFETY_WORDING:
+            with self.subTest(wording=wording):
+                self.assertContains(response, wording)
+
+    def test_advisory_page_does_not_render_raw_jd_text(self):
+        self._create_skill_entry()
+        self._create_jd_ready_pair("python", marker="UNIQUE_PRIVATE_JD_SENTENCE")
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode()
+
+        self.assertContains(response, "JD candidate match: Yes - advisory context only.")
+        self.assertNotIn("UNIQUE_PRIVATE_JD_SENTENCE", content)
+        self.assertNotIn("deterministic planning context", content)
+
+    def test_advisory_page_does_not_expose_application_data(self):
+        self._create_skill_entry()
+        self._create_jd_ready_pair("python")
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode()
+
+        for forbidden in (
+            "Private Employer",
+            "Private Analyst",
+            "Private salary",
+            "Private Contact",
+            "private@example.com",
+            "Private application note.",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, content)
+
+    def test_advisory_page_does_not_imply_employer_confirmation(self):
+        self._create_skill_entry()
+        self._create_jd_ready_pair("python")
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode()
+
+        for forbidden in (
+            "Employer confirmed this skill",
+            "You are qualified for roles requiring",
+            "Automatically matched to employer demand",
+            "AI confirmed",
+            "Employer ready",
+            "Verified by employer",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, content)
+
+    def test_advisory_page_does_not_imply_proficiency_from_jd_signal(self):
+        self._create_skill_entry()
+        self._create_jd_ready_pair("python")
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode()
+
+        for forbidden in (
+            "This JD signal verifies your proficiency",
+            "You meet the requirements for this skill",
+            "This proves proficiency",
+            "AI verified",
+            "Automatically verified",
+            "Skill confirmed",
+            "Ready to apply",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, content)
+        self.assertContains(response, "A JD signal does not prove proficiency.")
+
+    def test_advisory_page_still_loads_when_no_jd_ready_records(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "No JD signal candidate terms met the deterministic frequency threshold.",
+        )
+
+    def test_advisory_page_still_loads_for_authenticated_user(self):
+        self._create_skill_entry()
+        self._create_jd_ready_pair("python")
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Skill Ledger Advisory")
+
+    def test_sprint_85_advisory_classifications_unchanged(self):
+        self.assertEqual(
+            ADVISORY_CLASSIFICATIONS,
+            {
+                "VERIFIED_WITH_EVIDENCE": "Verified - sprint evidence present",
+                "VERIFIED_NO_REFERENCE": "Verified - add sprint reference",
+                "LEARNING_TARGET": "Learning target - do not claim as verified",
+                "STUDYING": "Studying - personal study only",
+                "NO_EVIDENCE": "Gap identified - do not claim",
+                "PUBLIC_RISK": "Public visibility risk - review before publishing",
+                "JD_SIGNAL_UNMATCHED": "Appears in JDs - not yet in ledger",
+                "CLAIM_SAFE": "Safe to discuss - evidence confirmed",
+            },
+        )
 
 
 class SkillEntryModelTests(TestCase):
