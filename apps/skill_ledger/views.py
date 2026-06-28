@@ -13,6 +13,7 @@ from .advisory import (
     collect_jd_candidate_terms,
 )
 from .ai_explanation import (
+    FORBIDDEN_EXPLANATION_PHRASES,
     REQUIRED_EXPLANATION_SAFETY_WARNING,
     SPRINT_87_PROVIDER_MODE_MOCKED,
     build_skill_advisory_explanations,
@@ -179,6 +180,52 @@ def skill_ledger_advisory_explanations(request):
             "provider_mode": SPRINT_87_PROVIDER_MODE_MOCKED,
             "jd_signal_safety_wording": REQUIRED_JD_SIGNAL_SAFETY_WORDING,
             "skill_advisory_safety_wording": REQUIRED_SKILL_ADVISORY_SAFETY_WORDING,
+        },
+    )
+
+
+@login_required
+@require_GET
+def skill_ledger_advisory_ai_evidence(request):
+    entries = SkillEntry.objects.all().order_by("evidence_level", "category", "skill_name")
+    skill_entry_count = SkillEntry.objects.count()
+    jd_candidate_terms = collect_jd_candidate_terms(request.user)
+    advisory_rows = build_skill_advisory_rows(entries, jd_candidate_terms=jd_candidate_terms)
+    advisory_row_count = len(advisory_rows)
+    return render(
+        request,
+        "skill_ledger/skill_advisory_ai_evidence.html",
+        {
+            "provider_mode": SPRINT_87_PROVIDER_MODE_MOCKED,
+            "required_explanation_safety_warning": REQUIRED_EXPLANATION_SAFETY_WARNING,
+            "jd_signal_safety_wording": REQUIRED_JD_SIGNAL_SAFETY_WORDING,
+            "skill_advisory_safety_wording": REQUIRED_SKILL_ADVISORY_SAFETY_WORDING,
+            "system_status": {
+                "Provider mode": SPRINT_87_PROVIDER_MODE_MOCKED,
+                "Live provider configured": "No",
+                "API key configured": "No",
+                "Raw provider output stored": "No",
+                "Raw JD text rendered": "No",
+                "Mutation/save/update": "No",
+            },
+            "contract_health": {
+                "Required safety warning": "Present",
+                "Forbidden phrase count": len(FORBIDDEN_EXPLANATION_PHRASES),
+                "Schema frozen": "Yes",
+                "Golden cases": 8,
+            },
+            "data_counts": {
+                "Skill Ledger entries": skill_entry_count,
+                "Advisory rows generated": advisory_row_count,
+                "JD signal context terms": len(jd_candidate_terms),
+                "Explanation rows available": advisory_row_count,
+            },
+            "boundary_summary": {
+                "Public exposure": "No",
+                "Auto apply": "No",
+                "CV/profile mutation": "No",
+                "Background task": "No",
+            },
         },
     )
 

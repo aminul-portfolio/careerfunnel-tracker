@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}AI Safety Controls | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}AI explanation layer - safety controls and evidence{% endblock %}
+
+{% block content %}
+<div class="cf89-page">
+    <section class="cf89-panel" aria-label="AI explanation safety overview">
+        <h1>AI explanation layer - safety controls and evidence</h1>
+        <p>Provider mode: {{ provider_mode }}</p>
+        <p>No live provider is configured for this sprint.</p>
+        <p>No raw provider output is stored or displayed.</p>
+        <p>No raw JD text is displayed on this dashboard.</p>
+        <p>This dashboard is advisory evidence only.</p>
+        <p>This dashboard does not save, update, publish, submit, or mutate records.</p>
+        <p>{{ required_explanation_safety_warning }}</p>
+        <p>A JD signal does not prove proficiency.</p>
+        <p>Review evidence manually before using any skill in your CV, LinkedIn, or public profile.</p>
+        <p>
+            This dashboard derives all status information from code constants and queryset counts.
+            No AI output, provider response, or prompt data is stored or displayed here.
+        </p>
+        <p>
+            The forbidden phrase list and required safety warning are enforced in code. They are not
+            manually curated at display time.
+        </p>
+    </section>
+
+    <section class="cf89-panel" aria-label="System status">
+        <h2>System status</h2>
+        <dl class="cf89-status-list">
+            {% for label, value in system_status.items %}
+            <div class="cf89-status-row">
+                <dt>{{ label }}</dt>
+                <dd>{{ value }}</dd>
+            </div>
+            {% endfor %}
+        </dl>
+    </section>
+
+    <section class="cf89-panel" aria-label="Contract health">
+        <h2>Contract health</h2>
+        <dl class="cf89-status-list">
+            {% for label, value in contract_health.items %}
+            <div class="cf89-status-row">
+                <dt>{{ label }}</dt>
+                <dd>{{ value }}</dd>
+            </div>
+            {% endfor %}
+        </dl>
+    </section>
+
+    <section class="cf89-panel" aria-label="Data counts">
+        <h2>Data counts</h2>
+        <dl class="cf89-status-list">
+            {% for label, value in data_counts.items %}
+            <div class="cf89-status-row">
+                <dt>{{ label }}</dt>
+                <dd>{{ value }}</dd>
+            </div>
+            {% endfor %}
+        </dl>
+    </section>
+
+    <section class="cf89-panel" aria-label="Boundary summary">
+        <h2>Boundary summary</h2>
+        <dl class="cf89-status-list">
+            {% for label, value in boundary_summary.items %}
+            <div class="cf89-status-row">
+                <dt>{{ label }}</dt>
+                <dd>{{ value }}</dd>
+            </div>
+            {% endfor %}
+        </dl>
+    </section>
+</div>
+{% endblock %}
