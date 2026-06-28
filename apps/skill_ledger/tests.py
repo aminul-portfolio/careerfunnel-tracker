@@ -1,3 +1,4 @@
+from dataclasses import FrozenInstanceError, asdict, replace
 from io import StringIO
 
 from django.apps import apps
@@ -21,6 +22,16 @@ from .advisory import (
     collect_jd_candidate_terms,
     validate_advisory_classification,
     validate_skill_advisory_row_schema,
+)
+from .ai_explanation import (
+    FORBIDDEN_EXPLANATION_PHRASES,
+    REQUIRED_EXPLANATION_SAFETY_WARNING,
+    SPRINT_87_PROVIDER_MODE_MOCKED,
+    SkillAdvisoryExplanation,
+    build_skill_advisory_explanation,
+    build_skill_advisory_explanations,
+    explanation_to_dict,
+    validate_explanation,
 )
 from .management.commands.seed_skill_ledger import LEARNING_TARGET_NOTES, VERIFIED_DEFAULT_NOTES
 from .models import SkillEntry
@@ -276,6 +287,310 @@ class SkillLedgerAdvisoryServiceTests(TestCase):
         ):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, generated_text)
+
+
+class SkillLedgerAIExplanationServiceTests(TestCase):
+    def _entry(self, **overrides):
+        entry = {
+            "skill_name": "Python",
+            "category": SkillEntry.Category.PROGRAMMING,
+            "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+            "sprint_reference": "Sprint 84",
+            "project_link": "https://example.com/python",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        entry.update(overrides)
+        return entry
+
+    def _row(self, **overrides):
+        return build_skill_advisory_row(self._entry(**overrides))
+
+    def _golden_rows_by_classification(self):
+        rows = {
+            "VERIFIED_WITH_EVIDENCE": self._row(project_link=""),
+            "VERIFIED_NO_REFERENCE": self._row(sprint_reference=""),
+            "LEARNING_TARGET": self._row(
+                evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+            ),
+            "STUDYING": self._row(evidence_level=SkillEntry.EvidenceLevel.STUDYING),
+            "NO_EVIDENCE": self._row(evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE),
+            "PUBLIC_RISK": self._row(
+                evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+                visibility=SkillEntry.Visibility.PUBLIC,
+            ),
+            "CLAIM_SAFE": self._row(),
+        }
+        rows["JD_SIGNAL_UNMATCHED"] = build_skill_advisory_rows(
+            (),
+            jd_candidate_terms=("Airflow",),
+        )[0]
+        return rows
+
+    def _valid_explanation(self):
+        return build_skill_advisory_explanation(self._row())
+
+    def test_skill_advisory_explanation_schema_is_frozen(self):
+        explanation = self._valid_explanation()
+
+        with self.assertRaises(FrozenInstanceError):
+            explanation.skill_name = "Changed"
+
+    def test_skill_advisory_explanation_rejects_none_fields(self):
+        for field_name in SkillAdvisoryExplanation.__dataclass_fields__:
+            with self.subTest(field_name=field_name):
+                explanation = replace(self._valid_explanation(), **{field_name: None})
+
+                with self.assertRaises(SkillAdvisoryValidationError):
+                    validate_explanation(explanation)
+
+    def test_skill_advisory_explanation_provider_mode_is_constant(self):
+        self.assertEqual(SPRINT_87_PROVIDER_MODE_MOCKED, "mocked")
+
+        explanation = self._valid_explanation()
+
+        self.assertEqual(explanation.provider_mode, SPRINT_87_PROVIDER_MODE_MOCKED)
+
+    def test_explanation_for_verified_with_evidence(self):
+        explanation = build_skill_advisory_explanation(
+            self._golden_rows_by_classification()["VERIFIED_WITH_EVIDENCE"],
+        )
+
+        self.assertEqual(explanation.classification, "VERIFIED_WITH_EVIDENCE")
+        self.assertIn("Sprint evidence is present", explanation.evidence_basis)
+        self.assertIn(REQUIRED_EXPLANATION_SAFETY_WARNING, explanation.claim_safety_warning)
+
+    def test_explanation_for_verified_no_reference(self):
+        explanation = build_skill_advisory_explanation(
+            self._golden_rows_by_classification()["VERIFIED_NO_REFERENCE"],
+        )
+
+        self.assertEqual(explanation.classification, "VERIFIED_NO_REFERENCE")
+        self.assertIn("Verified status needs a sprint reference", explanation.evidence_basis)
+
+    def test_explanation_for_learning_target(self):
+        explanation = build_skill_advisory_explanation(
+            self._golden_rows_by_classification()["LEARNING_TARGET"],
+        )
+
+        self.assertEqual(explanation.classification, "LEARNING_TARGET")
+        self.assertIn("learning target", explanation.evidence_basis.lower())
+
+    def test_explanation_for_studying(self):
+        explanation = build_skill_advisory_explanation(
+            self._golden_rows_by_classification()["STUDYING"],
+        )
+
+        self.assertEqual(explanation.classification, "STUDYING")
+        self.assertIn("personal study", explanation.evidence_basis)
+
+    def test_explanation_for_no_evidence(self):
+        explanation = build_skill_advisory_explanation(
+            self._golden_rows_by_classification()["NO_EVIDENCE"],
+        )
+
+        self.assertEqual(explanation.classification, "NO_EVIDENCE")
+        self.assertIn("No supporting evidence", explanation.evidence_basis)
+
+    def test_explanation_for_public_risk(self):
+        explanation = build_skill_advisory_explanation(
+            self._golden_rows_by_classification()["PUBLIC_RISK"],
+        )
+
+        self.assertEqual(explanation.classification, "PUBLIC_RISK")
+        self.assertIn("public entry", explanation.evidence_basis)
+
+    def test_explanation_for_jd_signal_unmatched(self):
+        explanation = build_skill_advisory_explanation(
+            self._golden_rows_by_classification()["JD_SIGNAL_UNMATCHED"],
+        )
+
+        self.assertEqual(explanation.classification, "JD_SIGNAL_UNMATCHED")
+        self.assertIn("JD signal context is present", explanation.jd_signal_context)
+
+    def test_explanation_for_claim_safe(self):
+        explanation = build_skill_advisory_explanation(
+            self._golden_rows_by_classification()["CLAIM_SAFE"],
+        )
+
+        self.assertEqual(explanation.classification, "CLAIM_SAFE")
+        self.assertIn("Verified project evidence", explanation.evidence_basis)
+
+    def test_explanation_for_jd_signal_present_evidence_missing(self):
+        row = build_skill_advisory_rows(
+            (
+                self._entry(
+                    skill_name="Airflow",
+                    evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE,
+                ),
+            ),
+            jd_candidate_terms=("Airflow",),
+        )[0]
+
+        explanation = build_skill_advisory_explanation(row)
+
+        self.assertEqual(explanation.classification, "NO_EVIDENCE")
+        self.assertIn("JD signal context is present", explanation.jd_signal_context)
+        self.assertIn(REQUIRED_EXPLANATION_SAFETY_WARNING, explanation.claim_safety_warning)
+
+    def test_explanation_for_jd_signal_present_verified_evidence(self):
+        row = build_skill_advisory_rows(
+            (self._entry(skill_name="Python"),),
+            jd_candidate_terms=("Python",),
+        )[0]
+
+        explanation = build_skill_advisory_explanation(row)
+
+        self.assertEqual(explanation.classification, "CLAIM_SAFE")
+        self.assertIn("JD signal context is present", explanation.jd_signal_context)
+        self.assertIn(REQUIRED_EXPLANATION_SAFETY_WARNING, explanation.claim_safety_warning)
+
+    def test_explanation_claim_safety_warning_never_empty(self):
+        for row in self._golden_rows_by_classification().values():
+            with self.subTest(classification=row.classification):
+                explanation = build_skill_advisory_explanation(row)
+
+                self.assertTrue(explanation.claim_safety_warning)
+                self.assertIn(
+                    REQUIRED_EXPLANATION_SAFETY_WARNING,
+                    explanation.claim_safety_warning,
+                )
+
+    def test_validator_rejects_explanation_with_empty_warning(self):
+        explanation = replace(self._valid_explanation(), claim_safety_warning="")
+
+        with self.assertRaisesMessage(
+            SkillAdvisoryValidationError,
+            "claim_safety_warning_required",
+        ):
+            validate_explanation(explanation)
+
+    def test_forbidden_phrases_absent_from_all_golden_cases(self):
+        explanations = tuple(
+            build_skill_advisory_explanation(row)
+            for row in self._golden_rows_by_classification().values()
+        )
+        generated_text = " ".join(
+            " ".join(explanation_to_dict(explanation).values())
+            for explanation in explanations
+        ).lower()
+
+        for forbidden in FORBIDDEN_EXPLANATION_PHRASES:
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, generated_text)
+
+    def test_explanation_service_does_not_write_to_skill_entry(self):
+        entry = SkillEntry.objects.create(
+            skill_name="Python",
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+            sprint_reference="Sprint 84",
+            project_link="https://example.com/python",
+            visibility=SkillEntry.Visibility.PRIVATE,
+            notes="Private note.",
+        )
+        row = build_skill_advisory_row(entry)
+        before_values = SkillEntry.objects.values().get(pk=entry.pk)
+
+        explanation = build_skill_advisory_explanation(row)
+        entry.refresh_from_db()
+
+        self.assertEqual(explanation.classification, "CLAIM_SAFE")
+        self.assertEqual(SkillEntry.objects.values().get(pk=entry.pk), before_values)
+
+    def test_explanation_service_does_not_write_to_database(self):
+        row = self._row()
+        before_count = SkillEntry.objects.count()
+
+        with self.assertNumQueries(0):
+            explanation = build_skill_advisory_explanation(row)
+
+        self.assertEqual(explanation.classification, "CLAIM_SAFE")
+        self.assertEqual(SkillEntry.objects.count(), before_count)
+
+    def test_explanation_provider_mode_is_mocked_in_sprint_87(self):
+        explanation = self._valid_explanation()
+
+        self.assertEqual(explanation.provider_mode, "mocked")
+        with self.assertRaisesMessage(SkillAdvisoryValidationError, "invalid_provider_mode"):
+            validate_explanation(replace(explanation, provider_mode="live"))
+
+    def test_explanation_service_accepts_empty_jd_signal_context(self):
+        explanation = build_skill_advisory_explanation(self._row())
+
+        self.assertEqual(explanation.jd_signal_context, "")
+        self.assertEqual(validate_explanation(explanation), explanation)
+
+    def test_sprint_85_classifications_unchanged_for_explanation_contract(self):
+        self.assertEqual(
+            tuple(ADVISORY_CLASSIFICATIONS),
+            (
+                "VERIFIED_WITH_EVIDENCE",
+                "VERIFIED_NO_REFERENCE",
+                "LEARNING_TARGET",
+                "STUDYING",
+                "NO_EVIDENCE",
+                "PUBLIC_RISK",
+                "JD_SIGNAL_UNMATCHED",
+                "CLAIM_SAFE",
+            ),
+        )
+
+    def test_explanation_builder_returns_tuple_without_mutating_rows(self):
+        rows = tuple(self._golden_rows_by_classification().values())
+        before_rows = tuple(asdict(row) for row in rows)
+
+        explanations = build_skill_advisory_explanations(rows)
+
+        self.assertIsInstance(explanations, tuple)
+        self.assertEqual(len(explanations), len(rows))
+        self.assertEqual(tuple(asdict(row) for row in rows), before_rows)
+
+    def test_explanation_to_dict_returns_only_contract_fields(self):
+        explanation = self._valid_explanation()
+
+        explanation_dict = explanation_to_dict(explanation)
+
+        self.assertEqual(
+            tuple(explanation_dict),
+            tuple(SkillAdvisoryExplanation.__dataclass_fields__),
+        )
+        self.assertNotIn("row", explanation_dict)
+        self.assertNotIn("application", explanation_dict)
+
+    def test_validator_rejects_non_explanation_input(self):
+        with self.assertRaisesMessage(
+            SkillAdvisoryValidationError,
+            "invalid_explanation_type",
+        ):
+            validate_explanation({"skill_name": "Python"})
+
+    def test_validator_rejects_non_string_field_values(self):
+        explanation = replace(self._valid_explanation(), skill_name=123)
+
+        with self.assertRaisesMessage(
+            SkillAdvisoryValidationError,
+            "skill_name_must_be_string",
+        ):
+            validate_explanation(explanation)
+
+    def test_validator_rejects_forbidden_phrases_case_insensitively(self):
+        explanation = replace(
+            self._valid_explanation(),
+            confidence_boundary="This proves proficiency.",
+        )
+
+        with self.assertRaisesMessage(
+            SkillAdvisoryValidationError,
+            "forbidden_explanation_phrase",
+        ):
+            validate_explanation(explanation)
+
+    def test_explanation_service_does_not_require_application_imports(self):
+        self.assertNotIn(
+            "JobApplication",
+            build_skill_advisory_explanation.__code__.co_names,
+        )
+        self.assertNotIn("applications", build_skill_advisory_explanation.__code__.co_names)
 
 
 class SkillLedgerAdvisoryPageTests(TestCase):
