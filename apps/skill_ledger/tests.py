@@ -1,5 +1,6 @@
 from io import StringIO
 
+from django.apps import apps
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib.messages import get_messages
@@ -8,8 +9,448 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from .advisory import (
+    ADVISORY_CLASSIFICATIONS,
+    ADVISORY_ROW_FIELDS,
+    REQUIRED_SKILL_ADVISORY_SAFETY_WORDING,
+    SkillAdvisoryValidationError,
+    advisory_row_to_template_dict,
+    build_skill_advisory_row,
+    build_skill_advisory_rows,
+    validate_advisory_classification,
+    validate_skill_advisory_row_schema,
+)
 from .management.commands.seed_skill_ledger import LEARNING_TARGET_NOTES, VERIFIED_DEFAULT_NOTES
 from .models import SkillEntry
+
+
+class SkillLedgerAdvisoryServiceTests(TestCase):
+    def _entry(self, **overrides):
+        entry = {
+            "skill_name": "Python",
+            "category": SkillEntry.Category.PROGRAMMING,
+            "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+            "sprint_reference": "Sprint 84",
+            "project_link": "https://example.com/python",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        entry.update(overrides)
+        return entry
+
+    def _row(self, **overrides):
+        return build_skill_advisory_row(self._entry(**overrides))
+
+    def test_skill_advisory_row_schema_has_required_fields(self):
+        row = self._row()
+        row_dict = advisory_row_to_template_dict(row)
+
+        self.assertEqual(tuple(row_dict.keys()), ADVISORY_ROW_FIELDS)
+        self.assertEqual(
+            tuple(row.__dataclass_fields__),
+            ADVISORY_ROW_FIELDS,
+        )
+
+    def test_skill_advisory_row_rejects_extra_fields(self):
+        row_dict = advisory_row_to_template_dict(self._row())
+        row_dict["extra"] = "not allowed"
+
+        with self.assertRaisesMessage(SkillAdvisoryValidationError, "extra_schema_keys"):
+            validate_skill_advisory_row_schema(row_dict)
+
+    def test_classification_set_is_complete_and_bounded(self):
+        expected = {
+            "VERIFIED_WITH_EVIDENCE": "Verified - sprint evidence present",
+            "VERIFIED_NO_REFERENCE": "Verified - add sprint reference",
+            "LEARNING_TARGET": "Learning target - do not claim as verified",
+            "STUDYING": "Studying - personal study only",
+            "NO_EVIDENCE": "Gap identified - do not claim",
+            "PUBLIC_RISK": "Public visibility risk - review before publishing",
+            "JD_SIGNAL_UNMATCHED": "Appears in JDs - not yet in ledger",
+            "CLAIM_SAFE": "Safe to discuss - evidence confirmed",
+        }
+
+        self.assertEqual(ADVISORY_CLASSIFICATIONS, expected)
+        for classification in ADVISORY_CLASSIFICATIONS:
+            self.assertEqual(validate_advisory_classification(classification), classification)
+        with self.assertRaisesMessage(
+            SkillAdvisoryValidationError,
+            "invalid_advisory_classification",
+        ):
+            validate_advisory_classification("OTHER")
+
+    def test_advisory_classifies_verified_with_sprint_reference(self):
+        row = self._row(project_link="")
+
+        self.assertEqual(row.classification, "VERIFIED_WITH_EVIDENCE")
+        self.assertFalse(row.claim_ready)
+        self.assertTrue(row.manual_review_required)
+
+    def test_advisory_classifies_verified_without_sprint_reference(self):
+        row = self._row(sprint_reference="", project_link="https://example.com/python")
+
+        self.assertEqual(row.classification, "VERIFIED_NO_REFERENCE")
+        self.assertFalse(row.claim_ready)
+        self.assertTrue(row.manual_review_required)
+
+    def test_advisory_classifies_learning_target(self):
+        row = self._row(evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET)
+
+        self.assertEqual(row.classification, "LEARNING_TARGET")
+        self.assertFalse(row.claim_ready)
+
+    def test_advisory_classifies_studying(self):
+        row = self._row(evidence_level=SkillEntry.EvidenceLevel.STUDYING)
+
+        self.assertEqual(row.classification, "STUDYING")
+        self.assertFalse(row.claim_ready)
+
+    def test_advisory_classifies_no_evidence(self):
+        row = self._row(evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE)
+
+        self.assertEqual(row.classification, "NO_EVIDENCE")
+        self.assertFalse(row.claim_ready)
+
+    def test_advisory_classifies_public_visibility_risk(self):
+        row = self._row(
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+            visibility=SkillEntry.Visibility.PUBLIC,
+        )
+
+        self.assertEqual(row.classification, "PUBLIC_RISK")
+        self.assertTrue(row.public_visibility_risk)
+        self.assertFalse(row.claim_ready)
+        self.assertTrue(row.manual_review_required)
+
+    def test_advisory_classifies_jd_signal_unmatched(self):
+        rows = build_skill_advisory_rows(
+            (self._entry(skill_name="Python"),),
+            jd_candidate_terms=("Airflow",),
+        )
+
+        unmatched = rows[-1]
+        self.assertEqual(unmatched.skill_name, "Airflow")
+        self.assertEqual(unmatched.classification, "JD_SIGNAL_UNMATCHED")
+        self.assertTrue(unmatched.jd_candidate_match)
+        self.assertFalse(unmatched.claim_ready)
+
+    def test_advisory_classifies_claim_safe_when_all_evidence_present(self):
+        row = self._row()
+
+        self.assertEqual(row.classification, "CLAIM_SAFE")
+        self.assertTrue(row.claim_ready)
+        self.assertFalse(row.manual_review_required)
+
+    def test_advisory_marks_learning_target_claim_ready_false(self):
+        row = self._row(evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET)
+
+        self.assertFalse(row.claim_ready)
+        self.assertTrue(row.manual_review_required)
+
+    def test_advisory_marks_studying_claim_ready_false(self):
+        row = self._row(evidence_level=SkillEntry.EvidenceLevel.STUDYING)
+
+        self.assertFalse(row.claim_ready)
+        self.assertTrue(row.manual_review_required)
+
+    def test_advisory_marks_no_evidence_claim_ready_false(self):
+        row = self._row(evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE)
+
+        self.assertFalse(row.claim_ready)
+        self.assertTrue(row.manual_review_required)
+
+    def test_advisory_marks_verified_no_reference_claim_ready_false(self):
+        row = self._row(sprint_reference="")
+
+        self.assertEqual(row.classification, "VERIFIED_NO_REFERENCE")
+        self.assertFalse(row.claim_ready)
+        self.assertTrue(row.manual_review_required)
+
+    def test_advisory_never_sets_manual_review_false_for_gap(self):
+        for evidence_level in (
+            SkillEntry.EvidenceLevel.LEARNING_TARGET,
+            SkillEntry.EvidenceLevel.STUDYING,
+            SkillEntry.EvidenceLevel.NO_EVIDENCE,
+        ):
+            with self.subTest(evidence_level=evidence_level):
+                self.assertTrue(self._row(evidence_level=evidence_level).manual_review_required)
+
+    def test_advisory_service_does_not_write_to_skill_entry(self):
+        entry = SkillEntry.objects.create(
+            skill_name="Python",
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+            sprint_reference="Sprint 84",
+            project_link="https://example.com/python",
+            visibility=SkillEntry.Visibility.PRIVATE,
+            notes="Private note.",
+        )
+        before_values = SkillEntry.objects.values().get(pk=entry.pk)
+
+        row = build_skill_advisory_row(entry)
+        entry.refresh_from_db()
+
+        self.assertEqual(row.classification, "CLAIM_SAFE")
+        self.assertEqual(SkillEntry.objects.values().get(pk=entry.pk), before_values)
+
+    def test_advisory_service_does_not_write_to_database(self):
+        SkillEntry.objects.create(skill_name="Python")
+        before_count = SkillEntry.objects.count()
+
+        rows = build_skill_advisory_rows((), jd_candidate_terms=("Airflow",))
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].classification, "JD_SIGNAL_UNMATCHED")
+        self.assertEqual(SkillEntry.objects.count(), before_count)
+
+    def test_advisory_service_accepts_empty_ledger_gracefully(self):
+        self.assertEqual(build_skill_advisory_rows(()), ())
+
+    def test_advisory_service_accepts_no_jd_candidates_gracefully(self):
+        rows = build_skill_advisory_rows((self._entry(skill_name="Python"),))
+
+        self.assertEqual(len(rows), 1)
+        self.assertFalse(rows[0].jd_candidate_match)
+
+    def test_advisory_safety_wording_is_preserved_exactly(self):
+        expected = (
+            "Skill Ledger advisory signals are planning aids only.",
+            (
+                "A skill is claim-ready only when supported by verified project evidence, "
+                "tests, screenshots, or prior work experience."
+            ),
+            "Learning targets must not be presented as verified skills.",
+            "JD requirement signals do not prove proficiency.",
+            (
+                "Review evidence manually before adding any skill to your CV, LinkedIn, "
+                "or public profile."
+            ),
+            "This page does not update your Skill Ledger automatically.",
+            (
+                "Classifications are generated from your Skill Ledger fields using "
+                "deterministic rules, not AI inference."
+            ),
+            (
+                "Public visibility risk means a Skill Ledger entry is set to public but "
+                "does not have confirmed evidence. Review before sharing."
+            ),
+        )
+
+        self.assertEqual(REQUIRED_SKILL_ADVISORY_SAFETY_WORDING, expected)
+
+    def test_advisory_generated_text_avoids_forbidden_phrases(self):
+        rows = build_skill_advisory_rows(
+            (
+                self._entry(),
+                self._entry(
+                    skill_name="Snowflake",
+                    evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+                    visibility=SkillEntry.Visibility.PUBLIC,
+                ),
+            ),
+            jd_candidate_terms=("Airflow",),
+        )
+        generated_text = " ".join(
+            (
+                *ADVISORY_CLASSIFICATIONS.values(),
+                *REQUIRED_SKILL_ADVISORY_SAFETY_WORDING,
+                *(row.advisory_note for row in rows),
+                *(row.action_hint for row in rows),
+            ),
+        ).lower()
+
+        for forbidden in (
+            "employer ready",
+            "job ready",
+            "you meet the requirements",
+            "verified by employer",
+            "certified",
+            "guaranteed",
+            "you are qualified",
+            "this proves proficiency",
+            "ai verified",
+            "automatically verified",
+            "skill confirmed",
+            "ready to apply",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, generated_text)
+
+
+class SkillLedgerAdvisoryPageTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="advisoryuser", password="StrongPass12345")
+        self.url = reverse("skill_ledger:advisory")
+
+    def _login(self):
+        self.client.login(username="advisoryuser", password="StrongPass12345")
+
+    def _create_skill_entry(self, **overrides):
+        defaults = {
+            "skill_name": "Python",
+            "category": SkillEntry.Category.PROGRAMMING,
+            "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+            "sprint_reference": "Sprint 84",
+            "project_link": "https://example.com/python",
+            "notes": "Private note must not render.",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        defaults.update(overrides)
+        return SkillEntry.objects.create(**defaults)
+
+    def test_skill_ledger_advisory_page_loads_for_authenticated_user(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Skill Ledger Advisory")
+        self.assertContains(response, "Safe to discuss - evidence confirmed")
+
+    def test_skill_ledger_advisory_page_redirects_anonymous_user(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response["Location"])
+
+    def test_skill_ledger_advisory_page_is_get_only(self):
+        self._login()
+
+        response = self.client.post(self.url, {"skill_name": "Python"})
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_skill_ledger_advisory_page_shows_advisory_wording(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        for wording in REQUIRED_SKILL_ADVISORY_SAFETY_WORDING:
+            with self.subTest(wording=wording):
+                self.assertContains(response, wording)
+        self.assertContains(response, "Classifications are deterministic rules, not AI inference.")
+
+    def test_skill_ledger_advisory_page_shows_claim_ready_false_for_gaps(self):
+        self._create_skill_entry(
+            skill_name="GraphQL",
+            evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE,
+            sprint_reference="",
+            project_link="",
+        )
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "GraphQL")
+        self.assertContains(response, "Gap identified - do not claim")
+        self.assertContains(response, "Claim ready: No")
+        self.assertContains(response, "Manual review required: Yes")
+
+    def test_skill_ledger_advisory_page_does_not_imply_employer_readiness(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode()
+
+        for forbidden in (
+            "Employer ready",
+            "Job ready",
+            "You meet the requirements",
+            "Verified by employer",
+            "Certified",
+            "Guaranteed",
+            "You are qualified",
+            "This proves proficiency",
+            "AI verified",
+            "Automatically verified",
+            "Skill confirmed",
+            "Ready to apply",
+            "provider output",
+            "AI output",
+            "raw provider output",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, content)
+
+    def test_skill_ledger_advisory_page_does_not_save_output(self):
+        entry = self._create_skill_entry()
+        JobApplication = apps.get_model("applications", "JobApplication")
+        application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Private Employer",
+            job_title="Private Analyst",
+            date_applied=timezone.localdate(),
+            job_description="Private JD text.",
+        )
+        before_entry_count = SkillEntry.objects.count()
+        before_application_count = JobApplication.objects.count()
+        before_entry_values = SkillEntry.objects.values().get(pk=entry.pk)
+        before_application_values = JobApplication.objects.values().get(pk=application.pk)
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(SkillEntry.objects.count(), before_entry_count)
+        self.assertEqual(JobApplication.objects.count(), before_application_count)
+        self.assertEqual(SkillEntry.objects.values().get(pk=entry.pk), before_entry_values)
+        self.assertEqual(
+            JobApplication.objects.values().get(pk=application.pk),
+            before_application_values,
+        )
+        self.assertNotIn("skill_ledger_advisory_output", self.client.session.keys())
+        self.assertNotIn("provider_response", self.client.session.keys())
+
+    def test_skill_ledger_advisory_page_does_not_update_skill_entries(self):
+        entry = self._create_skill_entry(
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+            visibility=SkillEntry.Visibility.PUBLIC,
+        )
+        before_values = SkillEntry.objects.values().get(pk=entry.pk)
+        self._login()
+
+        response = self.client.get(self.url)
+        entry.refresh_from_db()
+        advisory_section = response.content.decode().split('<div class="cf85-page"', 1)[1]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(SkillEntry.objects.values().get(pk=entry.pk), before_values)
+        self.assertEqual(entry.evidence_level, SkillEntry.EvidenceLevel.LEARNING_TARGET)
+        self.assertEqual(entry.visibility, SkillEntry.Visibility.PUBLIC)
+        self.assertNotIn("<form", advisory_section)
+        self.assertNotIn("<button", advisory_section)
+        self.assertNotIn("Save", advisory_section)
+
+    def test_skill_ledger_advisory_page_shows_public_risk_warning(self):
+        self._create_skill_entry(
+            skill_name="Snowflake",
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+            visibility=SkillEntry.Visibility.PUBLIC,
+        )
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Snowflake")
+        self.assertContains(response, "Public visibility risk - review before publishing")
+        self.assertContains(response, "Public visibility risk: Yes")
+        self.assertContains(response, "This public entry does not have confirmed evidence.")
+
+    def test_skill_ledger_advisory_page_jd_match_shown_as_advisory_only(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "JD candidate match: No - advisory context only.")
+        self.assertContains(
+            response,
+            "No JD enrichment candidate context is connected in this advisory view.",
+        )
+        self.assertContains(response, "JD requirement signals do not prove proficiency.")
+        self.assertNotContains(response, "This proves proficiency")
 
 
 class SkillEntryModelTests(TestCase):

@@ -4,6 +4,12 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET
 
+from .advisory import (
+    ADVISORY_CLASSIFICATIONS,
+    REQUIRED_SKILL_ADVISORY_SAFETY_WORDING,
+    advisory_row_to_template_dict,
+    build_skill_advisory_rows,
+)
 from .models import SkillEntry
 
 
@@ -124,6 +130,23 @@ def skill_ledger_public(request):
             "evidence_groups": evidence_groups,
             "kpi_counts": kpi_counts,
             "search_query": search_query,
+        },
+    )
+
+
+@login_required
+@require_GET
+def skill_ledger_advisory(request):
+    entries = SkillEntry.objects.all().order_by("evidence_level", "category", "skill_name")
+    advisory_rows = build_skill_advisory_rows(entries, jd_candidate_terms=())
+    template_rows = tuple(advisory_row_to_template_dict(row) for row in advisory_rows)
+    return render(
+        request,
+        "skill_ledger/skill_ledger_advisory.html",
+        {
+            "advisory_rows": template_rows,
+            "safety_wording": REQUIRED_SKILL_ADVISORY_SAFETY_WORDING,
+            "classifications": ADVISORY_CLASSIFICATIONS,
         },
     )
 
