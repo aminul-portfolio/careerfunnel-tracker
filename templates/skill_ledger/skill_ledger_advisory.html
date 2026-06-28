@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Skill Ledger Advisory | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Skill Ledger Advisory{% endblock %}
+
+{% block content %}
+<div class="cf85-page">
+    <section class="cf85-panel" aria-label="Skill Ledger advisory overview">
+        <h1>Skill Ledger Advisory</h1>
+        <p>Classifications are deterministic rules, not AI inference.</p>
+        <p>No JD enrichment candidate context is connected in this advisory view.</p>
+    </section>
+
+    <section class="cf85-panel" aria-label="Skill Ledger advisory safety wording">
+        <h2>Safety boundaries</h2>
+        <ul>
+            {% for wording in safety_wording %}
+            <li>{{ wording }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="cf85-panel" aria-label="Classification labels">
+        <h2>Classification reference</h2>
+        <ul>
+            {% for key, label in classifications.items %}
+            <li>{{ key }}: {{ label }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    {% if advisory_rows %}
+    <section class="cf85-panel" aria-label="Skill Ledger advisory rows">
+        <h2>Deterministic advisory rows</h2>
+        {% for row in advisory_rows %}
+        <article class="cf85-row">
+            <h3>{{ row.skill_name }}</h3>
+            <p>Classification: {{ row.classification_label }}</p>
+            <p>Claim ready: {{ row.claim_ready|yesno:"Yes,No" }}</p>
+            <p>Manual review required: {{ row.manual_review_required|yesno:"Yes,No" }}</p>
+            <p>Public visibility risk: {{ row.public_visibility_risk|yesno:"Yes,No" }}</p>
+            <p>JD candidate match: {{ row.jd_candidate_match|yesno:"Yes,No" }} - advisory context only.</p>
+            <p>Advisory note: {{ row.advisory_note }}</p>
+            <p>Action hint: {{ row.action_hint }}</p>
+            {% if row.sprint_reference %}
+            <p>Sprint reference: {{ row.sprint_reference }}</p>
+            {% endif %}
+            {% if row.project_link %}
+            <p>Project link: {{ row.project_link }}</p>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </section>
+    {% else %}
+    <section class="cf85-panel cf85-empty" aria-label="No Skill Ledger entries">
+        <h2>No Skill Ledger entries available</h2>
+        <p>No Skill Ledger entries exist yet, so there are no advisory rows to review.</p>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
