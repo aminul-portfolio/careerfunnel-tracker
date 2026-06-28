@@ -8,7 +8,21 @@
     <section class="cf85-panel" aria-label="Skill Ledger advisory overview">
         <h1>Skill Ledger Advisory</h1>
         <p>Classifications are deterministic rules, not AI inference.</p>
-        <p>No JD enrichment candidate context is connected in this advisory view.</p>
+        <p>JD signal context is connected from saved job description term frequency only.</p>
+        {% if has_jd_candidate_terms %}
+        <p>Some Skill Ledger rows may show JD candidate match as advisory-only context.</p>
+        {% else %}
+        <p>No JD signal candidate terms met the deterministic frequency threshold.</p>
+        {% endif %}
+    </section>
+
+    <section class="cf86-panel" aria-label="JD signal advisory safety wording">
+        <h2>JD signal context</h2>
+        <ul>
+            {% for wording in jd_signal_safety_wording %}
+            <li>{{ wording }}</li>
+            {% endfor %}
+        </ul>
     </section>
 
     <section class="cf85-panel" aria-label="Skill Ledger advisory safety wording">

@@ -37,6 +37,25 @@ REQUIRED_SKILL_ADVISORY_SAFETY_WORDING = (
     ),
 )
 
+REQUIRED_JD_SIGNAL_SAFETY_WORDING = (
+    "JD signal context is advisory only.",
+    "A JD signal does not prove proficiency.",
+    "A JD signal does not make a skill claim-ready.",
+    (
+        "Review evidence manually before adding any JD-signalled skill to your CV, "
+        "LinkedIn, or public profile."
+    ),
+    (
+        "JD signals are derived from saved job description term frequency only. "
+        "They do not reflect employer decisions or application outcomes."
+    ),
+    (
+        "A skill appearing in saved JDs alongside a VERIFIED ledger entry means you "
+        "have evidence and market demand for this skill. It does not mean an employer "
+        "has assessed your proficiency."
+    ),
+)
+
 ADVISORY_ROW_FIELDS = (
     "skill_name",
     "evidence_level",
@@ -217,6 +236,30 @@ def build_skill_advisory_rows(
         if _match_key(term) not in ledger_keys
     )
     return (*rows, *unmatched_rows)
+
+
+def collect_jd_candidate_terms(user, *, min_frequency: int = 2) -> tuple[str, ...]:
+    from apps.applications.services import (
+        aggregate_tracked_jd_terms,
+        get_jd_ready_applications_for_gap_aggregation,
+    )
+
+    jd_ready_applications = get_jd_ready_applications_for_gap_aggregation(user)
+    if not jd_ready_applications:
+        return ()
+
+    candidate_terms: list[str] = []
+    seen_terms: set[str] = set()
+    for aggregated_term in aggregate_tracked_jd_terms(jd_ready_applications):
+        frequency = int(_read_mapping_or_attr(aggregated_term, "frequency", 0) or 0)
+        if frequency < min_frequency:
+            continue
+        term = _clean_text(_read_mapping_or_attr(aggregated_term, "term"))
+        term_key = _match_key(term)
+        if term and term_key not in seen_terms:
+            candidate_terms.append(term)
+            seen_terms.add(term_key)
+    return tuple(candidate_terms)
 
 
 def validate_skill_advisory_row_schema(
