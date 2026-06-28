@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}AI Explanation Contract Preview | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}AI explanation contract preview{% endblock %}
+
+{% block content %}
+<div class="cf88-page">
+    <section class="cf88-panel" aria-label="AI explanation preview overview">
+        <h1>AI explanation contract preview</h1>
+        <p>No live provider output is shown here.</p>
+        <p>Provider mode: {{ provider_mode }}</p>
+        <p>Explanations are advisory only.</p>
+        <p>{{ required_explanation_safety_warning }}</p>
+        <p>Review evidence manually before using any skill in your CV, LinkedIn, or public profile.</p>
+        <p>This preview does not save, update, publish, or submit anything.</p>
+    </section>
+
+    <section class="cf88-panel" aria-label="Preview safety boundaries">
+        <h2>Safety boundaries</h2>
+        <ul>
+            <li>A JD signal does not prove proficiency.</li>
+            <li>Skill gap signals are advisory only.</li>
+            <li>Learning recommendations are planning aids.</li>
+            {% for wording in jd_signal_safety_wording %}
+            <li>{{ wording }}</li>
+            {% endfor %}
+            {% for wording in skill_advisory_safety_wording %}
+            <li>{{ wording }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    {% if explanation_rows %}
+    <section class="cf88-panel" aria-label="Skill advisory explanation rows">
+        <h2>Deterministic explanation rows</h2>
+        {% for row in explanation_rows %}
+        <article class="cf88-row">
+            <h3>{{ row.skill_name }}</h3>
+            <p>Classification: {{ row.classification }}</p>
+            <p>Evidence basis: {{ row.evidence_basis }}</p>
+            {% if row.jd_signal_context %}
+            <p>JD signal context: {{ row.jd_signal_context }}</p>
+            {% endif %}
+            <p>Claim safety warning: {{ row.claim_safety_warning }}</p>
+            <p>Manual next action: {{ row.manual_next_action }}</p>
+            <p>Source limitations: {{ row.source_limitations }}</p>
+            <p>Confidence boundary: {{ row.confidence_boundary }}</p>
+            <p>Provider mode: {{ row.provider_mode }}</p>
+        </article>
+        {% endfor %}
+    </section>
+    {% else %}
+    <section class="cf88-panel cf88-empty" aria-label="No explanation rows">
+        <h2>No explanation rows available</h2>
+        <p>No Skill Ledger entries or JD candidate terms are available for this contract preview.</p>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

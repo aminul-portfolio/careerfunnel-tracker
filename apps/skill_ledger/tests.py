@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.contrib.messages import get_messages
 from django.core.management import call_command
 from django.test import TestCase
-from django.urls import reverse
+from django.urls import resolve, reverse
 from django.utils import timezone
 
 from .advisory import (
@@ -768,6 +768,273 @@ class SkillLedgerAdvisoryPageTests(TestCase):
         )
         self.assertContains(response, "JD requirement signals do not prove proficiency.")
         self.assertNotContains(response, "This proves proficiency")
+
+
+class SkillLedgerAIExplanationPreviewPageTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="explanationuser",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skill_ledger:advisory_explanations")
+        self.JobApplication = apps.get_model("applications", "JobApplication")
+
+    def _login(self):
+        self.client.login(username="explanationuser", password="StrongPass12345")
+
+    def _jd_text(self, *terms, marker=""):
+        intro = " ".join((*terms, marker)).strip()
+        filler = " deterministic planning context" * 140
+        return f"{intro} {filler}".strip()
+
+    def _create_application(self, **overrides):
+        defaults = {
+            "user": self.user,
+            "company_name": "Private Employer",
+            "job_title": "Private Analyst",
+            "date_applied": timezone.localdate(),
+            "job_description": self._jd_text("python"),
+            "job_url": "",
+            "salary_range": "Private salary",
+            "contact_name": "Private Contact",
+            "contact_email": "private@example.com",
+            "notes": "Private application note.",
+        }
+        defaults.update(overrides)
+        return self.JobApplication.objects.create(**defaults)
+
+    def _create_jd_ready_pair(self, term="python", marker=""):
+        self._create_application(job_description=self._jd_text(term, marker=marker))
+        self._create_application(
+            company_name="Private Employer Two",
+            job_description=self._jd_text(term, marker=marker),
+        )
+
+    def _create_skill_entry(self, **overrides):
+        defaults = {
+            "skill_name": "python",
+            "category": SkillEntry.Category.PROGRAMMING,
+            "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+            "sprint_reference": "Sprint 84",
+            "project_link": "https://example.com/python",
+            "notes": "Private note must not render.",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        defaults.update(overrides)
+        return SkillEntry.objects.create(**defaults)
+
+    def test_explanation_preview_redirects_anonymous_user(self):
+        response = self.client.get("/skill-ledger/advisory/explanations/")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response["Location"])
+
+    def test_explanation_preview_authenticated_user_receives_200(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_explanation_preview_route_name_resolves_correctly(self):
+        self.assertEqual(self.url, "/skill-ledger/advisory/explanations/")
+
+        match = resolve(self.url)
+
+        self.assertEqual(match.view_name, "skill_ledger:advisory_explanations")
+
+    def test_explanation_preview_renders_contract_heading(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "AI explanation contract preview")
+
+    def test_explanation_preview_renders_provider_mode_mocked(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, f"Provider mode: {SPRINT_87_PROVIDER_MODE_MOCKED}")
+
+    def test_explanation_preview_renders_required_safety_warning(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, REQUIRED_EXPLANATION_SAFETY_WARNING)
+
+    def test_explanation_preview_renders_no_live_provider_output_wording(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "No live provider output is shown here.")
+
+    def test_explanation_preview_renders_no_mutation_wording(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            "This preview does not save, update, publish, or submit anything.",
+        )
+
+    def test_explanation_preview_renders_rows_for_existing_skill_entries(self):
+        self._create_skill_entry(skill_name="python")
+        self._create_skill_entry(
+            skill_name="sql",
+            evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE,
+            sprint_reference="",
+            project_link="",
+        )
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "python")
+        self.assertContains(response, "sql")
+        self.assertContains(response, "Classification: CLAIM_SAFE")
+        self.assertContains(response, "Classification: NO_EVIDENCE")
+        self.assertContains(response, "Evidence basis:")
+        self.assertContains(response, "Manual next action:")
+        self.assertContains(response, "Source limitations:")
+        self.assertContains(response, "Confidence boundary:")
+
+    def test_explanation_preview_renders_jd_signal_context_safely(self):
+        self._create_skill_entry(skill_name="python")
+        self._create_jd_ready_pair("python")
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "JD signal context:")
+        self.assertContains(response, "Saved JD signal context is present")
+        self.assertContains(response, "A JD signal does not prove proficiency.")
+
+    def test_explanation_preview_does_not_render_raw_jd_text(self):
+        self._create_skill_entry(skill_name="python")
+        self._create_jd_ready_pair("python", marker="UNIQUE_PRIVATE_JD_SENTENCE")
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode()
+
+        self.assertContains(response, "JD signal context:")
+        self.assertNotIn("UNIQUE_PRIVATE_JD_SENTENCE", content)
+        self.assertNotIn("deterministic planning context", content)
+        self.assertNotIn("Private Employer", content)
+        self.assertNotIn("Private Analyst", content)
+
+    def test_explanation_preview_post_is_not_allowed(self):
+        self._login()
+
+        response = self.client.post(self.url, {"skill_name": "python"})
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_explanation_preview_does_not_mutate_skill_entries(self):
+        entry = self._create_skill_entry(
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+            visibility=SkillEntry.Visibility.PUBLIC,
+        )
+        before_count = SkillEntry.objects.count()
+        before_values = SkillEntry.objects.values().get(pk=entry.pk)
+        self._login()
+
+        response = self.client.get(self.url)
+        entry.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(SkillEntry.objects.count(), before_count)
+        self.assertEqual(SkillEntry.objects.values().get(pk=entry.pk), before_values)
+        self.assertEqual(entry.evidence_level, SkillEntry.EvidenceLevel.LEARNING_TARGET)
+        self.assertEqual(entry.visibility, SkillEntry.Visibility.PUBLIC)
+
+    def test_explanation_preview_forbidden_phrases_absent_from_rendered_page(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+        forbidden_phrases = (
+            *FORBIDDEN_EXPLANATION_PHRASES,
+            "live provider output generated",
+            "ai confirmed",
+            "ai has assessed your skill",
+            "ai says you are qualified",
+            "employer-ready",
+            "profile updated",
+            "cv updated",
+            "application submitted",
+            "auto-save",
+            "auto-apply",
+        )
+
+        for forbidden in forbidden_phrases:
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, content)
+
+    def test_explanation_preview_has_no_save_update_submit_or_publish_controls(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode().lower().split('<div class="cf88-page"', 1)[1]
+
+        self.assertNotIn("<form", content)
+        self.assertNotIn("<button", content)
+        self.assertNotIn('type="submit"', content)
+        self.assertNotIn('name="save"', content)
+        self.assertNotIn('name="update"', content)
+        self.assertNotIn('name="publish"', content)
+
+    def test_explanation_preview_does_not_expose_provider_live_or_api_key_wording(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        for forbidden in (
+            "openai",
+            "anthropic",
+            "api key",
+            "secret key",
+            "provider response",
+            "raw provider output",
+            "generated by a live provider",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, content)
+
+    def test_existing_advisory_page_still_loads(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(reverse("skill_ledger:advisory"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Skill Ledger Advisory")
+
+    def test_public_skill_ledger_remains_public_and_does_not_expose_explanations(self):
+        self._create_skill_entry(visibility=SkillEntry.Visibility.PUBLIC)
+
+        response = self.client.get(reverse("skill_ledger:public"))
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "python")
+        self.assertNotIn("AI explanation contract preview", content)
+        self.assertNotIn("Claim safety warning:", content)
+        self.assertNotIn(REQUIRED_EXPLANATION_SAFETY_WARNING, content)
 
 
 class SkillLedgerJdSignalContextTests(TestCase):
