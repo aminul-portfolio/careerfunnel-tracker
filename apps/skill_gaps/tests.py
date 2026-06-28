@@ -27,6 +27,17 @@ from .ai_career_coach import (
     expected_response_schema,
     validate_career_coach_response,
 )
+from .jd_requirement_enrichment import (
+    MAX_EXCERPT_LENGTH,
+    REQUIRED_ENRICHMENT_SAFETY_WORDING,
+    EnrichmentCandidateValidationError,
+    build_enrichment_prompt_payload,
+    build_mocked_enrichment_candidates,
+    excerpt_is_verified,
+    sanitise_jd_text_for_enrichment,
+    validate_enrichment_candidate,
+    validate_enrichment_candidates,
+)
 from .models import (
     ApplicationSkillGap,
     SkillGapIdentifiedBy,
@@ -62,6 +73,239 @@ from .services import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+class JdRequirementEnrichmentContractTests(TestCase):
+    def _jd_text(self):
+        return (
+            "The analyst will build Python data pipelines and SQL reporting checks. "
+            "Power BI dashboard development is required for stakeholder reporting. "
+            "Experience with Snowflake data models is useful for analytics delivery."
+        )
+
+    def _candidate(self, **overrides):
+        candidate = {
+            "term": "Python",
+            "excerpt": "The analyst will build Python data pipelines and SQL reporting checks",
+            "confidence": "high",
+            "provenance": "rule_based",
+            "is_excerpt_verified": True,
+            "rejection_reason": None,
+        }
+        candidate.update(overrides)
+        return candidate
+
+    def test_enrichment_candidate_schema_rejects_extra_keys(self):
+        candidate = self._candidate(extra="not allowed")
+
+        with self.assertRaisesMessage(
+            EnrichmentCandidateValidationError,
+            "extra_schema_keys",
+        ):
+            validate_enrichment_candidate(candidate, jd_text=self._jd_text())
+
+    def test_enrichment_candidate_schema_requires_all_fields(self):
+        candidate = self._candidate()
+        candidate.pop("provenance")
+
+        with self.assertRaisesMessage(
+            EnrichmentCandidateValidationError,
+            "missing_required_fields",
+        ):
+            validate_enrichment_candidate(candidate, jd_text=self._jd_text())
+
+    def test_enrichment_candidate_excerpt_required_non_empty(self):
+        with self.assertRaisesMessage(EnrichmentCandidateValidationError, "empty_excerpt"):
+            validate_enrichment_candidate(self._candidate(excerpt="   "), jd_text=self._jd_text())
+
+    def test_excerpt_is_verified_exact_match_passes(self):
+        self.assertTrue(
+            excerpt_is_verified(
+                "Power BI dashboard development is required for stakeholder reporting",
+                self._jd_text(),
+            ),
+        )
+
+    def test_excerpt_is_verified_paraphrase_fails(self):
+        self.assertFalse(
+            excerpt_is_verified(
+                "The role needs dashboard creation for stakeholder communication",
+                self._jd_text(),
+            ),
+        )
+
+    def test_excerpt_is_verified_normalised_whitespace_passes(self):
+        self.assertTrue(
+            excerpt_is_verified(
+                "The analyst   will build Python data pipelines\nand SQL reporting checks",
+                self._jd_text(),
+            ),
+        )
+
+    def test_excerpt_is_verified_too_short_fails(self):
+        self.assertFalse(excerpt_is_verified("SQL", self._jd_text()))
+
+    def test_excerpt_is_verified_too_long_fails(self):
+        long_excerpt = "A" * (MAX_EXCERPT_LENGTH + 1)
+
+        self.assertFalse(excerpt_is_verified(long_excerpt, long_excerpt))
+
+    def test_excerpt_is_verified_case_insensitive_passes(self):
+        self.assertTrue(
+            excerpt_is_verified(
+                "power bi dashboard development is required for stakeholder reporting",
+                self._jd_text(),
+            ),
+        )
+
+    def test_validator_rejects_unverified_excerpt(self):
+        candidate = self._candidate(excerpt="Paraphrased Python analytics responsibility")
+
+        result = validate_enrichment_candidate(candidate, jd_text=self._jd_text())
+
+        self.assertEqual(result.rejection_reason, "excerpt_not_found_in_jd")
+        self.assertFalse(result.is_excerpt_verified)
+
+    def test_validator_rejects_proficiency_claim(self):
+        candidate = self._candidate(
+            term="Python proficient",
+            excerpt="The analyst will build Python data pipelines and SQL reporting checks",
+        )
+
+        result = validate_enrichment_candidate(candidate, jd_text=self._jd_text())
+
+        self.assertEqual(result.rejection_reason, "proficiency_claim")
+
+    def test_validator_rejects_employer_readiness_claim(self):
+        candidate = self._candidate(
+            term="Python meets employer requirement",
+            excerpt="The analyst will build Python data pipelines and SQL reporting checks",
+        )
+
+        result = validate_enrichment_candidate(candidate, jd_text=self._jd_text())
+
+        self.assertEqual(result.rejection_reason, "employer_readiness_claim")
+
+    def test_validator_rejects_salary_or_contact_term(self):
+        candidate = self._candidate(
+            term="Python salary",
+            excerpt="The analyst will build Python data pipelines and SQL reporting checks",
+        )
+
+        result = validate_enrichment_candidate(candidate, jd_text=self._jd_text())
+
+        self.assertEqual(result.rejection_reason, "salary_or_contact_term")
+
+    def test_validator_rejects_extra_schema_keys(self):
+        candidate = self._candidate(raw_provider_response="RAW")
+
+        with self.assertRaisesMessage(
+            EnrichmentCandidateValidationError,
+            "extra_schema_keys",
+        ):
+            validate_enrichment_candidate(candidate, jd_text=self._jd_text())
+
+    def test_validator_accepts_valid_low_confidence_candidate(self):
+        candidate = self._candidate(confidence="low")
+
+        result = validate_enrichment_candidate(candidate, jd_text=self._jd_text())
+
+        self.assertEqual(result.confidence, "low")
+        self.assertIsNone(result.rejection_reason)
+        self.assertTrue(result.is_excerpt_verified)
+
+    def test_validator_populates_rejection_reason_on_failure(self):
+        candidate = self._candidate(
+            excerpt="Python pipelines are important in this paraphrased summary",
+        )
+
+        result = validate_enrichment_candidate(candidate, jd_text=self._jd_text())
+        accepted = validate_enrichment_candidates((candidate,), jd_text=self._jd_text())
+
+        self.assertEqual(result.rejection_reason, "excerpt_not_found_in_jd")
+        self.assertEqual(accepted, ())
+
+    def test_jd_sanitiser_strips_email_patterns(self):
+        sanitised = sanitise_jd_text_for_enrichment(
+            "Contact recruiter@example.com about Python reporting.",
+        )
+
+        self.assertNotIn("recruiter@example.com", sanitised)
+        self.assertIn("Python reporting", sanitised)
+
+    def test_jd_sanitiser_strips_phone_patterns(self):
+        sanitised = sanitise_jd_text_for_enrichment(
+            "Call +44 7700 900123 for SQL reporting context.",
+        )
+
+        self.assertNotIn("+44 7700 900123", sanitised)
+        self.assertIn("SQL reporting context", sanitised)
+
+    def test_jd_sanitiser_strips_url_patterns(self):
+        sanitised = sanitise_jd_text_for_enrichment(
+            "Apply at https://example.com/jobs and build Power BI dashboards.",
+        )
+
+        self.assertNotIn("https://example.com/jobs", sanitised)
+        self.assertIn("Power BI dashboards", sanitised)
+
+    def test_jd_sanitiser_preserves_skill_requirement_text(self):
+        sanitised = sanitise_jd_text_for_enrichment(self._jd_text())
+
+        self.assertIn("Python data pipelines", sanitised)
+        self.assertIn("SQL reporting checks", sanitised)
+        self.assertIn("Power BI dashboard development", sanitised)
+
+    def test_mocked_enrichment_returns_valid_candidates(self):
+        candidates = build_mocked_enrichment_candidates(self._jd_text())
+
+        self.assertGreaterEqual(len(candidates), 1)
+        for candidate in candidates:
+            with self.subTest(term=candidate.term):
+                self.assertIsNone(candidate.rejection_reason)
+                self.assertTrue(candidate.is_excerpt_verified)
+
+    def test_mocked_enrichment_candidates_all_pass_validator(self):
+        candidates = build_mocked_enrichment_candidates(self._jd_text())
+        candidate_dicts = [candidate.__dict__ for candidate in candidates]
+
+        validated_candidates = validate_enrichment_candidates(
+            tuple(candidate_dicts),
+            jd_text=self._jd_text(),
+        )
+
+        self.assertEqual(validated_candidates, candidates)
+
+    def test_no_raw_provider_output_in_mocked_path(self):
+        before_application_count = JobApplication.objects.count()
+        before_skill_count = SkillEntry.objects.count()
+        candidates = build_mocked_enrichment_candidates(self._jd_text())
+        payload = build_enrichment_prompt_payload(
+            jd_text=(
+                "Email private@example.com for Python details. "
+                "Visit https://example.com/job for SQL context."
+            ),
+            tracked_terms=("Python", "SQL"),
+        )
+        source = (
+            REPO_ROOT / "apps" / "skill_gaps" / "jd_requirement_enrichment.py"
+        ).read_text(encoding="utf-8")
+        dumped_output = json.dumps(
+            {"candidates": [candidate.__dict__ for candidate in candidates], **payload},
+        )
+
+        for wording in REQUIRED_ENRICHMENT_SAFETY_WORDING:
+            with self.subTest(wording=wording):
+                self.assertIn(wording, payload["instructions"])
+        self.assertNotIn("raw_provider_response", dumped_output)
+        self.assertNotIn("private@example.com", dumped_output)
+        self.assertNotIn("https://example.com/job", dumped_output)
+        self.assertNotIn("ai_providers", source)
+        self.assertNotIn("get_live_response", source)
+        self.assertNotIn("urlopen", source)
+        self.assertNotIn(".save(", source)
+        self.assertEqual(JobApplication.objects.count(), before_application_count)
+        self.assertEqual(SkillEntry.objects.count(), before_skill_count)
 
 
 class ApplicationSkillGapModelTests(TestCase):
