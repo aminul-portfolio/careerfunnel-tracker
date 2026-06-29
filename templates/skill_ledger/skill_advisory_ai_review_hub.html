@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}AI Advisory Review Hub | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}AI advisory review hub{% endblock %}
+
+{% block content %}
+<div class="cf90-page">
+    <section class="cf90-panel" aria-label="AI advisory review hub overview">
+        <h1>AI advisory review hub</h1>
+        <p>This hub is private and advisory only.</p>
+        <p>This hub does not save, update, publish, submit, or mutate records.</p>
+        <p>No live AI provider is called from this hub.</p>
+        <p>No raw JD text, prompt text, provider response, or AI output is stored or displayed here.</p>
+        <p>Review evidence manually before using any skill in your CV, LinkedIn, or public profile.</p>
+        <p>{{ required_explanation_safety_warning }}</p>
+        <p>A JD signal does not prove proficiency.</p>
+        <p>Skill gap signals are advisory only.</p>
+        <p>Learning recommendations are planning aids.</p>
+        <p>
+            This hub does not call any AI provider. All links lead to private advisory pages.
+            No output is generated, saved, or published from this page.
+        </p>
+    </section>
+
+    <section class="cf90-panel" aria-label="Private advisory links">
+        <h2>Private advisory pages</h2>
+        <ul class="cf90-link-list">
+            <li>
+                <a href="{{ explanation_preview_url }}">AI explanation preview</a>
+            </li>
+            <li>
+                <a href="{{ safety_evidence_url }}">AI safety controls and evidence dashboard</a>
+            </li>
+        </ul>
+    </section>
+
+    <section class="cf90-panel" aria-label="Manual review workflow">
+        <h2>Manual review workflow</h2>
+        <ol class="cf90-workflow">
+            <li>Review the private AI explanation preview.</li>
+            <li>Check the safety controls and evidence dashboard.</li>
+            <li>Manually verify evidence before using any skill in your CV, LinkedIn, or public profile.</li>
+        </ol>
+    </section>
+
+    <section class="cf90-panel" aria-label="Read-only summary strip">
+        <h2>Read-only summary</h2>
+        <dl class="cf90-summary-strip">
+            {% for label, value in summary_strip.items %}
+            <div class="cf90-summary-item">
+                <dt>{{ label }}</dt>
+                <dd>{{ value }}</dd>
+            </div>
+            {% endfor %}
+        </dl>
+    </section>
+</div>
+{% endblock %}

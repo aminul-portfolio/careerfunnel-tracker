@@ -1252,6 +1252,238 @@ class SkillLedgerAIExplanationEvidenceDashboardTests(TestCase):
         self.assertContains(response, "Provider mode: mocked")
 
 
+class SkillLedgerAIAdvisoryReviewHubTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="aireviewhubuser",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skill_ledger:advisory_ai_review_hub")
+        self.JobApplication = apps.get_model("applications", "JobApplication")
+
+    def _login(self):
+        self.client.login(username="aireviewhubuser", password="StrongPass12345")
+
+    def _jd_text(self, *terms, marker=""):
+        intro = " ".join((*terms, marker)).strip()
+        filler = " deterministic planning context" * 140
+        return f"{intro} {filler}".strip()
+
+    def _create_application(self, **overrides):
+        defaults = {
+            "user": self.user,
+            "company_name": "Private Employer",
+            "job_title": "Private Analyst",
+            "date_applied": timezone.localdate(),
+            "job_description": self._jd_text("python"),
+            "job_url": "",
+            "salary_range": "Private salary",
+            "contact_name": "Private Contact",
+            "contact_email": "private@example.com",
+            "notes": "Private application note.",
+        }
+        defaults.update(overrides)
+        return self.JobApplication.objects.create(**defaults)
+
+    def _create_jd_ready_pair(self, term="python", marker=""):
+        self._create_application(job_description=self._jd_text(term, marker=marker))
+        self._create_application(
+            company_name="Private Employer Two",
+            job_description=self._jd_text(term, marker=marker),
+        )
+
+    def _create_skill_entry(self, **overrides):
+        defaults = {
+            "skill_name": "python",
+            "category": SkillEntry.Category.PROGRAMMING,
+            "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+            "sprint_reference": "Sprint 84",
+            "project_link": "https://example.com/python",
+            "notes": "Private note must not render.",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        defaults.update(overrides)
+        return SkillEntry.objects.create(**defaults)
+
+    def _hub_content(self):
+        response = self.client.get(self.url)
+        return response.content.decode()
+
+    def test_ai_review_hub_loads_for_authenticated_user(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI advisory review hub")
+
+    def test_ai_review_hub_redirects_anonymous_user(self):
+        response = self.client.get("/skill-ledger/advisory/ai-review-hub/")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response["Location"])
+
+    def test_ai_review_hub_post_returns_405(self):
+        self._login()
+
+        response = self.client.post(self.url, {"provider_mode": "mocked"})
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_ai_review_hub_links_to_explanation_preview(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'href="/skill-ledger/advisory/explanations/"')
+        self.assertContains(response, "AI explanation preview")
+
+    def test_ai_review_hub_links_to_safety_evidence_dashboard(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'href="/skill-ledger/advisory/ai-evidence/"')
+        self.assertContains(response, "AI safety controls and evidence dashboard")
+
+    def test_ai_review_hub_renders_manual_review_workflow(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Review the private AI explanation preview.")
+        self.assertContains(response, "Check the safety controls and evidence dashboard.")
+        self.assertContains(
+            response,
+            (
+                "Manually verify evidence before using any skill in your CV, LinkedIn, "
+                "or public profile."
+            ),
+        )
+
+    def test_ai_review_hub_renders_no_save_no_submit_wording(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+        hub_content = response.content.decode().lower().split('<div class="cf90-page"', 1)[1]
+
+        self.assertContains(
+            response,
+            "This hub does not save, update, publish, submit, or mutate records.",
+        )
+        self.assertNotIn("<form", hub_content)
+        self.assertNotIn("<button", hub_content)
+        self.assertNotIn('type="submit"', hub_content)
+
+    def test_ai_review_hub_renders_no_live_provider_wording(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "No live AI provider is called from this hub.")
+        self.assertContains(
+            response,
+            (
+                "No raw JD text, prompt text, provider response, or AI output is stored "
+                "or displayed here."
+            ),
+        )
+        self.assertContains(
+            response,
+            "This hub does not call any AI provider. All links lead to private advisory pages.",
+        )
+
+    def test_ai_review_hub_does_not_render_raw_jd_marker(self):
+        self._create_skill_entry(skill_name="python")
+        self._create_jd_ready_pair("python", marker="UNIQUE_PRIVATE_JD_SENTENCE")
+        self._login()
+
+        content = self._hub_content()
+
+        self.assertNotIn("UNIQUE_PRIVATE_JD_SENTENCE", content)
+        self.assertNotIn("deterministic planning context", content)
+        self.assertNotIn("Private Employer", content)
+        self.assertNotIn("Private Analyst", content)
+
+    def test_ai_review_hub_does_not_render_explanation_row_content(self):
+        self._create_skill_entry(skill_name="UNIQUE_SKILL_NAME")
+        self._login()
+
+        content = self._hub_content()
+
+        self.assertNotIn("UNIQUE_SKILL_NAME", content)
+        self.assertNotIn("Evidence basis:", content)
+        self.assertNotIn("Manual next action:", content)
+        self.assertNotIn("Confidence boundary:", content)
+        self.assertNotIn("Classification: CLAIM_SAFE", content)
+
+    def test_ai_review_hub_forbidden_phrases_absent(self):
+        self._create_skill_entry()
+        self._login()
+
+        content = self._hub_content().lower()
+        forbidden_phrases = (
+            *FORBIDDEN_EXPLANATION_PHRASES,
+            "ai confirmed",
+            "ai has assessed your skill",
+            "ai says you are qualified",
+            "employer-ready",
+            "profile updated",
+            "cv updated",
+            "application submitted",
+            "auto-save",
+            "auto-apply",
+            "production ai",
+            "live ai monitoring",
+            "real-time ai metrics",
+            "ai observability dashboard",
+        )
+
+        for forbidden in forbidden_phrases:
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, content)
+
+    def test_sprint_88_explanation_preview_unaffected(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(reverse("skill_ledger:advisory_explanations"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI explanation contract preview")
+        self.assertContains(response, "Provider mode: mocked")
+
+    def test_sprint_89_safety_dashboard_unaffected(self):
+        self._create_skill_entry()
+        self._login()
+
+        response = self.client.get(reverse("skill_ledger:advisory_ai_evidence"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI explanation layer - safety controls and evidence")
+        self.assertContains(response, "Provider mode: mocked")
+
+    def test_ai_review_hub_renders_skill_ledger_entry_count(self):
+        self._create_skill_entry(skill_name="python")
+        self._create_skill_entry(skill_name="sql")
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Skill Ledger entries")
+        self.assertContains(response, "Advisory rows")
+        self.assertContains(response, "Explanation rows")
+        self.assertContains(response, "Provider mode")
+        self.assertContains(response, "2")
+        self.assertContains(response, SPRINT_87_PROVIDER_MODE_MOCKED)
+
+
 class SkillLedgerJdSignalContextTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="jdcontext", password="StrongPass12345")
