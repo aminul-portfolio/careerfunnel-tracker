@@ -1484,6 +1484,325 @@ class SkillLedgerAIAdvisoryReviewHubTests(TestCase):
         self.assertContains(response, SPRINT_87_PROVIDER_MODE_MOCKED)
 
 
+class SkillLedgerAIAdvisoryManualReviewChecklistTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="manualreviewuser",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skill_ledger:advisory_manual_review_checklist")
+        self.JobApplication = apps.get_model("applications", "JobApplication")
+
+    def _login(self):
+        self.client.login(username="manualreviewuser", password="StrongPass12345")
+
+    def _page_content(self):
+        response = self.client.get(self.url)
+        return response.content.decode()
+
+    def _checklist_content(self):
+        return self._page_content().split('<div class="cf91-page"', 1)[1]
+
+    def _create_skill_entry(self, **overrides):
+        defaults = {
+            "skill_name": "UNIQUE_STATIC_ONLY_SKILL",
+            "category": SkillEntry.Category.PROGRAMMING,
+            "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+            "sprint_reference": "Sprint 84",
+            "project_link": "https://example.com/python",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        defaults.update(overrides)
+        return SkillEntry.objects.create(**defaults)
+
+    def _create_application_with_marker(self):
+        return self.JobApplication.objects.create(
+            user=self.user,
+            company_name="Private Employer",
+            job_title="Private Analyst",
+            date_applied=timezone.localdate(),
+            job_description="UNIQUE_PRIVATE_JD_MARKER deterministic planning context",
+        )
+
+    def test_manual_review_checklist_loads_for_authenticated_user(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI advisory manual review checklist")
+
+    def test_manual_review_checklist_redirects_anonymous_user(self):
+        response = self.client.get("/skill-ledger/advisory/manual-review-checklist/")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response["Location"])
+
+    def test_manual_review_checklist_post_returns_405(self):
+        self._login()
+
+        response = self.client.post(self.url, {"review": "done"})
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_manual_review_checklist_links_to_explanation_preview(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'href="/skill-ledger/advisory/explanations/"')
+        self.assertContains(response, "AI explanation preview")
+
+    def test_manual_review_checklist_links_to_safety_evidence_dashboard(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'href="/skill-ledger/advisory/ai-evidence/"')
+        self.assertContains(response, "AI safety controls and evidence dashboard")
+
+    def test_manual_review_checklist_links_to_review_hub(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'href="/skill-ledger/advisory/ai-review-hub/"')
+        self.assertContains(response, "AI advisory review hub")
+
+    def test_manual_review_checklist_renders_checklist_sections(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        for section in (
+            "Evidence source review",
+            "Sprint reference review",
+            "Project link review",
+            "Evidence level decision",
+            "JD signal caution",
+            "Public claim decision boundary",
+            "CV, LinkedIn, portfolio, and public profile caution",
+            "Manual-only review workflow",
+        ):
+            with self.subTest(section=section):
+                self.assertContains(response, section)
+
+    def test_manual_review_checklist_renders_verified_guidance(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            (
+                "Use VERIFIED skills in public claims only when the linked evidence, "
+                "sprint reference, and project context have been manually reviewed."
+            ),
+        )
+        self.assertContains(
+            response,
+            (
+                "VERIFIED skills may be considered for public claims only after linked "
+                "evidence, sprint reference, and project context have been manually reviewed."
+            ),
+        )
+
+    def test_manual_review_checklist_renders_learning_target_caution(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            (
+                "Do not present LEARNING_TARGET, STUDYING, NO_EVIDENCE, or JD-only "
+                "signals as verified proficiency."
+            ),
+        )
+        self.assertContains(
+            response,
+            (
+                "LEARNING_TARGET, STUDYING, NO_EVIDENCE, and JD-only signals must not "
+                "be presented as verified proficiency."
+            ),
+        )
+
+    def test_manual_review_checklist_renders_no_save_no_submit_wording(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            "This checklist does not save, update, publish, submit, or mutate records.",
+        )
+
+    def test_manual_review_checklist_renders_no_live_provider_wording(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "No live AI provider is called from this checklist.")
+        self.assertContains(
+            response,
+            (
+                "No raw JD text, prompt text, provider response, or AI output is stored "
+                "or displayed here."
+            ),
+        )
+        self.assertContains(
+            response,
+            (
+                "This checklist is static guidance. It does not query your Skill Ledger, "
+                "call any provider, or generate personalised output. Apply it manually "
+                "to your own evidence."
+            ),
+        )
+
+    def test_manual_review_checklist_no_forms_or_inputs_present(self):
+        self._login()
+
+        content = self._checklist_content().lower()
+
+        self.assertNotIn("<form", content)
+        self.assertNotIn("<input", content)
+        self.assertNotIn("<textarea", content)
+
+    def test_manual_review_checklist_no_checkboxes_present(self):
+        self._login()
+
+        content = self._checklist_content().lower()
+
+        self.assertNotIn('type="checkbox"', content)
+        self.assertNotIn("checkbox", content)
+
+    def test_manual_review_checklist_no_submit_buttons_present(self):
+        self._login()
+
+        content = self._checklist_content().lower()
+
+        self.assertNotIn("<button", content)
+        self.assertNotIn('type="submit"', content)
+        self.assertNotIn('role="button"', content)
+
+    def test_manual_review_checklist_no_raw_jd_marker_text(self):
+        self._create_application_with_marker()
+        self._login()
+
+        content = self._page_content()
+
+        self.assertNotIn("UNIQUE_PRIVATE_JD_MARKER", content)
+        self.assertNotIn("deterministic planning context", content)
+        self.assertNotIn("Private Employer", content)
+        self.assertNotIn("Private Analyst", content)
+
+    def test_manual_review_checklist_no_explanation_row_content(self):
+        self._create_skill_entry()
+        self._login()
+
+        content = self._page_content()
+
+        self.assertNotIn("UNIQUE_STATIC_ONLY_SKILL", content)
+        self.assertNotIn("Evidence basis:", content)
+        self.assertNotIn("Manual next action:", content)
+        self.assertNotIn("Confidence boundary:", content)
+        self.assertNotIn("Classification: CLAIM_SAFE", content)
+
+    def test_manual_review_checklist_forbidden_phrases_absent(self):
+        self._login()
+
+        content = self._page_content().lower()
+        forbidden_phrases = (
+            "employer confirmed",
+            "you are qualified",
+            "job ready",
+            "employer ready",
+            "this proves proficiency",
+            "ai verified",
+            "automatically verified",
+            "skill confirmed",
+            "ready to apply",
+            "you meet the requirements",
+            "this jd signal verifies",
+            "proficiency confirmed",
+            "ai confirmed",
+            "ai has assessed your skill",
+            "ai says you are qualified",
+            "employer-ready",
+            "profile updated",
+            "cv updated",
+            "linkedin updated",
+            "application submitted",
+            "auto-save",
+            "auto-apply",
+            "production ai",
+            "live ai monitoring",
+            "real-time ai metrics",
+            "ai observability dashboard",
+            "claim-ready skill",
+            "verified by ai",
+            "verified by jd",
+        )
+
+        for forbidden in forbidden_phrases:
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, content)
+
+    def test_sprint_88_explanation_preview_unaffected(self):
+        self._login()
+
+        response = self.client.get(reverse("skill_ledger:advisory_explanations"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI explanation contract preview")
+
+    def test_sprint_89_safety_dashboard_unaffected(self):
+        self._login()
+
+        response = self.client.get(reverse("skill_ledger:advisory_ai_evidence"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI explanation layer - safety controls and evidence")
+
+    def test_sprint_90_review_hub_unaffected(self):
+        self._login()
+
+        response = self.client.get(reverse("skill_ledger:advisory_ai_review_hub"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI advisory review hub")
+
+    def test_manual_review_checklist_renders_required_safety_wording(self):
+        self._login()
+
+        response = self.client.get(self.url)
+
+        for wording in (
+            "This checklist is private and advisory only.",
+            (
+                "This checklist does not verify proficiency, certify skills, "
+                "or predict employer outcomes."
+            ),
+            (
+                "Review evidence manually before using any skill in your CV, LinkedIn, "
+                "portfolio, or public profile."
+            ),
+            "A JD signal does not prove proficiency.",
+            "JD signal context is advisory only.",
+            "A JD signal does not make a skill claim-ready.",
+            "Skill gap signals are advisory only.",
+            "Learning recommendations are planning aids.",
+        ):
+            with self.subTest(wording=wording):
+                self.assertContains(response, wording)
+
+    def test_manual_review_checklist_route_resolves_by_namespaced_reverse(self):
+        self.assertEqual(
+            reverse("skill_ledger:advisory_manual_review_checklist"),
+            "/skill-ledger/advisory/manual-review-checklist/",
+        )
+
+
 class SkillLedgerJdSignalContextTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="jdcontext", password="StrongPass12345")

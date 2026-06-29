@@ -255,6 +255,15 @@ def skill_ledger_advisory_ai_review_hub(request):
 
 
 @login_required
+@require_GET
+def skill_ledger_advisory_manual_review_checklist(request):
+    return render(
+        request,
+        "skill_ledger/skill_advisory_manual_review_checklist.html",
+    )
+
+
+@login_required
 def skill_entry_detail(request, pk):
     entry = get_object_or_404(SkillEntry, pk=pk)
     return render(
