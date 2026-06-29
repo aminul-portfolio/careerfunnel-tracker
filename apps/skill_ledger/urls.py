@@ -24,6 +24,11 @@ urlpatterns = [
         name="advisory_ai_review_hub",
     ),
     path(
+        "advisory/evaluation-casebook/",
+        views.advisory_evaluation_casebook,
+        name="advisory_evaluation_casebook",
+    ),
+    path(
         "advisory/manual-review-checklist/",
         views.skill_ledger_advisory_manual_review_checklist,
         name="advisory_manual_review_checklist",

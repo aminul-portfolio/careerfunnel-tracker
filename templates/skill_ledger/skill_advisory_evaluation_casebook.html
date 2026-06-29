@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Private AI Advisory Evaluation Casebook | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Private AI Advisory Evaluation Casebook{% endblock %}
+
+{% block content %}
+<div class="cf97-page">
+    <section class="cf97-panel" aria-label="Private AI advisory evaluation casebook overview">
+        <h1>Private AI Advisory Evaluation Casebook</h1>
+        <p>Private planning reference - deterministic cases only</p>
+        <p>These cases are deterministic review examples, not live AI generations.</p>
+        <p>No live AI model is used in this version.</p>
+        <p>Evaluation cases are planning and safety review aids only.</p>
+        <p>Passing an evaluation case does not verify skill proficiency or predict employer outcomes.</p>
+        <p>These examples do not update CVs, public profiles, applications, or Skill Ledger evidence.</p>
+        <p>This page is private and advisory only.</p>
+        <p>
+            Use this casebook as a private reference for reviewing advisory AI-style wording.
+            It is deterministic, static, read-only, and does not run model output checks.
+        </p>
+    </section>
+
+    <section class="cf97-panel" aria-label="Casebook safety boundaries">
+        <h2>Casebook boundaries</h2>
+        <ul class="cf97-boundary-list">
+            <li>No live AI model or provider integration is used.</li>
+            <li>No automated grading, candidate scoring, or employer outcome prediction is performed.</li>
+            <li>No proficiency verification is performed.</li>
+            <li>No CV, public profile, application, or Skill Ledger evidence is changed.</li>
+            <li>No documents are created from this page.</li>
+        </ul>
+    </section>
+
+    <section class="cf97-panel" aria-label="Deterministic evaluation cases">
+        <h2>Deterministic case examples</h2>
+        <div class="cf97-case-list">
+            {% for case in evaluation_cases %}
+            <article class="cf97-case" data-testid="evaluation-case">
+                <h3>{{ case.title }}</h3>
+                <p>{{ case.scenario }}</p>
+                <dl class="cf97-case-fields">
+                    <div class="cf97-case-field">
+                        <dt>Evaluation focus</dt>
+                        <dd>{{ case.evaluation_focus }}</dd>
+                    </div>
+                    <div class="cf97-case-field">
+                        <dt>Safety boundary</dt>
+                        <dd>{{ case.safety_boundary }}</dd>
+                    </div>
+                    <div class="cf97-case-field">
+                        <dt>Expected safe behaviour</dt>
+                        <dd>{{ case.expected_safe_behaviour }}</dd>
+                    </div>
+                    <div class="cf97-case-field">
+                        <dt>Fail condition</dt>
+                        <dd>{{ case.fail_condition }}</dd>
+                    </div>
+                </dl>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

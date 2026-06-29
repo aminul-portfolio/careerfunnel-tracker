@@ -3333,3 +3333,178 @@ class PublicSkillLedgerViewTests(TestCase):
         self.assertContains(response, "Learning Target")
         self.assertContains(response, "Studying")
         self.assertContains(response, "No Evidence")
+
+
+class PrivateAIAdvisoryEvaluationCasebookTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="casebookuser",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skill_ledger:advisory_evaluation_casebook")
+        self.hub_url = reverse("skill_ledger:advisory_ai_review_hub")
+
+    def _login(self):
+        self.client.login(username="casebookuser", password="StrongPass12345")
+
+    def _get_casebook(self):
+        self._login()
+        return self.client.get(self.url)
+
+    def test_evaluation_casebook_loads_for_authenticated_user(self):
+        response = self._get_casebook()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.url, "/skill-ledger/advisory/evaluation-casebook/")
+        self.assertEqual(
+            resolve(self.url).view_name,
+            "skill_ledger:advisory_evaluation_casebook",
+        )
+        self.assertContains(response, "Private AI Advisory Evaluation Casebook")
+        self.assertContains(
+            response,
+            "Private planning reference - deterministic cases only",
+        )
+
+    def test_evaluation_casebook_redirects_anonymous_user(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response["Location"])
+
+    def test_evaluation_casebook_post_returns_405(self):
+        self._login()
+
+        response = self.client.post(self.url, {"case": "review"})
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_evaluation_casebook_renders_structural_case_markers(self):
+        response = self._get_casebook()
+
+        self.assertContains(response, 'data-testid="evaluation-case"', count=8)
+        self.assertGreaterEqual(
+            response.content.decode().count('data-testid="evaluation-case"'),
+            8,
+        )
+
+    def test_evaluation_casebook_renders_evaluation_focus_labels(self):
+        response = self._get_casebook()
+
+        self.assertContains(response, "Evaluation focus", count=8)
+
+    def test_evaluation_casebook_renders_safety_boundary_labels(self):
+        response = self._get_casebook()
+
+        self.assertContains(response, "Safety boundary", count=8)
+
+    def test_evaluation_casebook_renders_expected_safe_behaviour(self):
+        response = self._get_casebook()
+
+        self.assertContains(response, "Expected safe behaviour", count=8)
+
+    def test_evaluation_casebook_renders_fail_condition(self):
+        response = self._get_casebook()
+
+        self.assertContains(response, "Fail condition", count=8)
+
+    def test_evaluation_casebook_advisory_wording_present(self):
+        response = self._get_casebook()
+
+        self.assertContains(
+            response,
+            "These cases are deterministic review examples, not live AI generations.",
+        )
+        self.assertContains(
+            response,
+            "Evaluation cases are planning and safety review aids only.",
+        )
+        self.assertContains(
+            response,
+            (
+                "Passing an evaluation case does not verify skill proficiency or "
+                "predict employer outcomes."
+            ),
+        )
+        self.assertContains(response, "This page is private and advisory only.")
+
+    def test_evaluation_casebook_no_live_provider_wording_present(self):
+        response = self._get_casebook()
+
+        self.assertContains(response, "No live AI model is used in this version.")
+        self.assertContains(response, "No live AI model or provider integration is used.")
+
+    def test_evaluation_casebook_no_mutation_wording_present(self):
+        response = self._get_casebook()
+
+        self.assertContains(
+            response,
+            (
+                "These examples do not update CVs, public profiles, applications, "
+                "or Skill Ledger evidence."
+            ),
+        )
+        self.assertContains(
+            response,
+            "No CV, public profile, application, or Skill Ledger evidence is changed.",
+        )
+
+    def test_evaluation_casebook_forbidden_phrases_absent(self):
+        response = self._get_casebook()
+
+        for phrase in (
+            "production AI evaluation framework",
+            "live AI evaluation results",
+            "automated AI grading",
+            "model performance benchmark",
+            "provider-powered evaluation",
+            "OpenAI",
+            "Anthropic",
+            "Gemini",
+            "LangChain",
+            "auto-updates your CV",
+            "auto-submits applications",
+            "verifies proficiency",
+            "predicts employer outcomes",
+            "generated by AI",
+            "production-ready AI system",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotContains(response, phrase)
+
+    def test_review_hub_links_to_evaluation_casebook(self):
+        self._login()
+
+        response = self.client.get(self.hub_url)
+        content = response.content.decode()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI Advisory Evaluation Casebook")
+        self.assertContains(
+            response,
+            'href="/skill-ledger/advisory/evaluation-casebook/"',
+        )
+        self.assertEqual(
+            content.count('href="/skill-ledger/advisory/evaluation-casebook/"'),
+            1,
+        )
+
+    def test_sprint_88_explanations_page_unaffected(self):
+        self._login()
+
+        response = self.client.get(reverse("skill_ledger:advisory_explanations"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI explanation contract preview")
+        self.assertContains(response, "No live provider output is shown here.")
+        self.assertContains(response, "Explanations are advisory only.")
+
+    def test_sprint_89_evidence_dashboard_unaffected(self):
+        self._login()
+
+        response = self.client.get(reverse("skill_ledger:advisory_ai_evidence"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI explanation layer - safety controls and evidence")
+        self.assertContains(response, "No live provider is configured for this sprint.")
+        self.assertContains(response, "This dashboard is advisory evidence only.")

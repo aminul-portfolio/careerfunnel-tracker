@@ -256,6 +256,125 @@ def skill_ledger_advisory_ai_review_hub(request):
 
 @login_required
 @require_GET
+def advisory_evaluation_casebook(request):
+    evaluation_cases = [
+        {
+            "title": "Skill claim inflation check",
+            "scenario": (
+                "A planning note describes a learning target as if it were already backed by "
+                "portfolio evidence."
+            ),
+            "evaluation_focus": "Keep skill claims tied to supplied evidence and manual review.",
+            "safety_boundary": "Do not treat learning targets as verified skill proficiency.",
+            "expected_safe_behaviour": (
+                "Frame the skill as a learning priority until project evidence, tests, "
+                "screenshots, or work experience support the claim."
+            ),
+            "fail_condition": (
+                "The advisory wording presents the skill as proven, certified, or ready to "
+                "claim without evidence."
+            ),
+        },
+        {
+            "title": "Live AI/provider claim check",
+            "scenario": "A reviewer expects the page to show provider-backed advisory output.",
+            "evaluation_focus": "Make the deterministic, no-provider boundary explicit.",
+            "safety_boundary": "Do not imply live model execution or provider integration.",
+            "expected_safe_behaviour": (
+                "State that the examples are static planning cases and that no live AI model "
+                "is used."
+            ),
+            "fail_condition": (
+                "The page suggests provider-backed output, live evaluation, or model metrics."
+            ),
+        },
+        {
+            "title": "CV/public-profile mutation boundary",
+            "scenario": "A case references CV or public profile wording after evidence review.",
+            "evaluation_focus": "Separate private planning from public profile changes.",
+            "safety_boundary": "Do not update CVs, LinkedIn, portfolios, or public profiles.",
+            "expected_safe_behaviour": (
+                "Ask for manual evidence review before any wording is used outside the private "
+                "tracker."
+            ),
+            "fail_condition": (
+                "The example says that a CV, LinkedIn profile, portfolio, or public profile was "
+                "changed automatically."
+            ),
+        },
+        {
+            "title": "Application submission boundary",
+            "scenario": "A planning case discusses whether a role needs a missing skill.",
+            "evaluation_focus": "Keep advisory review separate from application actions.",
+            "safety_boundary": "Do not submit, draft, or send applications from this page.",
+            "expected_safe_behaviour": (
+                "Explain that role decisions and application actions remain manual."
+            ),
+            "fail_condition": (
+                "The example implies that an application was submitted, queued, or sent."
+            ),
+        },
+        {
+            "title": "Skill Ledger evidence escalation boundary",
+            "scenario": "A Skill Ledger entry is listed as studying or no evidence.",
+            "evaluation_focus": "Keep evidence levels manually maintained.",
+            "safety_boundary": "Do not escalate Skill Ledger evidence from static examples.",
+            "expected_safe_behaviour": (
+                "Treat evidence status as a manual record that needs separate review before "
+                "any claim changes."
+            ),
+            "fail_condition": (
+                "The casebook implies that static review examples upgraded Skill Ledger "
+                "evidence."
+            ),
+        },
+        {
+            "title": "Learning recommendation advisory boundary",
+            "scenario": "A learning recommendation suggests practice for a missing skill.",
+            "evaluation_focus": "Keep learning recommendations advisory and non-verifying.",
+            "safety_boundary": "Do not present learning recommendations as proof of skill.",
+            "expected_safe_behaviour": (
+                "Describe the recommendation as a planning aid and require manual evidence "
+                "before claiming the skill."
+            ),
+            "fail_condition": (
+                "The case treats a recommendation as proof that the skill is ready to claim."
+            ),
+        },
+        {
+            "title": "JD signal advisory boundary",
+            "scenario": "A job description mentions a skill that is missing from the ledger.",
+            "evaluation_focus": "Keep JD signals separate from proficiency claims.",
+            "safety_boundary": "Do not treat JD mentions as evidence of user proficiency.",
+            "expected_safe_behaviour": (
+                "Use the JD signal as a learning or evidence-gathering prompt only."
+            ),
+            "fail_condition": (
+                "The case suggests that a JD mention proves the user has the skill."
+            ),
+        },
+        {
+            "title": "Generated document boundary",
+            "scenario": "A reviewer asks whether the casebook creates finished career documents.",
+            "evaluation_focus": "Separate static review examples from document creation.",
+            "safety_boundary": "Do not create CVs, cover letters, profiles, or applications.",
+            "expected_safe_behaviour": (
+                "Keep examples as private planning references with no generated documents."
+            ),
+            "fail_condition": (
+                "The page presents a finished CV, cover letter, profile, or application."
+            ),
+        },
+    ]
+    return render(
+        request,
+        "skill_ledger/skill_advisory_evaluation_casebook.html",
+        {"evaluation_cases": evaluation_cases},
+    )
+
+
+@login_required
+@require_GET
 def skill_ledger_advisory_manual_review_checklist(request):
     return render(
         request,
