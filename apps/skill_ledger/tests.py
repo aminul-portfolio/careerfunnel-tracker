@@ -770,6 +770,172 @@ class SkillLedgerAdvisoryPageTests(TestCase):
         self.assertNotContains(response, "This proves proficiency")
 
 
+class SkillLedgerAdvisoryClassificationKeyTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="classificationkeyuser",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skill_ledger:advisory")
+
+    def _login(self):
+        self.client.login(username="classificationkeyuser", password="StrongPass12345")
+
+    def _create_skill_entry(self, **overrides):
+        defaults = {
+            "skill_name": "Python",
+            "category": SkillEntry.Category.PROGRAMMING,
+            "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+            "sprint_reference": "Sprint 84",
+            "project_link": "https://example.com/python",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        defaults.update(overrides)
+        return SkillEntry.objects.create(**defaults)
+
+    def _get_advisory_page(self):
+        self._create_skill_entry()
+        self._login()
+        return self.client.get(self.url)
+
+    def test_advisory_page_classification_key_section_renders(self):
+        response = self._get_advisory_page()
+
+        self.assertContains(response, "Classification key")
+        self.assertContains(
+            response,
+            (
+                "Classifications are deterministic - derived from your Skill Ledger "
+                "evidence_level and visibility fields. They are not AI-generated assessments."
+            ),
+        )
+
+    def test_advisory_page_classification_key_shows_verified_label(self):
+        response = self._get_advisory_page()
+
+        self.assertContains(response, "VERIFIED WITH EVIDENCE")
+        self.assertContains(response, "sprint evidence present, safe to discuss")
+        self.assertContains(response, "VERIFIED NO REFERENCE")
+        self.assertContains(response, "add a sprint reference to strengthen claim")
+
+    def test_advisory_page_classification_key_shows_learning_target_label(self):
+        response = self._get_advisory_page()
+
+        self.assertContains(response, "LEARNING TARGET")
+        self.assertContains(response, "do not claim as verified")
+
+    def test_advisory_page_classification_key_shows_studying_label(self):
+        response = self._get_advisory_page()
+
+        self.assertContains(response, "STUDYING")
+        self.assertContains(response, "personal study only, not claim-ready")
+
+    def test_advisory_page_classification_key_shows_no_evidence_label(self):
+        response = self._get_advisory_page()
+
+        self.assertContains(response, "NO EVIDENCE")
+        self.assertContains(response, "gap identified, do not claim")
+
+    def test_advisory_page_classification_key_shows_public_risk_label(self):
+        response = self._get_advisory_page()
+
+        self.assertContains(response, "PUBLIC RISK")
+        self.assertContains(response, "public visibility set but evidence incomplete")
+
+    def test_advisory_page_classification_key_shows_claim_safe_label(self):
+        response = self._get_advisory_page()
+
+        self.assertContains(response, "CLAIM SAFE")
+        self.assertContains(response, "evidence confirmed, safe to discuss")
+
+    def test_advisory_page_classification_key_shows_jd_signal_unmatched_label(self):
+        response = self._get_advisory_page()
+
+        self.assertContains(response, "JD SIGNAL UNMATCHED")
+        self.assertContains(response, "appears in JDs, not yet in your ledger")
+
+    def test_advisory_page_existing_safety_wording_survives_sprint_94(self):
+        response = self._get_advisory_page()
+
+        for wording in (
+            "Skill Ledger advisory signals are planning aids only.",
+            (
+                "A skill is claim-ready only when supported by verified project evidence, "
+                "tests, screenshots, or prior work experience."
+            ),
+            "Learning targets must not be presented as verified skills.",
+            "JD requirement signals do not prove proficiency.",
+            (
+                "Review evidence manually before adding any skill to your CV, LinkedIn, "
+                "or public profile."
+            ),
+            "This page does not update your Skill Ledger automatically.",
+            (
+                "Classifications are generated from your Skill Ledger fields using "
+                "deterministic rules, not AI inference."
+            ),
+        ):
+            with self.subTest(wording=wording):
+                self.assertContains(response, wording)
+
+    def test_advisory_page_jd_signal_wording_survives_sprint_94(self):
+        response = self._get_advisory_page()
+
+        self.assertContains(response, "JD signal context is advisory only.")
+        self.assertContains(response, "A JD signal does not prove proficiency.")
+
+    def test_advisory_page_forbidden_phrases_still_absent_after_sprint_94(self):
+        response = self._get_advisory_page()
+        content = response.content.decode().lower()
+        forbidden_phrases = (
+            "employer confirmed",
+            "you are qualified",
+            "job ready",
+            "employer ready",
+            "this proves proficiency",
+            "ai verified",
+            "automatically verified",
+            "skill confirmed",
+            "ready to apply",
+            "you meet the requirements",
+            "this jd signal verifies",
+            "proficiency confirmed",
+            "ai confirmed",
+            "ai has assessed your skill",
+            "employer-ready",
+            "profile updated",
+            "cv updated",
+            "application submitted",
+            "auto-save",
+            "auto-apply",
+            "production ai",
+            "live ai monitoring",
+            "real-time ai metrics",
+            "claim-ready skill",
+            "verified by ai",
+            "verified by jd",
+            "automatically classified",
+            "ai assessed",
+        )
+
+        for forbidden in forbidden_phrases:
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, content)
+
+    def test_advisory_page_classification_key_does_not_imply_verification(self):
+        response = self._get_advisory_page()
+        content = response.content.decode().lower()
+
+        self.assertContains(
+            response,
+            "They are not AI-generated assessments.",
+        )
+        self.assertNotIn("verified by ai", content)
+        self.assertNotIn("verified by jd", content)
+        self.assertNotIn("ai assessed", content)
+        self.assertNotIn("automatically classified", content)
+
+
 class SkillLedgerAIExplanationPreviewPageTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
