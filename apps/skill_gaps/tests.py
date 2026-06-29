@@ -4563,3 +4563,204 @@ class SkillGapLiveProviderSpikeTests(TestCase):
 
         self.assertContains(response, "Career planning summary unavailable")
         self.assertNotContains(response, "RAW_SENTINEL")
+
+
+class SkillIntelligenceDashboardSafetyWordingRegressionTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="safetydash",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skill_gaps:dashboard")
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Safety Analytics Ltd",
+            job_title="Data Analyst",
+            date_applied=date(2026, 6, 29),
+        )
+
+    def _login(self):
+        self.client.login(username="safetydash", password="StrongPass12345")
+
+    def _get_dashboard(self, query_params=None):
+        self._login()
+        return self.client.get(self.url, query_params or {})
+
+    def _create_gap(
+        self,
+        *,
+        skill_name="Python",
+        priority=SkillGapPriority.LOW,
+        stage=SkillGapStage.APPLICATION,
+    ):
+        priority_score = Decimal("6.00") if priority in (
+            SkillGapPriority.CRITICAL,
+            SkillGapPriority.HIGH,
+        ) else Decimal("1.00")
+        return ApplicationSkillGap.objects.create(
+            application=self.application,
+            stage=stage,
+            skill_name=skill_name,
+            current_tier=SkillTier.MISSING,
+            priority=priority,
+            goal_weight=Decimal("1.00"),
+            failure_count=0,
+            stage_weight=Decimal("1.00"),
+            priority_score=priority_score,
+            identified_by=SkillGapIdentifiedBy.MANUAL,
+        )
+
+    def _create_skill_entry(self, *, skill_name, evidence_level):
+        return SkillEntry.objects.create(
+            skill_name=skill_name,
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=evidence_level,
+            sprint_reference="Sprint 96",
+            notes="Manually reviewed private evidence.",
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+
+    def _seed_skill_ledger_status_rows(self):
+        for skill_name in ("Python", "Snowflake", "Statistics", "GraphQL", "Airflow"):
+            self._create_gap(skill_name=skill_name)
+        self._create_skill_entry(
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._create_skill_entry(
+            skill_name="Snowflake",
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        self._create_skill_entry(
+            skill_name="Statistics",
+            evidence_level=SkillEntry.EvidenceLevel.STUDYING,
+        )
+        self._create_skill_entry(
+            skill_name="GraphQL",
+            evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE,
+        )
+
+    def test_dashboard_preserves_skill_gap_advisory_wording(self):
+        response = self._get_dashboard()
+
+        self.assertContains(
+            response,
+            (
+                "Skill gap signals are advisory only. They indicate learning "
+                "priorities, not current proficiency."
+            ),
+        )
+        self.assertContains(response, "Advisory only")
+
+    def test_dashboard_preserves_learning_recommendation_boundary(self):
+        response = self._get_dashboard()
+
+        self.assertContains(
+            response,
+            (
+                "Learning recommendations are planning aids. A recommendation "
+                "does not mean the skill is portfolio-evidenced or ready to claim."
+            ),
+        )
+
+    def test_dashboard_preserves_manual_evidence_review_boundary(self):
+        response = self._get_dashboard()
+
+        self.assertContains(response, "Manual evidence review before claiming")
+        self.assertContains(
+            response,
+            (
+                "Before adding a skill to your CV or public profile, ensure it "
+                "is supported by project evidence, tests, screenshots, or prior "
+                "work experience."
+            ),
+        )
+
+    def test_dashboard_preserves_read_only_dashboard_boundary(self):
+        response = self._get_dashboard()
+
+        self.assertContains(response, "read-only view")
+        self.assertContains(response, "Read-only list")
+
+    def test_dashboard_preserves_no_auto_create_update_delete_boundary(self):
+        response = self._get_dashboard()
+
+        self.assertContains(
+            response,
+            "does not create, update, or delete gaps automatically",
+        )
+        self.assertContains(response, "This dashboard does not create gaps automatically")
+
+    def test_dashboard_preserves_no_cv_profile_mutation_boundary(self):
+        response = self._get_dashboard()
+
+        self.assertContains(response, "not automatic profile changes")
+        self.assertContains(
+            response,
+            (
+                "Before adding a skill to your CV or public profile, ensure it "
+                "is supported by project evidence, tests, screenshots, or prior "
+                "work experience."
+            ),
+        )
+
+    def test_dashboard_preserves_no_application_submission_boundary(self):
+        response = self._get_dashboard()
+
+        self.assertContains(response, "This dashboard does not submit applications.")
+
+    def test_dashboard_preserves_skill_ledger_evidence_summary_boundary(self):
+        response = self._get_dashboard()
+
+        self.assertContains(response, "Skill Ledger Evidence Summary")
+        self.assertContains(response, "Evidence-informed planning")
+
+    def test_dashboard_preserves_skill_ledger_status_labels(self):
+        self._seed_skill_ledger_status_rows()
+        response = self._get_dashboard()
+
+        self.assertContains(response, "VERIFIED")
+        self.assertContains(response, "LEARNING_TARGET")
+        self.assertContains(response, "STUDYING")
+        self.assertContains(response, "NO_EVIDENCE")
+        self.assertContains(response, "Not in Skill Ledger")
+
+    def test_dashboard_preserves_private_skill_ledger_navigation_boundary(self):
+        response = self._get_dashboard()
+
+        self.assertContains(response, "Open private Skill Ledger")
+        self.assertContains(response, "private Skill Ledger")
+
+    def test_dashboard_preserves_empty_state_safety_wording(self):
+        response = self._get_dashboard()
+
+        self.assertContains(response, "No saved skill gaps to show.")
+        self.assertContains(response, "This dashboard does not create gaps automatically")
+
+    def test_dashboard_preserves_application_skill_gap_table_boundary(self):
+        self._create_gap(skill_name="SQL")
+        response = self._get_dashboard()
+
+        self.assertContains(response, "Application skill gaps")
+        self.assertContains(response, "Read-only list")
+        self.assertContains(response, "Based on manually saved application skill-gap records")
+
+    def test_dashboard_preserves_high_priority_gap_boundary(self):
+        self._create_gap(skill_name="dbt", priority=SkillGapPriority.HIGH)
+        response = self._get_dashboard()
+
+        self.assertContains(response, "High-priority gaps")
+        self.assertContains(response, "High or critical priority")
+        self.assertContains(
+            response,
+            (
+                "Skill gap signals are advisory only. They indicate learning "
+                "priorities, not current proficiency."
+            ),
+        )
+
+    def test_dashboard_preserves_no_generated_documents_or_live_ai_claims(self):
+        response = self._get_dashboard()
+
+        self.assertContains(response, "No live AI model is used in this version.")
+        self.assertContains(response, "Documents are not generated here.")
