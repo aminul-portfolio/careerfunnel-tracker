@@ -1913,6 +1913,248 @@ class SkillLedgerAIAdvisoryReviewHubChecklistLinkTests(TestCase):
         self.assertIn("No live AI provider is called from this hub.", self._hub_content())
 
 
+class SkillLedgerAIAdvisorySafetyWordingRegressionTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="safetyregressionuser",
+            password="StrongPass12345",
+        )
+        self.JobApplication = apps.get_model("applications", "JobApplication")
+        self.forbidden_phrases = (
+            "employer confirmed",
+            "you are qualified",
+            "job ready",
+            "employer ready",
+            "this proves proficiency",
+            "ai verified",
+            "automatically verified",
+            "skill confirmed",
+            "ready to apply",
+            "you meet the requirements",
+            "this jd signal verifies",
+            "proficiency confirmed",
+            "ai confirmed",
+            "ai has assessed your skill",
+            "employer-ready",
+            "profile updated",
+            "cv updated",
+            "application submitted",
+            "auto-save",
+            "auto-apply",
+            "production ai",
+            "live ai monitoring",
+            "real-time ai metrics",
+            "claim-ready skill",
+            "verified by ai",
+            "verified by jd",
+        )
+
+    def _login(self):
+        self.client.login(username="safetyregressionuser", password="StrongPass12345")
+
+    def _authenticated_get(self, route_name, **kwargs):
+        self._login()
+        return self.client.get(reverse(route_name, kwargs=kwargs or None))
+
+    def _create_skill_entry(self):
+        return SkillEntry.objects.create(
+            skill_name="Python",
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+            sprint_reference="Sprint 84",
+            project_link="https://example.com/python",
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+
+    def _create_application(self):
+        return self.JobApplication.objects.create(
+            user=self.user,
+            company_name="Evidence Analytics Ltd",
+            job_title="Data Analyst",
+            date_applied=timezone.localdate(),
+            job_description="Python SQL dashboard analytics evidence.",
+        )
+
+    def _assert_forbidden_absent(self, response):
+        content = response.content.decode().lower()
+        for phrase in self.forbidden_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_explanations_page_preserves_advisory_only_wording(self):
+        response = self._authenticated_get("skill_ledger:advisory_explanations")
+
+        self.assertContains(response, "Explanations are advisory only.")
+
+    def test_explanations_page_preserves_no_proficiency_claim_wording(self):
+        response = self._authenticated_get("skill_ledger:advisory_explanations")
+
+        self.assertContains(
+            response,
+            (
+                "This explanation is advisory only and does not verify proficiency, "
+                "certify skills, or predict employer outcomes."
+            ),
+        )
+
+    def test_ai_evidence_dashboard_preserves_advisory_evidence_wording(self):
+        response = self._authenticated_get("skill_ledger:advisory_ai_evidence")
+
+        self.assertContains(response, "This dashboard is advisory evidence only.")
+
+    def test_ai_evidence_dashboard_preserves_no_mutation_wording(self):
+        response = self._authenticated_get("skill_ledger:advisory_ai_evidence")
+
+        self.assertContains(
+            response,
+            "This dashboard does not save, update, publish, submit, or mutate records.",
+        )
+
+    def test_review_hub_preserves_no_live_provider_wording(self):
+        response = self._authenticated_get("skill_ledger:advisory_ai_review_hub")
+
+        self.assertContains(response, "No live AI provider is called from this hub.")
+
+    def test_review_hub_preserves_no_raw_output_wording(self):
+        response = self._authenticated_get("skill_ledger:advisory_ai_review_hub")
+
+        self.assertContains(
+            response,
+            (
+                "No raw JD text, prompt text, provider response, or AI output is stored "
+                "or displayed here."
+            ),
+        )
+
+    def test_manual_checklist_preserves_verified_evidence_guidance(self):
+        response = self._authenticated_get(
+            "skill_ledger:advisory_manual_review_checklist",
+        )
+
+        self.assertContains(
+            response,
+            (
+                "Use VERIFIED skills in public claims only when the linked evidence, "
+                "sprint reference, and project context have been manually reviewed."
+            ),
+        )
+
+    def test_manual_checklist_preserves_learning_target_caution_wording(self):
+        response = self._authenticated_get(
+            "skill_ledger:advisory_manual_review_checklist",
+        )
+
+        self.assertContains(
+            response,
+            (
+                "Do not present LEARNING_TARGET, STUDYING, NO_EVIDENCE, or JD-only "
+                "signals as verified proficiency."
+            ),
+        )
+
+    def test_explanations_page_forbidden_phrases_absent(self):
+        response = self._authenticated_get("skill_ledger:advisory_explanations")
+
+        self._assert_forbidden_absent(response)
+
+    def test_ai_evidence_dashboard_forbidden_phrases_absent(self):
+        response = self._authenticated_get("skill_ledger:advisory_ai_evidence")
+
+        self._assert_forbidden_absent(response)
+
+    def test_review_hub_forbidden_phrases_absent(self):
+        response = self._authenticated_get("skill_ledger:advisory_ai_review_hub")
+
+        self._assert_forbidden_absent(response)
+
+    def test_manual_checklist_forbidden_phrases_absent(self):
+        response = self._authenticated_get(
+            "skill_ledger:advisory_manual_review_checklist",
+        )
+
+        self._assert_forbidden_absent(response)
+
+    def test_advisory_page_forbidden_phrases_absent(self):
+        self._create_skill_entry()
+
+        response = self._authenticated_get("skill_ledger:advisory")
+
+        self._assert_forbidden_absent(response)
+
+    def test_skill_ledger_list_forbidden_phrases_absent(self):
+        self._create_skill_entry()
+
+        response = self._authenticated_get("skill_ledger:list")
+
+        self._assert_forbidden_absent(response)
+
+    def test_application_form_prefill_wording_survives(self):
+        self._login()
+
+        response = self.client.get(
+            reverse("applications:application_create"),
+            {"company_name": "FinSight", "job_title": "Junior Finance Data Analyst"},
+        )
+
+        self.assertContains(
+            response,
+            "Pre-filling this form does not save your application.",
+        )
+
+    def test_application_detail_tracking_only_wording_survives(self):
+        self._login()
+
+        response = self.client.get(
+            reverse("applications:application_create"),
+            {"company_name": "FinSight", "job_title": "Junior Finance Data Analyst"},
+        )
+
+        self.assertContains(response, "Saving creates a tracking record only.")
+
+    def test_jd_gap_aggregation_advisory_wording_survives(self):
+        response = self._authenticated_get("applications:jd_gap_aggregation")
+
+        self.assertContains(response, "Skill gap signals are advisory only.")
+
+    def test_advisory_page_jd_signal_wording_survives_sprint_93(self):
+        self._create_skill_entry()
+
+        response = self._authenticated_get("skill_ledger:advisory")
+
+        self.assertContains(response, "A JD signal does not prove proficiency.")
+        self.assertContains(
+            response,
+            (
+                "Review evidence manually before adding any JD-signalled skill to your "
+                "CV, LinkedIn, or public profile."
+            ),
+        )
+
+    def test_advisory_page_claim_ready_wording_survives_sprint_93(self):
+        self._create_skill_entry()
+
+        response = self._authenticated_get("skill_ledger:advisory")
+
+        self.assertContains(response, "A JD signal does not make a skill claim-ready.")
+
+    def test_advisory_page_manual_review_wording_survives_sprint_93(self):
+        self._create_skill_entry()
+
+        response = self._authenticated_get("skill_ledger:advisory")
+
+        self.assertContains(response, "Manual review required:")
+
+    def test_skill_gap_private_planning_tool_wording_survives_sprint_93(self):
+        response = self._authenticated_get("skill_gaps:ai_career_coach")
+
+        self.assertContains(response, "This is a private planning tool.")
+
+    def test_skill_gap_advisory_judgement_wording_survives_sprint_93(self):
+        response = self._authenticated_get("skill_gaps:ai_career_coach")
+
+        self.assertContains(response, "All output is advisory. Use your own judgement.")
+
+
 class SkillLedgerJdSignalContextTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="jdcontext", password="StrongPass12345")
