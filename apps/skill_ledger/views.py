@@ -231,6 +231,30 @@ def skill_ledger_advisory_ai_evidence(request):
 
 
 @login_required
+@require_GET
+def skill_ledger_advisory_ai_review_hub(request):
+    entries = SkillEntry.objects.all().order_by("evidence_level", "category", "skill_name")
+    jd_candidate_terms = collect_jd_candidate_terms(request.user)
+    advisory_rows = build_skill_advisory_rows(entries, jd_candidate_terms=jd_candidate_terms)
+    explanations = build_skill_advisory_explanations(advisory_rows)
+    return render(
+        request,
+        "skill_ledger/skill_advisory_ai_review_hub.html",
+        {
+            "explanation_preview_url": "/skill-ledger/advisory/explanations/",
+            "safety_evidence_url": "/skill-ledger/advisory/ai-evidence/",
+            "required_explanation_safety_warning": REQUIRED_EXPLANATION_SAFETY_WARNING,
+            "summary_strip": {
+                "Skill Ledger entries": SkillEntry.objects.count(),
+                "Advisory rows": len(advisory_rows),
+                "Explanation rows": len(explanations),
+                "Provider mode": SPRINT_87_PROVIDER_MODE_MOCKED,
+            },
+        },
+    )
+
+
+@login_required
 def skill_entry_detail(request, pk):
     entry = get_object_or_404(SkillEntry, pk=pk)
     return render(

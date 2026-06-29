@@ -18,6 +18,11 @@ urlpatterns = [
         views.skill_ledger_advisory_ai_evidence,
         name="advisory_ai_evidence",
     ),
+    path(
+        "advisory/ai-review-hub/",
+        views.skill_ledger_advisory_ai_review_hub,
+        name="advisory_ai_review_hub",
+    ),
     path("public/", views.skill_ledger_public, name="public"),
     path("<int:pk>/edit/", views.skill_entry_edit, name="edit"),
     path("<int:pk>/", views.skill_entry_detail, name="detail"),
