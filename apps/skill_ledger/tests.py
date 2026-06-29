@@ -1803,6 +1803,116 @@ class SkillLedgerAIAdvisoryManualReviewChecklistTests(TestCase):
         )
 
 
+class SkillLedgerAIAdvisoryReviewHubChecklistLinkTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="reviewhubchecklistuser",
+            password="StrongPass12345",
+        )
+        self.hub_url = reverse("skill_ledger:advisory_ai_review_hub")
+        self.checklist_url = reverse("skill_ledger:advisory_manual_review_checklist")
+
+    def _login(self):
+        self.client.login(username="reviewhubchecklistuser", password="StrongPass12345")
+
+    def _hub_content(self):
+        response = self.client.get(self.hub_url)
+        return response.content.decode()
+
+    def test_review_hub_renders_link_to_manual_review_checklist(self):
+        self._login()
+
+        response = self.client.get(self.hub_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Manual review checklist")
+
+    def test_review_hub_checklist_link_uses_correct_url(self):
+        self._login()
+
+        response = self.client.get(self.hub_url)
+
+        self.assertContains(
+            response,
+            'href="/skill-ledger/advisory/manual-review-checklist/"',
+        )
+        self.assertEqual(
+            self.checklist_url,
+            "/skill-ledger/advisory/manual-review-checklist/",
+        )
+
+    def test_review_hub_anonymous_access_still_redirected(self):
+        response = self.client.get(self.hub_url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response["Location"])
+
+    def test_sprint_91_checklist_loads_for_authenticated_user(self):
+        self._login()
+
+        response = self.client.get(self.checklist_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI advisory manual review checklist")
+
+    def test_sprint_91_checklist_redirects_anonymous_user(self):
+        response = self.client.get(self.checklist_url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response["Location"])
+
+    def test_sprint_91_checklist_post_returns_405(self):
+        self._login()
+
+        response = self.client.post(self.checklist_url, {"review": "done"})
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_review_hub_does_not_render_forbidden_phrases(self):
+        self._login()
+
+        content = self._hub_content().lower()
+        forbidden_phrases = (
+            *FORBIDDEN_EXPLANATION_PHRASES,
+            "ai confirmed",
+            "ai has assessed your skill",
+            "ai says you are qualified",
+            "employer-ready",
+            "profile updated",
+            "cv updated",
+            "linkedin updated",
+            "application submitted",
+            "auto-save",
+            "auto-apply",
+            "production ai",
+            "live ai monitoring",
+            "real-time ai metrics",
+            "ai observability dashboard",
+            "claim-ready skill",
+            "verified by ai",
+            "verified by jd",
+        )
+
+        for forbidden in forbidden_phrases:
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, content)
+
+    def test_review_hub_no_forms_inputs_or_submit_controls(self):
+        self._login()
+
+        content = self._hub_content().lower().split('<div class="cf90-page"', 1)[1]
+
+        self.assertNotIn("<form", content)
+        self.assertNotIn("<input", content)
+        self.assertNotIn("<textarea", content)
+        self.assertNotIn("<button", content)
+        self.assertNotIn('type="submit"', content)
+        self.assertNotIn('role="button"', content)
+        self.assertIn("AI advisory review hub", self._hub_content())
+        self.assertIn("This hub is private and advisory only.", self._hub_content())
+        self.assertIn("No live AI provider is called from this hub.", self._hub_content())
+
+
 class SkillLedgerJdSignalContextTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="jdcontext", password="StrongPass12345")
