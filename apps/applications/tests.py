@@ -4296,6 +4296,203 @@ class JobPostingAnalyzerPrefillBridgeTests(TestCase):
         self.assertContains(response, f"company_name={encoded_company}")
 
 
+class ApplicationWorkflowSafetyWordingRegressionTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="workflow-safety",
+            password="StrongPass12345",
+        )
+        self.create_url = reverse("applications:application_create")
+        self.unsafe_claim_phrases = (
+            "employer confirmed",
+            "you are qualified",
+            "job ready",
+            "employer ready",
+            "this proves proficiency",
+            "ai verified",
+            "automatically verified",
+            "skill confirmed",
+            "ready to apply",
+            "you meet the requirements",
+            "this jd signal verifies",
+            "proficiency confirmed",
+            "ai confirmed",
+            "profile updated",
+            "cv updated",
+            "careerfunnel submitted your application",
+            "application has been submitted",
+            "application was submitted",
+            "submitted to employer",
+            "submitted for you",
+            "sent to employer",
+            "auto-applied",
+            "automatically applied",
+            "we applied for you",
+            "careerfunnel applied",
+            "production ai",
+            "live ai monitoring",
+        )
+
+    def _login(self):
+        self.client.login(username="workflow-safety", password="StrongPass12345")
+
+    def _create_application(self, **overrides):
+        defaults = {
+            "user": self.user,
+            "company_name": "Evidence Analytics Ltd",
+            "job_title": "Data Analyst",
+            "date_applied": date(2026, 5, 9),
+        }
+        defaults.update(overrides)
+        return JobApplication.objects.create(**defaults)
+
+    def _get_application_form(self, with_prefill=False):
+        self._login()
+        if not with_prefill:
+            return self.client.get(self.create_url)
+        return self.client.get(
+            self.create_url,
+            {
+                "company_name": "FinSight",
+                "job_title": "Junior Finance Data Analyst",
+                "location": "Hybrid London",
+                "fit_score": "70",
+            },
+        )
+
+    def _get_application_detail(self):
+        self._login()
+        application = self._create_application(contact_email="hiring@example.com")
+        return self.client.get(
+            reverse("applications:application_detail", kwargs={"pk": application.pk}),
+        )
+
+    def _get_status_update(self):
+        self._login()
+        application = self._create_application()
+        return self.client.get(
+            reverse("applications:application_status_update", kwargs={"pk": application.pk}),
+        )
+
+    def _assert_unsafe_claim_phrases_absent(self, response):
+        content = response.content.decode().lower()
+        for phrase in self.unsafe_claim_phrases:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+    def test_application_form_prefill_wording_present(self):
+        response = self._get_application_form()
+
+        self.assertContains(response, "Pre-filling this form does not save your application.")
+
+    def test_application_form_tracking_only_wording_present(self):
+        response = self._get_application_form()
+
+        self.assertContains(response, "Saving creates a tracking record only.")
+
+    def test_application_form_no_documents_generated_wording_present(self):
+        response = self._get_application_detail()
+
+        self.assertContains(response, "Documents are not generated here.")
+
+    def test_application_detail_followup_manual_wording_present(self):
+        response = self._get_application_detail()
+
+        self.assertContains(response, "Follow-up email drafts are for manual use only.")
+
+    def test_application_form_prefill_cta_label_present(self):
+        response = self._get_application_form(with_prefill=True)
+
+        self.assertContains(response, "Pre-fill Add Application")
+
+    def test_application_form_cv_draft_label_present(self):
+        response = self._get_application_form()
+
+        self.assertContains(response, "Draft - tracking record only")
+
+    def test_application_detail_no_auto_apply_boundary_wording_present(self):
+        response = self._get_application_detail()
+
+        self.assertContains(response, "No auto-apply and no employer submission by CareerFunnel.")
+
+    def test_skill_gap_dashboard_advisory_wording_present(self):
+        self._login()
+
+        response = self.client.get(reverse("skills:job_ai_capability_match_report"))
+
+        self.assertContains(response, "Skill gap signals are advisory only.")
+
+    def test_career_intelligence_learning_recs_wording_present(self):
+        self._login()
+
+        response = self.client.get(reverse("skills:learning_recommendations_report"))
+
+        self.assertContains(response, "Learning recommendations are planning aids.")
+
+    def test_application_form_unsafe_claim_phrases_absent(self):
+        response = self._get_application_form(with_prefill=True)
+
+        self._assert_unsafe_claim_phrases_absent(response)
+
+    def test_application_detail_unsafe_claim_phrases_absent(self):
+        response = self._get_application_detail()
+
+        self.assertContains(response, "No auto-apply and no employer submission by CareerFunnel.")
+        self._assert_unsafe_claim_phrases_absent(response)
+
+    def test_application_list_unsafe_claim_phrases_absent(self):
+        self._login()
+        self._create_application()
+
+        response = self.client.get(reverse("applications:application_list"))
+
+        self.assertContains(response, "No auto-apply and no employer submission by CareerFunnel.")
+        self._assert_unsafe_claim_phrases_absent(response)
+
+    def test_skill_gap_dashboard_unsafe_claim_phrases_absent(self):
+        self._login()
+
+        response = self.client.get(reverse("skills:job_ai_capability_match_report"))
+
+        self._assert_unsafe_claim_phrases_absent(response)
+
+    def test_data_quality_audit_unsafe_claim_phrases_absent(self):
+        self._login()
+
+        response = self.client.get(reverse("applications:application_data_quality_audit"))
+
+        self._assert_unsafe_claim_phrases_absent(response)
+
+    def test_status_update_form_tracking_only_wording_present(self):
+        response = self._get_status_update()
+
+        self.assertContains(response, "This updates your saved tracking record only.")
+
+    def test_status_update_form_no_employer_update_wording_present(self):
+        response = self._get_status_update()
+
+        self.assertContains(response, "It does not update any employer system")
+
+    def test_status_update_form_manual_review_wording_present(self):
+        response = self._get_status_update()
+
+        self.assertContains(response, "Review recruiter emails and employer messages manually")
+
+    def test_jd_gap_aggregation_advisory_wording_present(self):
+        self._login()
+
+        response = self.client.get(reverse("applications:jd_gap_aggregation"))
+
+        self.assertContains(response, "Skill gap signals are advisory only.")
+
+    def test_jd_gap_aggregation_unsafe_claim_phrases_absent(self):
+        self._login()
+
+        response = self.client.get(reverse("applications:jd_gap_aggregation"))
+
+        self._assert_unsafe_claim_phrases_absent(response)
+
+
 class EvaluationQueueTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="queue", password="StrongPass12345")
