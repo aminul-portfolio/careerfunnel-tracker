@@ -3508,3 +3508,132 @@ class PrivateAIAdvisoryEvaluationCasebookTests(TestCase):
         self.assertContains(response, "AI explanation layer - safety controls and evidence")
         self.assertContains(response, "No live provider is configured for this sprint.")
         self.assertContains(response, "This dashboard is advisory evidence only.")
+
+
+class SkillLedgerAdvisoryClaimSafetyExamplesTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="claimsafetyuser",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skill_ledger:advisory")
+
+    def _login(self):
+        self.client.login(username="claimsafetyuser", password="StrongPass12345")
+
+    def _get_advisory(self):
+        self._login()
+        return self.client.get(self.url)
+
+    def test_advisory_page_renders_claim_safety_examples_section(self):
+        response = self._get_advisory()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Claim-safety examples")
+        self.assertContains(response, "Claim-safety examples are advisory only.")
+
+    def test_advisory_page_renders_at_least_four_claim_safety_example_blocks(self):
+        response = self._get_advisory()
+
+        self.assertContains(response, 'data-testid="claim-safety-example"', count=4)
+        self.assertContains(response, "Learning-target skill claim inflation")
+        self.assertContains(response, "Expert in Databricks with production pipeline ownership.")
+        self.assertContains(
+            response,
+            "Databricks is a learning target; portfolio evidence is planned but not yet verified.",
+        )
+        self.assertNotContains(response, "Expert in dbt with production pipeline ownership.")
+        self.assertNotContains(
+            response,
+            "dbt is a learning target; portfolio evidence is planned but not yet verified.",
+        )
+        self.assertContains(response, "JD signal mistaken as proof of proficiency")
+        self.assertContains(
+            response,
+            "Verified skill without enough public evidence context",
+        )
+        self.assertContains(
+            response,
+            "Public CV, LinkedIn, or profile wording before manual review",
+        )
+
+    def test_advisory_page_renders_unsafe_claim_and_safer_alternative_labels(self):
+        response = self._get_advisory()
+
+        self.assertContains(response, "Unsafe inflated claim:")
+        self.assertContains(response, "Safer evidence-grounded alternative:")
+        self.assertContains(response, "Manual review note:")
+        self.assertContains(response, "Unsafe examples show wording to avoid.")
+        self.assertContains(response, "Safer examples still require manual evidence review.")
+
+    def test_advisory_page_renders_manual_review_wording_before_public_use(self):
+        response = self._get_advisory()
+
+        self.assertContains(response, "Manual review is required before using any claim in a CV")
+        self.assertContains(response, "cover letter, or interview answer.")
+        self.assertContains(
+            response,
+            (
+                "Review CV, LinkedIn, public profile, cover letter, and interview "
+                "wording manually before publishing any claim."
+            ),
+        )
+
+    def test_advisory_page_renders_no_live_ai_and_no_certification_wording(self):
+        response = self._get_advisory()
+
+        self.assertContains(response, "No live AI model is used in this advisory page.")
+        self.assertContains(
+            response,
+            "These examples do not certify proficiency or predict employer outcomes.",
+        )
+        self.assertContains(
+            response,
+            "Do not use learning-target, studying, or no-evidence skills as verified claims.",
+        )
+        self.assertContains(response, "A JD signal does not prove proficiency.")
+
+    def test_advisory_page_renders_no_mutation_wording(self):
+        response = self._get_advisory()
+
+        self.assertContains(
+            response,
+            "This page does not update CVs, LinkedIn, public profiles, applications, or Skill",
+        )
+        self.assertContains(response, "Ledger evidence.")
+
+    def test_advisory_page_preserves_deterministic_classification_wording(self):
+        response = self._get_advisory()
+
+        self.assertContains(response, "Classifications are deterministic rules, not AI inference.")
+        self.assertContains(response, "LEARNING TARGET</strong> - do not claim as verified")
+        self.assertContains(response, "STUDYING</strong> - personal study only, not claim-ready")
+        self.assertContains(response, "NO EVIDENCE</strong> - gap identified, do not claim")
+        self.assertContains(
+            response,
+            (
+                "Classifications are deterministic - derived from your Skill Ledger "
+                "evidence_level and visibility fields. They are not AI-generated assessments."
+            ),
+        )
+
+    def test_advisory_page_claim_safety_examples_require_login(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login", response["Location"])
+
+    def test_advisory_page_post_remains_get_only(self):
+        self._login()
+
+        response = self.client.post(self.url, {"skill_name": "Python"})
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_advisory_page_claim_safety_examples_render_without_advisory_rows(self):
+        response = self._get_advisory()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No Skill Ledger entries available")
+        self.assertContains(response, "Claim-safety examples")
+        self.assertContains(response, 'data-testid="claim-safety-example"', count=4)
