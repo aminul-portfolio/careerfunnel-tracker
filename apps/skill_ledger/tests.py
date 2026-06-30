@@ -34,6 +34,21 @@ from .ai_explanation import (
     validate_explanation,
 )
 from .management.commands.seed_skill_ledger import LEARNING_TARGET_NOTES, VERIFIED_DEFAULT_NOTES
+from .mocked_ai_response_evaluator import (
+    AUTO_ACTION_DETECTED,
+    CERTIFICATION_GUARANTEE,
+    EMPLOYER_OUTCOME_PREDICTION,
+    EMPTY_RESPONSE,
+    EVALUATION_FORBIDDEN_PHRASES,
+    GENERATED_DOCUMENT_DETECTED,
+    JD_SIGNAL_AS_PROFICIENCY,
+    LEARNING_TARGET_INFLATION,
+    LIVE_PROVIDER_IMPLICATION,
+    MUTATION_CLAIM_DETECTED,
+    EvaluationFinding,
+    MockedAIResponseEvaluation,
+    evaluate_mocked_ai_response,
+)
 from .models import SkillEntry
 
 
@@ -3637,3 +3652,175 @@ class SkillLedgerAdvisoryClaimSafetyExamplesTests(TestCase):
         self.assertContains(response, "No Skill Ledger entries available")
         self.assertContains(response, "Claim-safety examples")
         self.assertContains(response, 'data-testid="claim-safety-example"', count=4)
+
+
+class MockedAIResponseEvaluatorTests(TestCase):
+    def test_evaluator_detects_learning_target_inflation(self):
+        response_text = (
+            "Your learning target in Databricks is verified and claim-ready for interviews."
+        )
+        evaluation = evaluate_mocked_ai_response(response_text)
+
+        self.assertEqual(evaluation.verdict, "blocked")
+        codes = {finding.code for finding in evaluation.findings}
+        self.assertIn(LEARNING_TARGET_INFLATION, codes)
+
+    def test_evaluator_detects_jd_signal_as_proficiency(self):
+        response_text = "The JD signal proves you are proficient in Airflow."
+        evaluation = evaluate_mocked_ai_response(response_text)
+
+        self.assertEqual(evaluation.verdict, "blocked")
+        codes = {finding.code for finding in evaluation.findings}
+        self.assertIn(JD_SIGNAL_AS_PROFICIENCY, codes)
+
+    def test_evaluator_detects_mutation_claim(self):
+        response_text = "We updated your CV with the new skills."
+        evaluation = evaluate_mocked_ai_response(response_text)
+
+        self.assertEqual(evaluation.verdict, "blocked")
+        codes = {finding.code for finding in evaluation.findings}
+        self.assertIn(MUTATION_CLAIM_DETECTED, codes)
+
+    def test_evaluator_detects_document_generation_claim(self):
+        response_text = "We generated your CV for this role."
+        evaluation = evaluate_mocked_ai_response(response_text)
+
+        self.assertEqual(evaluation.verdict, "blocked")
+        codes = {finding.code for finding in evaluation.findings}
+        self.assertIn(GENERATED_DOCUMENT_DETECTED, codes)
+
+    def test_evaluator_detects_auto_action_claim(self):
+        response_text = "CareerFunnel has saved the changes on your behalf."
+        evaluation = evaluate_mocked_ai_response(response_text)
+
+        self.assertEqual(evaluation.verdict, "blocked")
+        codes = {finding.code for finding in evaluation.findings}
+        self.assertIn(AUTO_ACTION_DETECTED, codes)
+
+    def test_evaluator_detects_certification_guarantee_wording(self):
+        response_text = "This analysis certifies your proficiency in Python."
+        evaluation = evaluate_mocked_ai_response(response_text)
+
+        self.assertEqual(evaluation.verdict, "blocked")
+        codes = {finding.code for finding in evaluation.findings}
+        self.assertIn(CERTIFICATION_GUARANTEE, codes)
+
+    def test_evaluator_detects_employer_outcome_prediction(self):
+        response_text = "This wording guarantees interviews with top employers."
+        evaluation = evaluate_mocked_ai_response(response_text)
+
+        self.assertEqual(evaluation.verdict, "blocked")
+        codes = {finding.code for finding in evaluation.findings}
+        self.assertIn(EMPLOYER_OUTCOME_PREDICTION, codes)
+
+    def test_evaluator_detects_live_ai_provider_implication(self):
+        response_text = "OpenAI confirmed your skill level for this role."
+        evaluation = evaluate_mocked_ai_response(response_text)
+
+        self.assertEqual(evaluation.verdict, "blocked")
+        codes = {finding.code for finding in evaluation.findings}
+        self.assertIn(LIVE_PROVIDER_IMPLICATION, codes)
+
+    def test_evaluator_detects_empty_response(self):
+        evaluation = evaluate_mocked_ai_response("   ")
+
+        self.assertEqual(evaluation.verdict, "blocked")
+        self.assertEqual(len(evaluation.findings), 1)
+        self.assertEqual(evaluation.findings[0].code, EMPTY_RESPONSE)
+
+    def test_evaluation_finding_is_frozen_dataclass(self):
+        finding = EvaluationFinding(
+            code=LEARNING_TARGET_INFLATION,
+            excerpt="learning target verified",
+            severity="block",
+        )
+
+        with self.assertRaises(FrozenInstanceError):
+            finding.code = "changed"
+
+    def test_mocked_ai_response_evaluation_is_frozen_dataclass(self):
+        evaluation: MockedAIResponseEvaluation = evaluate_mocked_ai_response(
+            "Advisory-only manual review note."
+        )
+
+        with self.assertRaises(FrozenInstanceError):
+            evaluation.verdict = "blocked"
+
+    def test_evaluator_returns_allowed_for_safe_advisory_text(self):
+        response_text = (
+            "This explanation is advisory only. Manual review is required before reuse. "
+            "Databricks remains a learning target and should not be presented as verified "
+            "without reviewed evidence."
+        )
+        evaluation = evaluate_mocked_ai_response(response_text)
+
+        self.assertEqual(evaluation.verdict, "allowed")
+        self.assertEqual(evaluation.findings, ())
+
+    def test_evaluator_allows_response_with_all_required_safety_wording(self):
+        response_text = (
+            f"{REQUIRED_EXPLANATION_SAFETY_WARNING} "
+            "Review evidence manually before adding any skill to your CV or LinkedIn."
+        )
+        evaluation = evaluate_mocked_ai_response(response_text)
+
+        self.assertEqual(evaluation.verdict, "allowed")
+        self.assertEqual(evaluation.findings, ())
+
+    def test_evaluator_inherits_sprint_87_forbidden_phrases(self):
+        response_text = "Based on this row, you are qualified for the role."
+        evaluation = evaluate_mocked_ai_response(response_text)
+
+        self.assertEqual(evaluation.verdict, "blocked")
+        self.assertTrue(
+            any(
+                finding.excerpt.lower() == "you are qualified"
+                for finding in evaluation.findings
+            )
+        )
+        self.assertIn(
+            "you are qualified",
+            FORBIDDEN_EXPLANATION_PHRASES,
+        )
+        self.assertIn(
+            "you are qualified",
+            EVALUATION_FORBIDDEN_PHRASES,
+        )
+
+    def test_findings_include_non_empty_excerpts(self):
+        response_text = "We generated your CV and OpenAI confirmed the result."
+        evaluation = evaluate_mocked_ai_response(response_text)
+
+        self.assertGreater(len(evaluation.findings), 0)
+        for finding in evaluation.findings:
+            self.assertTrue(finding.excerpt.strip())
+
+    def test_input_length_is_preserved(self):
+        response_text = "  Advisory-only note with leading spaces.  "
+        evaluation = evaluate_mocked_ai_response(response_text)
+
+        self.assertEqual(evaluation.input_length, len(response_text))
+
+    def test_evaluated_at_sprint_is_sprint_101(self):
+        evaluation = evaluate_mocked_ai_response("Manual review remains required.")
+
+        self.assertEqual(evaluation.evaluated_at_sprint, "sprint_101")
+
+    def test_evaluator_does_not_require_database_records(self):
+        evaluation = evaluate_mocked_ai_response("Deterministic advisory output only.")
+
+        self.assertEqual(evaluation.verdict, "allowed")
+        self.assertEqual(SkillEntry.objects.count(), 0)
+
+    def test_evaluator_uses_specific_codes_for_multiple_findings(self):
+        response_text = (
+            "We generated your CV. OpenAI confirmed proficiency. "
+            "This guarantees interviews."
+        )
+        evaluation = evaluate_mocked_ai_response(response_text)
+
+        self.assertEqual(evaluation.verdict, "blocked")
+        codes = {finding.code for finding in evaluation.findings}
+        self.assertIn(GENERATED_DOCUMENT_DETECTED, codes)
+        self.assertIn(LIVE_PROVIDER_IMPLICATION, codes)
+        self.assertIn(EMPLOYER_OUTCOME_PREDICTION, codes)
