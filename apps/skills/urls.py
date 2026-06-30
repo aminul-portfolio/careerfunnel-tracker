@@ -40,4 +40,9 @@ urlpatterns = [
         views.final_career_intelligence_workflow,
         name="final_career_intelligence_workflow",
     ),
+    path(
+        "career-workflow-decision-assistant/",
+        views.career_workflow_decision_assistant,
+        name="career_workflow_decision_assistant",
+    ),
 ]

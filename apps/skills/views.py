@@ -108,3 +108,72 @@ def final_career_intelligence_workflow(request):
             "workflow": build_final_career_intelligence_workflow(),
         },
     )
+
+
+@login_required
+@require_http_methods(["GET"])
+def career_workflow_decision_assistant(request):
+    workflow_principles = [
+        {
+            "title": "Review evidence before claiming a learning-target skill",
+            "guidance": (
+                "Before using a learning-target skill in a CV bullet or interview answer, "
+                "check whether portfolio evidence, tests, screenshots, or prior work "
+                "experience support the claim."
+            ),
+        },
+        {
+            "title": "Prioritise evidence-backed skills when tailoring a manual application",
+            "guidance": (
+                "When tailoring a manual application, lead with skills that already have "
+                "reviewed evidence rather than skills still marked as learning targets."
+            ),
+        },
+        {
+            "title": "Check whether a manual follow-up is appropriate before drafting",
+            "guidance": (
+                "Before drafting follow-up text, confirm the application stage, saved notes, "
+                "and whether a manual follow-up is appropriate for that role."
+            ),
+        },
+        {
+            "title": "Do not claim tools that are only learning targets",
+            "guidance": (
+                "Keep learning-target tools in a study or development plan until evidence "
+                "is ready. Do not present them as verified proficiency."
+            ),
+        },
+        {
+            "title": "Improve evidence for repeated JD signals",
+            "guidance": (
+                "When the same skill appears across multiple job descriptions, treat it as "
+                "a repeated signal to gather or strengthen evidence manually."
+            ),
+        },
+        {
+            "title": "Review weak-fit applications before investing tailoring time",
+            "guidance": (
+                "Review role fit, location, seniority, and evidence gaps before spending "
+                "tailoring time on a weak-fit application."
+            ),
+        },
+        {
+            "title": "Add portfolio evidence for high-value skills",
+            "guidance": (
+                "For high-value skills that appear often in target roles, plan portfolio "
+                "evidence, project notes, or sprint references before public claims."
+            ),
+        },
+        {
+            "title": "Continue the manual save and manual submit workflow",
+            "guidance": (
+                "Save application records manually, review evidence manually, and submit "
+                "applications manually. Do not expect this page to save or send anything."
+            ),
+        },
+    ]
+    return render(
+        request,
+        "skills/career_workflow_decision_assistant.html",
+        {"workflow_principles": workflow_principles},
+    )
