@@ -4,18 +4,52 @@
 {% block page_heading %}AI explanation contract preview{% endblock %}
 
 {% block content %}
-<div class="cf88-page">
-    <section class="cf88-panel" aria-label="AI explanation preview overview">
+<style>
+    .cf103-explanations-page {
+        display: grid;
+        gap: 1.25rem;
+    }
+
+    .cf103-explanations-page .cf103-vh-hero {
+        border-left: 4px solid #1d4ed8;
+    }
+
+    .cf103-explanations-page .cf103-vh-locked-stack {
+        display: grid;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+    }
+
+    .cf103-explanations-page .cf103-vh-locked-stack p:first-child {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .cf103-explanations-page .cf103-vh-safety-panel ul {
+        display: grid;
+        gap: 0.35rem;
+    }
+
+    .cf103-explanations-page .cf103-vh-rows-panel .cf88-row + .cf88-row {
+        margin-top: 0.75rem;
+    }
+</style>
+<div class="cf88-page cf103-explanations-page">
+    <section class="cf88-panel cf103-vh-hero" aria-label="AI explanation preview overview">
         <h1>AI explanation contract preview</h1>
-        <p>No live provider output is shown here.</p>
-        <p>Provider mode: {{ provider_mode }}</p>
-        <p>Explanations are advisory only.</p>
-        <p>{{ required_explanation_safety_warning }}</p>
-        <p>Review evidence manually before using any skill in your CV, LinkedIn, or public profile.</p>
-        <p>This preview does not save, update, publish, or submit anything.</p>
+        <div class="cf103-vh-locked-stack">
+            <p>{{ required_explanation_safety_warning }}</p>
+            <p>No live provider output is shown here.</p>
+            <p>Provider mode: {{ provider_mode }}</p>
+            <p>Explanations are advisory only.</p>
+            <p>Review evidence manually before using any skill in your CV, LinkedIn, or public profile.</p>
+            <p>This preview does not save, update, publish, or submit anything.</p>
+        </div>
     </section>
 
-    <section class="cf88-panel" aria-label="Preview safety boundaries">
+    <section class="cf88-panel cf103-vh-safety-panel" aria-label="Preview safety boundaries">
         <h2>Safety boundaries</h2>
         <ul>
             <li>A JD signal does not prove proficiency.</li>
@@ -31,7 +65,7 @@
     </section>
 
     {% if explanation_rows %}
-    <section class="cf88-panel" aria-label="Skill advisory explanation rows">
+    <section class="cf88-panel cf103-vh-rows-panel" aria-label="Skill advisory explanation rows">
         <h2>Deterministic explanation rows</h2>
         {% for row in explanation_rows %}
         <article class="cf88-row">
@@ -50,7 +84,7 @@
         {% endfor %}
     </section>
     {% else %}
-    <section class="cf88-panel cf88-empty" aria-label="No explanation rows">
+    <section class="cf88-panel cf88-empty cf103-vh-rows-panel" aria-label="No explanation rows">
         <h2>No explanation rows available</h2>
         <p>No Skill Ledger entries or JD candidate terms are available for this contract preview.</p>
     </section>

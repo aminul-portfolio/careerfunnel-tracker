@@ -4,8 +4,38 @@
 {% block page_heading %}Private AI Advisory Evaluation Casebook{% endblock %}
 
 {% block content %}
-<div class="cf97-page">
-    <section class="cf97-panel" aria-label="Private AI advisory evaluation casebook overview">
+<style>
+    .cf103-casebook-page {
+        display: grid;
+        gap: 1.25rem;
+    }
+
+    .cf103-casebook-page .cf103-vh-hero {
+        border-left: 4px solid #1d4ed8;
+    }
+
+    .cf103-casebook-page .cf103-vh-boundary-zone {
+        border-left: 4px solid #0f766e;
+    }
+
+    .cf103-casebook-page .cf97-boundary-list {
+        display: grid;
+        gap: 0.35rem;
+    }
+
+    .cf103-casebook-page .cf97-case-list {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .cf103-casebook-page .cf97-case {
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 1rem;
+    }
+</style>
+<div class="cf97-page cf103-casebook-page">
+    <section class="cf97-panel cf103-vh-hero" aria-label="Private AI advisory evaluation casebook overview">
         <h1>Private AI Advisory Evaluation Casebook</h1>
         <p>Private planning reference - deterministic cases only</p>
         <p>These cases are deterministic review examples, not live AI generations.</p>
@@ -20,7 +50,7 @@
         </p>
     </section>
 
-    <section class="cf97-panel" aria-label="Casebook safety boundaries">
+    <section class="cf97-panel cf103-vh-boundary-zone" aria-label="Casebook safety boundaries">
         <h2>Casebook boundaries</h2>
         <ul class="cf97-boundary-list">
             <li>No live AI model or provider integration is used.</li>

@@ -4,74 +4,113 @@
 {% block page_heading %}AI explanation layer - safety controls and evidence{% endblock %}
 
 {% block content %}
-<div class="cf89-page">
-    <section class="cf89-panel" aria-label="AI explanation safety overview">
+<style>
+    .cf103-evidence-page {
+        display: grid;
+        gap: 1.25rem;
+    }
+
+    .cf103-evidence-page .cf103-vh-hero {
+        border-left: 4px solid #1d4ed8;
+    }
+
+    .cf103-evidence-page .cf103-vh-locked-stack {
+        display: grid;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+    }
+
+    .cf103-evidence-page .cf103-vh-locked-stack p:nth-child(7),
+    .cf103-evidence-page .cf103-vh-locked-stack p:nth-child(8) {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .cf103-evidence-page .cf103-vh-metrics-grid {
+        display: grid;
+        gap: 1rem;
+    }
+
+    @media (min-width: 900px) {
+        .cf103-evidence-page .cf103-vh-metrics-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+</style>
+<div class="cf89-page cf103-evidence-page">
+    <section class="cf89-panel cf103-vh-hero" aria-label="AI explanation safety overview">
         <h1>AI explanation layer - safety controls and evidence</h1>
-        <p>Provider mode: {{ provider_mode }}</p>
-        <p>No live provider is configured for this sprint.</p>
-        <p>No raw provider output is stored or displayed.</p>
-        <p>No raw JD text is displayed on this dashboard.</p>
-        <p>This dashboard is advisory evidence only.</p>
-        <p>This dashboard does not save, update, publish, submit, or mutate records.</p>
-        <p>{{ required_explanation_safety_warning }}</p>
-        <p>A JD signal does not prove proficiency.</p>
-        <p>Review evidence manually before using any skill in your CV, LinkedIn, or public profile.</p>
-        <p>
-            This dashboard derives all status information from code constants and queryset counts.
-            No AI output, provider response, or prompt data is stored or displayed here.
-        </p>
-        <p>
-            The forbidden phrase list and required safety warning are enforced in code. They are not
-            manually curated at display time.
-        </p>
+        <div class="cf103-vh-locked-stack">
+            <p>Provider mode: {{ provider_mode }}</p>
+            <p>No live provider is configured for this sprint.</p>
+            <p>No raw provider output is stored or displayed.</p>
+            <p>No raw JD text is displayed on this dashboard.</p>
+            <p>This dashboard is advisory evidence only.</p>
+            <p>This dashboard does not save, update, publish, submit, or mutate records.</p>
+            <p>{{ required_explanation_safety_warning }}</p>
+            <p>A JD signal does not prove proficiency.</p>
+            <p>Review evidence manually before using any skill in your CV, LinkedIn, or public profile.</p>
+            <p>
+                This dashboard derives all status information from code constants and queryset counts.
+                No AI output, provider response, or prompt data is stored or displayed here.
+            </p>
+            <p>
+                The forbidden phrase list and required safety warning are enforced in code. They are not
+                manually curated at display time.
+            </p>
+        </div>
     </section>
 
-    <section class="cf89-panel" aria-label="System status">
-        <h2>System status</h2>
-        <dl class="cf89-status-list">
-            {% for label, value in system_status.items %}
-            <div class="cf89-status-row">
-                <dt>{{ label }}</dt>
-                <dd>{{ value }}</dd>
-            </div>
-            {% endfor %}
-        </dl>
-    </section>
+    <div class="cf103-vh-metrics-grid" aria-label="Evidence dashboard metrics">
+        <section class="cf89-panel" aria-label="System status">
+            <h2>System status</h2>
+            <dl class="cf89-status-list">
+                {% for label, value in system_status.items %}
+                <div class="cf89-status-row">
+                    <dt>{{ label }}</dt>
+                    <dd>{{ value }}</dd>
+                </div>
+                {% endfor %}
+            </dl>
+        </section>
 
-    <section class="cf89-panel" aria-label="Contract health">
-        <h2>Contract health</h2>
-        <dl class="cf89-status-list">
-            {% for label, value in contract_health.items %}
-            <div class="cf89-status-row">
-                <dt>{{ label }}</dt>
-                <dd>{{ value }}</dd>
-            </div>
-            {% endfor %}
-        </dl>
-    </section>
+        <section class="cf89-panel" aria-label="Contract health">
+            <h2>Contract health</h2>
+            <dl class="cf89-status-list">
+                {% for label, value in contract_health.items %}
+                <div class="cf89-status-row">
+                    <dt>{{ label }}</dt>
+                    <dd>{{ value }}</dd>
+                </div>
+                {% endfor %}
+            </dl>
+        </section>
 
-    <section class="cf89-panel" aria-label="Data counts">
-        <h2>Data counts</h2>
-        <dl class="cf89-status-list">
-            {% for label, value in data_counts.items %}
-            <div class="cf89-status-row">
-                <dt>{{ label }}</dt>
-                <dd>{{ value }}</dd>
-            </div>
-            {% endfor %}
-        </dl>
-    </section>
+        <section class="cf89-panel" aria-label="Data counts">
+            <h2>Data counts</h2>
+            <dl class="cf89-status-list">
+                {% for label, value in data_counts.items %}
+                <div class="cf89-status-row">
+                    <dt>{{ label }}</dt>
+                    <dd>{{ value }}</dd>
+                </div>
+                {% endfor %}
+            </dl>
+        </section>
 
-    <section class="cf89-panel" aria-label="Boundary summary">
-        <h2>Boundary summary</h2>
-        <dl class="cf89-status-list">
-            {% for label, value in boundary_summary.items %}
-            <div class="cf89-status-row">
-                <dt>{{ label }}</dt>
-                <dd>{{ value }}</dd>
-            </div>
-            {% endfor %}
-        </dl>
-    </section>
+        <section class="cf89-panel" aria-label="Boundary summary">
+            <h2>Boundary summary</h2>
+            <dl class="cf89-status-list">
+                {% for label, value in boundary_summary.items %}
+                <div class="cf89-status-row">
+                    <dt>{{ label }}</dt>
+                    <dd>{{ value }}</dd>
+                </div>
+                {% endfor %}
+            </dl>
+        </section>
+    </div>
 </div>
 {% endblock %}
