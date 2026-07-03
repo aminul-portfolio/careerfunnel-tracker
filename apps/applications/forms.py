@@ -1,6 +1,6 @@
 from django import forms
 
-from .choices import DocumentType
+from .choices import DocumentType, PipelineStage
 from .models import ApplicationDocument, JobApplication
 
 
@@ -8,6 +8,7 @@ class JobApplicationForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["follow_up_status"].required = False
+        self.fields["pipeline_stage"].required = False
 
     class Meta:
         model = JobApplication
@@ -25,6 +26,7 @@ class JobApplicationForm(forms.ModelForm):
             "job_description",
             "date_applied",
             "status",
+            "pipeline_stage",
             "response_date",
             "cv_version",
             "cover_letter_version",
@@ -90,6 +92,7 @@ class JobApplicationForm(forms.ModelForm):
                 attrs={"class": "form-control", "type": "date"},
             ),
             "status": forms.Select(attrs={"class": "form-control"}),
+            "pipeline_stage": forms.Select(attrs={"class": "form-control"}),
             "response_date": forms.DateInput(
                 format="%Y-%m-%d",
                 attrs={"class": "form-control", "type": "date"},
@@ -136,6 +139,9 @@ class JobApplicationForm(forms.ModelForm):
 
         if not cleaned_data.get("follow_up_status"):
             cleaned_data["follow_up_status"] = "not_set"
+
+        if not cleaned_data.get("pipeline_stage"):
+            cleaned_data["pipeline_stage"] = PipelineStage.JOB_FOUND
 
         if response_date and date_applied and response_date < date_applied:
             self.add_error("response_date", "Response date cannot be before the application date.")
