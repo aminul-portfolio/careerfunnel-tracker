@@ -4768,3 +4768,84 @@ class MasterCvLockedClaimWordingTests(SimpleTestCase):
         self.assertNotIn("828 automated tests", careerfunnel[2])
         self.assertIn("GBP 30,000", BASELINE_PROFILE_PARAGRAPH)
         self.assertIn("GBP 30,000", EXPERIENCE_MONEY_TRANSFER_FX_BULLETS[2])
+
+
+class Sprint103ApplicationDetailVisualHierarchySafetyTests(TestCase):
+    FORBIDDEN_UNSAFE_CLAIMS = (
+        "follow-up emails are sent automatically",
+        "applications are submitted automatically",
+        "application data is auto-saved from pre-fill",
+        "documents are generated here",
+        "cvs are generated here",
+        "cover letters are generated here",
+        "ai verifies proficiency",
+        "employer outcomes are predicted",
+        "skill ledger evidence is automatically updated",
+        "cv, linkedin, portfolio, or public profile is automatically updated",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="sprint103appdetail",
+            password="StrongPass12345",
+        )
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Phase Two Analytics",
+            job_title="Data Analyst",
+            date_applied=date(2026, 5, 9),
+            contact_email="hiring@example.com",
+        )
+
+    def _login(self):
+        self.client.login(username="sprint103appdetail", password="StrongPass12345")
+
+    def _get_application_detail(self):
+        self._login()
+        return self.client.get(
+            reverse(
+                "applications:application_detail",
+                kwargs={"pk": self.application.pk},
+            ),
+        )
+
+    def test_application_detail_renders_exact_locked_wording(self):
+        response = self._get_application_detail()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Follow-up email drafts are for manual use only.",
+        )
+        self.assertContains(response, "Documents are not generated here.")
+
+    def test_application_detail_renders_near_boundary_workflow_phrases(self):
+        response = self._get_application_detail()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Tracking record only:")
+        self.assertContains(response, "draft records only")
+        self.assertContains(response, "This updates your tracking record only")
+
+    def test_application_detail_loads_for_authenticated_user(self):
+        response = self._get_application_detail()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Phase Two Analytics")
+        self.assertContains(response, "Application identity")
+        self.assertContains(response, "cf103-application-detail-page")
+        self.assertContains(response, "cf103-vh-zone-identity")
+        self.assertContains(response, "cf103-vh-zone-records")
+        self.assertContains(response, "cf103-vh-zone-danger")
+
+    def test_application_detail_preserves_manual_boundaries_without_unsafe_claims(self):
+        response = self._get_application_detail()
+        content = response.content.decode().lower()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Manual document-review boundary")
+        self.assertContains(response, "CareerFunnel Tracker does not send email")
+        self.assertContains(response, "no automatic submission")
+        for phrase in self.FORBIDDEN_UNSAFE_CLAIMS:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
