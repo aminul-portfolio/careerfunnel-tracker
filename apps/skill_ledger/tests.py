@@ -1682,7 +1682,7 @@ class SkillLedgerAIAdvisoryManualReviewChecklistTests(TestCase):
         return response.content.decode()
 
     def _checklist_content(self):
-        return self._page_content().split('<div class="cf91-page"', 1)[1]
+        return self._page_content().split("cf103-checklist-page", 1)[1]
 
     def _create_skill_entry(self, **overrides):
         defaults = {
@@ -4102,6 +4102,70 @@ class Sprint104BPhase1SkillEntryFormGrammarAlignmentTests(TestCase):
 
     def test_skill_entry_form_unsafe_claim_phrases_absent(self):
         response = self._get_create_form()
+        content = response.content.decode().lower()
+
+        for phrase in self.UNSAFE_CLAIM_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+
+class Sprint104BPhase2ManualReviewChecklistLongPageRhythmTests(TestCase):
+    LOCKED_WORDING = (
+        "A JD signal does not prove proficiency.",
+        "A JD signal does not make a skill claim-ready.",
+        "Skill gap signals are advisory only.",
+        "Learning recommendations are planning aids.",
+        "This checklist does not verify proficiency, certify skills, or predict employer outcomes.",
+    )
+
+    UNSAFE_CLAIM_PHRASES = (
+        "proficiency is verified",
+        "employer outcomes are predicted",
+        "skills are certified",
+        "live ai provider is connected",
+        "openai integration is active",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="cf104b-checklist-user",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skill_ledger:advisory_manual_review_checklist")
+
+    def _get_checklist(self):
+        self.client.login(username="cf104b-checklist-user", password="StrongPass12345")
+        return self.client.get(self.url)
+
+    def test_manual_review_checklist_renders_cf104b_long_page_wrappers(self):
+        response = self._get_checklist()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="cf91-page cf104b-long-page"')
+        self.assertContains(response, "cf104b-long-page-shell")
+        self.assertContains(response, "cf104b-long-page-stack")
+        self.assertContains(response, "cf104b-long-page-section")
+        self.assertContains(response, "cf104b-long-page-safety")
+        self.assertContains(response, "cf103-checklist-page")
+        self.assertContains(response, "cf103-vh-hero")
+
+    def test_manual_review_checklist_preserves_claim_safety_wording(self):
+        response = self._get_checklist()
+
+        for phrase in self.LOCKED_WORDING:
+            with self.subTest(phrase=phrase):
+                self.assertContains(response, phrase)
+
+    def test_manual_review_checklist_preserves_manual_review_sections_and_links(self):
+        response = self._get_checklist()
+
+        self.assertContains(response, "Evidence source review")
+        self.assertContains(response, "Manual-only review workflow")
+        self.assertContains(response, 'href="/skill-ledger/advisory/explanations/"')
+        self.assertContains(response, 'href="/skill-ledger/advisory/ai-evidence/"')
+
+    def test_manual_review_checklist_unsafe_claim_phrases_absent(self):
+        response = self._get_checklist()
         content = response.content.decode().lower()
 
         for phrase in self.UNSAFE_CLAIM_PHRASES:

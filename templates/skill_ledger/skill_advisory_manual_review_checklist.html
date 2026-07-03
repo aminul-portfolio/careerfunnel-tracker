@@ -45,12 +45,33 @@
             grid-column: 1 / -1;
         }
     }
+
+    .cf104b-long-page .cf104b-long-page-shell {
+        display: grid;
+        gap: 1.25rem;
+    }
+
+    .cf104b-long-page .cf104b-long-page-stack {
+        display: grid;
+        gap: 1.25rem;
+    }
+
+    .cf104b-long-page .cf104b-long-page-section {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .cf104b-long-page .cf104b-long-page-safety {
+        display: grid;
+        gap: 0.75rem;
+    }
 </style>
-<div class="cf91-page">
-    <div class="cf103-checklist-page">
-    <section class="cf91-panel cf103-vh-hero" aria-label="Manual review checklist overview">
+<div class="cf91-page cf104b-long-page">
+    <div class="cf104b-long-page-shell">
+    <div class="cf103-checklist-page cf104b-long-page-stack">
+    <section class="cf91-panel cf103-vh-hero cf104b-long-page-section" aria-label="Manual review checklist overview">
         <h1>AI advisory manual review checklist</h1>
-        <div class="cf103-vh-locked-stack">
+        <div class="cf103-vh-locked-stack cf104b-long-page-safety">
             <p>This checklist is private and advisory only.</p>
             <p>This checklist does not save, update, publish, submit, or mutate records.</p>
             <p>This checklist does not verify proficiency, certify skills, or predict employer outcomes.</p>
@@ -68,7 +89,7 @@
         </div>
     </section>
 
-    <section class="cf91-panel" aria-label="Related private advisory pages">
+    <section class="cf91-panel cf104b-long-page-section" aria-label="Related private advisory pages">
         <h2>Related private advisory pages</h2>
         <ul class="cf91-link-list">
             <li><a href="/skill-ledger/advisory/explanations/">AI explanation preview</a></li>
@@ -77,7 +98,7 @@
         </ul>
     </section>
 
-    <div class="cf103-vh-checklist-grid" aria-label="Manual review checklist sections">
+    <div class="cf103-vh-checklist-grid cf104b-long-page-section" aria-label="Manual review checklist sections">
         <section class="cf91-panel" aria-label="Evidence source review">
             <h2>Evidence source review</h2>
             <p>
@@ -143,6 +164,7 @@
                 <li>Use conservative wording when adding skills to CV, LinkedIn, portfolio, or public profile material.</li>
             </ol>
         </section>
+    </div>
     </div>
     </div>
 </div>
