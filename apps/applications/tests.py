@@ -1037,7 +1037,7 @@ class JobApplicationViewTests(TestCase):
 
         response = self._get_application_detail(application)
         content = response.content.decode()
-        hero_content = content.split('class="cf69d-safety-grid"', 1)[0]
+        hero_content = content.split("cf69d-safety-grid", 1)[0]
         danger_zone = content.split('class="danger-zone cf69d-danger-zone"', 1)[1]
         delete_url = reverse("applications:application_delete", kwargs={"pk": application.pk})
 
@@ -1051,7 +1051,7 @@ class JobApplicationViewTests(TestCase):
         response = self._get_application_detail(application)
         content = response.content.decode()
         action_cluster = content.split('aria-label="Application action hierarchy"', 1)[1].split(
-            'class="cf69d-safety-grid"',
+            "cf69d-safety-grid",
             1,
         )[0]
 
@@ -4847,5 +4847,144 @@ class Sprint103ApplicationDetailVisualHierarchySafetyTests(TestCase):
         self.assertContains(response, "CareerFunnel Tracker does not send email")
         self.assertContains(response, "no automatic submission")
         for phrase in self.FORBIDDEN_UNSAFE_CLAIMS:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+
+class Sprint104BPhase1ApplicationFormGrammarAlignmentTests(TestCase):
+    LOCKED_WORDING = (
+        "Pre-filling this form does not save your application.",
+        "Saving creates a tracking record only.",
+        "Draft - tracking record only",
+    )
+
+    UNSAFE_CLAIM_PHRASES = (
+        "applications are submitted automatically",
+        "application data is auto-saved from pre-fill",
+        "cvs are generated here",
+        "cover letters are generated here",
+        "ai verifies proficiency",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="cf104b-form-user",
+            password="StrongPass12345",
+        )
+        self.create_url = reverse("applications:application_create")
+
+    def _get_add_form(self):
+        self.client.login(username="cf104b-form-user", password="StrongPass12345")
+        return self.client.get(self.create_url)
+
+    def test_application_form_renders_cf104b_visual_wrappers(self):
+        response = self._get_add_form()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="application-form-premium cf104b-form-page"')
+        self.assertContains(response, "cf104b-form-shell")
+        self.assertContains(response, "cf104b-form-hero")
+        self.assertContains(response, "cf104b-form-zone-advisory")
+        self.assertContains(response, "cf104b-form-stack")
+        self.assertContains(response, "cf104b-form-section")
+        self.assertContains(response, "cf104b-form-actions")
+
+    def test_application_form_preserves_locked_manual_save_wording(self):
+        response = self._get_add_form()
+
+        for phrase in self.LOCKED_WORDING:
+            with self.subTest(phrase=phrase):
+                self.assertContains(response, phrase)
+
+    def test_application_form_renders_expected_fields_and_submit_area(self):
+        response = self._get_add_form()
+
+        self.assertContains(response, 'name="company_name"')
+        self.assertContains(response, 'name="job_title"')
+        self.assertContains(response, 'name="status"')
+        self.assertContains(response, 'type="submit"')
+        self.assertContains(response, "Cancel")
+
+    def test_application_form_unsafe_claim_phrases_absent(self):
+        response = self._get_add_form()
+        content = response.content.decode().lower()
+
+        for phrase in self.UNSAFE_CLAIM_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+
+class Sprint104BPhase2ApplicationDetailLongPageRhythmTests(TestCase):
+    LOCKED_WORDING = (
+        "Follow-up email drafts are for manual use only.",
+        "Documents are not generated here.",
+        "Tracking record only:",
+        "draft records only",
+        "This updates your tracking record only",
+    )
+
+    UNSAFE_CLAIM_PHRASES = (
+        "follow-up emails are sent automatically",
+        "applications are submitted automatically",
+        "ai verifies proficiency",
+        "employer outcomes are predicted",
+        "documents are generated here",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="cf104b-longpage-user",
+            password="StrongPass12345",
+        )
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Rhythm Analytics Ltd",
+            job_title="Data Analyst",
+            date_applied=date(2026, 5, 9),
+            contact_email="hiring@example.com",
+        )
+
+    def _get_application_detail(self):
+        self.client.login(username="cf104b-longpage-user", password="StrongPass12345")
+        return self.client.get(
+            reverse(
+                "applications:application_detail",
+                kwargs={"pk": self.application.pk},
+            ),
+        )
+
+    def test_application_detail_renders_cf104b_long_page_wrappers(self):
+        response = self._get_application_detail()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="dashboard-grid cf69d-page cf104b-long-page"')
+        self.assertContains(response, "cf104b-long-page-shell")
+        self.assertContains(response, "cf104b-long-page-stack")
+        self.assertContains(response, "cf104b-long-page-section")
+        self.assertContains(response, "cf104b-long-page-safety")
+        self.assertContains(response, "cf104b-long-page-actions")
+        self.assertContains(response, "cf103-vh-zone-identity")
+        self.assertContains(response, "cf103-vh-zone-records")
+
+    def test_application_detail_preserves_locked_safety_wording(self):
+        response = self._get_application_detail()
+
+        for phrase in self.LOCKED_WORDING:
+            with self.subTest(phrase=phrase):
+                self.assertContains(response, phrase)
+
+    def test_application_detail_preserves_key_actions_and_headings(self):
+        response = self._get_application_detail()
+
+        self.assertContains(response, "Rhythm Analytics Ltd")
+        self.assertContains(response, "Application identity")
+        self.assertContains(response, "Update Status")
+        self.assertContains(response, "Edit Application")
+
+    def test_application_detail_unsafe_claim_phrases_absent(self):
+        response = self._get_application_detail()
+        content = response.content.decode().lower()
+
+        for phrase in self.UNSAFE_CLAIM_PHRASES:
             with self.subTest(phrase=phrase):
                 self.assertNotIn(phrase, content)
