@@ -183,6 +183,20 @@
         padding: 1rem;
     }
 
+    .cf104b-form-page .cf104b-form-stack {
+        display: grid;
+        gap: 1.1rem;
+    }
+
+    .cf104b-form-page .cf104b-form-zone-advisory {
+        display: grid;
+        gap: 0.85rem;
+    }
+
+    .cf104b-form-page .cf104b-form-section + .cf104b-form-section {
+        margin-top: 0;
+    }
+
     @media (max-width: 900px) {
         .application-form-hero,
         .readiness-assets,
@@ -196,9 +210,9 @@
         }
     }
 </style>
-<div class="application-form-premium">
-<div class="content-card form-card application-form-shell">
-    <div class="card-header application-form-hero">
+<div class="application-form-premium cf104b-form-page">
+<div class="content-card form-card application-form-shell cf104b-form-shell">
+    <div class="card-header application-form-hero cf104b-form-hero">
         <div>
             <p class="eyebrow">Application Record</p>
             <h1>{{ page_title }}</h1>
@@ -208,7 +222,7 @@
         <span class="application-status-pill">Tracking record only</span>
         {% endif %}
     </div>
-    <div class="application-advisory-stack">
+    <div class="application-advisory-stack cf104b-form-zone cf104b-form-zone-advisory">
     {% if page_title == "Add Application" %}
     <div class="diagnosis-box application-advisory">
         <p>Pre-filling this form does not save your application. Review all fields before saving.</p>
@@ -223,9 +237,9 @@
     </div>
     {% endif %}
     </div>
-    <form method="post" class="form-stack application-form-stack">{% csrf_token %}
+    <form method="post" class="form-stack application-form-stack cf104b-form-stack">{% csrf_token %}
         {% if form.non_field_errors %}<div class="form-error">{{ form.non_field_errors }}</div>{% endif %}
-        <div class="form-section application-form-section">
+        <div class="form-section application-form-section cf104b-form-section">
             <div class="section-heading"><div><p class="section-kicker">Role intake</p><h2>Job Details</h2></div></div>
             <div class="form-grid">
             <div class="form-group"><label>Company Name</label>{{ form.company_name }}{{ form.company_name.errors }}</div>
@@ -238,13 +252,13 @@
             <div class="form-group"><label>Role Fit</label>{{ form.role_fit }}{{ form.role_fit.errors }}</div>
             <div class="form-group"><label>Experience Level</label>{{ form.experience_level }}{{ form.experience_level.errors }}</div>
         </div></div>
-        <div class="form-section application-form-section">
+        <div class="form-section application-form-section cf104b-form-section">
             <div class="section-heading"><div><p class="section-kicker">Evidence inputs</p><h2>Smart Fit Inputs</h2></div></div>
             <div class="form-grid">
             <div class="form-group"><label>Required Skills</label>{{ form.required_skills }}{{ form.required_skills.errors }}</div>
             <div class="form-group"><label>Job Description / Requirements</label>{{ form.job_description }}{{ form.job_description.errors }}</div>
         </div></div>
-        <div class="form-section application-form-section">
+        <div class="form-section application-form-section cf104b-form-section">
             <div class="section-heading"><div><p class="section-kicker">Pipeline state</p><h2>Lifecycle Status</h2></div></div>
             <div class="form-grid">
             <div class="form-group"><label>Date Applied</label>{{ form.date_applied }}{{ form.date_applied.errors }}</div>
@@ -277,7 +291,7 @@
             <div class="checkbox-group form-wide">{{ form.portfolio_project_included }} <label>Portfolio project included or referenced</label></div>
             <div class="checkbox-group form-wide">{{ form.company_researched }} <label>Company researched</label></div>
         </div></div>
-        <div class="form-section application-form-section">
+        <div class="form-section application-form-section cf104b-form-section">
             <div class="section-heading"><div><p class="section-kicker">Next contact</p><h2>Follow-Up Plan</h2></div></div>
             <div class="form-grid">
             <div class="form-group"><label>Follow-up Date</label>{{ form.follow_up_date }}{{ form.follow_up_date.errors }}</div>
@@ -285,16 +299,16 @@
             <div class="form-group"><label>Last Contacted Date</label>{{ form.last_contacted_date }}{{ form.last_contacted_date.errors }}</div>
             <div class="form-group"><label>Next Action</label>{{ form.next_action }}{{ form.next_action.errors }}</div>
         </div></div>
-        <div class="form-section application-form-section">
+        <div class="form-section application-form-section cf104b-form-section">
             <div class="section-heading"><div><p class="section-kicker">Recruiter details</p><h2>Contact</h2></div></div>
             <div class="form-grid">
             <div class="form-group"><label>Contact Name</label>{{ form.contact_name }}{{ form.contact_name.errors }}</div>
             <div class="form-group"><label>Contact Email</label>{{ form.contact_email }}{{ form.contact_email.errors }}</div>
         </div></div>
-        <div class="form-section application-form-section">
+        <div class="form-section application-form-section cf104b-form-section">
             <div class="section-heading"><div><p class="section-kicker">Context</p><h2>Notes</h2></div></div>
             <div class="form-group"><label>Notes</label>{{ form.notes }}{{ form.notes.errors }}</div></div>
-        <div class="form-actions application-form-actions"><button type="submit" class="btn btn-primary">{{ submit_label }}</button><a href="{% url 'applications:application_list' %}" class="btn btn-secondary">Cancel</a></div>
+        <div class="form-actions application-form-actions cf104b-form-actions"><button type="submit" class="btn btn-primary">{{ submit_label }}</button><a href="{% url 'applications:application_list' %}" class="btn btn-secondary">Cancel</a></div>
     </form>
 </div>
 </div>

@@ -4041,3 +4041,69 @@ class Sprint103SkillLedgerAdvisoryVisualHierarchySafetyTests(TestCase):
                 for phrase in self.FORBIDDEN_UNSAFE_CLAIMS:
                     with self.subTest(route_name=route_name, phrase=phrase):
                         self.assertNotIn(phrase, content)
+
+
+class Sprint104BPhase1SkillEntryFormGrammarAlignmentTests(TestCase):
+    UNSAFE_CLAIM_PHRASES = (
+        "ai verifies proficiency",
+        "employer outcomes are predicted",
+        "skill ledger evidence is automatically updated",
+        "a jd signal does not prove proficiency",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
+        self.create_url = reverse("skill_ledger:create")
+
+    def _get_create_form(self):
+        self.client.login(username="aminul", password="StrongPass12345")
+        return self.client.get(self.create_url)
+
+    def _get_edit_form(self):
+        entry = SkillEntry.objects.create(
+            skill_name="SQL",
+            category=SkillEntry.Category.ANALYTICS_ENGINEERING,
+            evidence_level=SkillEntry.EvidenceLevel.STUDYING,
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+        self.client.login(username="aminul", password="StrongPass12345")
+        return self.client.get(reverse("skill_ledger:edit", kwargs={"pk": entry.pk}))
+
+    def test_skill_entry_form_renders_cf104b_visual_wrappers(self):
+        response = self._get_create_form()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="cf104b-form-page"')
+        self.assertContains(response, "cf104b-form-shell")
+        self.assertContains(response, "cf104b-form-hero")
+        self.assertContains(response, "cf104b-form-stack")
+        self.assertContains(response, "cf104b-form-section")
+        self.assertContains(response, "cf104b-form-actions")
+
+    def test_skill_entry_form_renders_evidence_and_visibility_fields(self):
+        response = self._get_create_form()
+
+        self.assertContains(response, 'name="evidence_level"')
+        self.assertContains(response, 'name="visibility"')
+        self.assertContains(response, 'name="skill_name"')
+        self.assertContains(response, 'name="category"')
+        self.assertContains(response, "Save Skill Entry")
+
+    def test_skill_entry_edit_form_preserves_evidence_advisory_wording(self):
+        response = self._get_edit_form()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Changing evidence level updates your private Skill Ledger record only.",
+        )
+        self.assertContains(response, "It does not verify a skill by itself.")
+        self.assertContains(response, "Save Changes")
+
+    def test_skill_entry_form_unsafe_claim_phrases_absent(self):
+        response = self._get_create_form()
+        content = response.content.decode().lower()
+
+        for phrase in self.UNSAFE_CLAIM_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)

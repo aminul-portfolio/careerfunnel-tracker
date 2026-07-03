@@ -2,8 +2,73 @@
 
 {% block title %}{% if is_edit %}Edit Skill Entry{% else %}Add Skill Entry{% endif %} | CareerFunnel Tracker{% endblock %}
 
+{% block page_heading %}{% if is_edit %}Edit Skill Entry{% else %}Add Skill Entry{% endif %}{% endblock %}
+
 {% block content %}
 <style>
+    .cf104b-form-page {
+        background: #f6f7fb;
+        border-radius: 28px;
+        margin: -0.5rem;
+        padding: clamp(1rem, 2vw, 2rem);
+    }
+
+    .cf104b-form-shell {
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 24px;
+        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
+        padding: clamp(1.25rem, 3vw, 2.5rem);
+    }
+
+    .cf104b-form-hero {
+        border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+        margin-bottom: 1.25rem;
+        padding-bottom: 1.25rem;
+    }
+
+    .cf104b-form-stack {
+        display: grid;
+        gap: 1.1rem;
+    }
+
+    .cf104b-form-section {
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        border-radius: 20px;
+        box-shadow: 0 14px 38px rgba(15, 23, 42, 0.05);
+        padding: clamp(1rem, 2vw, 1.5rem);
+    }
+
+    .cf104b-form-section .section-heading {
+        align-items: baseline;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .cf104b-form-section h2 {
+        margin: 0;
+    }
+
+    .cf104b-section-kicker {
+        color: #64748b;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        margin: 0;
+        text-transform: uppercase;
+    }
+
+    .cf104b-form-actions {
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 18px;
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.05);
+        padding: 1rem;
+    }
+
     .cf75-edit-advisory {
         background: #f0fdfa;
         border: 1px solid #99f6e4;
@@ -21,8 +86,9 @@
         margin: 6px 0 0;
     }
 </style>
-<div class="content-card form-card">
-    <div class="card-header">
+<div class="cf104b-form-page">
+<div class="content-card form-card cf104b-form-shell">
+    <div class="card-header cf104b-form-hero">
         <p class="eyebrow">Skill Ledger</p>
         <h1>{% if is_edit %}Edit Skill Entry{% else %}Add Skill Entry{% endif %}</h1>
         <p>{% if is_edit %}Update the saved private skill evidence record for your own review workflow.{% else %}Record the skill, current evidence level, and any project notes you want to keep.{% endif %}</p>
@@ -34,27 +100,98 @@
     </div>
     {% endif %}
 
-    <form method="post" class="form-stack">
+    <form method="post" class="form-stack cf104b-form-stack">
         {% csrf_token %}
         {% if form.non_field_errors %}
         <div class="form-error">{{ form.non_field_errors }}</div>
         {% endif %}
-        <div class="form-grid">
-            {% for field in form %}
-            <div class="form-group {% if field.name == 'notes' %}form-wide{% endif %}">
-                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% if field.help_text %}
-                <p class="cf75-field-help">{{ field.help_text }}</p>
-                {% endif %}
-                {{ field.errors }}
+
+        <div class="form-section cf104b-form-section">
+            <div class="section-heading">
+                <div>
+                    <p class="cf104b-section-kicker">Skill details</p>
+                    <h2>Identity</h2>
+                </div>
             </div>
-            {% endfor %}
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.skill_name.id_for_label }}">{{ form.skill_name.label }}</label>
+                    {{ form.skill_name }}
+                    {{ form.skill_name.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.category.id_for_label }}">{{ form.category.label }}</label>
+                    {{ form.category }}
+                    {{ form.category.errors }}
+                </div>
+            </div>
         </div>
-        <div class="form-actions">
+
+        <div class="form-section cf104b-form-section">
+            <div class="section-heading">
+                <div>
+                    <p class="cf104b-section-kicker">Evidence and visibility</p>
+                    <h2>Claim posture</h2>
+                </div>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.evidence_level.id_for_label }}">{{ form.evidence_level.label }}</label>
+                    {{ form.evidence_level }}
+                    {% if form.evidence_level.help_text %}
+                    <p class="cf75-field-help">{{ form.evidence_level.help_text }}</p>
+                    {% endif %}
+                    {{ form.evidence_level.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.visibility.id_for_label }}">{{ form.visibility.label }}</label>
+                    {{ form.visibility }}
+                    {% if form.visibility.help_text %}
+                    <p class="cf75-field-help">{{ form.visibility.help_text }}</p>
+                    {% endif %}
+                    {{ form.visibility.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.sprint_reference.id_for_label }}">{{ form.sprint_reference.label }}</label>
+                    {{ form.sprint_reference }}
+                    {% if form.sprint_reference.help_text %}
+                    <p class="cf75-field-help">{{ form.sprint_reference.help_text }}</p>
+                    {% endif %}
+                    {{ form.sprint_reference.errors }}
+                </div>
+                <div class="form-group form-wide">
+                    <label for="{{ form.project_link.id_for_label }}">{{ form.project_link.label }}</label>
+                    {{ form.project_link }}
+                    {% if form.project_link.help_text %}
+                    <p class="cf75-field-help">{{ form.project_link.help_text }}</p>
+                    {% endif %}
+                    {{ form.project_link.errors }}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section cf104b-form-section">
+            <div class="section-heading">
+                <div>
+                    <p class="cf104b-section-kicker">Context</p>
+                    <h2>Project notes</h2>
+                </div>
+            </div>
+            <div class="form-group form-wide">
+                <label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+                {{ form.notes }}
+                {% if form.notes.help_text %}
+                <p class="cf75-field-help">{{ form.notes.help_text }}</p>
+                {% endif %}
+                {{ form.notes.errors }}
+            </div>
+        </div>
+
+        <div class="form-actions cf104b-form-actions">
             <button type="submit" class="btn btn-primary">{% if is_edit %}Save Changes{% else %}Save Skill Entry{% endif %}</button>
             <a href="{% url 'skill_ledger:list' %}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
+</div>
 </div>
 {% endblock %}
