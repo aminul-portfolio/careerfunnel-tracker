@@ -4755,6 +4755,152 @@ class EvaluationQueueTests(TestCase):
                 self.assertNotIn(unsafe_phrase, content)
 
 
+class Sprint105BPhase1EvaluationQueuePaginationTests(TestCase):
+    LOCKED_WORDING = (
+        "CV and cover letter exports use saved draft records with employer-facing formatting.",
+        "Application Pack exports remain manual-review drafts only.",
+        "Nothing on this page submits an application externally.",
+        (
+            "Draft - tracking record only. Final tailored CV comes from your "
+            "external document source."
+        ),
+    )
+
+    UNSAFE_CLAIM_PHRASES = (
+        "automatically submits",
+        "auto-apply",
+        "external submission completed",
+        "documents are generated automatically",
+        "ai applies",
+        "background submission",
+        "employer contacted automatically",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="cf105b-queue-pagination-user",
+            password="StrongPass12345",
+        )
+        self.other_user = User.objects.create_user(
+            username="cf105b-queue-other-user",
+            password="StrongPass12345",
+        )
+        self.queue_url = reverse("applications:evaluation_queue")
+        self.base_kwargs = {
+            "user": self.user,
+            "job_title": "Junior Data Analyst",
+            "date_applied": date(2026, 6, 1),
+            "pipeline_stage": PipelineStage.FIT_CHECKED,
+        }
+
+    def _login(self):
+        self.client.login(username="cf105b-queue-pagination-user", password="StrongPass12345")
+
+    def _get_queue(self, query_string=""):
+        self._login()
+        url = self.queue_url
+        if query_string:
+            url = f"{url}?{query_string}"
+        return self.client.get(url)
+
+    def _create_queue_applications(self, count):
+        companies = []
+        for index in range(1, count + 1):
+            companies.append(
+                JobApplication.objects.create(
+                    **self.base_kwargs,
+                    company_name=f"Queue Page Co {index:02d}",
+                ).company_name,
+            )
+        return companies
+
+    def test_evaluation_queue_pagination_renders_for_authenticated_owner(self):
+        self._create_queue_applications(11)
+        response = self._get_queue()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("page_obj", response.context)
+
+    def test_evaluation_queue_pagination_preserves_user_scoping(self):
+        JobApplication.objects.create(
+            user=self.other_user,
+            company_name="Other User Queue Co",
+            job_title="Data Analyst",
+            date_applied=date(2026, 6, 1),
+            pipeline_stage=PipelineStage.FIT_CHECKED,
+        )
+        self._create_queue_applications(1)
+        response = self._get_queue()
+
+        self.assertNotContains(response, "Other User Queue Co")
+
+    def test_evaluation_queue_pagination_excludes_non_evaluation_stages(self):
+        self._create_queue_applications(2)
+        JobApplication.objects.create(
+            user=self.user,
+            company_name="Submitted Stage Co",
+            job_title=self.base_kwargs["job_title"],
+            date_applied=self.base_kwargs["date_applied"],
+            pipeline_stage=PipelineStage.SUBMITTED,
+        )
+        response = self._get_queue()
+
+        self.assertNotContains(response, "Submitted Stage Co")
+        self.assertContains(response, "Queue Page Co 01")
+        self.assertContains(response, "Queue Page Co 02")
+
+    def test_evaluation_queue_first_page_shows_only_first_ten_records(self):
+        companies = self._create_queue_applications(11)
+        response = self._get_queue()
+
+        page_obj = response.context["page_obj"]
+        self.assertEqual(page_obj.number, 1)
+        self.assertEqual(len(response.context["table_rows"]), 10)
+        self.assertContains(response, companies[-1])
+        self.assertNotContains(response, companies[0])
+
+    def test_evaluation_queue_second_page_shows_remaining_records(self):
+        companies = self._create_queue_applications(11)
+        response = self._get_queue("page=2")
+
+        page_obj = response.context["page_obj"]
+        self.assertEqual(page_obj.number, 2)
+        self.assertEqual(len(response.context["table_rows"]), 1)
+        self.assertContains(response, companies[0])
+        self.assertNotContains(response, companies[-1])
+
+    def test_evaluation_queue_invalid_page_value_handled_safely(self):
+        self._create_queue_applications(11)
+        response = self._get_queue("page=not-a-page")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].number, 1)
+
+    def test_evaluation_queue_out_of_range_page_value_handled_safely(self):
+        self._create_queue_applications(11)
+        response = self._get_queue("page=999")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].number, 2)
+
+    def test_evaluation_queue_pagination_preserves_locked_wording(self):
+        self._create_queue_applications(1)
+        response = self._get_queue()
+
+        for phrase in self.LOCKED_WORDING:
+            with self.subTest(phrase=phrase):
+                self.assertContains(response, phrase)
+
+    def test_evaluation_queue_pagination_unsafe_claim_phrases_absent(self):
+        self._create_queue_applications(11)
+        response = self._get_queue("page=2")
+        content = response.content.decode().lower()
+
+        for phrase in self.UNSAFE_CLAIM_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+
 class MasterCvLockedClaimWordingTests(SimpleTestCase):
     def test_baseline_and_portfolio_use_locked_master_cv_claims(self):
         from apps.applications.master_cv import (

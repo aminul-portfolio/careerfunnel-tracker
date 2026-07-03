@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -62,6 +63,7 @@ from .services import (
 )
 
 JD_READY_TEXT_THRESHOLD = 750
+EVALUATION_QUEUE_PAGE_SIZE = 10
 
 
 @login_required
@@ -314,12 +316,17 @@ def evaluation_queue(request):
         )
         .order_by("-date_applied", "-pk")
     )
+    page_obj = Paginator(applications, EVALUATION_QUEUE_PAGE_SIZE).get_page(
+        request.GET.get("page"),
+    )
+    page_applications = page_obj.object_list
     return render(
         request,
         "applications/evaluation_queue.html",
         {
-            "applications": applications,
-            "table_rows": build_evaluation_queue_rows(applications),
+            "applications": page_applications,
+            "page_obj": page_obj,
+            "table_rows": build_evaluation_queue_rows(page_applications),
         },
     )
 

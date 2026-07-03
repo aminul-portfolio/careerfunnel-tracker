@@ -214,6 +214,36 @@
         color: #ffffff;
     }
 
+    .evaluation-pagination {
+        align-items: center;
+        border-top: 1px solid rgba(148, 163, 184, 0.22);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: space-between;
+        margin-top: 1.25rem;
+        padding-top: 1rem;
+    }
+
+    .evaluation-pagination-summary {
+        color: #475569;
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
+    .evaluation-pagination-actions {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .evaluation-pagination-disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+        pointer-events: none;
+    }
+
     @media (max-width: 1100px) {
         .evaluation-table-wrap {
             overflow-x: auto;
@@ -325,6 +355,25 @@
                 </tbody>
             </table>
         </div>
+        {% if page_obj.paginator.num_pages > 1 %}
+        <nav class="evaluation-pagination" aria-label="Evaluation queue pagination">
+            <p class="evaluation-pagination-summary">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </p>
+            <div class="evaluation-pagination-actions">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-secondary">Previous</a>
+                {% else %}
+                <span class="btn btn-secondary evaluation-pagination-disabled">Previous</span>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="btn btn-secondary">Next</a>
+                {% else %}
+                <span class="btn btn-secondary evaluation-pagination-disabled">Next</span>
+                {% endif %}
+            </div>
+        </nav>
+        {% endif %}
         {% else %}
         <div class="empty-state">
             <h3>No roles in the evaluation queue yet.</h3>
