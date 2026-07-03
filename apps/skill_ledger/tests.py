@@ -3824,3 +3824,220 @@ class MockedAIResponseEvaluatorTests(TestCase):
         self.assertIn(GENERATED_DOCUMENT_DETECTED, codes)
         self.assertIn(LIVE_PROVIDER_IMPLICATION, codes)
         self.assertIn(EMPLOYER_OUTCOME_PREDICTION, codes)
+
+
+class Sprint103SkillLedgerAdvisoryVisualHierarchySafetyTests(TestCase):
+    ADVISORY_ROUTES = (
+        ("skill_ledger:advisory", "Skill Ledger Advisory"),
+        ("skill_ledger:advisory_explanations", "AI explanation contract preview"),
+        (
+            "skill_ledger:advisory_ai_evidence",
+            "AI explanation layer - safety controls and evidence",
+        ),
+        ("skill_ledger:advisory_ai_review_hub", "AI advisory review hub"),
+        (
+            "skill_ledger:advisory_evaluation_casebook",
+            "Private AI Advisory Evaluation Casebook",
+        ),
+        (
+            "skill_ledger:advisory_manual_review_checklist",
+            "AI advisory manual review checklist",
+        ),
+    )
+
+    FORBIDDEN_UNSAFE_CLAIMS = (
+        "live ai provider is connected",
+        "openai integration is active",
+        "anthropic integration is active",
+        "gemini integration is active",
+        "langchain integration is active",
+        "skills are certified",
+        "proficiency is verified",
+        "employer outcomes are predicted",
+        "automatically updated your cv",
+        "automatically updated your linkedin",
+        "automatically updated your portfolio",
+        "automatically updated your application",
+        "automatically updated skill ledger evidence",
+        "documents are generated from these advisory pages",
+        "applications are submitted",
+        "emails are sent",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="sprint103vhuser",
+            password="StrongPass12345",
+        )
+
+    def _login(self):
+        self.client.login(username="sprint103vhuser", password="StrongPass12345")
+
+    def _authenticated_get(self, route_name):
+        self._login()
+        return self.client.get(reverse(route_name))
+
+    def test_cf_ui_047_renders_required_locked_strings(self):
+        response = self._authenticated_get("skill_ledger:advisory")
+
+        self.assertEqual(response.status_code, 200)
+        for wording in (
+            "A JD signal does not prove proficiency.",
+            "JD signal context is advisory only.",
+            "A JD signal does not make a skill claim-ready.",
+            (
+                "Review evidence manually before adding any JD-signalled skill to your CV, "
+                "LinkedIn, or public profile."
+            ),
+            (
+                "Classifications are deterministic - derived from your Skill Ledger "
+                "evidence_level and visibility fields. They are not AI-generated assessments."
+            ),
+        ):
+            with self.subTest(wording=wording):
+                self.assertContains(response, wording)
+
+    def test_cf_ui_048_renders_required_locked_strings(self):
+        response = self._authenticated_get("skill_ledger:advisory_explanations")
+
+        self.assertEqual(response.status_code, 200)
+        for wording in (
+            (
+                "This explanation is advisory only and does not verify proficiency, "
+                "certify skills, or predict employer outcomes."
+            ),
+            "A JD signal does not prove proficiency.",
+            "Skill gap signals are advisory only.",
+            "Learning recommendations are planning aids.",
+            "JD signal context is advisory only.",
+            "A JD signal does not make a skill claim-ready.",
+            (
+                "Review evidence manually before adding any JD-signalled skill to your CV, "
+                "LinkedIn, or public profile."
+            ),
+        ):
+            with self.subTest(wording=wording):
+                self.assertContains(response, wording)
+
+    def test_cf_ui_049_renders_required_locked_strings(self):
+        response = self._authenticated_get("skill_ledger:advisory_ai_evidence")
+
+        self.assertEqual(response.status_code, 200)
+        for wording in (
+            (
+                "This explanation is advisory only and does not verify proficiency, "
+                "certify skills, or predict employer outcomes."
+            ),
+            "A JD signal does not prove proficiency.",
+        ):
+            with self.subTest(wording=wording):
+                self.assertContains(response, wording)
+
+    def test_cf_ui_050_renders_required_locked_strings(self):
+        response = self._authenticated_get("skill_ledger:advisory_ai_review_hub")
+
+        self.assertEqual(response.status_code, 200)
+        for wording in (
+            (
+                "This explanation is advisory only and does not verify proficiency, "
+                "certify skills, or predict employer outcomes."
+            ),
+            "A JD signal does not prove proficiency.",
+            "Skill gap signals are advisory only.",
+            "Learning recommendations are planning aids.",
+        ):
+            with self.subTest(wording=wording):
+                self.assertContains(response, wording)
+
+    def test_cf_ui_051_renders_protected_casebook_boundary_strings(self):
+        response = self._authenticated_get("skill_ledger:advisory_evaluation_casebook")
+
+        self.assertEqual(response.status_code, 200)
+        for wording in (
+            "Private planning reference - deterministic cases only",
+            "These cases are deterministic review examples, not live AI generations.",
+            "No live AI model is used in this version.",
+            "Evaluation cases are planning and safety review aids only.",
+            (
+                "Passing an evaluation case does not verify skill proficiency or "
+                "predict employer outcomes."
+            ),
+            (
+                "These examples do not update CVs, public profiles, applications, "
+                "or Skill Ledger evidence."
+            ),
+            "This page is private and advisory only.",
+            "Use this casebook as a private reference for reviewing advisory AI-style wording.",
+            "It is deterministic, static, read-only, and does not run model output checks.",
+            "No live AI model or provider integration is used.",
+            (
+                "No automated grading, candidate scoring, or employer outcome prediction "
+                "is performed."
+            ),
+            "No proficiency verification is performed.",
+            "No CV, public profile, application, or Skill Ledger evidence is changed.",
+            "No documents are created from this page.",
+            "Evaluation focus",
+            "Safety boundary",
+            "Expected safe behaviour",
+            "Fail condition",
+            "Do not treat learning targets as verified skill proficiency.",
+            "Do not imply live model execution or provider integration.",
+            "Do not update CVs, LinkedIn, portfolios, or public profiles.",
+            "Do not submit, draft, or send applications from this page.",
+            "Do not escalate Skill Ledger evidence from static examples.",
+            "Do not present learning recommendations as proof of skill.",
+            "Do not treat JD mentions as evidence of user proficiency.",
+            "Do not create CVs, cover letters, profiles, or applications.",
+        ):
+            with self.subTest(wording=wording):
+                self.assertContains(response, wording)
+
+    def test_cf_ui_052_renders_required_locked_strings(self):
+        response = self._authenticated_get("skill_ledger:advisory_manual_review_checklist")
+
+        self.assertEqual(response.status_code, 200)
+        for wording in (
+            "A JD signal does not prove proficiency.",
+            "JD signal context is advisory only.",
+            "A JD signal does not make a skill claim-ready.",
+            "Skill gap signals are advisory only.",
+            "Learning recommendations are planning aids.",
+        ):
+            with self.subTest(wording=wording):
+                self.assertContains(response, wording)
+
+    def test_all_six_advisory_pages_load_for_authenticated_users(self):
+        for route_name, page_marker in self.ADVISORY_ROUTES:
+            with self.subTest(route_name=route_name):
+                response = self._authenticated_get(route_name)
+
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, page_marker)
+
+    def test_anonymous_users_are_redirected_from_private_advisory_routes(self):
+        for route_name, _page_marker in self.ADVISORY_ROUTES:
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+
+                self.assertEqual(response.status_code, 302)
+                self.assertIn("/login", response["Location"])
+
+    def test_post_is_not_allowed_on_get_only_advisory_routes(self):
+        self._login()
+        for route_name, _page_marker in self.ADVISORY_ROUTES:
+            with self.subTest(route_name=route_name):
+                response = self.client.post(reverse(route_name), {"probe": "value"})
+
+                self.assertEqual(response.status_code, 405)
+
+    def test_forbidden_unsafe_claims_absent_from_rendered_advisory_pages(self):
+        for route_name, _page_marker in self.ADVISORY_ROUTES:
+            with self.subTest(route_name=route_name):
+                response = self._authenticated_get(route_name)
+                content = response.content.decode().lower()
+
+                self.assertEqual(response.status_code, 200)
+                for phrase in self.FORBIDDEN_UNSAFE_CLAIMS:
+                    with self.subTest(route_name=route_name, phrase=phrase):
+                        self.assertNotIn(phrase, content)

@@ -4,8 +4,56 @@
 {% block page_heading %}Skill Ledger Advisory{% endblock %}
 
 {% block content %}
+<style>
+    .cf103-advisory-page {
+        display: grid;
+        gap: 1.25rem;
+    }
+
+    .cf103-advisory-page .cf103-vh-hero {
+        border-left: 4px solid #1d4ed8;
+    }
+
+    .cf103-advisory-page .cf103-vh-safety-zone {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .cf103-advisory-page .cf103-vh-safety-zone .cf86-panel {
+        border-left: 4px solid #0f766e;
+    }
+
+    .cf103-advisory-page .cf103-vh-locked-note {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 0.5rem;
+        margin-top: 0.75rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .cf103-advisory-page .cf103-vh-examples-zone .cf100-claim-example-list {
+        display: grid;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+    }
+
+    .cf103-advisory-page .cf103-vh-rows-zone .cf85-row + .cf85-row {
+        margin-top: 0.75rem;
+    }
+
+    @media (min-width: 900px) {
+        .cf103-advisory-page .cf103-vh-safety-zone {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .cf103-advisory-page .cf103-vh-safety-zone .cf86-panel {
+            grid-column: 1 / -1;
+        }
+    }
+</style>
 <div class="cf85-page">
-    <section class="cf85-panel" aria-label="Skill Ledger advisory overview">
+    <div class="cf103-advisory-page">
+    <section class="cf85-panel cf103-vh-hero" aria-label="Skill Ledger advisory overview">
         <h1>Skill Ledger Advisory</h1>
         <p>Classifications are deterministic rules, not AI inference.</p>
         <p>JD signal context is connected from saved job description term frequency only.</p>
@@ -16,40 +64,42 @@
         {% endif %}
     </section>
 
-    <section class="cf85-panel" aria-label="Classification key">
-        <h2>Classification key</h2>
-        <ul>
-            <li><strong>VERIFIED WITH EVIDENCE</strong> - sprint evidence present, safe to discuss</li>
-            <li><strong>VERIFIED NO REFERENCE</strong> - add a sprint reference to strengthen claim</li>
-            <li><strong>LEARNING TARGET</strong> - do not claim as verified</li>
-            <li><strong>STUDYING</strong> - personal study only, not claim-ready</li>
-            <li><strong>NO EVIDENCE</strong> - gap identified, do not claim</li>
-            <li><strong>PUBLIC RISK</strong> - public visibility set but evidence incomplete</li>
-            <li><strong>JD SIGNAL UNMATCHED</strong> - appears in JDs, not yet in your ledger</li>
-            <li><strong>CLAIM SAFE</strong> - evidence confirmed, safe to discuss</li>
-        </ul>
-        <p class="cf69-advisory-info">Classifications are deterministic - derived from your Skill Ledger evidence_level and visibility fields. They are not AI-generated assessments.</p>
-    </section>
+    <div class="cf103-vh-safety-zone" aria-label="Advisory safety and classification guidance">
+        <section class="cf85-panel" aria-label="Classification key">
+            <h2>Classification key</h2>
+            <ul>
+                <li><strong>VERIFIED WITH EVIDENCE</strong> - sprint evidence present, safe to discuss</li>
+                <li><strong>VERIFIED NO REFERENCE</strong> - add a sprint reference to strengthen claim</li>
+                <li><strong>LEARNING TARGET</strong> - do not claim as verified</li>
+                <li><strong>STUDYING</strong> - personal study only, not claim-ready</li>
+                <li><strong>NO EVIDENCE</strong> - gap identified, do not claim</li>
+                <li><strong>PUBLIC RISK</strong> - public visibility set but evidence incomplete</li>
+                <li><strong>JD SIGNAL UNMATCHED</strong> - appears in JDs, not yet in your ledger</li>
+                <li><strong>CLAIM SAFE</strong> - evidence confirmed, safe to discuss</li>
+            </ul>
+            <p class="cf69-advisory-info cf103-vh-locked-note">Classifications are deterministic - derived from your Skill Ledger evidence_level and visibility fields. They are not AI-generated assessments.</p>
+        </section>
 
-    <section class="cf86-panel" aria-label="JD signal advisory safety wording">
-        <h2>JD signal context</h2>
-        <ul>
-            {% for wording in jd_signal_safety_wording %}
-            <li>{{ wording }}</li>
-            {% endfor %}
-        </ul>
-    </section>
+        <section class="cf86-panel" aria-label="JD signal advisory safety wording">
+            <h2>JD signal context</h2>
+            <ul>
+                {% for wording in jd_signal_safety_wording %}
+                <li>{{ wording }}</li>
+                {% endfor %}
+            </ul>
+        </section>
 
-    <section class="cf85-panel" aria-label="Skill Ledger advisory safety wording">
-        <h2>Safety boundaries</h2>
-        <ul>
-            {% for wording in safety_wording %}
-            <li>{{ wording }}</li>
-            {% endfor %}
-        </ul>
-    </section>
+        <section class="cf85-panel" aria-label="Skill Ledger advisory safety wording">
+            <h2>Safety boundaries</h2>
+            <ul>
+                {% for wording in safety_wording %}
+                <li>{{ wording }}</li>
+                {% endfor %}
+            </ul>
+        </section>
+    </div>
 
-    <section class="cf85-panel cf100-claim-safety-examples" aria-label="Claim-safety examples">
+    <section class="cf85-panel cf100-claim-safety-examples cf103-vh-examples-zone" aria-label="Claim-safety examples">
         <h2>Claim-safety examples</h2>
         <p>Claim-safety examples are advisory only.</p>
         <p>Unsafe examples show wording to avoid.</p>
@@ -104,7 +154,7 @@
     </section>
 
     {% if advisory_rows %}
-    <section class="cf85-panel" aria-label="Skill Ledger advisory rows">
+    <section class="cf85-panel cf103-vh-rows-zone" aria-label="Skill Ledger advisory rows">
         <h2>Deterministic advisory rows</h2>
         {% for row in advisory_rows %}
         <article class="cf85-row">
@@ -126,10 +176,11 @@
         {% endfor %}
     </section>
     {% else %}
-    <section class="cf85-panel cf85-empty" aria-label="No Skill Ledger entries">
+    <section class="cf85-panel cf85-empty cf103-vh-rows-zone" aria-label="No Skill Ledger entries">
         <h2>No Skill Ledger entries available</h2>
         <p>No Skill Ledger entries exist yet, so there are no advisory rows to review.</p>
     </section>
     {% endif %}
+    </div>
 </div>
 {% endblock %}
