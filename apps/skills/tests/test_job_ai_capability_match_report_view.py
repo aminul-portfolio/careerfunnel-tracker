@@ -310,5 +310,80 @@ class JobAICapabilityMatchReportViewTests(TestCase):
         for path in untouched_paths:
             with self.subTest(path=path):
                 content = path.read_text(encoding="utf-8")
+                # Sibling pages may include workflow nav labels; page-specific
+                # root class and test-module title leakage remain forbidden.
                 self.assertNotIn("cf-job-ai-capability-match", content)
-                self.assertNotIn("Job AI Capability Match", content)
+                if path.suffix == ".py":
+                    self.assertNotIn("Job AI Capability Match", content)
+
+
+class Sprint105EPhase1BJobAiCapabilityMatchWorkflowNavTests(TestCase):
+    UNSAFE_CLAIM_PHRASES = (
+        "is predictive hiring ai",
+        "external ai apis are used",
+        "applications are automated",
+        "auto-apply",
+        "employer submission",
+        "documents are generated here",
+        "guaranteed job outcome",
+    )
+
+    MANUAL_ACTION_LABELS = (
+        "Open AI Capability Framework",
+        "Open AI Readiness Report",
+        "Open Learning Recommendations",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="cf105e-jobmatch-nav-user",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skills:job_ai_capability_match_report")
+
+    def _get(self):
+        self.client.login(username="cf105e-jobmatch-nav-user", password="StrongPass12345")
+        return self.client.get(self.url)
+
+    def test_page_renders_successfully(self):
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+
+    def test_step_indicator_and_workflow_nav_markers_present(self):
+        response = self._get()
+        content = response.content.decode()
+        self.assertContains(response, "Step 3 of 7")
+        self.assertIn("cf69h-page", content)
+        self.assertIn("cf69h-hero", content)
+        self.assertIn("cf69h-actions", content)
+        self.assertIn("cf-report-manual-actions", content)
+
+    def test_manual_action_link_labels_present(self):
+        response = self._get()
+        for label in self.MANUAL_ACTION_LABELS:
+            with self.subTest(label=label):
+                self.assertContains(response, label)
+        self.assertIn(reverse("skills:ai_capability_framework"), response.content.decode())
+        self.assertIn(reverse("skills:ai_readiness_report"), response.content.decode())
+        self.assertIn(
+            reverse("skills:learning_recommendations_report"),
+            response.content.decode(),
+        )
+
+    def test_advisory_wording_preserved(self):
+        response = self._get()
+        self.assertContains(
+            response,
+            "Rule-based keyword matching report for manual review.",
+        )
+        self.assertContains(response, "It is not predictive hiring AI.")
+        self.assertContains(response, "It does not use external AI APIs.")
+        self.assertContains(response, "It does not automate applications.")
+        self.assertContains(response, "Skill gap signals are advisory only.")
+
+    def test_unsafe_claim_phrases_absent(self):
+        response = self._get()
+        content = response.content.decode().lower()
+        for phrase in self.UNSAFE_CLAIM_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)

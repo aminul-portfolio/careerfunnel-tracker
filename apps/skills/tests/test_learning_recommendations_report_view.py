@@ -180,3 +180,92 @@ class LearningRecommendationsReportViewTests(TestCase):
         content = response.content.decode().lower()
         for phrase in FORBIDDEN_PAGE_PHRASES:
             self.assertNotIn(phrase, content, msg=f"Page contains forbidden phrase: {phrase}")
+
+
+class Sprint105EPhase1LearningRecommendationsWorkflowCardPolishTests(TestCase):
+    UNSAFE_CLAIM_PHRASES = (
+        "is predictive hiring ai",
+        "external ai apis are used",
+        "applications are automated",
+        "auto-apply",
+        "employer submission",
+        "documents are generated here",
+        "guaranteed job outcome",
+    )
+
+    MANUAL_ACTION_LABELS = (
+        "Open AI Readiness Report",
+        "Open Job AI Capability Match",
+        "Open AI Capability Framework",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="cf105e-learning-user",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skills:learning_recommendations_report")
+        self.expected = build_portfolio_baseline_learning_recommendations()
+
+    def _get(self):
+        self.client.login(username="cf105e-learning-user", password="StrongPass12345")
+        return self.client.get(self.url)
+
+    def test_page_renders_successfully(self):
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+
+    def test_page_local_root_and_workflow_markers_present(self):
+        response = self._get()
+        content = response.content.decode()
+        self.assertIn("cf69i-route4-page", content)
+        self.assertIn("cf69i-route4-hero", content)
+        self.assertIn("cf69i-route4-actions", content)
+        self.assertIn("cf-report-manual-actions", content)
+
+    def test_step_indicator_and_advisory_wording_preserved(self):
+        response = self._get()
+        self.assertContains(response, "Step 4 of 7")
+        self.assertContains(
+            response,
+            "Rule-based advisory recommendation report for manual review.",
+        )
+        self.assertContains(response, "It is not predictive hiring AI.")
+        self.assertContains(response, "It does not use external AI APIs.")
+        self.assertContains(response, "It does not automate applications.")
+        self.assertContains(response, "It does not replace human judgement.")
+        self.assertContains(
+            response,
+            (
+                "Learning recommendations are planning aids. A recommendation does not "
+                "mean the skill is portfolio-evidenced or ready to claim."
+            ),
+        )
+        self.assertContains(
+            response,
+            (
+                "Before adding a skill to your CV or public profile, ensure it is supported "
+                "by project evidence, tests, screenshots, or prior work experience."
+            ),
+        )
+        self.assertContains(response, "Advisory only. Verify before acting on any item.")
+
+    def test_manual_action_link_labels_preserved(self):
+        response = self._get()
+        for label in self.MANUAL_ACTION_LABELS:
+            with self.subTest(label=label):
+                self.assertContains(response, label)
+
+    def test_service_derived_kpi_content_preserved(self):
+        response = self._get()
+        self.assertContains(response, "Overall Priority")
+        self.assertContains(response, self.expected.overall_priority)
+        self.assertContains(response, "Next best action")
+        self.assertContains(response, self.expected.next_best_action)
+
+    def test_unsafe_claim_phrases_absent(self):
+        response = self._get()
+        content = response.content.decode().lower()
+        for phrase in self.UNSAFE_CLAIM_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
