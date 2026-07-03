@@ -5135,6 +5135,355 @@ class Sprint105BPhase2EvaluationQueueSearchTests(TestCase):
                 self.assertNotIn(phrase, content)
 
 
+class Sprint105CPhase1ApplicationListPaginationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="cf105c-list-pagination-user",
+            password="StrongPass12345",
+        )
+        self.other_user = User.objects.create_user(
+            username="cf105c-list-pagination-other",
+            password="StrongPass12345",
+        )
+        self.list_url = reverse("applications:application_list")
+        self.base_kwargs = {
+            "user": self.user,
+            "job_title": "Data Analyst",
+            "date_applied": date(2026, 6, 1),
+        }
+
+    def _login(self):
+        self.client.login(username="cf105c-list-pagination-user", password="StrongPass12345")
+
+    def _get_list(self, query_string=""):
+        self._login()
+        url = self.list_url
+        if query_string:
+            url = f"{url}?{query_string}"
+        return self.client.get(url)
+
+    def _create_list_applications(self, count):
+        companies = []
+        for index in range(1, count + 1):
+            companies.append(
+                JobApplication.objects.create(
+                    **self.base_kwargs,
+                    company_name=f"List Page Co {index:02d}",
+                ).company_name,
+            )
+        return companies
+
+    def test_application_list_pagination_renders_for_authenticated_owner(self):
+        self._create_list_applications(16)
+        response = self._get_list()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("page_obj", response.context)
+
+    def test_application_list_first_page_shows_only_first_fifteen_records(self):
+        companies = self._create_list_applications(16)
+        response = self._get_list()
+
+        page_obj = response.context["page_obj"]
+        self.assertEqual(page_obj.number, 1)
+        self.assertEqual(len(response.context["table_rows"]), 15)
+        self.assertContains(response, companies[-1])
+        self.assertNotContains(response, companies[0])
+
+    def test_application_list_second_page_shows_remaining_records(self):
+        companies = self._create_list_applications(16)
+        response = self._get_list("page=2")
+
+        page_obj = response.context["page_obj"]
+        self.assertEqual(page_obj.number, 2)
+        self.assertEqual(len(response.context["table_rows"]), 1)
+        self.assertContains(response, companies[0])
+        self.assertNotContains(response, companies[-1])
+
+    def test_application_list_invalid_page_value_handled_safely(self):
+        self._create_list_applications(16)
+        response = self._get_list("page=not-a-page")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].number, 1)
+
+    def test_application_list_out_of_range_page_value_handled_safely(self):
+        self._create_list_applications(16)
+        response = self._get_list("page=999")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].number, 2)
+
+    def test_application_list_pagination_preserves_user_scoping(self):
+        JobApplication.objects.create(
+            user=self.other_user,
+            company_name="Other User List Co",
+            job_title="Data Analyst",
+            date_applied=date(2026, 6, 1),
+        )
+        self._create_list_applications(1)
+        response = self._get_list()
+
+        self.assertNotContains(response, "Other User List Co")
+
+    def test_application_list_pagination_preserves_ordering(self):
+        for index in range(1, 17):
+            JobApplication.objects.create(
+                user=self.user,
+                company_name=f"List Order Co {index:02d}",
+                job_title="Data Analyst",
+                date_applied=date(2026, 6, index),
+            )
+
+        first_page = self._get_list()
+        second_page = self._get_list("page=2")
+
+        first_page_companies = [
+            row["application"].company_name for row in first_page.context["table_rows"]
+        ]
+        second_page_companies = [
+            row["application"].company_name for row in second_page.context["table_rows"]
+        ]
+
+        self.assertEqual(first_page_companies[0], "List Order Co 16")
+        self.assertEqual(first_page_companies[-1], "List Order Co 02")
+        self.assertEqual(second_page_companies, ["List Order Co 01"])
+
+    def test_application_list_pagination_kpi_cards_remain_user_wide(self):
+        self._create_list_applications(16)
+        response = self._get_list()
+
+        self.assertEqual(response.context["summary"].total_applications, 16)
+        self.assertEqual(len(response.context["table_rows"]), 15)
+        content = response.content.decode()
+        self.assertIn(f">{response.context['summary'].total_applications}<", content)
+
+    def test_application_list_pagination_q_filter_still_works(self):
+        for index in range(1, 17):
+            JobApplication.objects.create(
+                **self.base_kwargs,
+                company_name=f"Filter Paginate Co {index:02d}",
+            )
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Other List Co",
+        )
+        response = self._get_list("q=Filter+Paginate")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["table_rows"]), 15)
+        self.assertContains(response, "Filter Paginate Co 16")
+        self.assertNotContains(response, "Other List Co")
+
+    def test_application_list_pagination_status_filter_still_works(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Submitted List Co",
+            status=ApplicationStatus.SUBMITTED,
+        )
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Interview List Co",
+            status=ApplicationStatus.INTERVIEW,
+        )
+        response = self._get_list("status=interview")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["table_rows"]), 1)
+        self.assertContains(response, "Interview List Co")
+        self.assertNotContains(response, "Submitted List Co")
+
+
+class Sprint105CPhase2ApplicationListPaginationPersistenceTests(TestCase):
+    SAFETY_WORDING = (
+        "Tracking record only: application actions happen manually outside the tracker.",
+        "No auto-apply and no employer submission by CareerFunnel.",
+        "Search and filter saved records without changing application data.",
+        (
+            "Server-side filters narrow saved tracker records. They do not submit "
+            "applications or contact employers."
+        ),
+        (
+            "Table rows are the evidence anchor for this page. The View action "
+            "opens the saved tracking record only."
+        ),
+        "These rows are tracker evidence only, based on records saved in CareerFunnel.",
+        "Manual tracking workflow",
+        (
+            "Not scraped live-market data and not proof of employer interaction "
+            "or external verification."
+        ),
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="cf105c-list-persist-user",
+            password="StrongPass12345",
+        )
+        self.other_user = User.objects.create_user(
+            username="cf105c-list-persist-other",
+            password="StrongPass12345",
+        )
+        self.list_url = reverse("applications:application_list")
+        self.base_kwargs = {
+            "user": self.user,
+            "job_title": "Data Analyst",
+            "date_applied": date(2026, 6, 1),
+        }
+
+    def _login(self):
+        self.client.login(username="cf105c-list-persist-user", password="StrongPass12345")
+
+    def _get_list(self, query_string=""):
+        self._login()
+        url = self.list_url
+        if query_string:
+            url = f"{url}?{query_string}"
+        return self.client.get(url)
+
+    def _create_matching_applications(self, count, company_prefix="Persist Query Co"):
+        for index in range(1, count + 1):
+            JobApplication.objects.create(
+                **self.base_kwargs,
+                company_name=f"{company_prefix} {index:02d}",
+            )
+
+    def _create_interview_applications(self, count, company_prefix="Persist Status Co"):
+        for index in range(1, count + 1):
+            JobApplication.objects.create(
+                **self.base_kwargs,
+                company_name=f"{company_prefix} {index:02d}",
+                status=ApplicationStatus.INTERVIEW,
+            )
+
+    def test_application_list_pagination_preserves_q_in_links(self):
+        self._create_matching_applications(16)
+        response = self._get_list("q=Persist+Query")
+        content = response.content.decode()
+
+        self.assertEqual(response.context["pagination_querystring"], "q=Persist+Query")
+        self.assertIn("page=2", content)
+        self.assertIn("q=", content)
+        self.assertIn("Persist", content)
+
+        second_page = self._get_list("q=Persist+Query&page=2")
+        second_content = second_page.content.decode()
+        self.assertIn("page=1", second_content)
+        self.assertIn("q=", second_content)
+
+    def test_application_list_pagination_preserves_status_in_links(self):
+        self._create_interview_applications(16)
+        response = self._get_list("status=interview")
+        content = response.content.decode()
+
+        self.assertEqual(response.context["pagination_querystring"], "status=interview")
+        self.assertIn("page=2", content)
+        self.assertIn("status=interview", content)
+
+        second_page = self._get_list("status=interview&page=2")
+        second_content = second_page.content.decode()
+        self.assertIn("page=1", second_content)
+        self.assertIn("status=interview", second_content)
+
+    def test_application_list_pagination_preserves_q_and_status_together_in_links(self):
+        for index in range(1, 17):
+            JobApplication.objects.create(
+                **self.base_kwargs,
+                company_name=f"Combined Persist Co {index:02d}",
+                status=ApplicationStatus.INTERVIEW,
+            )
+        response = self._get_list("q=Combined+Persist&status=interview")
+        content = response.content.decode()
+
+        querystring = response.context["pagination_querystring"]
+        self.assertIn("q=Combined+Persist", querystring)
+        self.assertIn("status=interview", querystring)
+        self.assertIn("page=2", content)
+        self.assertIn("q=", content)
+        self.assertIn("status=interview", content)
+
+    def test_application_list_pagination_querystring_excludes_page_parameter(self):
+        self._create_matching_applications(16)
+        response = self._get_list("q=Persist+Query&status=interview&page=2")
+        content = response.content.decode()
+
+        querystring = response.context["pagination_querystring"]
+        self.assertNotIn("page=", querystring)
+        self.assertIn("q=Persist+Query", querystring)
+        self.assertIn("status=interview", querystring)
+        self.assertNotRegex(content, r"page=\d+.*page=\d+")
+
+    def test_application_list_pagination_filters_apply_before_pagination(self):
+        self._create_matching_applications(16)
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Unfiltered Other Co",
+        )
+        first_page = self._get_list("q=Persist+Query")
+        second_page = self._get_list("q=Persist+Query&page=2")
+
+        self.assertEqual(len(first_page.context["table_rows"]), 15)
+        self.assertEqual(len(second_page.context["table_rows"]), 1)
+        self.assertNotContains(first_page, "Unfiltered Other Co")
+        self.assertNotContains(second_page, "Unfiltered Other Co")
+
+    def test_application_list_invalid_page_with_active_filters_handled_safely(self):
+        for index in range(1, 17):
+            JobApplication.objects.create(
+                **self.base_kwargs,
+                company_name=f"Persist Query Co {index:02d}",
+                status=ApplicationStatus.INTERVIEW,
+            )
+        response = self._get_list("q=Persist+Query&status=interview&page=not-a-page")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].number, 1)
+        self.assertIn("q=Persist+Query", response.context["pagination_querystring"])
+        self.assertIn("status=interview", response.context["pagination_querystring"])
+
+    def test_application_list_out_of_range_page_with_active_filters_handled_safely(self):
+        self._create_matching_applications(16)
+        response = self._get_list("q=Persist+Query&page=999")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].number, 2)
+        self.assertEqual(len(response.context["table_rows"]), 1)
+
+    def test_application_list_filtered_zero_renders_existing_empty_state(self):
+        self._create_matching_applications(3)
+        response = self._get_list("q=NoMatchFilterXYZ")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["table_rows"], [])
+        self.assertContains(response, "No applications logged yet.")
+        self.assertContains(
+            response,
+            "This creates a tracking record only; any external application action remains manual.",
+        )
+
+    def test_application_list_pagination_user_scoping_with_q_and_page(self):
+        JobApplication.objects.create(
+            user=self.other_user,
+            company_name="Scoped Persist Other Co",
+            job_title="Data Analyst",
+            date_applied=date(2026, 6, 1),
+        )
+        self._create_matching_applications(16)
+        response = self._get_list("q=Persist+Query&page=2")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Scoped Persist Other Co")
+        self.assertContains(response, "Persist Query Co 01")
+
+    def test_application_list_pagination_preserves_page_specific_safety_wording(self):
+        self._create_matching_applications(16)
+        response = self._get_list("q=Persist+Query&page=2")
+
+        for phrase in self.SAFETY_WORDING:
+            with self.subTest(phrase=phrase):
+                self.assertContains(response, phrase)
+
+
 class MasterCvLockedClaimWordingTests(SimpleTestCase):
     def test_baseline_and_portfolio_use_locked_master_cv_claims(self):
         from apps.applications.master_cv import (

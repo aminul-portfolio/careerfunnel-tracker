@@ -64,6 +64,7 @@ from .services import (
 
 JD_READY_TEXT_THRESHOLD = 750
 EVALUATION_QUEUE_PAGE_SIZE = 10
+APPLICATION_LIST_PAGE_SIZE = 15
 
 
 @login_required
@@ -80,15 +81,26 @@ def application_list(request):
             | Q(job_title__icontains=search_query),
         )
 
+    page_obj = Paginator(applications, APPLICATION_LIST_PAGE_SIZE).get_page(
+        request.GET.get("page"),
+    )
+    page_applications = page_obj.object_list
+
+    pagination_params = request.GET.copy()
+    pagination_params.pop("page", None)
+    pagination_querystring = pagination_params.urlencode()
+
     context = {
-        "applications": applications,
-        "table_rows": build_application_table_rows(applications),
+        "applications": page_applications,
+        "page_obj": page_obj,
+        "table_rows": build_application_table_rows(page_applications),
         "summary": build_application_summary(request.user),
         "response_rate": calculate_response_rate(request.user),
         "interview_rate": calculate_interview_rate(request.user),
         "offer_rate": calculate_offer_rate(request.user),
         "status_filter": status_filter,
         "search_query": search_query or "",
+        "pagination_querystring": pagination_querystring,
     }
     return render(request, "applications/application_list.html", context)
 
