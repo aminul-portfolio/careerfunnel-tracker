@@ -369,3 +369,74 @@ class FinalCareerIntelligenceWorkflowViewTests(TestCase):
         ).get(pk=entry.pk)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(after, before)
+
+
+class Sprint105EPhase1BFinalCareerIntelligenceWorkflowCardPolishTests(TestCase):
+    UNSAFE_CLAIM_PHRASES = (
+        "is predictive hiring ai",
+        "external ai apis are used",
+        "applications are automated",
+        "auto-apply",
+        "employer submission",
+        "documents are generated here",
+        "guaranteed job outcome",
+    )
+
+    MANUAL_ACTION_LABELS = (
+        "Open Career Strategy Action Plan",
+        "Open Career Readiness Dashboard",
+        "Open Learning Recommendations",
+        "Open AI Readiness Report",
+        "Open Job AI Capability Match",
+        "Open AI Capability Framework",
+        "Open Career Workflow Decision Assistant",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="cf105e-final-workflow-user",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skills:final_career_intelligence_workflow")
+
+    def _get(self):
+        self.client.login(username="cf105e-final-workflow-user", password="StrongPass12345")
+        return self.client.get(self.url)
+
+    def test_page_renders_successfully(self):
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+
+    def test_step_indicator_and_page_local_markers_present(self):
+        response = self._get()
+        content = response.content.decode()
+        self.assertContains(response, "Step 7 of 7")
+        self.assertIn("cf69i-route7-page", content)
+        self.assertIn("cf69i-route7-hero", content)
+        self.assertIn("cf69i-route7-actions", content)
+        self.assertIn("cf-report-manual-actions", content)
+
+    def test_manual_action_link_labels_preserved(self):
+        response = self._get()
+        for label in self.MANUAL_ACTION_LABELS:
+            with self.subTest(label=label):
+                self.assertContains(response, label)
+
+    def test_advisory_wording_preserved(self):
+        response = self._get()
+        self.assertContains(
+            response,
+            "Rule-based final career intelligence workflow for manual review.",
+        )
+        self.assertContains(response, "It is not predictive hiring AI.")
+        self.assertContains(response, "It does not use external AI APIs.")
+        self.assertContains(response, "It does not automate applications.")
+        self.assertContains(response, "It does not replace human judgement.")
+        self.assertContains(response, "Advisory only. Verify each stage output manually.")
+
+    def test_unsafe_claim_phrases_absent(self):
+        response = self._get()
+        content = response.content.decode().lower()
+        for phrase in self.UNSAFE_CLAIM_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)

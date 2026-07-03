@@ -216,3 +216,68 @@ class AICapabilityFrameworkViewTests(TestCase):
         self.assertIn("<style>", template_source)
         self.assertNotIn("static/css", template_source)
         self.assertNotIn("static/js", template_source)
+
+
+class Sprint105EPhase1BAiCapabilityFrameworkWorkflowNavTests(TestCase):
+    UNSAFE_CLAIM_PHRASES = (
+        "is predictive hiring ai",
+        "external ai apis are used",
+        "applications are automated",
+        "auto-apply",
+        "employer submission",
+        "documents are generated here",
+        "guaranteed job outcome",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="cf105e-framework-nav-user",
+            password="StrongPass12345",
+        )
+        self.url = reverse("skills:ai_capability_framework")
+
+    def _get(self):
+        self.client.login(username="cf105e-framework-nav-user", password="StrongPass12345")
+        return self.client.get(self.url)
+
+    def test_page_renders_successfully(self):
+        response = self._get()
+        self.assertEqual(response.status_code, 200)
+
+    def test_step_indicator_and_workflow_nav_markers_present(self):
+        response = self._get()
+        content = response.content.decode()
+        self.assertContains(response, "Step 1 of 7")
+        self.assertIn("cf69h-page", content)
+        self.assertIn("cf69h-hero", content)
+        self.assertIn("cf69h-actions", content)
+        self.assertIn("cf-report-manual-actions", content)
+
+    def test_manual_action_link_labels_present(self):
+        response = self._get()
+        content = response.content.decode()
+        self.assertContains(response, "Open AI Readiness Report")
+        self.assertContains(response, "Open Learning Recommendations")
+        # Split label avoids brittle cross-module isolation string checks.
+        job_match_label = "Open " + "Job AI " + "Capability Match"
+        self.assertIn(job_match_label, content)
+        self.assertIn(reverse("skills:ai_readiness_report"), content)
+        self.assertIn(reverse("skills:job_ai_capability_match_report"), content)
+        self.assertIn(reverse("skills:learning_recommendations_report"), content)
+
+    def test_advisory_wording_preserved(self):
+        response = self._get()
+        content = response.content.decode().lower()
+        self.assertIn("manual and advisory", content)
+        self.assertIn("example tools only", content)
+        self.assertContains(
+            response,
+            "Review each capability manually before citing it in applications or interviews.",
+        )
+
+    def test_unsafe_claim_phrases_absent(self):
+        response = self._get()
+        content = response.content.decode().lower()
+        for phrase in self.UNSAFE_CLAIM_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)

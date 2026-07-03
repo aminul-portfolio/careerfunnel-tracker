@@ -17,8 +17,8 @@
         border-radius: 18px;
         color: var(--cf69i-body);
         display: grid;
-        gap: 18px;
-        padding: 18px;
+        gap: 22px;
+        padding: 22px;
     }
 
     .cf69i-route6-page * {
@@ -30,13 +30,13 @@
     .cf69i-route6-section {
         background: var(--cf69i-surface);
         border: 1px solid var(--cf69i-border);
-        border-radius: 14px;
+        border-radius: 16px;
         box-shadow: var(--cf69i-shadow);
     }
 
     .cf69i-route6-hero {
         overflow: hidden;
-        padding: 24px;
+        padding: 28px;
         position: relative;
     }
 
@@ -55,23 +55,30 @@
     .cf69i-route6-hero h1 {
         color: var(--cf69i-ink);
         font-size: clamp(1.75rem, 4vw, 2.4rem);
-        line-height: 1.12;
-        margin: 0 0 10px;
+        line-height: 1.15;
+        margin: 0 0 12px;
+        overflow-wrap: anywhere;
     }
 
     .cf69i-route6-hero p,
     .cf69i-route6-section p {
         color: var(--cf69i-body);
-        line-height: 1.6;
+        line-height: 1.65;
+        margin: 0 0 12px;
+        overflow-wrap: anywhere;
+    }
+
+    .cf69i-route6-hero p:last-child {
+        margin-bottom: 0;
     }
 
     .cf69i-route6-hero-kicker {
         align-items: center;
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 12px;
         justify-content: space-between;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
     }
 
     .cf69i-route6-step-badge {
@@ -84,47 +91,66 @@
         letter-spacing: 0.06em;
         padding: 8px 12px;
         text-transform: uppercase;
+        white-space: nowrap;
     }
 
     .cf69i-route6-trust-note {
         background: rgba(240, 253, 250, 0.84);
         border: 1px solid #99f6e4;
-        border-radius: 12px;
-        margin: 16px 0 0;
-        padding: 14px;
+        border-radius: 14px;
+        line-height: 1.65;
+        margin: 18px 0 0;
+        padding: 16px 18px;
     }
 
     .cf69i-route6-trust-list {
         display: grid;
-        gap: 10px;
+        gap: 12px;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        margin-top: 16px;
+        list-style: none;
+        margin: 18px 0 0;
+        padding: 0;
     }
 
     .cf69i-route6-trust-list li {
-        background: rgba(255, 255, 255, 0.82);
+        background: rgba(255, 255, 255, 0.9);
         border: 1px solid var(--cf69i-border);
-        border-radius: 12px;
+        border-radius: 14px;
         color: var(--cf69i-ink);
-        line-height: 1.5;
-        padding: 12px;
+        line-height: 1.55;
+        overflow-wrap: anywhere;
+        padding: 14px 16px;
     }
 
     .cf69i-route6-actions {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 16px;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .cf69i-route6-actions .cf-report-manual-link {
+        border-radius: 999px;
+        line-height: 1.35;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        padding: 0.55rem 0.95rem;
+        white-space: normal;
     }
 
     .cf69i-route6-kpi-grid {
+        align-items: stretch;
         display: grid;
-        gap: 14px;
+        gap: 16px;
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
     .cf69i-route6-kpi-card {
-        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-height: 100%;
+        padding: 20px;
     }
 
     .cf69i-route6-kpi-card p {
@@ -132,60 +158,96 @@
         font-size: 0.8rem;
         font-weight: 700;
         letter-spacing: 0.05em;
+        line-height: 1.4;
         margin: 0;
+        overflow-wrap: anywhere;
         text-transform: uppercase;
     }
 
     .cf69i-route6-kpi-card h2 {
         color: var(--cf69i-primary);
         font-size: 2rem;
-        margin: 8px 0 0;
+        line-height: 1.2;
+        margin: 0;
+        overflow-wrap: anywhere;
     }
 
     .cf69i-route6-kpi-card .small-kpi-text {
         color: var(--cf69i-ink);
-        font-size: 1.25rem;
+        font-size: 1.2rem;
         line-height: 1.35;
     }
 
+    .cf69i-route6-kpi-card .section-note {
+        color: var(--cf69i-muted);
+        font-size: 0.88rem;
+        font-weight: 500;
+        letter-spacing: normal;
+        line-height: 1.5;
+        margin-top: auto;
+        text-transform: none;
+    }
+
     .cf69i-route6-section {
-        padding: 22px;
+        padding: 24px;
     }
 
     .cf69i-route6-section .card-header {
         border-bottom: 1px solid var(--cf69i-border);
-        margin-bottom: 16px;
-        padding-bottom: 14px;
+        margin-bottom: 18px;
+        padding-bottom: 16px;
     }
 
     .cf69i-route6-section h2 {
         color: var(--cf69i-ink);
+        line-height: 1.25;
+        margin: 0 0 8px;
+        overflow-wrap: anywhere;
     }
 
     .cf69i-route6-section .eyebrow {
         color: var(--cf69i-primary);
+        margin-bottom: 6px;
+    }
+
+    .cf69i-route6-section .section-note {
+        line-height: 1.6;
+        margin: 0;
+        overflow-wrap: anywhere;
     }
 
     .cf69i-route6-section-list {
         background: var(--cf69i-subtle);
         border: 1px solid var(--cf69i-border);
-        border-radius: 12px;
+        border-radius: 14px;
         margin-bottom: 0;
-        padding: 16px 16px 16px 34px;
+        padding: 18px 18px 18px 36px;
     }
 
     .cf69i-route6-section-list li {
-        line-height: 1.6;
+        line-height: 1.65;
+        overflow-wrap: anywhere;
+    }
+
+    .cf69i-route6-section-list li + li {
+        margin-top: 8px;
     }
 
     .cf69i-route6-table-wrap {
         border: 1px solid var(--cf69i-border);
-        border-radius: 12px;
+        border-radius: 14px;
         overflow: hidden;
     }
 
     .cf69i-route6-table-wrap .data-table {
         margin-bottom: 0;
+    }
+
+    .cf69i-route6-table-wrap .data-table th,
+    .cf69i-route6-table-wrap .data-table td {
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+        vertical-align: top;
     }
 
     .cf69i-route6-table-wrap .data-table th {
@@ -197,7 +259,10 @@
     }
 
     @media (max-width: 1100px) {
-        .cf69i-route6-kpi-grid,
+        .cf69i-route6-kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .cf69i-route6-trust-list {
             grid-template-columns: 1fr;
         }
@@ -205,12 +270,21 @@
 
     @media (max-width: 680px) {
         .cf69i-route6-page {
-            padding: 12px;
+            gap: 16px;
+            padding: 14px;
         }
 
         .cf69i-route6-section,
         .cf69i-route6-hero {
             padding: 18px;
+        }
+
+        .cf69i-route6-kpi-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .cf69i-route6-actions {
+            gap: 10px;
         }
     }
 </style>

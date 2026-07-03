@@ -27,11 +27,42 @@
         line-height: 1.6;
     }
 
+    .cf69h-hero-kicker {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+
+    .cf69h-step-badge {
+        background: var(--cf69h-surface);
+        border: 1px solid var(--cf69h-border);
+        border-radius: 999px;
+        color: var(--cf69h-primary);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        padding: 8px 12px;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
     .cf69h-actions {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 16px;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .cf69h-actions .cf-report-manual-link {
+        border-radius: 999px;
+        line-height: 1.35;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        padding: 0.55rem 0.95rem;
+        white-space: normal;
     }
 
     .cf69h-safety-note {
@@ -130,11 +161,20 @@
             grid-template-columns: 1fr;
         }
     }
+
+    @media (max-width: 680px) {
+        .cf69h-actions {
+            gap: 10px;
+        }
+    }
 </style>
 
 <div class="dashboard-grid cf-job-ai-capability-match cf69h-page cf-premium-page">
     <section class="hero-panel cf69h-hero cf-premium-hero">
-        <p class="eyebrow">Job AI Capability Match</p>
+        <div class="cf69h-hero-kicker cf-premium-hero-kicker">
+            <p class="eyebrow">Job AI Capability Match</p>
+            <span class="cf69h-step-badge">Step 3 of 7</span>
+        </div>
         <h1 class="cf-premium-hero-title">Rule-based keyword matching report for manual review.</h1>
         <p class="cf-premium-hero-copy">
             This page shows how demo job description text maps to Sprint 53 AI capability
@@ -162,6 +202,9 @@
             </a>
             <a href="{% url 'skills:ai_readiness_report' %}" class="cf-report-manual-link">
                 Open AI Readiness Report
+            </a>
+            <a href="{% url 'skills:learning_recommendations_report' %}" class="cf-report-manual-link">
+                Open Learning Recommendations
             </a>
         </div>
     </section>
