@@ -4755,6 +4755,386 @@ class EvaluationQueueTests(TestCase):
                 self.assertNotIn(unsafe_phrase, content)
 
 
+class Sprint105BPhase1EvaluationQueuePaginationTests(TestCase):
+    LOCKED_WORDING = (
+        "CV and cover letter exports use saved draft records with employer-facing formatting.",
+        "Application Pack exports remain manual-review drafts only.",
+        "Nothing on this page submits an application externally.",
+        (
+            "Draft - tracking record only. Final tailored CV comes from your "
+            "external document source."
+        ),
+    )
+
+    UNSAFE_CLAIM_PHRASES = (
+        "automatically submits",
+        "auto-apply",
+        "external submission completed",
+        "documents are generated automatically",
+        "ai applies",
+        "background submission",
+        "employer contacted automatically",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="cf105b-queue-pagination-user",
+            password="StrongPass12345",
+        )
+        self.other_user = User.objects.create_user(
+            username="cf105b-queue-other-user",
+            password="StrongPass12345",
+        )
+        self.queue_url = reverse("applications:evaluation_queue")
+        self.base_kwargs = {
+            "user": self.user,
+            "job_title": "Junior Data Analyst",
+            "date_applied": date(2026, 6, 1),
+            "pipeline_stage": PipelineStage.FIT_CHECKED,
+        }
+
+    def _login(self):
+        self.client.login(username="cf105b-queue-pagination-user", password="StrongPass12345")
+
+    def _get_queue(self, query_string=""):
+        self._login()
+        url = self.queue_url
+        if query_string:
+            url = f"{url}?{query_string}"
+        return self.client.get(url)
+
+    def _create_queue_applications(self, count):
+        companies = []
+        for index in range(1, count + 1):
+            companies.append(
+                JobApplication.objects.create(
+                    **self.base_kwargs,
+                    company_name=f"Queue Page Co {index:02d}",
+                ).company_name,
+            )
+        return companies
+
+    def test_evaluation_queue_pagination_renders_for_authenticated_owner(self):
+        self._create_queue_applications(11)
+        response = self._get_queue()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("page_obj", response.context)
+
+    def test_evaluation_queue_pagination_preserves_user_scoping(self):
+        JobApplication.objects.create(
+            user=self.other_user,
+            company_name="Other User Queue Co",
+            job_title="Data Analyst",
+            date_applied=date(2026, 6, 1),
+            pipeline_stage=PipelineStage.FIT_CHECKED,
+        )
+        self._create_queue_applications(1)
+        response = self._get_queue()
+
+        self.assertNotContains(response, "Other User Queue Co")
+
+    def test_evaluation_queue_pagination_excludes_non_evaluation_stages(self):
+        self._create_queue_applications(2)
+        JobApplication.objects.create(
+            user=self.user,
+            company_name="Submitted Stage Co",
+            job_title=self.base_kwargs["job_title"],
+            date_applied=self.base_kwargs["date_applied"],
+            pipeline_stage=PipelineStage.SUBMITTED,
+        )
+        response = self._get_queue()
+
+        self.assertNotContains(response, "Submitted Stage Co")
+        self.assertContains(response, "Queue Page Co 01")
+        self.assertContains(response, "Queue Page Co 02")
+
+    def test_evaluation_queue_first_page_shows_only_first_ten_records(self):
+        companies = self._create_queue_applications(11)
+        response = self._get_queue()
+
+        page_obj = response.context["page_obj"]
+        self.assertEqual(page_obj.number, 1)
+        self.assertEqual(len(response.context["table_rows"]), 10)
+        self.assertContains(response, companies[-1])
+        self.assertNotContains(response, companies[0])
+
+    def test_evaluation_queue_second_page_shows_remaining_records(self):
+        companies = self._create_queue_applications(11)
+        response = self._get_queue("page=2")
+
+        page_obj = response.context["page_obj"]
+        self.assertEqual(page_obj.number, 2)
+        self.assertEqual(len(response.context["table_rows"]), 1)
+        self.assertContains(response, companies[0])
+        self.assertNotContains(response, companies[-1])
+
+    def test_evaluation_queue_invalid_page_value_handled_safely(self):
+        self._create_queue_applications(11)
+        response = self._get_queue("page=not-a-page")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].number, 1)
+
+    def test_evaluation_queue_out_of_range_page_value_handled_safely(self):
+        self._create_queue_applications(11)
+        response = self._get_queue("page=999")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].number, 2)
+
+    def test_evaluation_queue_pagination_preserves_locked_wording(self):
+        self._create_queue_applications(1)
+        response = self._get_queue()
+
+        for phrase in self.LOCKED_WORDING:
+            with self.subTest(phrase=phrase):
+                self.assertContains(response, phrase)
+
+    def test_evaluation_queue_pagination_unsafe_claim_phrases_absent(self):
+        self._create_queue_applications(11)
+        response = self._get_queue("page=2")
+        content = response.content.decode().lower()
+
+        for phrase in self.UNSAFE_CLAIM_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+
+class Sprint105BPhase2EvaluationQueueSearchTests(TestCase):
+    LOCKED_WORDING = (
+        "CV and cover letter exports use saved draft records with employer-facing formatting.",
+        "Application Pack exports remain manual-review drafts only.",
+        "Nothing on this page submits an application externally.",
+        (
+            "Draft - tracking record only. Final tailored CV comes from your "
+            "external document source."
+        ),
+    )
+
+    UNSAFE_CLAIM_PHRASES = (
+        "automatically submits",
+        "auto-apply",
+        "external submission completed",
+        "documents are generated automatically",
+        "ai applies",
+        "background submission",
+        "employer contacted automatically",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="cf105b-queue-search-user",
+            password="StrongPass12345",
+        )
+        self.other_user = User.objects.create_user(
+            username="cf105b-queue-search-other",
+            password="StrongPass12345",
+        )
+        self.queue_url = reverse("applications:evaluation_queue")
+        self.base_kwargs = {
+            "user": self.user,
+            "date_applied": date(2026, 6, 3),
+            "pipeline_stage": PipelineStage.FIT_CHECKED,
+        }
+
+    def _login(self):
+        self.client.login(username="cf105b-queue-search-user", password="StrongPass12345")
+
+    def _get_queue(self, query_string=""):
+        self._login()
+        url = self.queue_url
+        if query_string:
+            url = f"{url}?{query_string}"
+        return self.client.get(url)
+
+    def test_evaluation_queue_search_by_company_name(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Orbit Search Analytics",
+            job_title="Data Analyst",
+        )
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Other Employer Ltd",
+            job_title="Data Analyst",
+        )
+        response = self._get_queue("q=Orbit+Search")
+
+        self.assertContains(response, "Orbit Search Analytics")
+        self.assertNotContains(response, "Other Employer Ltd")
+
+    def test_evaluation_queue_search_by_job_title(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Title Search Co",
+            job_title="Power BI Analyst",
+        )
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Title Search Co B",
+            job_title="Junior Data Analyst",
+        )
+        response = self._get_queue("q=Power+BI")
+
+        self.assertContains(response, "Power BI Analyst")
+        self.assertNotContains(response, "Title Search Co B")
+
+    def test_evaluation_queue_search_by_source(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Source Search Co",
+            job_title="Data Analyst",
+            source=ApplicationSource.LINKEDIN,
+        )
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Source Other Co",
+            job_title="Data Analyst",
+            source=ApplicationSource.INDEED,
+        )
+        response = self._get_queue("q=linked")
+
+        self.assertContains(response, "Source Search Co")
+        self.assertNotContains(response, "Source Other Co")
+
+    def test_evaluation_queue_search_no_match_shows_empty_state(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Visible Queue Co",
+            job_title="Data Analyst",
+        )
+        response = self._get_queue("q=NoMatchTermXYZ")
+
+        self.assertContains(response, "No evaluation queue records match your search.")
+        self.assertNotContains(response, "Visible Queue Co")
+
+    def test_evaluation_queue_whitespace_only_search_behaves_like_default(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Whitespace Queue Co",
+            job_title="Data Analyst",
+        )
+        response = self._get_queue("q=+++")
+
+        self.assertEqual(response.context["search_query"], "")
+        self.assertContains(response, "Whitespace Queue Co")
+
+    def test_evaluation_queue_search_preserves_user_scoping(self):
+        JobApplication.objects.create(
+            user=self.other_user,
+            company_name="Scoped Other User Co",
+            job_title="Data Analyst",
+            date_applied=date(2026, 6, 3),
+            pipeline_stage=PipelineStage.FIT_CHECKED,
+        )
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Scoped Owner Co",
+            job_title="Data Analyst",
+        )
+        response = self._get_queue("q=Scoped")
+
+        self.assertContains(response, "Scoped Owner Co")
+        self.assertNotContains(response, "Scoped Other User Co")
+
+    def test_evaluation_queue_search_excludes_non_evaluation_stage_records(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Stage Filter Co",
+            job_title="Data Analyst",
+        )
+        JobApplication.objects.create(
+            user=self.user,
+            company_name="Stage Filter Co",
+            job_title="Data Analyst",
+            date_applied=date(2026, 6, 3),
+            pipeline_stage=PipelineStage.SUBMITTED,
+        )
+        response = self._get_queue("q=Stage+Filter")
+
+        self.assertContains(response, "Stage Filter Co")
+        self.assertEqual(len(response.context["table_rows"]), 1)
+
+    def test_evaluation_queue_search_with_submitted_match_still_excluded(self):
+        JobApplication.objects.create(
+            user=self.user,
+            company_name="Submitted Match Co",
+            job_title="Data Analyst",
+            date_applied=date(2026, 6, 3),
+            pipeline_stage=PipelineStage.SUBMITTED,
+        )
+        response = self._get_queue("q=Submitted+Match")
+
+        self.assertContains(response, "No evaluation queue records match your search.")
+        self.assertEqual(response.context["table_rows"], [])
+
+    def test_evaluation_queue_search_paginates_more_than_ten_matches(self):
+        for index in range(1, 12):
+            JobApplication.objects.create(
+                **self.base_kwargs,
+                company_name=f"Paginate Search Co {index:02d}",
+                job_title="Data Analyst",
+            )
+        first_page = self._get_queue("q=Paginate+Search")
+        second_page = self._get_queue("q=Paginate+Search&page=2")
+
+        self.assertEqual(len(first_page.context["table_rows"]), 10)
+        self.assertEqual(len(second_page.context["table_rows"]), 1)
+        self.assertEqual(second_page.context["page_obj"].number, 2)
+
+    def test_evaluation_queue_search_pagination_preserves_q_in_links(self):
+        for index in range(1, 12):
+            JobApplication.objects.create(
+                **self.base_kwargs,
+                company_name=f"Preserve Query Co {index:02d}",
+                job_title="Data Analyst",
+            )
+        response = self._get_queue("q=Preserve+Query")
+
+        self.assertEqual(response.context["search_query"], "Preserve Query")
+        content = response.content.decode()
+        self.assertIn("page=2", content)
+        self.assertTrue("Preserve" in content and "q=" in content)
+
+    def test_evaluation_queue_search_narrow_result_with_page_two_handled_safely(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Single Narrow Search Co",
+            job_title="Data Analyst",
+        )
+        response = self._get_queue("q=Single+Narrow&page=2")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].number, 1)
+        self.assertContains(response, "Single Narrow Search Co")
+
+    def test_evaluation_queue_search_preserves_locked_wording(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Locked Wording Search Co",
+            job_title="Data Analyst",
+        )
+        response = self._get_queue("q=Locked+Wording")
+
+        for phrase in self.LOCKED_WORDING:
+            with self.subTest(phrase=phrase):
+                self.assertContains(response, phrase)
+
+    def test_evaluation_queue_search_unsafe_claim_phrases_absent(self):
+        JobApplication.objects.create(
+            **self.base_kwargs,
+            company_name="Unsafe Phrase Search Co",
+            job_title="Data Analyst",
+        )
+        response = self._get_queue("q=Unsafe+Phrase")
+        content = response.content.decode().lower()
+
+        for phrase in self.UNSAFE_CLAIM_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+
 class MasterCvLockedClaimWordingTests(SimpleTestCase):
     def test_baseline_and_portfolio_use_locked_master_cv_claims(self):
         from apps.applications.master_cv import (
