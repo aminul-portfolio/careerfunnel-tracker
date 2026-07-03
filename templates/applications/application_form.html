@@ -270,14 +270,13 @@
             <div class="section-heading"><div><p class="section-kicker">Tracked assets</p><h2>Application Readiness</h2></div></div>
             <div class="readiness-assets">
             <div class="form-group readiness-asset-card readiness-asset-card--primary">
-                <label class="asset-label">CV Version</label>
+                <label class="asset-label" for="{{ form.cv_version.id_for_label }}">CV Version</label>
                 <p class="asset-name">{{ cv_version_display.professional_basename }}</p>
                 <p class="asset-note">Draft - tracking record only. Final tailored CV comes from your external document source.</p>
+                {{ form.cv_version }}{{ form.cv_version.errors }}
                 {% if cv_version_display.internal_baseline %}
                 <p class="asset-baseline">Internal baseline: {{ cv_version_display.internal_baseline }}. Baseline - not tailored for this role.</p>
                 {% endif %}
-                {{ form.cv_version.as_hidden }}
-                {{ form.cv_version.errors }}
             </div>
             <div class="form-group readiness-asset-card">
                 <label class="asset-label">Cover Letter Version</label>

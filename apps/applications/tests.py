@@ -4232,6 +4232,140 @@ class ApplicationCreatePrefillTests(TestCase):
         self.assertTrue(JobApplication.objects.filter(company_name="Example Ltd").exists())
 
 
+class Sprint105DPhase1ApplicationFormRenderingFixTests(TestCase):
+    LOCKED_WORDING = (
+        "Pre-filling this form does not save your application.",
+        "Saving creates a tracking record only.",
+        "Draft - tracking record only",
+        (
+            "Submit your application manually through the employer's portal or job "
+            "board after saving this record."
+        ),
+    )
+
+    UNSAFE_CLAIM_PHRASES = (
+        "auto-apply",
+        "employer submission by the tracker",
+        "documents are generated here",
+        "external application submission",
+        "applications are submitted automatically",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="cf105d-form-render-user",
+            password="StrongPass12345",
+        )
+        self.client.login(username="cf105d-form-render-user", password="StrongPass12345")
+        self.create_url = reverse("applications:application_create")
+
+    def _get_add_form(self, query_string=""):
+        url = self.create_url if not query_string else f"{self.create_url}?{query_string}"
+        return self.client.get(url)
+
+    def _minimal_post_data(self, **overrides):
+        data = {
+            "company_name": "Render Fix Co",
+            "job_title": "Junior Data Analyst",
+            "job_url": "",
+            "location": "London",
+            "work_type": WorkType.HYBRID,
+            "salary_range": "",
+            "source": ApplicationSource.LINKEDIN,
+            "role_fit": RoleFit.STRONG,
+            "experience_level": "",
+            "required_skills": "",
+            "job_description": "",
+            "date_applied": "2026-06-01",
+            "status": ApplicationStatus.SUBMITTED,
+            "pipeline_stage": PipelineStage.CV_SELECTED,
+            "response_date": "",
+            "cv_version": "Aminul_Islam_Data_Analyst_CV",
+            "cover_letter_version": "",
+            "is_cv_tailored": "",
+            "is_cover_letter_tailored": "",
+            "portfolio_project_included": "",
+            "company_researched": "",
+            "follow_up_date": "",
+            "follow_up_status": "",
+            "last_contacted_date": "",
+            "next_action": "",
+            "contact_name": "",
+            "contact_email": "",
+            "notes": "",
+        }
+        data.update(overrides)
+        return data
+
+    def test_add_application_renders_pipeline_stage_select_widget(self):
+        response = self._get_add_form()
+        form = response.context["form"]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Pipeline Stage")
+        self.assertContains(response, 'name="pipeline_stage"')
+        self.assertEqual(form["pipeline_stage"].field.widget.__class__.__name__, "Select")
+        self.assertIn("form-control", form["pipeline_stage"].as_widget())
+
+    def test_add_application_pipeline_stage_select_includes_existing_choices(self):
+        response = self._get_add_form()
+        content = response.content.decode()
+
+        self.assertIn('value="fit_checked"', content)
+        self.assertIn("Fit checked", content)
+        self.assertIn('value="job_found"', content)
+
+    def test_add_application_renders_editable_cv_version_text_input(self):
+        response = self._get_add_form()
+        content = response.content.decode()
+
+        self.assertIn('name="cv_version"', content)
+        self.assertIn('type="text"', content)
+        self.assertNotIn('type="hidden" name="cv_version"', content)
+
+    def test_add_application_cv_version_is_not_static_only_display(self):
+        response = self._get_add_form()
+        form = response.context["form"]
+
+        self.assertIn("form-control", form["cv_version"].as_widget())
+        self.assertEqual(form["cv_version"].field.widget.__class__.__name__, "TextInput")
+
+    def test_post_create_application_saves_selected_pipeline_stage(self):
+        response = self.client.post(
+            self.create_url,
+            self._minimal_post_data(pipeline_stage=PipelineStage.CV_SELECTED),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        application = JobApplication.objects.get(company_name="Render Fix Co")
+        self.assertEqual(application.pipeline_stage, PipelineStage.CV_SELECTED)
+
+    def test_post_create_application_saves_entered_cv_version(self):
+        response = self.client.post(
+            self.create_url,
+            self._minimal_post_data(cv_version="Custom_CV_Version_v3"),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        application = JobApplication.objects.get(company_name="Render Fix Co")
+        self.assertEqual(application.cv_version, "Custom_CV_Version_v3")
+
+    def test_add_application_preserves_locked_safety_wording(self):
+        response = self._get_add_form()
+
+        for phrase in self.LOCKED_WORDING:
+            with self.subTest(phrase=phrase):
+                self.assertContains(response, phrase)
+
+    def test_add_application_does_not_introduce_unsafe_claim_wording(self):
+        response = self._get_add_form()
+        content = response.content.decode().lower()
+
+        for phrase in self.UNSAFE_CLAIM_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
+
+
 class JobPostingAnalyzerPrefillBridgeTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="analyzer", password="StrongPass12345")
