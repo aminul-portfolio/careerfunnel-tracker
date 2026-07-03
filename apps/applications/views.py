@@ -86,6 +86,10 @@ def application_list(request):
     )
     page_applications = page_obj.object_list
 
+    pagination_params = request.GET.copy()
+    pagination_params.pop("page", None)
+    pagination_querystring = pagination_params.urlencode()
+
     context = {
         "applications": page_applications,
         "page_obj": page_obj,
@@ -96,6 +100,7 @@ def application_list(request):
         "offer_rate": calculate_offer_rate(request.user),
         "status_filter": status_filter,
         "search_query": search_query or "",
+        "pagination_querystring": pagination_querystring,
     }
     return render(request, "applications/application_list.html", context)
 
