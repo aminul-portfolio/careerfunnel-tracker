@@ -4988,3 +4988,70 @@ class Sprint104BPhase2ApplicationDetailLongPageRhythmTests(TestCase):
         for phrase in self.UNSAFE_CLAIM_PHRASES:
             with self.subTest(phrase=phrase):
                 self.assertNotIn(phrase, content)
+
+
+class Sprint104DPhase1ApplicationDetailDangerZoneOutlierAlignmentTests(TestCase):
+    TRACKING_ONLY_COPY = (
+        "Delete only if this saved application record was created by mistake.",
+        "This remains an internal tracking action.",
+    )
+
+    UNSAFE_CLAIM_PHRASES = (
+        "deleted automatically",
+        "automatic deletion",
+        "employer deletion",
+        "external deletion",
+        "ai verifies",
+        "ai verification",
+        "submitted automatically",
+        "applications are submitted automatically",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="cf104d-danger-zone-user",
+            password="StrongPass12345",
+        )
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Danger Zone Analytics Ltd",
+            job_title="Data Analyst",
+            date_applied=date(2026, 6, 2),
+        )
+
+    def _get_application_detail(self):
+        self.client.login(username="cf104d-danger-zone-user", password="StrongPass12345")
+        return self.client.get(
+            reverse(
+                "applications:application_detail",
+                kwargs={"pk": self.application.pk},
+            ),
+        )
+
+    def test_application_detail_danger_zone_classes_and_delete_link_present(self):
+        response = self._get_application_detail()
+        delete_url = reverse(
+            "applications:application_delete",
+            kwargs={"pk": self.application.pk},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "danger-zone cf69d-danger-zone")
+        self.assertContains(response, "cf69d-danger-zone")
+        self.assertContains(response, 'class="btn btn-danger"')
+        self.assertContains(response, delete_url)
+
+    def test_application_detail_preserves_tracking_only_delete_copy(self):
+        response = self._get_application_detail()
+
+        for phrase in self.TRACKING_ONLY_COPY:
+            with self.subTest(phrase=phrase):
+                self.assertContains(response, phrase)
+
+    def test_application_detail_danger_zone_unsafe_claim_phrases_absent(self):
+        response = self._get_application_detail()
+        content = response.content.decode().lower()
+
+        for phrase in self.UNSAFE_CLAIM_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)

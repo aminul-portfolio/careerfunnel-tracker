@@ -272,3 +272,93 @@ class InterviewPrepHandoffPolishTests(TestCase):
 
         self.assertContains(response, recruiter_section_url)
         self.assertContains(response, "Recruiter emails on application")
+
+
+class Sprint104DPhase1InterviewConfirmDeleteOutlierAlignmentTests(TestCase):
+    WARNING_HEADING = "This action cannot be undone."
+    WARNING_BODY = "Only delete this interview prep if it was created by mistake."
+    MOJIBAKE_EM_DASH_SEPARATOR = b"\xc3\x94\xc3\x87\xc3\xb6".decode("utf-8")
+
+    UNSAFE_CLAIM_PHRASES = (
+        "deleted automatically",
+        "automatic deletion",
+        "employer deletion",
+        "external deletion",
+        "ai verifies",
+        "ai verification",
+        "employer-system action",
+        "submitted automatically",
+    )
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="cf104d-interview-delete-user",
+            password="StrongPass12345",
+        )
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Outlier Analytics Ltd",
+            job_title="Data Analyst",
+            date_applied=date(2026, 6, 1),
+        )
+        self.interview = InterviewPrep.objects.create(
+            user=self.user,
+            application=self.application,
+            interview_date=date(2026, 6, 10),
+        )
+        self.delete_url = reverse(
+            "interviews:interview_delete",
+            kwargs={"pk": self.interview.pk},
+        )
+        self.detail_url = reverse(
+            "interviews:interview_detail",
+            kwargs={"pk": self.interview.pk},
+        )
+
+    def _get_confirm_delete(self):
+        self.client.login(
+            username="cf104d-interview-delete-user",
+            password="StrongPass12345",
+        )
+        return self.client.get(self.delete_url)
+
+    def test_interview_confirm_delete_renders_for_authenticated_owner(self):
+        response = self._get_confirm_delete()
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_interview_confirm_delete_renders_dominant_delete_pattern(self):
+        response = self._get_confirm_delete()
+        content = response.content.decode()
+
+        self.assertContains(response, "content-card form-card")
+        self.assertContains(response, "diagnosis-box danger-box")
+        self.assertContains(response, 'class="form-actions delete-actions"')
+        self.assertContains(response, 'class="btn btn-danger"')
+        self.assertContains(response, "Yes, Delete")
+        self.assertContains(response, 'class="btn btn-secondary"')
+        self.assertContains(response, "Cancel")
+        self.assertContains(response, 'method="post"')
+        self.assertContains(response, "Outlier Analytics Ltd - Data Analyst")
+        self.assertNotIn(self.MOJIBAKE_EM_DASH_SEPARATOR, content)
+
+    def test_interview_confirm_delete_renders_warning_copy_exactly(self):
+        response = self._get_confirm_delete()
+
+        self.assertContains(response, self.WARNING_HEADING)
+        self.assertContains(response, self.WARNING_BODY)
+
+    def test_interview_confirm_delete_preserves_cancel_link_and_csrf(self):
+        response = self._get_confirm_delete()
+        content = response.content.decode()
+
+        self.assertIn('name="csrfmiddlewaretoken"', content)
+        self.assertContains(response, f'href="{self.detail_url}"')
+
+    def test_interview_confirm_delete_unsafe_claim_phrases_absent(self):
+        response = self._get_confirm_delete()
+        content = response.content.decode().lower()
+
+        for phrase in self.UNSAFE_CLAIM_PHRASES:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
