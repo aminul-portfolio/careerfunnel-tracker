@@ -275,6 +275,10 @@ This is one analytics-readiness definition propagated across operational entry, 
 - Public evidence map: `docs/evidence/phase4a_public_evidence_map.md`
 - Claim safety review: `docs/evidence/phase4a_claim_safety_review.md`
 
+### Phase 5A Claim-Safety Reviewer (planning only)
+
+- MVP planning pack: `docs/ai/claim_safety_reviewer/` (specification only; no runtime implementation in Phase 5A)
+
 For a portfolio-level evidence map across the user's major GitHub projects, see `docs/career_evidence/portfolio_project_index.md`.
 
 For recruiter-facing portfolio presentation materials, see `docs/career_evidence/portfolio_presentation_pack.md`.
