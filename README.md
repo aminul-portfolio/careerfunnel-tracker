@@ -279,6 +279,11 @@ This is one analytics-readiness definition propagated across operational entry, 
 
 - MVP planning pack: `docs/ai/claim_safety_reviewer/` (specification only; no runtime implementation in Phase 5A)
 
+### Phase 5B Claim-Safety Reviewer (mocked service)
+
+- Sprint evidence: `docs/evidence/sprint_5b_claim_safety_reviewer_mocked.md`
+- Service module: `apps/ai_agents/claim_safety_reviewer.py` (rule-based; no live LLM)
+
 For a portfolio-level evidence map across the user's major GitHub projects, see `docs/career_evidence/portfolio_project_index.md`.
 
 For recruiter-facing portfolio presentation materials, see `docs/career_evidence/portfolio_presentation_pack.md`.
