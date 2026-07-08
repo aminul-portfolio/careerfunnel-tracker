@@ -268,6 +268,13 @@ This is one analytics-readiness definition propagated across operational entry, 
 
 ## Evidence And Verification
 
+### Phase 4A reviewer evidence (public hardening)
+
+- Current public test log: `docs/evidence/phase4a_current_public_test_log.md`
+- Screenshot safety checklist: `docs/evidence/phase4a_screenshot_safety_checklist.md`
+- Public evidence map: `docs/evidence/phase4a_public_evidence_map.md`
+- Claim safety review: `docs/evidence/phase4a_claim_safety_review.md`
+
 For a portfolio-level evidence map across the user's major GitHub projects, see `docs/career_evidence/portfolio_project_index.md`.
 
 For recruiter-facing portfolio presentation materials, see `docs/career_evidence/portfolio_presentation_pack.md`.
