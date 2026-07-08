@@ -23,8 +23,16 @@ REQUIRED_RESPONSE_FIELDS = (
 )
 
 HIGH_RISK_RULES: tuple[tuple[re.Pattern[str], str, str], ...] = (
-    (re.compile(r"\bproduction\b(?!\s+deployment\s+claimed\b)", re.I), "forbidden_production_claim", "deployment"),
-    (re.compile(r"\blive\s+(demo|saas|product|platform|users?)\b", re.I), "forbidden_production_claim", "deployment"),
+    (
+        re.compile(r"\bproduction\b(?!\s+deployment\s+claimed\b)", re.I),
+        "forbidden_production_claim",
+        "deployment",
+    ),
+    (
+        re.compile(r"\blive\s+(demo|saas|product|platform|users?)\b", re.I),
+        "forbidden_production_claim",
+        "deployment",
+    ),
     (re.compile(r"\bdeployed\b", re.I), "unverified_deployment_url", "deployment"),
     (re.compile(r"\bproduction\s+url\b", re.I), "unverified_deployment_url", "deployment"),
     (re.compile(r"\baws\b", re.I), "unverified_deployment_url", "deployment"),
@@ -38,7 +46,11 @@ HIGH_RISK_RULES: tuple[tuple[re.Pattern[str], str, str], ...] = (
     (re.compile(r"\bpaying\s+customers?\b", re.I), "commercial_overclaim", "commercial"),
     (re.compile(r"\bdaily\s+active\s+users?\b", re.I), "forbidden_production_claim", "commercial"),
     (re.compile(r"\bcompanies\s+worldwide\b", re.I), "commercial_overclaim", "commercial"),
-    (re.compile(r"\bused\s+by\s+\d+\s+companies\b", re.I), "forbidden_production_claim", "commercial"),
+    (
+        re.compile(r"\bused\s+by\s+\d+\s+companies\b", re.I),
+        "forbidden_production_claim",
+        "commercial",
+    ),
     (re.compile(r"\bstartup\b", re.I), "commercial_overclaim", "commercial"),
     (re.compile(r"\blaunched\b", re.I), "forbidden_production_claim", "commercial"),
     (re.compile(r"\bsign\s+up\b", re.I), "commercial_overclaim", "commercial"),
@@ -167,7 +179,11 @@ def _evidence_facts(evidence_text: str) -> dict[str, Any]:
 
 
 def _split_claim_segments(claim_text: str) -> list[str]:
-    segments = [part.strip() for part in re.split(r"[.;]\s+|\s+;\s+", claim_text.strip()) if part.strip()]
+    segments = [
+        part.strip()
+        for part in re.split(r"[.;]\s+|\s+;\s+", claim_text.strip())
+        if part.strip()
+    ]
     return segments or [claim_text.strip()]
 
 
@@ -269,7 +285,9 @@ def _classify_segment(
             )
             unknowns.append("Latest GitHub Actions run status")
 
-    if sub_verdict == "safe" and any(pattern.search(segment) for pattern in SAFE_PORTFOLIO_PATTERNS):
+    if sub_verdict == "safe" and any(
+        pattern.search(segment) for pattern in SAFE_PORTFOLIO_PATTERNS
+    ):
         category = "analytics" if "funnel" in lowered or "metric" in lowered else category
 
     if (
@@ -370,7 +388,8 @@ REWRITE_TEMPLATES = {
     ),
     "unverified_ci_tests": (
         "CI workflow is defined in the repository; latest run status and exact test count "
-        "should be cited from a dated test log or verified Actions run — otherwise mark as [UNKNOWN]."
+        "should be cited from a dated test log or verified Actions run — "
+        "otherwise mark as [UNKNOWN]."
     ),
     "enterprise_agents": (
         "Built a Django job-search analytics portfolio with rule-based decision support, "
@@ -396,7 +415,8 @@ REWRITE_TEMPLATES = {
     ),
     "generic_unsafe": (
         "Local Django portfolio project with manual, rule-based workflows. Remove unsupported "
-        "production, commercial, deployment, or live AI automation claims unless independently verified."
+        "production, commercial, deployment, or live AI automation claims "
+        "unless independently verified."
     ),
     "generic_unknown": (
         "Portfolio claim requires clearer evidence. Use conservative wording and mark unverified "
@@ -562,7 +582,9 @@ def review_claim_safety(
         }
         for code in warnings
     )
-    risk_level = _aggregate_risk(overall_verdict, warnings, has_high_risk_warning=has_high_risk_warning)
+    risk_level = _aggregate_risk(
+        overall_verdict, warnings, has_high_risk_warning=has_high_risk_warning
+    )
 
     unsupported_claims = [
         claim.text
@@ -624,7 +646,10 @@ def validate_claim_safety_response(response: dict) -> tuple[bool, list[str]]:
     if not isinstance(response["reviewer_notes"], str):
         errors.append("invalid_reviewer_notes_type")
 
-    if response["overall_verdict"] in {"unsafe", "needs_evidence"} and not response["safe_rewrite"].strip():
+    if (
+        response["overall_verdict"] in {"unsafe", "needs_evidence"}
+        and not response["safe_rewrite"].strip()
+    ):
         errors.append("safe_rewrite_required")
 
     reviewed_texts = []

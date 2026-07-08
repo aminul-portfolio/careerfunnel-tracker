@@ -26,7 +26,10 @@ GOLDEN_CASES = [
             "Built a Django portfolio application that turns manually logged job applications "
             "into funnel metrics and data-quality warnings."
         ),
-        "evidence": 'README "What The Platform Does"; docs/analytics/metric_definitions.md referenced',
+        "evidence": (
+            'README "What The Platform Does"; '
+            "docs/analytics/metric_definitions.md referenced"
+        ),
         "channel": "general",
         "expected_verdict": "safe",
         "expected_risk": "low",
@@ -57,9 +60,13 @@ GOLDEN_CASES = [
     {
         "name": "case_03_unsupported_ai_llm",
         "claim": (
-            "Every feature is powered by GPT-4 in real time, including auto-apply and email drafting."
+            "Every feature is powered by GPT-4 in real time, including auto-apply "
+            "and email drafting."
         ),
-        "evidence": "README denies auto-apply, Gmail, external AI on every request; CLAUDE.md mocked-first note",
+        "evidence": (
+            "README denies auto-apply, Gmail, external AI on every request; "
+            "CLAUDE.md mocked-first note"
+        ),
         "channel": "general",
         "expected_verdict": "unsafe",
         "expected_risk": "high",
@@ -79,7 +86,8 @@ GOLDEN_CASES = [
         "expected_risk": "high",
         "expected_warnings": ["commercial_overclaim"],
         "expected_rewrite": (
-            "Personal portfolio project with no commercial revenue, subscriptions, or paying customers."
+            "Personal portfolio project with no commercial revenue, subscriptions, "
+            "or paying customers."
         ),
         "require_unknowns": False,
     },
@@ -92,7 +100,8 @@ GOLDEN_CASES = [
         "expected_risk": "high",
         "expected_warnings": ["forbidden_production_claim", "unverified_deployment_url"],
         "expected_rewrite": (
-            "Local Django project for portfolio review; no verified public deployment URL is claimed."
+            "Local Django project for portfolio review; no verified public deployment "
+            "URL is claimed."
         ),
         "require_unknowns": False,
     },
@@ -116,14 +125,18 @@ GOLDEN_CASES = [
     {
         "name": "case_07_unknown_evidence",
         "claim": "CI is green on every push and the test suite has exactly 3000 tests.",
-        "evidence": ".github/workflows/django-ci.yml referenced only (workflow definition, no run result)",
+        "evidence": (
+            ".github/workflows/django-ci.yml referenced only "
+            "(workflow definition, no run result)"
+        ),
         "channel": "general",
         "expected_verdict": "needs_evidence",
         "expected_risk": "medium",
         "expected_warnings": ["unverified_test_count", "unverified_ci_status"],
         "expected_rewrite": (
             "CI workflow is defined in the repository; latest run status and exact test count "
-            "should be cited from a dated test log or verified Actions run — otherwise mark as [UNKNOWN]."
+            "should be cited from a dated test log or verified Actions run — "
+            "otherwise mark as [UNKNOWN]."
         ),
         "require_unknowns": True,
     },
@@ -176,7 +189,10 @@ GOLDEN_CASES = [
     {
         "name": "case_11_interview_answer",
         "claim": "We integrated Gmail and the system automatically replies to recruiters for me.",
-        "evidence": "README — Gmail/OAuth not implemented; recruiter workflow is manual import only",
+        "evidence": (
+            "README — Gmail/OAuth not implemented; "
+            "recruiter workflow is manual import only"
+        ),
         "channel": "interview",
         "expected_verdict": "unsafe",
         "expected_risk": "high",
@@ -190,8 +206,9 @@ GOLDEN_CASES = [
     {
         "name": "case_12_job_application_answer",
         "claim": (
-            "In CareerFunnel I designed service-layer analytics with metric governance and verified "
-            "1977 local tests; I run it locally and do not claim production deployment."
+            "In CareerFunnel I designed service-layer analytics with metric governance "
+            "and verified 1977 local tests; I run it locally and do not claim production "
+            "deployment."
         ),
         "evidence": "Phase 4A test log (1977, 2026-07-08); README metric governance section",
         "channel": "job_application",
@@ -201,7 +218,8 @@ GOLDEN_CASES = [
         "expected_rewrite": (
             "In CareerFunnel Tracker I implemented Django service-layer analytics with metric "
             "definitions, data-quality propagation, and sprint evidence; 1977 tests passed locally "
-            "on 2026-07-08. I demonstrate it locally and do not claim a verified production deployment."
+            "on 2026-07-08. I demonstrate it locally and do not claim a verified production "
+            "deployment."
         ),
         "require_unknowns": False,
     },
@@ -210,7 +228,10 @@ GOLDEN_CASES = [
 
 class ClaimSafetyReviewerGoldenTests(SimpleTestCase):
     def test_required_response_fields_present(self):
-        response = review_claim_safety("Django portfolio analytics project.", evidence_context="README")
+        response = review_claim_safety(
+            "Django portfolio analytics project.",
+            evidence_context="README",
+        )
         for field_name in REQUIRED_RESPONSE_FIELDS:
             self.assertIn(field_name, response)
 
