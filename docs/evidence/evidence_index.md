@@ -87,6 +87,8 @@ CareerFunnel Tracker is positioned as a Django-based job-search intelligence and
 
 **Sprint 60 (feature branch `sprint-60-phase-6-final-validation-docs-closure`):** Application Document Pack workflow - `ApplicationDocument` model, rule-based draft CV/cover-letter generation, save to document pack, selection + Quick Call Review, standard-library DOCX/PDF download from saved text; **828** tests at Phase 6 closure; evidence doc `docs/evidence/sprint_60_application_document_pack_closure.md`. Manual-review only; no file upload, media storage, auto-apply, Gmail/Calendar/OAuth, or external AI/API calls.
 
+**Sprint 108 (feature branch `feature/sprint-108-claim-safety-repository-evidence-packaging`):** Claim-Safety repository evidence packaging — documentation-only consolidation of Phase 5A–5D Claim-Safety engineering evidence; no runtime changes. Evidence docs: `docs/evidence/sprint_108_claim_safety_source_of_truth_inventory.md`, `docs/evidence/sprint_108_claim_safety_skills_to_evidence_map.md`, `docs/evidence/sprint_108_claim_safety_recruiter_evidence_summary.md`, `docs/evidence/sprint_108_claim_safety_overstatement_guardrails.md`.
+
 ---
 
 ## Evidence Principles
