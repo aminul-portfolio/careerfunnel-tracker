@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse
@@ -38,10 +39,12 @@ from apps.job_intelligence.draft_documents import (
     render_analyzer_draft_download_bytes,
 )
 
+from .claim_safety_reviewer import review_claim_safety
 from .claude_provider import make_claude_cv_tailoring_provider, make_claude_provider
 from .cover_letter_adjustment import apply_cover_letter_recommended_fixes
 from .forms import (
     ApplicationChoiceForm,
+    ClaimSafetyReviewForm,
     CoverLetterQualityForm,
     CVGapAnalyzerForm,
     JobPostingAnalyzerForm,
@@ -64,6 +67,22 @@ from .services import (
     generate_followup_message,
     generate_interview_prep,
     get_latest_weekly_review,
+)
+
+LOCKED_DISCLOSURE = (
+    "This review is mocked and rule-based. It is not a live AI/LLM integration. "
+    "No claim text or review output is saved."
+)
+LOCKED_PRIVACY_WARNING = (
+    "Do not paste private, sensitive, financial, medical, legal, or "
+    "job-application personal data."
+)
+LOCKED_SCREENSHOT_WARNING = (
+    "Screenshots of this page are local-only and must not be used as proof "
+    "of live AI capability."
+)
+LOCKED_MANUAL_REVIEW_WARNING = (
+    "Manual review remains required before using any rewritten wording externally."
 )
 
 
@@ -654,3 +673,31 @@ def cv_ab_testing(request):
 def smart_notifications(request):
     notifications = build_smart_notifications(request.user)
     return render(request, "ai_agents/smart_notifications.html", {"notifications": notifications})
+
+
+@staff_member_required
+def claim_safety_review_view(request):
+    result = None
+    if request.method == "POST":
+        form = ClaimSafetyReviewForm(request.POST)
+        if form.is_valid():
+            result = review_claim_safety(
+                claim_text=form.cleaned_data["claim_text"],
+                evidence_context=form.cleaned_data.get("evidence_context") or None,
+                channel=form.cleaned_data["channel"],
+            )
+    else:
+        form = ClaimSafetyReviewForm(initial={"channel": "general"})
+
+    return render(
+        request,
+        "claim_safety/review.html",
+        {
+            "form": form,
+            "result": result,
+            "locked_disclosure": LOCKED_DISCLOSURE,
+            "locked_privacy_warning": LOCKED_PRIVACY_WARNING,
+            "locked_screenshot_warning": LOCKED_SCREENSHOT_WARNING,
+            "locked_manual_review_warning": LOCKED_MANUAL_REVIEW_WARNING,
+        },
+    )

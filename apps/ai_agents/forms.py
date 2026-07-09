@@ -171,3 +171,44 @@ class CoverLetterQualityForm(forms.Form):
         if uploaded is not None:
             validate_uploaded_file(uploaded)
         return uploaded
+
+
+class ClaimSafetyReviewForm(forms.Form):
+    CHANNEL_CHOICES = (
+        ("general", "General"),
+        ("cv", "CV"),
+        ("readme", "README"),
+        ("linkedin", "LinkedIn"),
+        ("interview", "Interview"),
+        ("portfolio", "Portfolio"),
+    )
+
+    claim_text = forms.CharField(
+        required=True,
+        strip=False,
+        max_length=1200,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 6,
+                "placeholder": "Paste wording for manual claim-safety review.",
+            }
+        ),
+    )
+    evidence_context = forms.CharField(
+        required=False,
+        max_length=2000,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 6,
+                "placeholder": "Optional: paste evidence excerpts or references.",
+            }
+        ),
+    )
+    channel = forms.ChoiceField(
+        required=True,
+        initial="general",
+        choices=CHANNEL_CHOICES,
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )

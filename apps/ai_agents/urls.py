@@ -33,5 +33,10 @@ urlpatterns = [
     ),
     path("cv-ab-testing/", views.cv_ab_testing, name="cv_ab_testing"),
     path("smart-notifications/", views.smart_notifications, name="smart_notifications"),
+    path(
+        "claim-safety/review/",
+        views.claim_safety_review_view,
+        name="claim_safety_review",
+    ),
     path("application/<int:pk>/", views.application_agent_pack, name="application_agent_pack"),
 ]

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Claim Safety Review{% endblock %}
+
+{% block content %}
+<section class="csr106-page">
+  <h1 class="csr106-title">Claim Safety Review</h1>
+  <p class="csr106-disclosure">{{ locked_disclosure }}</p>
+  <p class="csr106-warning">{{ locked_privacy_warning }}</p>
+  <p class="csr106-warning">{{ locked_screenshot_warning }}</p>
+  <p class="csr106-warning">{{ locked_manual_review_warning }}</p>
+
+  <form method="post" class="csr106-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="csr106-field">
+      {{ form.claim_text.label_tag }}
+      {{ form.claim_text }}
+      {{ form.claim_text.errors }}
+    </div>
+    <div class="csr106-field">
+      {{ form.evidence_context.label_tag }}
+      {{ form.evidence_context }}
+      {{ form.evidence_context.errors }}
+    </div>
+    <div class="csr106-field">
+      {{ form.channel.label_tag }}
+      {{ form.channel }}
+      {{ form.channel.errors }}
+    </div>
+    <button type="submit" class="btn btn-primary csr106-submit">Run Review</button>
+  </form>
+
+  {% if result %}
+    <section class="csr106-result">
+      <h2 class="csr106-result-title">Review Result</h2>
+      <p><strong>overall_verdict:</strong> {{ result.overall_verdict }}</p>
+      <p><strong>risk_level:</strong> {{ result.risk_level }}</p>
+      <p><strong>safe_rewrite:</strong> {{ result.safe_rewrite }}</p>
+      <p><strong>reviewer_notes:</strong> {{ result.reviewer_notes }}</p>
+
+      <h3>reviewed_claims</h3>
+      <ul>
+        {% for item in result.reviewed_claims %}
+          <li>
+            {{ item.text }} ({{ item.category }} / {{ item.sub_verdict }})
+          </li>
+        {% empty %}
+          <li>None</li>
+        {% endfor %}
+      </ul>
+
+      <h3>unsupported_claims</h3>
+      <ul>
+        {% for item in result.unsupported_claims %}
+          <li>{{ item }}</li>
+        {% empty %}
+          <li>None</li>
+        {% endfor %}
+      </ul>
+
+      <h3>evidence_required</h3>
+      <ul>
+        {% for item in result.evidence_required %}
+          <li>{{ item }}</li>
+        {% empty %}
+          <li>None</li>
+        {% endfor %}
+      </ul>
+
+      <h3>warnings</h3>
+      <ul>
+        {% for item in result.warnings %}
+          <li>{{ item }}</li>
+        {% empty %}
+          <li>None</li>
+        {% endfor %}
+      </ul>
+
+      <h3>unknowns</h3>
+      <ul>
+        {% for item in result.unknowns %}
+          <li>{{ item }}</li>
+        {% empty %}
+          <li>None</li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+</section>
+{% endblock %}
