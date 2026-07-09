@@ -135,7 +135,12 @@ CareerFunnel Tracker is a **local Django portfolio project** for one job seeker.
 - Career Intelligence pipeline (Sprints 53-59) at `/skills/` routes: AI Capability Framework, AI Readiness Report, Job-to-AI Capability Match, Learning Recommendations, Career Readiness Dashboard, Career Strategy Action Plan, and Final Career Intelligence Workflow.
 - Career Evidence OS (markdown + dashboard viewer) for portfolio and recruiter review.
 
-**Claim safety - deliberately not implemented:**
+**Claim safety — mocked, deterministic, rule-based reviewer:**
+
+CareerFunnel Tracker includes a mocked, deterministic, rule-based Claim-Safety Reviewer with version-controlled evaluation evidence. It is not a live AI/LLM integration.
+
+- Evaluation report: `docs/evidence/sprint_107_claim_safety_evaluation_report.md`
+- Evaluation summary: `docs/evidence/sprint_107_claim_safety_evaluation_summary.md`
 
 - No auto-apply, auto-send, or automatic application status updates.
 - No Gmail, Calendar, OAuth, inbox sync, or scraping.
