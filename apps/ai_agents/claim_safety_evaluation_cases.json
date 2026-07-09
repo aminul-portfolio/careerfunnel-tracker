@@ -1,0 +1,544 @@
+{
+  "dataset_name": "CareerFunnel Claim-Safety Evaluation Dataset",
+  "dataset_version": "1.0",
+  "sprint": 107,
+  "case_count": 22,
+  "category_count": 20,
+  "cases": [
+    {
+      "case_id": "CSR107-001",
+      "group": "career_claim",
+      "category": "01_supported_claim",
+      "claim_text": "Built a Django portfolio application that turns manually logged job applications into funnel metrics and data-quality warnings.",
+      "evidence_context": "README what the platform does; docs/analytics/metric_definitions.md referenced",
+      "channel": "general",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "safe",
+      "expected_risk_level": "low",
+      "expected_has_unsupported_claims": false,
+      "expected_warning_codes": [],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "portfolio",
+        "funnel metrics"
+      ],
+      "expected_safe_rewrite_excludes": [
+        "live SaaS",
+        "paying customers"
+      ],
+      "rationale": "Supported portfolio analytics claim with README-aligned evidence context.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-002",
+      "group": "career_claim",
+      "category": "02_unsupported_claim",
+      "claim_text": "We integrated Gmail and the system automatically replies to recruiters for me.",
+      "evidence_context": "README Gmail/OAuth not implemented; recruiter workflow is manual import only",
+      "channel": "interview",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "unsafe",
+      "expected_risk_level": "high",
+      "expected_has_unsupported_claims": true,
+      "expected_warning_codes": [
+        "integration_overclaim",
+        "ai_automation_overclaim"
+      ],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "manual import",
+        "no Gmail"
+      ],
+      "expected_safe_rewrite_excludes": [
+        "automatically replies"
+      ],
+      "rationale": "Unsupported Gmail automation claim contradicts documented manual workflow boundaries.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-003",
+      "group": "career_claim",
+      "category": "03_needs_evidence_claim",
+      "claim_text": "CI is green on every push and the test suite has exactly 3000 tests.",
+      "evidence_context": ".github/workflows/django-ci.yml workflow definition only (no run result)",
+      "channel": "general",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "needs_evidence",
+      "expected_risk_level": "medium",
+      "expected_has_unsupported_claims": true,
+      "expected_warning_codes": [
+        "unverified_test_count",
+        "unverified_ci_status"
+      ],
+      "expected_evidence_required_nonempty": true,
+      "expected_unknowns_nonempty": true,
+      "expected_safe_rewrite_contains": [
+        "[UNKNOWN]"
+      ],
+      "expected_safe_rewrite_excludes": [
+        "3000 tests pass"
+      ],
+      "rationale": "Numeric and CI-status claims require dated verification beyond workflow-file reference.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-004",
+      "group": "capability_meta_claim",
+      "category": "04_production_customer_revenue_saas_claim",
+      "claim_text": "CareerFunnel Tracker is a live production SaaS platform serving hundreds of daily active users.",
+      "evidence_context": "README what is not claimed; no production users",
+      "channel": "general",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "unsafe",
+      "expected_risk_level": "high",
+      "expected_has_unsupported_claims": true,
+      "expected_warning_codes": [
+        "forbidden_production_claim",
+        "commercial_overclaim"
+      ],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "local Django portfolio",
+        "not a live SaaS"
+      ],
+      "expected_safe_rewrite_excludes": [
+        "daily active users",
+        "production SaaS"
+      ],
+      "rationale": "Production SaaS and active-user claims are unsupported for this portfolio project.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-005",
+      "group": "capability_meta_claim",
+      "category": "05_live_ai_llm_claim",
+      "claim_text": "Every feature is powered by GPT-4 in real time, including auto-apply and email drafting.",
+      "evidence_context": "README denies auto-apply, Gmail, and external AI on every request",
+      "channel": "general",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "unsafe",
+      "expected_risk_level": "high",
+      "expected_has_unsupported_claims": true,
+      "expected_warning_codes": [
+        "ai_automation_overclaim",
+        "integration_overclaim"
+      ],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "rule-based",
+        "does not auto-apply"
+      ],
+      "expected_safe_rewrite_excludes": [
+        "GPT-4 in real time",
+        "every feature"
+      ],
+      "rationale": "Live LLM-on-every-request and automation claims exceed mocked-first reviewer boundaries.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-006",
+      "group": "capability_meta_claim",
+      "category": "06_deployment_claim",
+      "claim_text": "Try the live demo at our production URL deployed on AWS with 99.9% uptime.",
+      "evidence_context": "README live demo status; deployment not verified",
+      "channel": "general",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "unsafe",
+      "expected_risk_level": "high",
+      "expected_has_unsupported_claims": true,
+      "expected_warning_codes": [
+        "forbidden_production_claim",
+        "unverified_deployment_url"
+      ],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "no verified public deployment"
+      ],
+      "expected_safe_rewrite_excludes": [
+        "production URL",
+        "AWS"
+      ],
+      "rationale": "Public deployment and uptime claims are unsupported without verified hosting evidence.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-007",
+      "group": "career_claim",
+      "category": "07_ambiguous_claim",
+      "claim_text": "This project could support analytics reporting in some hiring workflows.",
+      "evidence_context": "",
+      "channel": "general",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "safe",
+      "expected_risk_level": "low",
+      "expected_has_unsupported_claims": false,
+      "expected_warning_codes": [],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "[UNKNOWN]"
+      ],
+      "expected_safe_rewrite_excludes": [],
+      "rationale": "Vague low-risk wording does not trigger high-risk keyword patterns and remains conservative.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-008",
+      "group": "career_claim",
+      "category": "08_empty_or_whitespace_claim",
+      "claim_text": "   ",
+      "evidence_context": "",
+      "channel": "general",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "unknown",
+      "expected_risk_level": "unknown",
+      "expected_has_unsupported_claims": false,
+      "expected_warning_codes": [
+        "empty_claim"
+      ],
+      "expected_evidence_required_nonempty": true,
+      "expected_unknowns_nonempty": true,
+      "expected_safe_rewrite_contains": [
+        "[UNKNOWN]"
+      ],
+      "expected_safe_rewrite_excludes": [],
+      "rationale": "Whitespace-only input cannot be classified and returns unknown verdict handling.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-009",
+      "group": "career_claim",
+      "category": "09_mixed_safe_unsafe_claim",
+      "claim_text": "Django analytics app with SQLite and 1977 passing tests, currently used by 500 companies worldwide.",
+      "evidence_context": "Phase 4A test log excerpt: Ran 1977 tests OK (2026-07-08)",
+      "channel": "general",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "unsafe",
+      "expected_risk_level": "high",
+      "expected_has_unsupported_claims": true,
+      "expected_warning_codes": [
+        "commercial_overclaim",
+        "forbidden_production_claim"
+      ],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "1977 passing tests",
+        "single-user portfolio"
+      ],
+      "expected_safe_rewrite_excludes": [
+        "500 companies",
+        "companies worldwide"
+      ],
+      "rationale": "Verified test evidence does not neutralise unsupported multi-company adoption claim.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-010",
+      "group": "career_claim",
+      "category": "09_mixed_safe_unsafe_claim",
+      "claim_text": "Built a Django portfolio project locally and also serves paying enterprise customers.",
+      "evidence_context": "README what the platform does",
+      "channel": "portfolio",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "unsafe",
+      "expected_risk_level": "high",
+      "expected_has_unsupported_claims": true,
+      "expected_warning_codes": [
+        "commercial_overclaim"
+      ],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "local Django portfolio"
+      ],
+      "expected_safe_rewrite_excludes": [
+        "paying enterprise customers"
+      ],
+      "rationale": "Portfolio-safe local wording mixed with unsupported paying-customer claim must fail unsafe.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-011",
+      "group": "behavioural",
+      "category": "10_unknown_marker_claim",
+      "claim_text": "Test count is [UNKNOWN] until verified from a dated log.",
+      "evidence_context": "",
+      "channel": "readme",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "safe",
+      "expected_risk_level": "low",
+      "expected_has_unsupported_claims": false,
+      "expected_warning_codes": [],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "[UNKNOWN]"
+      ],
+      "expected_safe_rewrite_excludes": [],
+      "rationale": "Explicit unknown-marker wording is treated as conservative claim-safe phrasing.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-012",
+      "group": "behavioural",
+      "category": "11_evidence_context_present",
+      "claim_text": "The project has 1977 passing tests.",
+      "evidence_context": "Phase 4A test log Ran 1977 tests OK 2026-07-08",
+      "channel": "general",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "safe",
+      "expected_risk_level": "low",
+      "expected_has_unsupported_claims": false,
+      "expected_warning_codes": [],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "[UNKNOWN]"
+      ],
+      "expected_safe_rewrite_excludes": [],
+      "rationale": "Matching test-count evidence allows safe classification of numeric test claim.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-013",
+      "group": "behavioural",
+      "category": "12_evidence_context_absent",
+      "claim_text": "The project has 1977 passing tests.",
+      "evidence_context": "",
+      "channel": "general",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "needs_evidence",
+      "expected_risk_level": "medium",
+      "expected_has_unsupported_claims": true,
+      "expected_warning_codes": [
+        "unverified_test_count"
+      ],
+      "expected_evidence_required_nonempty": true,
+      "expected_unknowns_nonempty": true,
+      "expected_safe_rewrite_contains": [
+        "rule-based"
+      ],
+      "expected_safe_rewrite_excludes": [
+        "1977 passing tests verified"
+      ],
+      "rationale": "Numeric test claim without evidence context requires proof before safe publication.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-014",
+      "group": "behavioural",
+      "category": "13_channel_specific_behaviour",
+      "claim_text": "Built a Django portfolio application that turns manually logged job applications into funnel metrics and data-quality warnings.",
+      "evidence_context": "README what the platform does",
+      "channel": "linkedin",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "safe",
+      "expected_risk_level": "low",
+      "expected_has_unsupported_claims": false,
+      "expected_warning_codes": [],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "portfolio",
+        "funnel metrics"
+      ],
+      "expected_safe_rewrite_excludes": [
+        "commercial SaaS launch"
+      ],
+      "rationale": "Channel value is accepted but current runtime behaviour is unchanged across supported channels.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-015",
+      "group": "behavioural",
+      "category": "14_determinism",
+      "claim_text": "Built a Django portfolio application that turns manually logged job applications into funnel metrics and data-quality warnings.",
+      "evidence_context": "README what the platform does",
+      "channel": "general",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "safe",
+      "expected_risk_level": "low",
+      "expected_has_unsupported_claims": false,
+      "expected_warning_codes": [],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "portfolio"
+      ],
+      "expected_safe_rewrite_excludes": [],
+      "rationale": "Repeated identical inputs must return identical deterministic reviewer output.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-016",
+      "group": "robustness",
+      "category": "15_boundary_length_input",
+      "claim_text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "evidence_context": "README what the platform does",
+      "channel": "general",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "safe",
+      "expected_risk_level": "low",
+      "expected_has_unsupported_claims": false,
+      "expected_warning_codes": [],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "[UNKNOWN]"
+      ],
+      "expected_safe_rewrite_excludes": [],
+      "rationale": "Maximum-length synthetic input is handled without runtime failure.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-017",
+      "group": "robustness",
+      "category": "16_input_handling_robustness",
+      "claim_text": "<script>alert(1)</script> portfolio project claim.",
+      "evidence_context": "",
+      "channel": "general",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "safe",
+      "expected_risk_level": "low",
+      "expected_has_unsupported_claims": false,
+      "expected_warning_codes": [],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "[UNKNOWN]"
+      ],
+      "expected_safe_rewrite_excludes": [],
+      "rationale": "XSS-like plain-text input is treated as claim text only; this is not a security audit.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-018",
+      "group": "career_claim",
+      "category": "17_unsupported_high_risk_wording",
+      "claim_text": "Autonomous agents replace recruiters in production SaaS.",
+      "evidence_context": "",
+      "channel": "cv",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "unsafe",
+      "expected_risk_level": "high",
+      "expected_has_unsupported_claims": true,
+      "expected_warning_codes": [
+        "ai_automation_overclaim",
+        "forbidden_production_claim",
+        "commercial_overclaim"
+      ],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "rule-based workflows"
+      ],
+      "expected_safe_rewrite_excludes": [
+        "autonomous agents",
+        "production SaaS"
+      ],
+      "rationale": "High-risk automation and production SaaS wording must be flagged unsafe.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-019",
+      "group": "behavioural",
+      "category": "18_safe_rewrite_behaviour",
+      "claim_text": "CareerFunnel Tracker is a live production SaaS platform serving users.",
+      "evidence_context": "README what is not claimed",
+      "channel": "general",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "unsafe",
+      "expected_risk_level": "high",
+      "expected_has_unsupported_claims": true,
+      "expected_warning_codes": [
+        "forbidden_production_claim",
+        "commercial_overclaim"
+      ],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "local Django portfolio",
+        "not a live SaaS"
+      ],
+      "expected_safe_rewrite_excludes": [
+        "live production SaaS"
+      ],
+      "rationale": "Unsafe claim must receive conservative rewrite that removes unsupported production wording.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-020",
+      "group": "behavioural",
+      "category": "19_warnings_and_unknowns",
+      "claim_text": "CI is green on every push and the test suite has exactly 3000 tests.",
+      "evidence_context": ".github/workflows/django-ci.yml workflow definition only",
+      "channel": "general",
+      "evaluation_status": "conformance",
+      "expected_overall_verdict": "needs_evidence",
+      "expected_risk_level": "medium",
+      "expected_has_unsupported_claims": true,
+      "expected_warning_codes": [
+        "unverified_test_count",
+        "unverified_ci_status"
+      ],
+      "expected_evidence_required_nonempty": true,
+      "expected_unknowns_nonempty": true,
+      "expected_safe_rewrite_contains": [
+        "[UNKNOWN]"
+      ],
+      "expected_safe_rewrite_excludes": [
+        "CI is green"
+      ],
+      "rationale": "Warnings and unknowns must be emitted when CI and numeric claims lack proof.",
+      "limitation_note": ""
+    },
+    {
+      "case_id": "CSR107-021",
+      "group": "limitation",
+      "category": "20_known_limitations",
+      "claim_text": "Used widely by teams beyond my own portfolio scope.",
+      "evidence_context": "",
+      "channel": "general",
+      "evaluation_status": "known_limitation",
+      "expected_overall_verdict": "safe",
+      "expected_risk_level": "low",
+      "expected_has_unsupported_claims": false,
+      "expected_warning_codes": [],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "[UNKNOWN]"
+      ],
+      "expected_safe_rewrite_excludes": [],
+      "rationale": "Documents indirect multi-team adoption wording that may evade explicit SaaS keyword rules.",
+      "limitation_note": "Deterministic keyword rules may miss indirect commercial-scale implications when risky terms are paraphrased."
+    },
+    {
+      "case_id": "CSR107-022",
+      "group": "limitation",
+      "category": "20_known_limitations",
+      "claim_text": "Our hiring workflow is the default choice for teams across sectors.",
+      "evidence_context": "",
+      "channel": "general",
+      "evaluation_status": "known_limitation",
+      "expected_overall_verdict": "safe",
+      "expected_risk_level": "low",
+      "expected_has_unsupported_claims": false,
+      "expected_warning_codes": [],
+      "expected_evidence_required_nonempty": false,
+      "expected_unknowns_nonempty": false,
+      "expected_safe_rewrite_contains": [
+        "[UNKNOWN]"
+      ],
+      "expected_safe_rewrite_excludes": [],
+      "rationale": "Documents nuanced adoption language that can read as external usage without explicit customer keywords.",
+      "limitation_note": "Rule-based pattern matching does not evaluate semantic nuance, sarcasm, or implied enterprise adoption."
+    }
+  ]
+}
