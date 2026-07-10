@@ -6,17 +6,18 @@ CareerFunnel Tracker is a Django portfolio analytics product that turns job-sear
 
 Deployment is conditional and not yet verified. This README does not claim a live hosted demo, demo login, production configuration, or public customer usage. If a deployment is added later, it should be verified separately and documented with the exact URL and environment assumptions.
 
-## Current Sprint Position
+## Current Status
 
-Sprints **52-59** are complete on `main`. Sprint **60** (Application Document Pack workflow) is complete on branch `sprint-60-phase-6-final-validation-docs-closure`.
+CareerFunnel Tracker is a **local Django portfolio application** for a single-user job-search workflow. It is **not** presented as a live SaaS product, production deployment, or commercial platform.
 
-Current verified baseline: **900+ validated tests** (current local validation; includes Application Document Pack and evidence cleanup coverage).
+Current verified public evidence includes:
 
-Latest completed tag: `sprint-59-final-career-intelligence-workflow-complete` (Sprint 60 tag pending merge).
+- **2,000+ automated tests** across the full repository suite (repository-wide validation; not specific to any single reviewer module).
+- **GitHub Actions CI** verified.
+- A **deterministic, rule-based** claim-safety reviewer with a version-controlled evaluation dataset: **22** total cases, **20** defined risk categories, **20** conformance cases, and **2** documented known-limitation cases. The reviewer is **not** a live AI/LLM integration.
+- Evidence indexed in `docs/evidence/evidence_index.md`.
 
-Earlier sprint families (25-51) remain merged on `main`, including CV Tailoring Claude Enhancement (34), Interview + Email Workflow Polish (35), Weekly Risk / Final Operating System Polish (36), premium SaaS shell and reporting (37-40), Skill Intelligence Dashboard (41-51), and premium component polish (52 Phase 2-3). Evidence for each sprint family is indexed in `docs/evidence/evidence_index.md`.
-
-GitHub Actions should be checked manually before external publishing if required.
+Passing evaluation cases confirms conformance to defined expected behaviour within the version-controlled dataset. It does not prove general correctness, intelligence, model quality, production readiness, deployment readiness, commercial readiness, or customer value.
 
 This README does not claim Gmail API integration, OAuth, web scraping, auto-apply workflows, automatic saving, calendar integration, a live SaaS deployment, production users, automatic email sending, automatic application status updates, automatic interview prep creation, final CV generation, or cover letter body generation.
 
@@ -135,12 +136,23 @@ CareerFunnel Tracker is a **local Django portfolio project** for one job seeker.
 - Career Intelligence pipeline (Sprints 53-59) at `/skills/` routes: AI Capability Framework, AI Readiness Report, Job-to-AI Capability Match, Learning Recommendations, Career Readiness Dashboard, Career Strategy Action Plan, and Final Career Intelligence Workflow.
 - Career Evidence OS (markdown + dashboard viewer) for portfolio and recruiter review.
 
-**Claim safety — mocked, deterministic, rule-based reviewer:**
+**Deterministic rule-based review and evaluation:**
 
-CareerFunnel Tracker includes a mocked, deterministic, rule-based Claim-Safety Reviewer with version-controlled evaluation evidence. It is not a live AI/LLM integration.
+CareerFunnel Tracker includes a deterministic, rule-based reviewer that checks whether a written claim is supported by recorded evidence. It is not a live AI/LLM integration.
+
+Version-controlled evaluation evidence:
+
+- 22 total version-controlled cases
+- 20 defined risk categories
+- 20 conformance cases
+- 2 documented known-limitation cases
+
+Passing evaluation cases confirms conformance to defined expected behaviour within the version-controlled dataset. It does not prove general correctness, intelligence, model quality, production readiness, deployment readiness, commercial readiness, or customer value.
 
 - Evaluation report: `docs/evidence/sprint_107_claim_safety_evaluation_report.md`
 - Evaluation summary: `docs/evidence/sprint_107_claim_safety_evaluation_summary.md`
+- Recruiter evidence summary: `docs/evidence/sprint_108_claim_safety_recruiter_evidence_summary.md`
+- Overstatement guardrails: `docs/evidence/sprint_108_claim_safety_overstatement_guardrails.md`
 
 - No auto-apply, auto-send, or automatic application status updates.
 - No Gmail, Calendar, OAuth, inbox sync, or scraping.
@@ -273,6 +285,23 @@ This is one analytics-readiness definition propagated across operational entry, 
 
 ## Evidence And Verification
 
+### Current verified evidence
+
+- **2,000+ automated tests** across the full repository suite (repository-wide; not reviewer-specific).
+- **GitHub Actions CI** verified.
+- Deterministic, rule-based claim-safety review with version-controlled evaluation dataset (**22** total cases, **20** defined risk categories, **20** conformance cases, **2** documented known-limitation cases).
+- Recruiter-facing evidence summary and overstatement guardrails.
+
+Key evidence files:
+
+- `docs/evidence/sprint_107_claim_safety_evaluation_report.md`
+- `docs/evidence/sprint_107_claim_safety_evaluation_summary.md`
+- `docs/evidence/sprint_108_claim_safety_source_of_truth_inventory.md`
+- `docs/evidence/sprint_108_claim_safety_skills_to_evidence_map.md`
+- `docs/evidence/sprint_108_claim_safety_recruiter_evidence_summary.md`
+- `docs/evidence/sprint_108_claim_safety_overstatement_guardrails.md`
+- `docs/evidence/evidence_index.md`
+
 ### Phase 4A reviewer evidence (public hardening)
 
 - Current public test log: `docs/evidence/phase4a_current_public_test_log.md`
@@ -292,8 +321,6 @@ This is one analytics-readiness definition propagated across operational entry, 
 For a portfolio-level evidence map across the user's major GitHub projects, see `docs/career_evidence/portfolio_project_index.md`.
 
 For recruiter-facing portfolio presentation materials, see `docs/career_evidence/portfolio_presentation_pack.md`.
-
-Current verified test baseline: **900+ validated tests**.
 
 Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/` and Sprint 53-59 intelligence screenshots stored in `docs/screenshots/intelligence/`. The main supporting documentation is:
 
