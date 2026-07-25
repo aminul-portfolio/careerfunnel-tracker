@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
@@ -40,7 +39,6 @@ from apps.job_intelligence.draft_documents import (
 )
 
 from .claim_safety_reviewer import review_claim_safety
-from .claude_provider import make_claude_cv_tailoring_provider, make_claude_provider
 from .cover_letter_adjustment import apply_cover_letter_recommended_fixes
 from .forms import (
     ApplicationChoiceForm,
@@ -48,6 +46,10 @@ from .forms import (
     CoverLetterQualityForm,
     CVGapAnalyzerForm,
     JobPostingAnalyzerForm,
+)
+from .provider_factory import (
+    compose_cv_tailoring_provider,
+    compose_fit_scoring_provider,
 )
 from .services import (
     ANALYZER_BORDERLINE_FIT_MIN_SCORE,
@@ -202,8 +204,7 @@ def job_posting_analyzer(request):
                     recommended_cv=analysis.recommended_cv,
                     recommended_projects=analysis.recommended_projects,
                 )
-            api_key = getattr(settings, "ANTHROPIC_API_KEY", "")
-            provider = make_claude_provider(api_key) if api_key else None
+            provider = compose_fit_scoring_provider()
             ai_wrapper_result = build_openai_fit_scoring_with_fallback(
                 company_name=company_name,
                 job_title=job_title,
@@ -216,9 +217,7 @@ def job_posting_analyzer(request):
                     analysis.fit_score,
                     ai_wrapper_result,
                 )
-            cv_tailoring_provider = (
-                make_claude_cv_tailoring_provider(api_key) if api_key else None
-            )
+            cv_tailoring_provider = compose_cv_tailoring_provider()
             tailoring_advisor = build_cv_tailoring_advisor(
                 company_name=company_name,
                 job_title=job_title,
@@ -391,18 +390,19 @@ def application_agent_pack(request, pk):
             [application.required_skills, application.job_description, application.notes]
         ),
     )
-    api_key = getattr(settings, "ANTHROPIC_API_KEY", "")
-    cv_tailoring_provider = (
-        make_claude_cv_tailoring_provider(api_key) if api_key else None
+    # External CV-tailoring payload excludes notes and version metadata.
+    external_job_description = " ".join(
+        part
+        for part in [application.required_skills, application.job_description]
+        if part
     )
+    cv_tailoring_provider = compose_cv_tailoring_provider()
     tailoring_advisor = build_cv_tailoring_advisor(
         company_name=application.company_name,
         job_title=application.job_title,
         location=application.location,
-        job_description=" ".join(
-            [application.required_skills, application.job_description, application.notes]
-        ),
-        cv_evidence=" ".join([application.cv_version, application.cover_letter_version]),
+        job_description=external_job_description,
+        cv_evidence="",
         provider_callable=cv_tailoring_provider,
     )
     interview_preps = application.interview_preps.all()[:5]
