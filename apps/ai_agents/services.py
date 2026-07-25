@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -11,6 +10,7 @@ from apps.ai_agents.interview_prep_pack import (
     InterviewPrepPack,
     generate_interview_prep,
 )
+from apps.ai_agents.provider_contracts import ExplanationProvider
 from apps.applications.choices import ApplicationStatus, FollowUpStatus
 from apps.applications.models import JobApplication
 from apps.daily_log.models import DailyLog
@@ -1181,6 +1181,22 @@ def _build_evidence_catalog_for_prompt() -> dict:
     }
 
 
+# Explicit allowlist for CV-tailoring external provider payloads (construction only).
+CV_EXTERNAL_PAYLOAD_ALLOWLIST = frozenset(
+    {
+        "company_name",
+        "job_title",
+        "location",
+        "job_description",
+        "cv_evidence",
+        "rule_based",
+        "evidence_catalog",
+        "required_output_schema",
+        "safety_rules",
+    }
+)
+
+
 def build_cv_tailoring_semantic_prompt(
     company_name: str,
     job_title: str,
@@ -1190,7 +1206,7 @@ def build_cv_tailoring_semantic_prompt(
     rule_based_result: CVTailoringAdvisorResult,
 ) -> dict:
     """Build provider prompt dict from rule-based baseline and evidence bank catalog."""
-    return {
+    payload = {
         "company_name": company_name,
         "job_title": job_title,
         "location": location,
@@ -1226,6 +1242,11 @@ def build_cv_tailoring_semantic_prompt(
             "Gap-tier skills must appear in semantic_gaps only, never as proven matches.",
         ],
     }
+    if set(payload.keys()) != CV_EXTERNAL_PAYLOAD_ALLOWLIST:
+        raise ValueError(
+            "CV external payload keys must equal CV_EXTERNAL_PAYLOAD_ALLOWLIST."
+        )
+    return payload
 
 
 def merge_cv_tailoring_with_semantic(
@@ -1318,7 +1339,7 @@ def build_cv_tailoring_advisor(
     location: str = "",
     job_description: str = "",
     cv_evidence: str = "",
-    provider_callable: Callable[[dict], dict] | None = None,
+    provider_callable: ExplanationProvider | None = None,
 ) -> CVTailoringAdvisorResult:
     """CV tailoring suggestions; rule-based baseline with optional semantic enhancement."""
     rule_based_result = _build_rule_based_cv_tailoring_advisor(
@@ -1347,6 +1368,11 @@ def build_cv_tailoring_advisor(
                 "Provider callable must return a dictionary payload.",
             )
         semantic_result = parse_cv_tailoring_semantic_payload(provider_response)
+    except TimeoutError as exc:
+        return _with_cv_tailoring_fallback_note(
+            rule_based_result,
+            f"Provider request timed out: {exc}",
+        )
     except ValueError as exc:
         return _with_cv_tailoring_fallback_note(
             rule_based_result,
@@ -1566,7 +1592,7 @@ def compare_rule_based_and_ai_scores(
 # --- Sprint 32C: OpenAI-shaped wrapper + safe fallback (mocked-first; no network) ---
 
 OPENAI_WRAPPER_PROVIDER_NAME = "Claude"
-OPENAI_WRAPPER_TIMEOUT_SECONDS = 20
+OPENAI_WRAPPER_TIMEOUT_SECONDS = 15
 
 OPENAI_WRAPPER_CLAIM_SAFETY_NOTES = [
     "Sprint 32C wrapper is mocked-first.",
@@ -1604,6 +1630,26 @@ def _build_openai_wrapper_fallback(fallback_reason: str) -> OpenAIFitScoringWrap
     )
 
 
+# Explicit allowlist for fit-scoring external provider payloads (construction only).
+FIT_EXTERNAL_PAYLOAD_ALLOWLIST = frozenset(
+    {
+        "company_name",
+        "job_title",
+        "location",
+        "job_description",
+        "rule_based_fit_score",
+        "rule_based_recommendation",
+        "matched_skills",
+        "risks",
+        "deal_breakers",
+        "required_output_schema",
+        "safety_rules",
+        "provider_name",
+        "timeout_seconds",
+    }
+)
+
+
 def build_openai_fit_scoring_prompt(
     company_name: str,
     job_title: str,
@@ -1612,7 +1658,7 @@ def build_openai_fit_scoring_prompt(
     rule_based_analysis: JobPostingAnalysis,
 ) -> dict:
     """Build a structured prompt dict for a future provider call. No secrets or network."""
-    return {
+    payload = {
         "company_name": company_name,
         "job_title": job_title,
         "location": location,
@@ -1638,6 +1684,11 @@ def build_openai_fit_scoring_prompt(
         "provider_name": OPENAI_WRAPPER_PROVIDER_NAME,
         "timeout_seconds": OPENAI_WRAPPER_TIMEOUT_SECONDS,
     }
+    if set(payload.keys()) != FIT_EXTERNAL_PAYLOAD_ALLOWLIST:
+        raise ValueError(
+            "Fit external payload keys must equal FIT_EXTERNAL_PAYLOAD_ALLOWLIST."
+        )
+    return payload
 
 
 def build_openai_fit_scoring_with_fallback(
@@ -1645,7 +1696,7 @@ def build_openai_fit_scoring_with_fallback(
     job_title: str,
     location: str,
     job_description: str,
-    provider_callable: Callable[[dict], dict] | None = None,
+    provider_callable: ExplanationProvider | None = None,
 ) -> OpenAIFitScoringWrapperResult:
     """
     Rule-based analysis first, then optional injected provider callable.
@@ -1677,6 +1728,10 @@ def build_openai_fit_scoring_with_fallback(
                 "Provider callable must return a dictionary payload."
             )
         ai_result = parse_ai_fit_scoring_payload(provider_response)
+    except TimeoutError as exc:
+        return _build_openai_wrapper_fallback(
+            f"Provider request timed out: {exc}"
+        )
     except ValueError as exc:
         return _build_openai_wrapper_fallback(
             f"Provider payload validation failed: {exc}"
