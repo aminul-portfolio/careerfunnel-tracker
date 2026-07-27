@@ -9,7 +9,13 @@ from __future__ import annotations
 
 from django.conf import settings
 
-from .claude_provider import make_claude_cv_tailoring_provider, make_claude_provider
+from .claude_provider import (
+    ClaudeTelemetryProvider,
+    make_claude_cv_tailoring_provider,
+    make_claude_cv_tailoring_telemetry_provider,
+    make_claude_fit_telemetry_provider,
+    make_claude_provider,
+)
 from .provider_contracts import ExplanationProvider
 
 LIVE_PROVIDER_MODE = "live"
@@ -56,3 +62,17 @@ def compose_cv_tailoring_provider() -> ExplanationProvider | None:
     if not live_providers_permitted():
         return None
     return make_claude_cv_tailoring_provider(_api_key())
+
+
+def compose_fit_scoring_telemetry_provider() -> ClaudeTelemetryProvider | None:
+    """Return the fit-scoring telemetry provider, or None when live is not permitted."""
+    if not live_providers_permitted():
+        return None
+    return make_claude_fit_telemetry_provider(_api_key())
+
+
+def compose_cv_tailoring_telemetry_provider() -> ClaudeTelemetryProvider | None:
+    """Return the CV telemetry provider, or None when live is not permitted."""
+    if not live_providers_permitted():
+        return None
+    return make_claude_cv_tailoring_telemetry_provider(_api_key())
