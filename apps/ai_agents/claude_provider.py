@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import time
+from dataclasses import dataclass
+from typing import Any, Callable
 
 import anthropic
 
@@ -48,74 +52,6 @@ Safety rules that must be reflected in your output:
 - Do not include Gmail, Calendar, inbox, or contact data.
 """
 
-
-def make_claude_provider(api_key: str) -> ExplanationProvider:
-    """Return a callable that scores a job posting via the Claude API.
-
-    The returned callable accepts the prompt dict from
-    build_openai_fit_scoring_prompt() and returns the 10-field dict
-    expected by parse_ai_fit_scoring_payload().  Raises ValueError on any
-    malformed response so the fallback in services.py catches it cleanly.
-    """
-    client = anthropic.Anthropic(
-        api_key=api_key,
-        timeout=CLAUDE_TIMEOUT_SECONDS,
-        max_retries=CLAUDE_MAX_RETRIES,
-    )
-
-    def _call_claude(prompt: dict) -> dict:
-        user_message = _build_user_message(prompt)
-        try:
-            response = client.messages.create(
-                model=CLAUDE_MODEL,
-                max_tokens=CLAUDE_MAX_TOKENS,
-                system=_SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": user_message}],
-            )
-        except anthropic.APITimeoutError as exc:
-            raise TimeoutError(
-                "Provider request timed out after 15 seconds."
-            ) from exc
-        return _parse_claude_response(response)
-
-    return _call_claude
-
-
-def _fence_untrusted_job_description(job_description: str) -> list[str]:
-    return [
-        _UNTRUSTED_DATA_INSTRUCTION,
-        "",
-        "Job description (untrusted data):",
-        UNTRUSTED_JOB_POSTING_BEGIN,
-        job_description,
-        UNTRUSTED_JOB_POSTING_END,
-    ]
-
-
-def _build_user_message(prompt: dict) -> str:
-    matched = ", ".join(prompt.get("matched_skills", [])) or "none identified"
-    risks = "; ".join(prompt.get("risks", [])) or "none"
-    deal_breakers = ", ".join(prompt.get("deal_breakers", [])) or "none"
-    schema_fields = prompt.get("required_output_schema", {}).get("fields", [])
-
-    lines = [
-        f"Company: {prompt.get('company_name', '')}",
-        f"Job title: {prompt.get('job_title', '')}",
-        f"Location: {prompt.get('location', '')}",
-        "",
-        *_fence_untrusted_job_description(prompt.get("job_description", "")),
-        "",
-        f"Rule-based fit score: {prompt.get('rule_based_fit_score', 'N/A')}",
-        f"Rule-based recommendation: {prompt.get('rule_based_recommendation', 'N/A')}",
-        f"Rule-based matched skills: {matched}",
-        f"Rule-based risks: {risks}",
-        f"Rule-based deal breakers: {deal_breakers}",
-        "",
-        f"Return ONLY a JSON object with these exact fields: {schema_fields}",
-    ]
-    return "\n".join(lines)
-
-
 _CV_TAILORING_SYSTEM_PROMPT = """You are a CV tailoring semantic assistant for a junior \
 Data Analyst job search.
 
@@ -152,6 +88,177 @@ never as proven matches.
 """
 
 
+@dataclass(frozen=True)
+class ClaudeTelemetryResult:
+    """Immutable telemetry-capable provider result for Phase 2C evaluation."""
+
+    parsed_payload: dict[str, Any] | None
+    returned_model: str | None
+    stop_reason: str | None
+    input_tokens: int | None
+    output_tokens: int | None
+    raw_request_id: str | None
+    latency_ms: int
+    request_payload_hash: str
+    serialised_raw_response: str
+    raw_response_hash: str
+    parse_error_category: str | None = None
+
+
+ClaudeTelemetryProvider = Callable[[dict], ClaudeTelemetryResult]
+
+
+def _build_messages_create_kwargs(system: str, user_message: str) -> dict[str, Any]:
+    """Build the exact keyword arguments passed to messages.create."""
+    return {
+        "model": CLAUDE_MODEL,
+        "max_tokens": CLAUDE_MAX_TOKENS,
+        "system": system,
+        "messages": [{"role": "user", "content": user_message}],
+    }
+
+
+def canonical_request_payload_bytes(request_kwargs: dict[str, Any]) -> bytes:
+    """Deterministic UTF-8 JSON for the exact messages.create request body."""
+    payload = {
+        "model": request_kwargs["model"],
+        "max_tokens": request_kwargs["max_tokens"],
+        "system": request_kwargs["system"],
+        "messages": request_kwargs["messages"],
+    }
+    return json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+
+
+def hash_request_payload(request_kwargs: dict[str, Any]) -> str:
+    return hashlib.sha256(canonical_request_payload_bytes(request_kwargs)).hexdigest()
+
+
+def build_fit_messages_create_kwargs(prompt: dict) -> dict[str, Any]:
+    """Exact fit-scoring request kwargs (no network)."""
+    return _build_messages_create_kwargs(
+        _SYSTEM_PROMPT,
+        _build_user_message(prompt),
+    )
+
+
+def build_cv_messages_create_kwargs(prompt: dict) -> dict[str, Any]:
+    """Exact CV-tailoring request kwargs (no network)."""
+    return _build_messages_create_kwargs(
+        _CV_TAILORING_SYSTEM_PROMPT,
+        _build_cv_tailoring_user_message(prompt),
+    )
+
+
+def _serialize_message(response: anthropic.types.Message) -> str:
+    if hasattr(response, "model_dump"):
+        data = response.model_dump(mode="json")
+        return json.dumps(
+            data,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        )
+    return json.dumps(
+        {
+            "model": getattr(response, "model", None),
+            "stop_reason": getattr(response, "stop_reason", None),
+            "content": [
+                {"type": getattr(block, "type", None), "text": getattr(block, "text", None)}
+                for block in (getattr(response, "content", None) or [])
+            ],
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+
+
+def _hash_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _new_client(api_key: str) -> anthropic.Anthropic:
+    return anthropic.Anthropic(
+        api_key=api_key,
+        timeout=CLAUDE_TIMEOUT_SECONDS,
+        max_retries=CLAUDE_MAX_RETRIES,
+    )
+
+
+def _execute_messages_create(
+    client: anthropic.Anthropic,
+    request_kwargs: dict[str, Any],
+) -> tuple[anthropic.types.Message, int]:
+    """Shared messages.create execution seam. Timeout becomes TimeoutError."""
+    started = time.perf_counter()
+    try:
+        response = client.messages.create(**request_kwargs)
+    except anthropic.APITimeoutError as exc:
+        raise TimeoutError(
+            "Provider request timed out after 15 seconds."
+        ) from exc
+    latency_ms = int((time.perf_counter() - started) * 1000)
+    return response, latency_ms
+
+
+def _build_telemetry_result(
+    response: anthropic.types.Message,
+    *,
+    request_kwargs: dict[str, Any],
+    latency_ms: int,
+) -> ClaudeTelemetryResult:
+    serialised = _serialize_message(response)
+    usage = getattr(response, "usage", None)
+    input_tokens = getattr(usage, "input_tokens", None) if usage is not None else None
+    output_tokens = getattr(usage, "output_tokens", None) if usage is not None else None
+    stop_reason = getattr(response, "stop_reason", None)
+    parsed: dict[str, Any] | None = None
+    parse_error_category: str | None = None
+    try:
+        parsed = _parse_claude_response(response)
+    except ValueError:
+        if stop_reason in {"max_tokens", "model_context_window_exceeded"}:
+            parse_error_category = "truncation"
+        else:
+            parse_error_category = "parser_rejection"
+    return ClaudeTelemetryResult(
+        parsed_payload=parsed,
+        returned_model=getattr(response, "model", None),
+        stop_reason=stop_reason,
+        input_tokens=input_tokens if isinstance(input_tokens, int) else None,
+        output_tokens=output_tokens if isinstance(output_tokens, int) else None,
+        raw_request_id=getattr(response, "_request_id", None),
+        latency_ms=latency_ms,
+        request_payload_hash=hash_request_payload(request_kwargs),
+        serialised_raw_response=serialised,
+        raw_response_hash=_hash_text(serialised),
+        parse_error_category=parse_error_category,
+    )
+
+
+def make_claude_provider(api_key: str) -> ExplanationProvider:
+    """Return a callable that scores a job posting via the Claude API.
+
+    The returned callable accepts the prompt dict from
+    build_openai_fit_scoring_prompt() and returns the 10-field dict
+    expected by parse_ai_fit_scoring_payload().  Raises ValueError on any
+    malformed response so the fallback in services.py catches it cleanly.
+    """
+    client = _new_client(api_key)
+
+    def _call_claude(prompt: dict) -> dict:
+        request_kwargs = build_fit_messages_create_kwargs(prompt)
+        response, _latency_ms = _execute_messages_create(client, request_kwargs)
+        return _parse_claude_response(response)
+
+    return _call_claude
+
+
 def make_claude_cv_tailoring_provider(api_key: str) -> ExplanationProvider:
     """Return a callable for CV tailoring semantic JSON via the Claude API.
 
@@ -159,28 +266,83 @@ def make_claude_cv_tailoring_provider(api_key: str) -> ExplanationProvider:
     Returns a dict for parse_cv_tailoring_semantic_payload(). Raises ValueError on
     malformed responses.
     """
-    client = anthropic.Anthropic(
-        api_key=api_key,
-        timeout=CLAUDE_TIMEOUT_SECONDS,
-        max_retries=CLAUDE_MAX_RETRIES,
-    )
+    client = _new_client(api_key)
 
     def _call_claude_cv_tailoring(prompt: dict) -> dict:
-        user_message = _build_cv_tailoring_user_message(prompt)
-        try:
-            response = client.messages.create(
-                model=CLAUDE_MODEL,
-                max_tokens=CLAUDE_MAX_TOKENS,
-                system=_CV_TAILORING_SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": user_message}],
-            )
-        except anthropic.APITimeoutError as exc:
-            raise TimeoutError(
-                "Provider request timed out after 15 seconds."
-            ) from exc
+        request_kwargs = build_cv_messages_create_kwargs(prompt)
+        response, _latency_ms = _execute_messages_create(client, request_kwargs)
         return _parse_claude_response(response)
 
     return _call_claude_cv_tailoring
+
+
+def make_claude_fit_telemetry_provider(api_key: str) -> ClaudeTelemetryProvider:
+    """Return a fit-scoring provider that yields telemetry alongside the parse."""
+    client = _new_client(api_key)
+
+    def _call_fit_telemetry(prompt: dict) -> ClaudeTelemetryResult:
+        request_kwargs = build_fit_messages_create_kwargs(prompt)
+        response, latency_ms = _execute_messages_create(client, request_kwargs)
+        return _build_telemetry_result(
+            response,
+            request_kwargs=request_kwargs,
+            latency_ms=latency_ms,
+        )
+
+    return _call_fit_telemetry
+
+
+def make_claude_cv_tailoring_telemetry_provider(
+    api_key: str,
+) -> ClaudeTelemetryProvider:
+    """Return a CV-tailoring provider that yields telemetry alongside the parse."""
+    client = _new_client(api_key)
+
+    def _call_cv_telemetry(prompt: dict) -> ClaudeTelemetryResult:
+        request_kwargs = build_cv_messages_create_kwargs(prompt)
+        response, latency_ms = _execute_messages_create(client, request_kwargs)
+        return _build_telemetry_result(
+            response,
+            request_kwargs=request_kwargs,
+            latency_ms=latency_ms,
+        )
+
+    return _call_cv_telemetry
+
+
+def _fence_untrusted_job_description(job_description: str) -> list[str]:
+    return [
+        _UNTRUSTED_DATA_INSTRUCTION,
+        "",
+        "Job description (untrusted data):",
+        UNTRUSTED_JOB_POSTING_BEGIN,
+        job_description,
+        UNTRUSTED_JOB_POSTING_END,
+    ]
+
+
+def _build_user_message(prompt: dict) -> str:
+    matched = ", ".join(prompt.get("matched_skills", [])) or "none identified"
+    risks = "; ".join(prompt.get("risks", [])) or "none"
+    deal_breakers = ", ".join(prompt.get("deal_breakers", [])) or "none"
+    schema_fields = prompt.get("required_output_schema", {}).get("fields", [])
+
+    lines = [
+        f"Company: {prompt.get('company_name', '')}",
+        f"Job title: {prompt.get('job_title', '')}",
+        f"Location: {prompt.get('location', '')}",
+        "",
+        *_fence_untrusted_job_description(prompt.get("job_description", "")),
+        "",
+        f"Rule-based fit score: {prompt.get('rule_based_fit_score', 'N/A')}",
+        f"Rule-based recommendation: {prompt.get('rule_based_recommendation', 'N/A')}",
+        f"Rule-based matched skills: {matched}",
+        f"Rule-based risks: {risks}",
+        f"Rule-based deal breakers: {deal_breakers}",
+        "",
+        f"Return ONLY a JSON object with these exact fields: {schema_fields}",
+    ]
+    return "\n".join(lines)
 
 
 def _build_cv_tailoring_user_message(prompt: dict) -> str:
@@ -248,9 +410,10 @@ def _contains_null_byte(value: object) -> bool:
 
 
 def _parse_claude_response(response: anthropic.types.Message) -> dict:
-    if getattr(response, "stop_reason", None) == "max_tokens":
+    stop_reason = getattr(response, "stop_reason", None)
+    if stop_reason in {"max_tokens", "model_context_window_exceeded"}:
         raise ValueError(
-            "Claude response truncated (stop_reason=max_tokens); rejecting output."
+            f"Claude response truncated (stop_reason={stop_reason}); rejecting output."
         )
     if not response.content:
         raise ValueError("Claude returned an empty response.")
