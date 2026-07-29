@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 from unittest.mock import patch
 from urllib.parse import quote
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AnonymousUser, User
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase, TestCase
@@ -44,10 +44,13 @@ from .services import (
     READINESS_LABEL_MISSING_KEY,
     READINESS_LABEL_NEEDS_IMPROVEMENT,
     READINESS_LABEL_STRONG,
+    AggregatedTrackedTerm,
     append_status_note,
     build_application_evidence_readiness,
+    build_jd_gap_aggregation_context,
     build_save_quality_warnings,
     calculate_response_rate,
+    compare_aggregated_terms_with_skill_ledger,
     parse_status_history,
 )
 
@@ -834,6 +837,7 @@ class JobApplicationViewTests(TestCase):
 
     def _create_skill_entry(self, **overrides):
         defaults = {
+            "user": self.user,
             "skill_name": "Python analytics",
             "category": SkillEntry.Category.PROGRAMMING,
             "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
@@ -6090,3 +6094,102 @@ class Sprint104DPhase1ApplicationDetailDangerZoneOutlierAlignmentTests(TestCase)
         for phrase in self.UNSAFE_CLAIM_PHRASES:
             with self.subTest(phrase=phrase):
                 self.assertNotIn(phrase, content)
+
+
+class Sprint110APhase3AApplicationsSkillEntryOwnershipTests(TestCase):
+    """Sprint 110A Phase 3A: JD-gap SkillEntry comparison ownership isolation."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(username="p3a_app_owner", password="pass")
+        self.other = User.objects.create_user(username="p3a_app_other", password="pass")
+
+    def _term(self, term="python"):
+        return AggregatedTrackedTerm(
+            term=term,
+            category="Programming",
+            frequency=2,
+            sample_applications=(),
+        )
+
+    def test_user_specific_comparison_uses_only_that_users_skillentry_rows(self):
+        SkillEntry.objects.create(
+            user=self.owner,
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        SkillEntry.objects.create(
+            user=self.other,
+            skill_name="dbt",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        compared = compare_aggregated_terms_with_skill_ledger(
+            (self._term("python"), self._term("dbt")),
+            self.owner,
+        )
+        by_term = {item.term: item for item in compared}
+        self.assertFalse(by_term["python"].is_unmatched)
+        self.assertTrue(by_term["python"].is_verified)
+        self.assertTrue(by_term["dbt"].is_unmatched)
+
+    def test_another_users_verified_entry_cannot_satisfy_current_user_skill(self):
+        SkillEntry.objects.create(
+            user=self.other,
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        compared = compare_aggregated_terms_with_skill_ledger(
+            (self._term("python"),),
+            self.owner,
+        )
+        self.assertEqual(len(compared), 1)
+        self.assertTrue(compared[0].is_unmatched)
+        self.assertFalse(compared[0].is_verified)
+
+    def test_another_users_learning_target_cannot_enter_current_user_comparison(self):
+        SkillEntry.objects.create(
+            user=self.other,
+            skill_name="Power BI",
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        compared = compare_aggregated_terms_with_skill_ledger(
+            (self._term("power bi"),),
+            self.owner,
+        )
+        self.assertTrue(compared[0].is_unmatched)
+        self.assertIsNone(compared[0].skill_ledger_match)
+
+    def test_two_users_with_same_skill_name_remain_isolated(self):
+        SkillEntry.objects.create(
+            user=self.owner,
+            skill_name="SQL",
+            evidence_level=SkillEntry.EvidenceLevel.STUDYING,
+        )
+        SkillEntry.objects.create(
+            user=self.other,
+            skill_name="SQL",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        compared = compare_aggregated_terms_with_skill_ledger(
+            (self._term("sql"),),
+            self.owner,
+        )
+        self.assertFalse(compared[0].is_unmatched)
+        self.assertFalse(compared[0].is_verified)
+        self.assertEqual(compared[0].skill_ledger_match.user_id, self.owner.pk)
+
+    def test_missing_or_unauthenticated_user_input_fails_closed(self):
+        SkillEntry.objects.create(
+            user=self.owner,
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        for user in (None, AnonymousUser()):
+            with self.subTest(user=user):
+                compared = compare_aggregated_terms_with_skill_ledger(
+                    (self._term("python"),),
+                    user,
+                )
+                self.assertTrue(compared[0].is_unmatched)
+        context = build_jd_gap_aggregation_context(None)
+        self.assertEqual(context.jd_ready_count, 0)
+        self.assertEqual(context.terms_found_count, 0)

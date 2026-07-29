@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.test import SimpleTestCase, TestCase
 
 from apps.skill_ledger.models import SkillEntry
@@ -216,8 +217,12 @@ class FinalCareerIntelligenceWorkflowTests(SimpleTestCase):
 
 
 class SkillLedgerEvidenceSummarySelectorTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="summaryuser", password="StrongPass12345")
+
     def _create_skill_entry(self, **overrides):
         defaults = {
+            "user": self.user,
             "skill_name": "Python",
             "category": SkillEntry.Category.PROGRAMMING,
             "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
@@ -230,7 +235,7 @@ class SkillLedgerEvidenceSummarySelectorTests(TestCase):
         return SkillEntry.objects.create(**defaults)
 
     def test_skill_ledger_evidence_summary_handles_empty_ledger(self):
-        summary = get_skill_ledger_evidence_summary()
+        summary = get_skill_ledger_evidence_summary(self.user)
 
         self.assertEqual(summary["total_entries"], 0)
         self.assertEqual(summary["verified_entries"], [])
@@ -247,28 +252,28 @@ class SkillLedgerEvidenceSummarySelectorTests(TestCase):
     def test_skill_ledger_evidence_summary_returns_verified_count(self):
         self._create_skill_entry(evidence_level=SkillEntry.EvidenceLevel.VERIFIED)
 
-        summary = get_skill_ledger_evidence_summary()
+        summary = get_skill_ledger_evidence_summary(self.user)
 
         self.assertEqual(summary["counts"][SkillEntry.EvidenceLevel.VERIFIED], 1)
 
     def test_skill_ledger_evidence_summary_returns_learning_target_count(self):
         self._create_skill_entry(evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET)
 
-        summary = get_skill_ledger_evidence_summary()
+        summary = get_skill_ledger_evidence_summary(self.user)
 
         self.assertEqual(summary["counts"][SkillEntry.EvidenceLevel.LEARNING_TARGET], 1)
 
     def test_skill_ledger_evidence_summary_returns_studying_count(self):
         self._create_skill_entry(evidence_level=SkillEntry.EvidenceLevel.STUDYING)
 
-        summary = get_skill_ledger_evidence_summary()
+        summary = get_skill_ledger_evidence_summary(self.user)
 
         self.assertEqual(summary["counts"][SkillEntry.EvidenceLevel.STUDYING], 1)
 
     def test_skill_ledger_evidence_summary_returns_no_evidence_count(self):
         self._create_skill_entry(evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE)
 
-        summary = get_skill_ledger_evidence_summary()
+        summary = get_skill_ledger_evidence_summary(self.user)
 
         self.assertEqual(summary["counts"][SkillEntry.EvidenceLevel.NO_EVIDENCE], 1)
 
@@ -282,7 +287,7 @@ class SkillLedgerEvidenceSummarySelectorTests(TestCase):
             evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
         )
 
-        summary = get_skill_ledger_evidence_summary()
+        summary = get_skill_ledger_evidence_summary(self.user)
 
         self.assertEqual(summary["verified_entries"], [verified])
 
@@ -293,7 +298,7 @@ class SkillLedgerEvidenceSummarySelectorTests(TestCase):
                 evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
             )
 
-        summary = get_skill_ledger_evidence_summary()
+        summary = get_skill_ledger_evidence_summary(self.user)
 
         self.assertEqual(len(summary["verified_entries"]), 5)
         self.assertEqual(summary["counts"][SkillEntry.EvidenceLevel.VERIFIED], 6)
@@ -313,7 +318,7 @@ class SkillLedgerEvidenceSummarySelectorTests(TestCase):
             "visibility",
         ).get(pk=entry.pk)
 
-        get_skill_ledger_evidence_summary()
+        get_skill_ledger_evidence_summary(self.user)
 
         after = SkillEntry.objects.values(
             "skill_name",

@@ -50,6 +50,7 @@ class FinalCareerIntelligenceWorkflowViewTests(TestCase):
 
     def _create_skill_entry(self, **overrides):
         defaults = {
+            "user": self.user,
             "skill_name": "Python",
             "category": SkillEntry.Category.PROGRAMMING,
             "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
