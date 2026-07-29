@@ -1,4 +1,18 @@
+from django.conf import settings
 from django.db import models
+
+
+class SkillEntryQuerySet(models.QuerySet):
+    def for_user(self, user):
+        """Return only SkillEntry rows owned by a persisted authenticated user."""
+        if user is None:
+            return self.none()
+        if not getattr(user, "is_authenticated", False):
+            return self.none()
+        user_pk = getattr(user, "pk", None)
+        if user_pk is None:
+            return self.none()
+        return self.filter(user_id=user_pk)
 
 
 class SkillEntry(models.Model):
@@ -22,6 +36,13 @@ class SkillEntry(models.Model):
         PRIVATE = "private", "Private"
         PUBLIC = "public", "Public"
 
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="skill_entries",
+        null=True,
+        blank=True,
+    )
     skill_name = models.CharField(max_length=255)
     category = models.CharField(
         max_length=100,
@@ -43,6 +64,8 @@ class SkillEntry(models.Model):
     )
     date_added = models.DateTimeField(auto_now_add=True)
     last_updated = models.DateTimeField(auto_now=True)
+
+    objects = SkillEntryQuerySet.as_manager()
 
     class Meta:
         verbose_name = "Skill Entry"

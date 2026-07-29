@@ -3,9 +3,11 @@ from io import StringIO
 
 from django.apps import apps
 from django.contrib import admin
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AnonymousUser, User
 from django.contrib.messages import get_messages
 from django.core.management import call_command
+from django.core.management.base import CommandError
+from django.db import models
 from django.test import TestCase
 from django.urls import resolve, reverse
 from django.utils import timezone
@@ -33,6 +35,7 @@ from .ai_explanation import (
     explanation_to_dict,
     validate_explanation,
 )
+from .management.commands.backfill_skillentry_ownership import CONFIRMATION_TOKEN
 from .management.commands.seed_skill_ledger import LEARNING_TARGET_NOTES, VERIFIED_DEFAULT_NOTES
 from .mocked_ai_response_evaluator import (
     AUTO_ACTION_DETECTED,
@@ -4171,3 +4174,283 @@ class Sprint104BPhase2ManualReviewChecklistLongPageRhythmTests(TestCase):
         for phrase in self.UNSAFE_CLAIM_PHRASES:
             with self.subTest(phrase=phrase):
                 self.assertNotIn(phrase, content)
+
+
+class SkillLedgerOwnershipPhase1Tests(TestCase):
+    """Sprint 110A Phase 1: nullable ownership foundation and backfill tooling."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(username="owner_a", password="pass")
+        self.other = User.objects.create_user(username="owner_b", password="pass")
+        self.inactive = User.objects.create_user(
+            username="inactive_owner",
+            password="pass",
+            is_active=False,
+        )
+        self.staff = User.objects.create_user(
+            username="staff_owner",
+            password="pass",
+            is_staff=True,
+        )
+        self.superuser = User.objects.create_superuser(
+            username="super_owner",
+            email="super_owner@example.com",
+            password="pass",
+        )
+
+    def _create_entry(self, *, skill_name="Python", user=None, notes="private note"):
+        return SkillEntry.objects.create(
+            skill_name=skill_name,
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+            notes=notes,
+            visibility=SkillEntry.Visibility.PRIVATE,
+            user=user,
+        )
+
+    def test_skillentry_user_field_is_nullable_foreign_key(self):
+        field = SkillEntry._meta.get_field("user")
+        self.assertTrue(field.null)
+        self.assertTrue(field.blank)
+        self.assertTrue(field.is_relation)
+        self.assertEqual(field.related_model, User)
+
+    def test_skillentry_user_related_name_is_skill_entries(self):
+        field = SkillEntry._meta.get_field("user")
+        self.assertEqual(field.remote_field.related_name, "skill_entries")
+        entry = self._create_entry(user=self.owner)
+        self.assertEqual(list(self.owner.skill_entries.all()), [entry])
+
+    def test_skillentry_user_on_delete_is_cascade(self):
+        field = SkillEntry._meta.get_field("user")
+        self.assertEqual(field.remote_field.on_delete, models.CASCADE)
+
+    def test_skillentry_creation_without_user_remains_temporarily_valid(self):
+        entry = self._create_entry(user=None)
+        self.assertIsNone(entry.user)
+        self.assertIsNone(entry.user_id)
+        self.assertEqual(SkillEntry.objects.filter(user__isnull=True).count(), 1)
+
+    def test_for_user_returns_only_requested_user_entries(self):
+        own = self._create_entry(skill_name="SQL", user=self.owner)
+        self._create_entry(skill_name="dbt", user=self.other)
+        self._create_entry(skill_name="Tableau", user=None)
+        result = list(SkillEntry.objects.for_user(self.owner))
+        self.assertEqual(result, [own])
+
+    def test_for_user_excludes_another_users_entries(self):
+        self._create_entry(skill_name="SQL", user=self.owner)
+        other_entry = self._create_entry(skill_name="dbt", user=self.other)
+        result = list(SkillEntry.objects.for_user(self.owner))
+        self.assertNotIn(other_entry, result)
+
+    def test_for_user_none_returns_empty_queryset(self):
+        self._create_entry(user=self.owner)
+        self.assertEqual(SkillEntry.objects.for_user(None).count(), 0)
+
+    def test_for_user_anonymous_user_returns_empty_queryset(self):
+        self._create_entry(user=self.owner)
+        self.assertEqual(SkillEntry.objects.for_user(AnonymousUser()).count(), 0)
+
+    def test_for_user_unsaved_user_returns_empty_queryset(self):
+        unsaved = User(username="unsaved_owner")
+        self.assertIsNone(unsaved.pk)
+        self._create_entry(user=self.owner)
+        self.assertEqual(SkillEntry.objects.for_user(unsaved).count(), 0)
+
+    def test_for_user_staff_and_superuser_receive_only_own_entries(self):
+        staff_entry = self._create_entry(skill_name="StaffSkill", user=self.staff)
+        super_entry = self._create_entry(skill_name="SuperSkill", user=self.superuser)
+        self._create_entry(skill_name="OwnerSkill", user=self.owner)
+        self.assertEqual(list(SkillEntry.objects.for_user(self.staff)), [staff_entry])
+        self.assertEqual(list(SkillEntry.objects.for_user(self.superuser)), [super_entry])
+
+    def test_backfill_dry_run_makes_no_writes(self):
+        unowned = self._create_entry(skill_name="Unowned", user=None)
+        owned = self._create_entry(skill_name="Owned", user=self.other)
+        out = StringIO()
+        call_command(
+            "backfill_skillentry_ownership",
+            f"--user-id={self.owner.pk}",
+            "--expected-unowned-count=1",
+            f"--confirm={CONFIRMATION_TOKEN}",
+            "--dry-run",
+            stdout=out,
+        )
+        unowned.refresh_from_db()
+        owned.refresh_from_db()
+        self.assertIsNone(unowned.user_id)
+        self.assertEqual(owned.user_id, self.other.pk)
+        self.assertIn("mode=dry-run", out.getvalue())
+        self.assertIn("rows_updated=0", out.getvalue())
+
+    def test_backfill_apply_assigns_all_unowned_rows(self):
+        first = self._create_entry(skill_name="One", user=None)
+        second = self._create_entry(skill_name="Two", user=None)
+        out = StringIO()
+        call_command(
+            "backfill_skillentry_ownership",
+            f"--user-id={self.owner.pk}",
+            "--expected-unowned-count=2",
+            f"--confirm={CONFIRMATION_TOKEN}",
+            "--apply",
+            stdout=out,
+        )
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.assertEqual(first.user_id, self.owner.pk)
+        self.assertEqual(second.user_id, self.owner.pk)
+        self.assertEqual(SkillEntry.objects.filter(user__isnull=True).count(), 0)
+        self.assertIn("mode=apply", out.getvalue())
+        self.assertIn("rows_updated=2", out.getvalue())
+
+    def test_backfill_never_reassigns_already_owned_rows(self):
+        owned = self._create_entry(skill_name="Owned", user=self.other)
+        unowned = self._create_entry(skill_name="Unowned", user=None)
+        call_command(
+            "backfill_skillentry_ownership",
+            f"--user-id={self.owner.pk}",
+            "--expected-unowned-count=1",
+            f"--confirm={CONFIRMATION_TOKEN}",
+            "--apply",
+            stdout=StringIO(),
+        )
+        owned.refresh_from_db()
+        unowned.refresh_from_db()
+        self.assertEqual(owned.user_id, self.other.pk)
+        self.assertEqual(unowned.user_id, self.owner.pk)
+
+    def test_backfill_incorrect_expected_count_blocks_with_no_writes(self):
+        entry = self._create_entry(user=None)
+        with self.assertRaises(CommandError):
+            call_command(
+                "backfill_skillentry_ownership",
+                f"--user-id={self.owner.pk}",
+                "--expected-unowned-count=99",
+                f"--confirm={CONFIRMATION_TOKEN}",
+                "--apply",
+                stdout=StringIO(),
+            )
+        entry.refresh_from_db()
+        self.assertIsNone(entry.user_id)
+
+    def test_backfill_incorrect_confirmation_token_blocks_with_no_writes(self):
+        entry = self._create_entry(user=None)
+        with self.assertRaises(CommandError):
+            call_command(
+                "backfill_skillentry_ownership",
+                f"--user-id={self.owner.pk}",
+                "--expected-unowned-count=1",
+                "--confirm=WRONG_TOKEN",
+                "--apply",
+                stdout=StringIO(),
+            )
+        entry.refresh_from_db()
+        self.assertIsNone(entry.user_id)
+
+    def test_backfill_missing_user_blocks(self):
+        self._create_entry(user=None)
+        with self.assertRaises(CommandError):
+            call_command(
+                "backfill_skillentry_ownership",
+                "--user-id=999999",
+                "--expected-unowned-count=1",
+                f"--confirm={CONFIRMATION_TOKEN}",
+                "--apply",
+                stdout=StringIO(),
+            )
+
+    def test_backfill_inactive_user_blocks(self):
+        entry = self._create_entry(user=None)
+        with self.assertRaises(CommandError):
+            call_command(
+                "backfill_skillentry_ownership",
+                f"--user-id={self.inactive.pk}",
+                "--expected-unowned-count=1",
+                f"--confirm={CONFIRMATION_TOKEN}",
+                "--apply",
+                stdout=StringIO(),
+            )
+        entry.refresh_from_db()
+        self.assertIsNone(entry.user_id)
+
+    def test_backfill_negative_expected_count_blocks(self):
+        self._create_entry(user=None)
+        with self.assertRaises(CommandError):
+            call_command(
+                "backfill_skillentry_ownership",
+                f"--user-id={self.owner.pk}",
+                "--expected-unowned-count=-1",
+                f"--confirm={CONFIRMATION_TOKEN}",
+                "--apply",
+                stdout=StringIO(),
+            )
+
+    def test_backfill_zero_unowned_with_expected_zero_is_safe_noop(self):
+        owned = self._create_entry(user=self.other)
+        out = StringIO()
+        call_command(
+            "backfill_skillentry_ownership",
+            f"--user-id={self.owner.pk}",
+            "--expected-unowned-count=0",
+            f"--confirm={CONFIRMATION_TOKEN}",
+            "--apply",
+            stdout=out,
+        )
+        owned.refresh_from_db()
+        self.assertEqual(owned.user_id, self.other.pk)
+        self.assertIn("rows_updated=0", out.getvalue())
+        self.assertIn("result=success", out.getvalue())
+
+    def test_backfill_rerun_with_original_nonzero_expected_count_blocks(self):
+        entry = self._create_entry(user=None)
+        call_command(
+            "backfill_skillentry_ownership",
+            f"--user-id={self.owner.pk}",
+            "--expected-unowned-count=1",
+            f"--confirm={CONFIRMATION_TOKEN}",
+            "--apply",
+            stdout=StringIO(),
+        )
+        entry.refresh_from_db()
+        self.assertEqual(entry.user_id, self.owner.pk)
+        with self.assertRaises(CommandError):
+            call_command(
+                "backfill_skillentry_ownership",
+                f"--user-id={self.owner.pk}",
+                "--expected-unowned-count=1",
+                f"--confirm={CONFIRMATION_TOKEN}",
+                "--apply",
+                stdout=StringIO(),
+            )
+
+    def test_backfill_rejects_dry_run_and_apply_together(self):
+        self._create_entry(user=None)
+        with self.assertRaises(CommandError):
+            call_command(
+                "backfill_skillentry_ownership",
+                f"--user-id={self.owner.pk}",
+                "--expected-unowned-count=1",
+                f"--confirm={CONFIRMATION_TOKEN}",
+                "--dry-run",
+                "--apply",
+                stdout=StringIO(),
+            )
+
+    def test_backfill_output_does_not_expose_email_or_notes(self):
+        self.owner.email = "owner_secret@example.com"
+        self.owner.save(update_fields=["email"])
+        self._create_entry(user=None, notes="secret private note body")
+        out = StringIO()
+        call_command(
+            "backfill_skillentry_ownership",
+            f"--user-id={self.owner.pk}",
+            "--expected-unowned-count=1",
+            f"--confirm={CONFIRMATION_TOKEN}",
+            "--dry-run",
+            stdout=out,
+        )
+        output = out.getvalue()
+        self.assertNotIn("owner_secret@example.com", output)
+        self.assertNotIn("secret private note body", output)
+        self.assertNotIn(self.superuser.email, output)
