@@ -1,4 +1,5 @@
-from django.core.management.base import BaseCommand
+from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand, CommandError
 
 from ...models import SkillEntry
 
@@ -253,13 +254,35 @@ SEED_ENTRIES = [
 class Command(BaseCommand):
     help = "Seed the private Skill Ledger with approved Sprint 70 skill entries."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--user-id",
+            type=int,
+            required=True,
+            help="Explicit active owner user primary key for all seeded SkillEntry rows.",
+        )
+
     def handle(self, *args, **options):
+        user_id = options["user_id"]
+        if user_id is None or user_id <= 0:
+            raise CommandError("user-id must be a positive integer.")
+
+        User = get_user_model()
+        try:
+            owner = User.objects.get(pk=user_id)
+        except User.DoesNotExist as exc:
+            raise CommandError(f"User id={user_id} does not exist.") from exc
+
+        if not owner.is_active:
+            raise CommandError(f"User id={user_id} is inactive.")
+
         created_count = 0
         existing_count = 0
 
         for seed_entry in SEED_ENTRIES:
             skill_name = seed_entry["skill_name"]
             entry, created = SkillEntry.objects.get_or_create(
+                user=owner,
                 skill_name=skill_name,
                 defaults={
                     "category": seed_entry["category"],
@@ -278,6 +301,7 @@ class Command(BaseCommand):
                 self.stdout.write(f"Existing, skipped: {entry.skill_name}")
 
         total_processed = created_count + existing_count
+        self.stdout.write(f"owner_user_id={owner.pk}")
         self.stdout.write(f"Created: {created_count}")
         self.stdout.write(f"Existing: {existing_count}")
         self.stdout.write(f"Total processed: {total_processed}")

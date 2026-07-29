@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET
@@ -20,6 +22,25 @@ from .ai_explanation import (
 )
 from .forms import SkillEntryForm
 from .models import SkillEntry
+
+
+def resolve_skill_ledger_public_owner():
+    """Return the configured active public owner, or None when resolution fails closed."""
+    configured_username = str(
+        getattr(settings, "SKILL_LEDGER_PUBLIC_OWNER_USERNAME", "") or ""
+    ).strip()
+    if not configured_username:
+        return None
+    User = get_user_model()
+    matches = list(
+        User.objects.filter(
+            username=configured_username,
+            is_active=True,
+        )[:2]
+    )
+    if len(matches) != 1:
+        return None
+    return matches[0]
 
 
 @login_required
@@ -81,10 +102,15 @@ def skill_ledger_public(request):
         SkillEntry.EvidenceLevel.VERIFIED,
         SkillEntry.EvidenceLevel.LEARNING_TARGET,
     ]
-    public_entries = SkillEntry.objects.filter(
-        visibility=SkillEntry.Visibility.PUBLIC,
-        evidence_level__in=public_evidence_levels,
-    )
+    public_owner = resolve_skill_ledger_public_owner()
+    if public_owner is None:
+        public_entries = SkillEntry.objects.none()
+    else:
+        public_entries = SkillEntry.objects.filter(
+            user=public_owner,
+            visibility=SkillEntry.Visibility.PUBLIC,
+            evidence_level__in=public_evidence_levels,
+        )
     entries = public_entries
     if search_query:
         entries = entries.filter(skill_name__icontains=search_query)

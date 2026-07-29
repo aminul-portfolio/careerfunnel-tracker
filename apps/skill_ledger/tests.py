@@ -1,17 +1,22 @@
 from dataclasses import FrozenInstanceError, asdict, replace
 from io import StringIO
+from unittest.mock import MagicMock, patch
 
 from django.apps import apps
+from django.conf import settings
 from django.contrib import admin
-from django.contrib.auth.models import AnonymousUser, User
+from django.contrib.admin.models import CHANGE, LogEntry
+from django.contrib.auth.models import AnonymousUser, Permission, User
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.messages import get_messages
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.db import models
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import resolve, reverse
 from django.utils import timezone
 
+from .admin import SkillEntryAdmin
 from .advisory import (
     ADVISORY_CLASSIFICATIONS,
     ADVISORY_ROW_FIELDS,
@@ -36,7 +41,11 @@ from .ai_explanation import (
     validate_explanation,
 )
 from .management.commands.backfill_skillentry_ownership import CONFIRMATION_TOKEN
-from .management.commands.seed_skill_ledger import LEARNING_TARGET_NOTES, VERIFIED_DEFAULT_NOTES
+from .management.commands.seed_skill_ledger import (
+    LEARNING_TARGET_NOTES,
+    SEED_ENTRIES,
+    VERIFIED_DEFAULT_NOTES,
+)
 from .mocked_ai_response_evaluator import (
     AUTO_ACTION_DETECTED,
     CERTIFICATION_GUARANTEE,
@@ -53,6 +62,7 @@ from .mocked_ai_response_evaluator import (
     evaluate_mocked_ai_response,
 )
 from .models import SkillEntry
+from .views import resolve_skill_ledger_public_owner
 
 
 class SkillLedgerAdvisoryServiceTests(TestCase):
@@ -1211,6 +1221,7 @@ class SkillLedgerAIExplanationPreviewPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Skill Ledger Advisory")
 
+    @override_settings(SKILL_LEDGER_PUBLIC_OWNER_USERNAME="explanationuser")
     def test_public_skill_ledger_remains_public_and_does_not_expose_explanations(self):
         self._create_skill_entry(visibility=SkillEntry.Visibility.PUBLIC)
 
@@ -3068,13 +3079,17 @@ class SkillLedgerViewTests(TestCase):
 
 
 class SkillLedgerSeedCommandTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="seedowner", password="StrongPass12345")
+
     def test_seed_skill_ledger_command_creates_verified_entries(self):
         output = StringIO()
 
-        call_command("seed_skill_ledger", stdout=output)
+        call_command("seed_skill_ledger", f"--user-id={self.user.pk}", stdout=output)
 
         self.assertTrue(
             SkillEntry.objects.filter(
+                user=self.user,
                 skill_name="Python",
                 category=SkillEntry.Category.PROGRAMMING,
                 evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
@@ -3084,6 +3099,7 @@ class SkillLedgerSeedCommandTests(TestCase):
         )
         self.assertTrue(
             SkillEntry.objects.filter(
+                user=self.user,
                 skill_name="dbt",
                 evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
                 notes__contains="not dbt Cloud or production orchestration",
@@ -3092,10 +3108,11 @@ class SkillLedgerSeedCommandTests(TestCase):
         self.assertIn("Created:", output.getvalue())
 
     def test_seed_skill_ledger_command_creates_learning_target_entries(self):
-        call_command("seed_skill_ledger", stdout=StringIO())
+        call_command("seed_skill_ledger", f"--user-id={self.user.pk}", stdout=StringIO())
 
         self.assertTrue(
             SkillEntry.objects.filter(
+                user=self.user,
                 skill_name="Snowflake",
                 category=SkillEntry.Category.CLOUD,
                 evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
@@ -3105,35 +3122,38 @@ class SkillLedgerSeedCommandTests(TestCase):
         )
         self.assertTrue(
             SkillEntry.objects.filter(
+                user=self.user,
                 skill_name="Databricks",
                 evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
             ).exists()
         )
 
     def test_seed_skill_ledger_command_is_idempotent(self):
-        call_command("seed_skill_ledger", stdout=StringIO())
+        call_command("seed_skill_ledger", f"--user-id={self.user.pk}", stdout=StringIO())
         count_after_first_run = SkillEntry.objects.count()
 
-        call_command("seed_skill_ledger", stdout=StringIO())
+        call_command("seed_skill_ledger", f"--user-id={self.user.pk}", stdout=StringIO())
 
         self.assertEqual(SkillEntry.objects.count(), count_after_first_run)
 
     def test_seed_skill_ledger_does_not_overwrite_existing_entries(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Python",
             category=SkillEntry.Category.OTHER,
             evidence_level=SkillEntry.EvidenceLevel.STUDYING,
             notes="User-edited notes.",
         )
 
-        call_command("seed_skill_ledger", stdout=StringIO())
+        call_command("seed_skill_ledger", f"--user-id={self.user.pk}", stdout=StringIO())
 
-        entry = SkillEntry.objects.get(skill_name="Python")
+        entry = SkillEntry.objects.get(user=self.user, skill_name="Python")
         self.assertEqual(entry.category, SkillEntry.Category.OTHER)
         self.assertEqual(entry.evidence_level, SkillEntry.EvidenceLevel.STUDYING)
         self.assertEqual(entry.notes, "User-edited notes.")
 
 
+@override_settings(SKILL_LEDGER_PUBLIC_OWNER_USERNAME="aminul")
 class PublicSkillLedgerViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="aminul", password="StrongPass12345")
@@ -3155,6 +3175,7 @@ class PublicSkillLedgerViewTests(TestCase):
 
     def test_public_view_shows_verified_public_entries(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Python",
             visibility=SkillEntry.Visibility.PUBLIC,
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
@@ -3167,6 +3188,7 @@ class PublicSkillLedgerViewTests(TestCase):
 
     def test_public_view_shows_learning_target_public_entries(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Snowflake",
             visibility=SkillEntry.Visibility.PUBLIC,
             evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
@@ -3179,11 +3201,13 @@ class PublicSkillLedgerViewTests(TestCase):
 
     def test_public_view_does_not_show_private_entries(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Private Python",
             visibility=SkillEntry.Visibility.PRIVATE,
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
         )
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Private Snowflake",
             visibility=SkillEntry.Visibility.PRIVATE,
             evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
@@ -3196,6 +3220,7 @@ class PublicSkillLedgerViewTests(TestCase):
 
     def test_public_view_does_not_show_studying_entries_even_if_public(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Statistics Study",
             visibility=SkillEntry.Visibility.PUBLIC,
             evidence_level=SkillEntry.EvidenceLevel.STUDYING,
@@ -3208,6 +3233,7 @@ class PublicSkillLedgerViewTests(TestCase):
 
     def test_public_view_does_not_show_no_evidence_entries_even_if_public(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="GraphQL Gap",
             visibility=SkillEntry.Visibility.PUBLIC,
             evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE,
@@ -3220,11 +3246,13 @@ class PublicSkillLedgerViewTests(TestCase):
 
     def test_public_kpi_shows_verified_count_only(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Python",
             visibility=SkillEntry.Visibility.PUBLIC,
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
         )
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Private SQL",
             visibility=SkillEntry.Visibility.PRIVATE,
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
@@ -3236,11 +3264,13 @@ class PublicSkillLedgerViewTests(TestCase):
 
     def test_public_kpi_shows_learning_target_count_only(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Snowflake",
             visibility=SkillEntry.Visibility.PUBLIC,
             evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
         )
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Private Airflow",
             visibility=SkillEntry.Visibility.PRIVATE,
             evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
@@ -3255,6 +3285,7 @@ class PublicSkillLedgerViewTests(TestCase):
 
     def test_public_kpi_does_not_show_studying_count(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Statistics Study",
             visibility=SkillEntry.Visibility.PUBLIC,
             evidence_level=SkillEntry.EvidenceLevel.STUDYING,
@@ -3267,6 +3298,7 @@ class PublicSkillLedgerViewTests(TestCase):
 
     def test_public_kpi_does_not_show_no_evidence_count(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="GraphQL Gap",
             visibility=SkillEntry.Visibility.PUBLIC,
             evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE,
@@ -3279,21 +3311,25 @@ class PublicSkillLedgerViewTests(TestCase):
 
     def test_public_search_filters_by_skill_name(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="dbt",
             visibility=SkillEntry.Visibility.PUBLIC,
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
         )
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Snowflake",
             visibility=SkillEntry.Visibility.PUBLIC,
             evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
         )
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Private dbt",
             visibility=SkillEntry.Visibility.PRIVATE,
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
         )
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="dbt Study",
             visibility=SkillEntry.Visibility.PUBLIC,
             evidence_level=SkillEntry.EvidenceLevel.STUDYING,
@@ -3338,6 +3374,7 @@ class PublicSkillLedgerViewTests(TestCase):
 
     def test_public_view_does_not_expose_private_notes(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Python",
             visibility=SkillEntry.Visibility.PUBLIC,
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
@@ -4846,8 +4883,10 @@ class Sprint110APhase3APrivateOwnershipIsolationTests(TestCase):
             2,
         )
 
+    @override_settings(SKILL_LEDGER_PUBLIC_OWNER_USERNAME="p3a_other")
     def test_public_route_remains_functionally_unchanged(self):
         SkillEntry.objects.create(
+            user=self.other,
             skill_name="PublicPython",
             visibility=SkillEntry.Visibility.PUBLIC,
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
@@ -4883,3 +4922,575 @@ class Sprint110APhase3APrivateOwnershipIsolationTests(TestCase):
         self.assertIn(REQUIRED_EXPLANATION_SAFETY_WARNING, evidence_content)
         self.assertIn("A JD signal does not prove proficiency.", evidence_content)
         self.assertIn("This dashboard is advisory evidence only.", evidence_content)
+
+
+@override_settings(SKILL_LEDGER_PUBLIC_OWNER_USERNAME="public_owner")
+class Sprint110APhase3BPublicOwnerBoundaryTests(TestCase):
+    """Sprint 110A Phase 3B: anonymous public Skill Ledger owner boundary."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="public_owner",
+            password="pass",
+            email="owner_public@example.com",
+        )
+        self.other = User.objects.create_user(
+            username="other_public",
+            password="pass",
+            email="other_public@example.com",
+        )
+
+    def _create(
+        self,
+        *,
+        user,
+        skill_name,
+        visibility=SkillEntry.Visibility.PUBLIC,
+        evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        notes="",
+    ):
+        return SkillEntry.objects.create(
+            user=user,
+            skill_name=skill_name,
+            category=SkillEntry.Category.PROGRAMMING,
+            visibility=visibility,
+            evidence_level=evidence_level,
+            notes=notes,
+        )
+
+    def test_configured_active_owner_shows_eligible_public_rows(self):
+        self._create(user=self.owner, skill_name="OwnerPublicPython")
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "OwnerPublicPython")
+
+    def test_another_users_public_row_is_excluded(self):
+        self._create(user=self.owner, skill_name="OwnerKeep")
+        self._create(user=self.other, skill_name="OtherPublic")
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertContains(response, "OwnerKeep")
+        self.assertNotContains(response, "OtherPublic")
+
+    @override_settings()
+    def test_missing_setting_returns_empty_ledger(self):
+        del settings.SKILL_LEDGER_PUBLIC_OWNER_USERNAME
+        self._create(user=self.owner, skill_name="ShouldHide")
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertEqual(list(response.context["entries"]), [])
+
+    @override_settings(SKILL_LEDGER_PUBLIC_OWNER_USERNAME="")
+    def test_empty_setting_returns_empty_ledger(self):
+        self._create(user=self.owner, skill_name="ShouldHide")
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertEqual(list(response.context["entries"]), [])
+
+    @override_settings(SKILL_LEDGER_PUBLIC_OWNER_USERNAME="   ")
+    def test_whitespace_only_setting_returns_empty_ledger(self):
+        self._create(user=self.owner, skill_name="ShouldHide")
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertEqual(list(response.context["entries"]), [])
+
+    @override_settings(SKILL_LEDGER_PUBLIC_OWNER_USERNAME="missing_user")
+    def test_missing_configured_username_returns_empty_ledger(self):
+        self._create(user=self.owner, skill_name="ShouldHide")
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertEqual(list(response.context["entries"]), [])
+
+    @override_settings(SKILL_LEDGER_PUBLIC_OWNER_USERNAME="inactive_owner")
+    def test_inactive_configured_owner_returns_empty_ledger(self):
+        User.objects.create_user(
+            username="inactive_owner",
+            password="pass",
+            is_active=False,
+        )
+        self._create(user=self.owner, skill_name="ShouldHide")
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertEqual(list(response.context["entries"]), [])
+
+    def test_ambiguous_owner_resolution_returns_empty_ledger(self):
+        self._create(user=self.owner, skill_name="ShouldHide")
+        fake_matches = [self.owner, self.other]
+        with patch("apps.skill_ledger.views.get_user_model") as mock_get_user_model:
+            mock_qs = MagicMock()
+            mock_get_user_model.return_value.objects.filter.return_value = mock_qs
+            mock_qs.__getitem__.return_value = fake_matches
+            self.assertIsNone(resolve_skill_ledger_public_owner())
+            response = self.client.get(reverse("skill_ledger:public"))
+        self.assertEqual(list(response.context["entries"]), [])
+
+    def test_configured_owners_private_rows_are_excluded(self):
+        self._create(
+            user=self.owner,
+            skill_name="OwnerPrivate",
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertNotContains(response, "OwnerPrivate")
+
+    def test_configured_owners_studying_rows_are_excluded(self):
+        self._create(
+            user=self.owner,
+            skill_name="OwnerStudying",
+            evidence_level=SkillEntry.EvidenceLevel.STUDYING,
+        )
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertNotContains(response, "OwnerStudying")
+
+    def test_configured_owners_no_evidence_rows_are_excluded(self):
+        self._create(
+            user=self.owner,
+            skill_name="OwnerNoEvidence",
+            evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE,
+        )
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertNotContains(response, "OwnerNoEvidence")
+
+    def test_verified_and_learning_target_remain_eligible(self):
+        self._create(
+            user=self.owner,
+            skill_name="OwnerVerified",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._create(
+            user=self.owner,
+            skill_name="OwnerLearning",
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertContains(response, "OwnerVerified")
+        self.assertContains(response, "OwnerLearning")
+        self.assertContains(response, "Developing - not yet portfolio-evidenced")
+
+    def test_search_is_restricted_to_configured_owner(self):
+        self._create(user=self.owner, skill_name="SharedSearchOwner")
+        self._create(user=self.other, skill_name="SharedSearchOther")
+        response = self.client.get(reverse("skill_ledger:public"), {"q": "SharedSearch"})
+        self.assertContains(response, "SharedSearchOwner")
+        self.assertNotContains(response, "SharedSearchOther")
+
+    def test_kpi_counts_are_restricted_to_configured_owner(self):
+        self._create(user=self.owner, skill_name="OwnerKPI")
+        self._create(user=self.other, skill_name="OtherKPI")
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertEqual(response.context["kpi_counts"][SkillEntry.EvidenceLevel.VERIFIED], 1)
+
+    def test_same_skill_name_across_two_owners_remains_isolated(self):
+        self._create(user=self.owner, skill_name="Python")
+        self._create(user=self.other, skill_name="Python")
+        response = self.client.get(reverse("skill_ledger:public"))
+        entries = list(response.context["entries"])
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0].user_id, self.owner.pk)
+
+    def test_private_notes_do_not_render(self):
+        self._create(
+            user=self.owner,
+            skill_name="NotedPython",
+            notes="secret public-owner note body",
+        )
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertContains(response, "NotedPython")
+        self.assertNotContains(response, "secret public-owner note body")
+
+    def test_owner_username_email_and_id_do_not_render(self):
+        self._create(user=self.owner, skill_name="IdentityCheck")
+        response = self.client.get(reverse("skill_ledger:public"))
+        content = response.content.decode()
+        self.assertNotIn(self.owner.username, content)
+        self.assertNotIn(self.owner.email, content)
+        self.assertNotIn(f"user={self.owner.pk}", content)
+        self.assertNotIn(f"user_id={self.owner.pk}", content)
+
+    def test_existing_noindex_behaviour_remains_present(self):
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertContains(response, '<meta name="robots" content="noindex, nofollow">')
+
+    def test_existing_learning_target_developing_wording_remains_present(self):
+        self._create(
+            user=self.owner,
+            skill_name="LearningWord",
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertContains(response, "Developing - not yet portfolio-evidenced")
+
+    def test_no_hardcoded_id_seven_or_confirmed_email_in_public_resolution_source(self):
+        from pathlib import Path
+
+        source = Path("apps/skill_ledger/views.py").read_text(encoding="utf-8")
+        public_start = source.find("def resolve_skill_ledger_public_owner")
+        public_end = source.find("\ndef skill_ledger_list")
+        fragment = source[public_start:public_end]
+        self.assertNotIn("user_id=7", fragment)
+        self.assertNotIn("pk=7", fragment)
+        self.assertNotIn("aminulislamkhan.tech@gmail.com", fragment)
+        self.assertNotIn("aminulislamkhan", fragment.lower())
+
+
+class Sprint110APhase3BAdminOwnershipBoundaryTests(TestCase):
+    """Sprint 110A Phase 3B: Django admin SkillEntry ownership policy."""
+
+    def setUp(self):
+        self.staff = User.objects.create_user(
+            username="p3b_staff",
+            password="pass",
+            is_staff=True,
+        )
+        self.other = User.objects.create_user(username="p3b_other", password="pass")
+        self.superuser = User.objects.create_superuser(
+            username="p3b_super",
+            email="p3b_super@example.com",
+            password="pass",
+        )
+        content_type = ContentType.objects.get_for_model(SkillEntry)
+        for codename in (
+            "add_skillentry",
+            "change_skillentry",
+            "view_skillentry",
+            "delete_skillentry",
+        ):
+            self.staff.user_permissions.add(
+                Permission.objects.get(content_type=content_type, codename=codename)
+            )
+        self.model_admin = SkillEntryAdmin(SkillEntry, admin.site)
+
+    def _entry(self, *, user, skill_name="AdminSkill", notes="private admin note"):
+        return SkillEntry.objects.create(
+            user=user,
+            skill_name=skill_name,
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+            visibility=SkillEntry.Visibility.PRIVATE,
+            notes=notes,
+        )
+
+    def test_user_is_present_in_list_display(self):
+        self.assertIn("user", self.model_admin.list_display)
+
+    def test_user_is_present_in_list_filter(self):
+        self.assertIn("user", self.model_admin.list_filter)
+
+    def test_notes_is_absent_from_search_fields(self):
+        self.assertNotIn("notes", self.model_admin.search_fields)
+
+    def test_notes_only_search_does_not_return_a_record(self):
+        entry = self._entry(user=self.other, notes="unique-notes-token-xyz")
+        self.client.force_login(self.staff)
+        response = self.client.get(
+            reverse("admin:skill_ledger_skillentry_changelist"),
+            {"q": "unique-notes-token-xyz"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, entry.skill_name)
+
+    def test_non_superuser_sees_user_as_readonly(self):
+        request = type("Request", (), {"user": self.staff})()
+        self.assertIn("user", self.model_admin.get_readonly_fields(request))
+
+    def test_non_superuser_admin_add_assigns_request_user(self):
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            reverse("admin:skill_ledger_skillentry_add"),
+            {
+                "skill_name": "StaffCreated",
+                "category": SkillEntry.Category.PROGRAMMING,
+                "evidence_level": SkillEntry.EvidenceLevel.STUDYING,
+                "sprint_reference": "",
+                "project_link": "",
+                "notes": "",
+                "visibility": SkillEntry.Visibility.PRIVATE,
+                "user": str(self.other.pk),
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        entry = SkillEntry.objects.get(skill_name="StaffCreated")
+        self.assertEqual(entry.user_id, self.staff.pk)
+
+    def test_forged_owner_values_on_non_superuser_add_are_ignored(self):
+        self.client.force_login(self.staff)
+        self.client.post(
+            reverse("admin:skill_ledger_skillentry_add"),
+            {
+                "skill_name": "ForgedAdd",
+                "category": SkillEntry.Category.PROGRAMMING,
+                "evidence_level": SkillEntry.EvidenceLevel.STUDYING,
+                "sprint_reference": "",
+                "project_link": "",
+                "notes": "",
+                "visibility": SkillEntry.Visibility.PRIVATE,
+                "user": str(self.other.pk),
+                "user_id": str(self.other.pk),
+            },
+        )
+        entry = SkillEntry.objects.get(skill_name="ForgedAdd")
+        self.assertEqual(entry.user_id, self.staff.pk)
+
+    def test_non_superuser_edit_preserves_existing_owner(self):
+        entry = self._entry(user=self.other, skill_name="PreserveOwner")
+        self.client.force_login(self.staff)
+        response = self.client.post(
+            reverse("admin:skill_ledger_skillentry_change", args=[entry.pk]),
+            {
+                "skill_name": "PreserveOwnerUpdated",
+                "category": SkillEntry.Category.PROGRAMMING,
+                "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+                "sprint_reference": "",
+                "project_link": "",
+                "notes": "updated",
+                "visibility": SkillEntry.Visibility.PRIVATE,
+                "user": str(self.staff.pk),
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        entry.refresh_from_db()
+        self.assertEqual(entry.user_id, self.other.pk)
+        self.assertEqual(entry.skill_name, "PreserveOwnerUpdated")
+
+    def test_forged_owner_values_on_non_superuser_edit_are_ignored(self):
+        entry = self._entry(user=self.other, skill_name="ForgeEdit")
+        self.client.force_login(self.staff)
+        self.client.post(
+            reverse("admin:skill_ledger_skillentry_change", args=[entry.pk]),
+            {
+                "skill_name": "ForgeEdit",
+                "category": SkillEntry.Category.PROGRAMMING,
+                "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+                "sprint_reference": "",
+                "project_link": "",
+                "notes": "x",
+                "visibility": SkillEntry.Visibility.PRIVATE,
+                "user": str(self.staff.pk),
+                "user_id": str(self.staff.pk),
+            },
+        )
+        entry.refresh_from_db()
+        self.assertEqual(entry.user_id, self.other.pk)
+
+    def test_superuser_sees_user_as_editable(self):
+        request = type("Request", (), {"user": self.superuser})()
+        self.assertNotIn("user", self.model_admin.get_readonly_fields(request))
+
+    def test_superuser_can_reassign_an_owner(self):
+        entry = self._entry(user=self.other, skill_name="ReassignMe")
+        self.client.force_login(self.superuser)
+        response = self.client.post(
+            reverse("admin:skill_ledger_skillentry_change", args=[entry.pk]),
+            {
+                "skill_name": "ReassignMe",
+                "category": SkillEntry.Category.PROGRAMMING,
+                "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+                "sprint_reference": "",
+                "project_link": "",
+                "notes": "",
+                "visibility": SkillEntry.Visibility.PRIVATE,
+                "user": str(self.staff.pk),
+            },
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        entry.refresh_from_db()
+        self.assertEqual(entry.user_id, self.staff.pk)
+
+    def test_superuser_owner_reassignment_creates_standard_admin_history(self):
+        entry = self._entry(user=self.other, skill_name="HistoryOwner")
+        self.client.force_login(self.superuser)
+        self.client.post(
+            reverse("admin:skill_ledger_skillentry_change", args=[entry.pk]),
+            {
+                "skill_name": "HistoryOwner",
+                "category": SkillEntry.Category.PROGRAMMING,
+                "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+                "sprint_reference": "",
+                "project_link": "",
+                "notes": "",
+                "visibility": SkillEntry.Visibility.PRIVATE,
+                "user": str(self.staff.pk),
+            },
+        )
+        content_type = ContentType.objects.get_for_model(SkillEntry)
+        self.assertTrue(
+            LogEntry.objects.filter(
+                content_type=content_type,
+                object_id=str(entry.pk),
+                action_flag=CHANGE,
+                user=self.superuser,
+            ).exists()
+        )
+
+    def test_superuser_admin_add_requires_an_owner(self):
+        self.client.force_login(self.superuser)
+        response = self.client.post(
+            reverse("admin:skill_ledger_skillentry_add"),
+            {
+                "skill_name": "NeedsOwner",
+                "category": SkillEntry.Category.PROGRAMMING,
+                "evidence_level": SkillEntry.EvidenceLevel.STUDYING,
+                "sprint_reference": "",
+                "project_link": "",
+                "notes": "",
+                "visibility": SkillEntry.Visibility.PRIVATE,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(SkillEntry.objects.filter(skill_name="NeedsOwner").exists())
+
+    def test_properly_authorised_staff_admin_queryset_remains_cross_user(self):
+        own = self._entry(user=self.staff, skill_name="StaffOwnedRow")
+        other = self._entry(user=self.other, skill_name="OtherOwnedRow")
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("admin:skill_ledger_skillentry_changelist"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, own.skill_name)
+        self.assertContains(response, other.skill_name)
+
+
+class Sprint110APhase3BSeedOwnershipBoundaryTests(TestCase):
+    """Sprint 110A Phase 3B: seed_skill_ledger explicit owner policy."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(username="seed_owner_a", password="pass")
+        self.second = User.objects.create_user(username="seed_owner_b", password="pass")
+        self.inactive = User.objects.create_user(
+            username="seed_inactive",
+            password="pass",
+            is_active=False,
+        )
+
+    def test_missing_user_id_fails_before_writes(self):
+        with self.assertRaises(CommandError):
+            call_command("seed_skill_ledger", stdout=StringIO())
+        self.assertEqual(SkillEntry.objects.count(), 0)
+
+    def test_invalid_user_id_fails_before_writes(self):
+        with self.assertRaises(CommandError):
+            call_command("seed_skill_ledger", "--user-id=999999", stdout=StringIO())
+        self.assertEqual(SkillEntry.objects.count(), 0)
+
+    def test_inactive_user_id_fails_before_writes(self):
+        with self.assertRaises(CommandError):
+            call_command(
+                "seed_skill_ledger",
+                f"--user-id={self.inactive.pk}",
+                stdout=StringIO(),
+            )
+        self.assertEqual(SkillEntry.objects.count(), 0)
+
+    def test_active_explicit_owner_receives_all_seeded_rows(self):
+        call_command(
+            "seed_skill_ledger",
+            f"--user-id={self.owner.pk}",
+            stdout=StringIO(),
+        )
+        self.assertEqual(SkillEntry.objects.filter(user=self.owner).count(), len(SEED_ENTRIES))
+        self.assertEqual(SkillEntry.objects.exclude(user=self.owner).count(), 0)
+
+    def test_no_seeded_row_is_unowned(self):
+        call_command(
+            "seed_skill_ledger",
+            f"--user-id={self.owner.pk}",
+            stdout=StringIO(),
+        )
+        self.assertEqual(SkillEntry.objects.filter(user__isnull=True).count(), 0)
+
+    def test_rerunning_for_same_owner_is_idempotent(self):
+        call_command(
+            "seed_skill_ledger",
+            f"--user-id={self.owner.pk}",
+            stdout=StringIO(),
+        )
+        first_count = SkillEntry.objects.filter(user=self.owner).count()
+        call_command(
+            "seed_skill_ledger",
+            f"--user-id={self.owner.pk}",
+            stdout=StringIO(),
+        )
+        self.assertEqual(SkillEntry.objects.filter(user=self.owner).count(), first_count)
+
+    def test_another_users_same_name_row_remains_untouched(self):
+        existing = SkillEntry.objects.create(
+            user=self.second,
+            skill_name="Python",
+            category=SkillEntry.Category.OTHER,
+            evidence_level=SkillEntry.EvidenceLevel.STUDYING,
+            notes="second-owner custom notes",
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+        call_command(
+            "seed_skill_ledger",
+            f"--user-id={self.owner.pk}",
+            stdout=StringIO(),
+        )
+        existing.refresh_from_db()
+        self.assertEqual(existing.user_id, self.second.pk)
+        self.assertEqual(existing.notes, "second-owner custom notes")
+        self.assertEqual(existing.evidence_level, SkillEntry.EvidenceLevel.STUDYING)
+
+    def test_running_for_second_owner_creates_independent_rows(self):
+        call_command(
+            "seed_skill_ledger",
+            f"--user-id={self.owner.pk}",
+            stdout=StringIO(),
+        )
+        call_command(
+            "seed_skill_ledger",
+            f"--user-id={self.second.pk}",
+            stdout=StringIO(),
+        )
+        self.assertEqual(SkillEntry.objects.filter(user=self.owner).count(), len(SEED_ENTRIES))
+        self.assertEqual(SkillEntry.objects.filter(user=self.second).count(), len(SEED_ENTRIES))
+        self.assertEqual(
+            SkillEntry.objects.filter(skill_name="Python").count(),
+            2,
+        )
+
+    def test_no_first_user_or_superuser_fallback_exists(self):
+        from pathlib import Path
+
+        source = Path(
+            "apps/skill_ledger/management/commands/seed_skill_ledger.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("--user-id", source)
+        self.assertNotIn("first()", source)
+        self.assertNotIn("order_by(\"pk\").first()", source)
+        self.assertNotIn("is_superuser", source)
+        self.assertNotIn("SKILL_LEDGER_PUBLIC_OWNER_USERNAME", source)
+
+    def test_output_contains_no_username_email_or_private_notes(self):
+        self.owner.email = "seed_owner_secret@example.com"
+        self.owner.save(update_fields=["email"])
+        out = StringIO()
+        call_command("seed_skill_ledger", f"--user-id={self.owner.pk}", stdout=out)
+        output = out.getvalue()
+        self.assertIn(f"owner_user_id={self.owner.pk}", output)
+        self.assertNotIn(self.owner.username, output)
+        self.assertNotIn(self.owner.email, output)
+        self.assertNotIn(VERIFIED_DEFAULT_NOTES, output)
+        self.assertNotIn(LEARNING_TARGET_NOTES, output)
+
+    def test_existing_evidence_levels_and_seed_content_remain_unchanged(self):
+        call_command(
+            "seed_skill_ledger",
+            f"--user-id={self.owner.pk}",
+            stdout=StringIO(),
+        )
+        expected = {
+            (item["skill_name"], item["evidence_level"], item["category"])
+            for item in SEED_ENTRIES
+        }
+        observed = {
+            (entry.skill_name, entry.evidence_level, entry.category)
+            for entry in SkillEntry.objects.filter(user=self.owner)
+        }
+        self.assertEqual(observed, expected)
+
+    def test_seed_implementation_includes_owner_in_get_or_create_lookup(self):
+        from pathlib import Path
+
+        source = Path(
+            "apps/skill_ledger/management/commands/seed_skill_ledger.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("get_or_create(", source)
+        self.assertIn("user=owner", source)
+        self.assertIn("skill_name=skill_name", source)

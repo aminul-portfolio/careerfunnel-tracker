@@ -124,6 +124,12 @@ MASTER_CV_TEMPLATE_DOCX_PATH = config("MASTER_CV_TEMPLATE_DOCX_PATH", default=""
 MASTER_CV_TEMPLATE_PDF_PATH = config("MASTER_CV_TEMPLATE_PDF_PATH", default="")
 MASTER_CV_FILE_PATH = config("MASTER_CV_FILE_PATH", default="")
 
+# Explicit username for the anonymous public Skill Ledger owner. Empty disables public rows.
+SKILL_LEDGER_PUBLIC_OWNER_USERNAME = config(
+    "SKILL_LEDGER_PUBLIC_OWNER_USERNAME",
+    default="",
+)
+
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "dashboard:overview"
 LOGOUT_REDIRECT_URL = "accounts:login"
