@@ -11,8 +11,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.messages import get_messages
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.db import models
-from django.test import TestCase, override_settings
+from django.db import IntegrityError, connection, models, transaction
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.urls import resolve, reverse
 from django.utils import timezone
 
@@ -66,6 +66,9 @@ from .views import resolve_skill_ledger_public_owner
 
 
 class SkillLedgerAdvisoryServiceTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="advisory_owner", password="x")
+
     def _entry(self, **overrides):
         entry = {
             "skill_name": "Python",
@@ -217,6 +220,7 @@ class SkillLedgerAdvisoryServiceTests(TestCase):
 
     def test_advisory_service_does_not_write_to_skill_entry(self):
         entry = SkillEntry.objects.create(
+            user=self.user,
             skill_name="Python",
             category=SkillEntry.Category.PROGRAMMING,
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
@@ -234,7 +238,7 @@ class SkillLedgerAdvisoryServiceTests(TestCase):
         self.assertEqual(SkillEntry.objects.values().get(pk=entry.pk), before_values)
 
     def test_advisory_service_does_not_write_to_database(self):
-        SkillEntry.objects.create(skill_name="Python")
+        SkillEntry.objects.create(user=self.user, skill_name="Python")
         before_count = SkillEntry.objects.count()
 
         rows = build_skill_advisory_rows((), jd_candidate_terms=("Airflow",))
@@ -318,6 +322,9 @@ class SkillLedgerAdvisoryServiceTests(TestCase):
 
 
 class SkillLedgerAIExplanationServiceTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="ai_expl_owner", password="x")
+
     def _entry(self, **overrides):
         entry = {
             "skill_name": "Python",
@@ -508,6 +515,7 @@ class SkillLedgerAIExplanationServiceTests(TestCase):
 
     def test_explanation_service_does_not_write_to_skill_entry(self):
         entry = SkillEntry.objects.create(
+            user=self.user,
             skill_name="Python",
             category=SkillEntry.Category.PROGRAMMING,
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
@@ -2618,8 +2626,11 @@ class SkillLedgerJdSignalContextTests(TestCase):
 
 
 class SkillEntryModelTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="model_tests_owner", password="x")
+
     def test_skill_entry_visibility_defaults_to_private(self):
-        entry = SkillEntry.objects.create(skill_name="SQL")
+        entry = SkillEntry.objects.create(user=self.user, skill_name="SQL")
 
         self.assertEqual(entry.visibility, SkillEntry.Visibility.PRIVATE)
 
@@ -2633,6 +2644,7 @@ class SkillEntryModelTests(TestCase):
 
     def test_skill_entry_str_representation(self):
         entry = SkillEntry.objects.create(
+            user=self.user,
             skill_name="SQL",
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
         )
@@ -2642,7 +2654,7 @@ class SkillEntryModelTests(TestCase):
     def test_skill_entry_date_fields_auto_populate(self):
         before_create = timezone.now()
 
-        entry = SkillEntry.objects.create(skill_name="Python")
+        entry = SkillEntry.objects.create(user=self.user, skill_name="Python")
 
         self.assertIsNotNone(entry.date_added)
         self.assertIsNotNone(entry.last_updated)
@@ -4234,10 +4246,33 @@ class Sprint104BPhase2ManualReviewChecklistLongPageRhythmTests(TestCase):
                 self.assertNotIn(phrase, content)
 
 
-class SkillLedgerOwnershipPhase1Tests(TestCase):
-    """Sprint 110A Phase 1: nullable ownership foundation and backfill tooling."""
+class SkillLedgerOwnershipPhase1Tests(TransactionTestCase):
+    """Sprint 110A Phase 1: nullable ownership foundation and backfill tooling.
+
+    Tests that require unowned rows are exercised against the historical 0002
+    nullable schema via MigrationExecutor to preserve meaningful coverage.
+    """
+
+    databases = ["default"]
+
+    def _migrate_to(self, target):
+        from django.db.migrations.executor import MigrationExecutor
+
+        executor = MigrationExecutor(connection)
+        executor.migrate([target])
+
+    def _historical_model(self):
+        from django.db.migrations.executor import MigrationExecutor
+
+        executor = MigrationExecutor(connection)
+        state = executor.loader.project_state(
+            [("skill_ledger", "0002_skillentry_user")]
+        )
+        return state.apps.get_model("skill_ledger", "SkillEntry")
 
     def setUp(self):
+        # Migrate down to the nullable state so unowned rows can be created.
+        self._migrate_to(("skill_ledger", "0002_skillentry_user"))
         self.owner = User.objects.create_user(username="owner_a", password="pass")
         self.other = User.objects.create_user(username="owner_b", password="pass")
         self.inactive = User.objects.create_user(
@@ -4256,28 +4291,39 @@ class SkillLedgerOwnershipPhase1Tests(TestCase):
             password="pass",
         )
 
+    def tearDown(self):
+        # Remove unowned rows before re-applying 0003.
+        H = self._historical_model()
+        H.objects.filter(user_id__isnull=True).delete()
+        self._migrate_to(("skill_ledger", "0003_require_skillentry_user"))
+
     def _create_entry(self, *, skill_name="Python", user=None, notes="private note"):
-        return SkillEntry.objects.create(
+        """Create a historical SkillEntry; user may be None (nullable at 0002)."""
+        H = self._historical_model()
+        user_id = user.pk if user is not None else None
+        return H.objects.create(
+            user_id=user_id,
             skill_name=skill_name,
-            category=SkillEntry.Category.PROGRAMMING,
-            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+            category="programming",
+            evidence_level="VERIFIED",
             notes=notes,
-            visibility=SkillEntry.Visibility.PRIVATE,
-            user=user,
+            visibility="private",
         )
 
     def test_skillentry_user_field_is_nullable_foreign_key(self):
-        field = SkillEntry._meta.get_field("user")
+        # At migration state 0002 the field is nullable; verify via historical state.
+        H = self._historical_model()
+        field = H._meta.get_field("user")
         self.assertTrue(field.null)
         self.assertTrue(field.blank)
         self.assertTrue(field.is_relation)
-        self.assertEqual(field.related_model, User)
 
     def test_skillentry_user_related_name_is_skill_entries(self):
         field = SkillEntry._meta.get_field("user")
         self.assertEqual(field.remote_field.related_name, "skill_entries")
         entry = self._create_entry(user=self.owner)
-        self.assertEqual(list(self.owner.skill_entries.all()), [entry])
+        pks = list(self.owner.skill_entries.values_list("pk", flat=True))
+        self.assertIn(entry.pk, pks)
 
     def test_skillentry_user_on_delete_is_cascade(self):
         field = SkillEntry._meta.get_field("user")
@@ -4293,14 +4339,14 @@ class SkillLedgerOwnershipPhase1Tests(TestCase):
         own = self._create_entry(skill_name="SQL", user=self.owner)
         self._create_entry(skill_name="dbt", user=self.other)
         self._create_entry(skill_name="Tableau", user=None)
-        result = list(SkillEntry.objects.for_user(self.owner))
-        self.assertEqual(result, [own])
+        result_pks = list(SkillEntry.objects.for_user(self.owner).values_list("pk", flat=True))
+        self.assertEqual(result_pks, [own.pk])
 
     def test_for_user_excludes_another_users_entries(self):
         self._create_entry(skill_name="SQL", user=self.owner)
         other_entry = self._create_entry(skill_name="dbt", user=self.other)
-        result = list(SkillEntry.objects.for_user(self.owner))
-        self.assertNotIn(other_entry, result)
+        result_pks = list(SkillEntry.objects.for_user(self.owner).values_list("pk", flat=True))
+        self.assertNotIn(other_entry.pk, result_pks)
 
     def test_for_user_none_returns_empty_queryset(self):
         self._create_entry(user=self.owner)
@@ -4320,8 +4366,10 @@ class SkillLedgerOwnershipPhase1Tests(TestCase):
         staff_entry = self._create_entry(skill_name="StaffSkill", user=self.staff)
         super_entry = self._create_entry(skill_name="SuperSkill", user=self.superuser)
         self._create_entry(skill_name="OwnerSkill", user=self.owner)
-        self.assertEqual(list(SkillEntry.objects.for_user(self.staff)), [staff_entry])
-        self.assertEqual(list(SkillEntry.objects.for_user(self.superuser)), [super_entry])
+        staff_pks = list(SkillEntry.objects.for_user(self.staff).values_list("pk", flat=True))
+        super_pks = list(SkillEntry.objects.for_user(self.superuser).values_list("pk", flat=True))
+        self.assertEqual(staff_pks, [staff_entry.pk])
+        self.assertEqual(super_pks, [super_entry.pk])
 
     def test_backfill_dry_run_makes_no_writes(self):
         unowned = self._create_entry(skill_name="Unowned", user=None)
@@ -5494,3 +5542,358 @@ class Sprint110APhase3BSeedOwnershipBoundaryTests(TestCase):
         self.assertIn("get_or_create(", source)
         self.assertIn("user=owner", source)
         self.assertIn("skill_name=skill_name", source)
+
+
+# ---------------------------------------------------------------------------
+# Sprint 110A Phase 3C - Non-null ownership invariant
+# ---------------------------------------------------------------------------
+
+class Sprint110APhase3CModelOwnershipInvariantTests(TestCase):
+    """Tests against the current (post-0003) schema state."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="p3c_owner", password="x")
+
+    def _owned_entry(self, **kw):
+        defaults = dict(
+            skill_name="Python",
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        defaults.update(kw)
+        return SkillEntry.objects.create(user=self.user, **defaults)
+
+    # 1
+    def test_skillentry_user_field_is_non_nullable(self):
+        field = SkillEntry._meta.get_field("user")
+        self.assertFalse(field.null)
+
+    # 2
+    def test_skillentry_user_field_is_not_blank(self):
+        field = SkillEntry._meta.get_field("user")
+        self.assertFalse(field.blank)
+
+    # 3
+    def test_skillentry_user_field_has_no_default(self):
+        field = SkillEntry._meta.get_field("user")
+        self.assertFalse(field.has_default())
+
+    # 4
+    def test_current_schema_rejects_unowned_skillentry_insert(self):
+        with transaction.atomic():
+            with self.assertRaises(IntegrityError):
+                SkillEntry.objects.create(
+                    skill_name="NullUser",
+                    category=SkillEntry.Category.OTHER,
+                    evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE,
+                )
+
+
+class Sprint110APhase3CMigrationStructureTests(TestCase):
+    """Static structural assertions on migration 0003 source code."""
+
+    def _migration_source(self):
+        from pathlib import Path
+        return Path(
+            "apps/skill_ledger/migrations/0003_require_skillentry_user.py"
+        ).read_text(encoding="utf-8")
+
+    # 5
+    def test_0003_depends_on_0002(self):
+        from importlib import import_module
+        m = import_module("apps.skill_ledger.migrations.0003_require_skillentry_user")
+        self.assertIn(("skill_ledger", "0002_skillentry_user"), m.Migration.dependencies)
+
+    # 6
+    def test_0003_runs_precondition_before_alterfield(self):
+        from importlib import import_module
+
+        from django.db.migrations.operations.fields import AlterField
+        from django.db.migrations.operations.special import RunPython
+
+        m = import_module("apps.skill_ledger.migrations.0003_require_skillentry_user")
+        ops = m.Migration.operations
+        self.assertIsInstance(ops[0], RunPython)
+        self.assertIsInstance(ops[1], AlterField)
+
+    # 7
+    def test_0003_alterfield_preserves_auth_model_cascade_and_related_name(self):
+        from importlib import import_module
+
+        import django.db.models.deletion
+
+        m = import_module("apps.skill_ledger.migrations.0003_require_skillentry_user")
+        alter = m.Migration.operations[1]
+        field = alter.field
+        self.assertEqual(field.related_model, settings.AUTH_USER_MODEL)
+        self.assertEqual(field.remote_field.on_delete, django.db.models.deletion.CASCADE)
+        self.assertEqual(field.remote_field.related_name, "skill_entries")
+        self.assertFalse(field.null)
+        self.assertFalse(field.blank)
+        self.assertFalse(field.has_default())
+
+    # 8
+    def test_0003_contains_no_owner_assignment_or_data_update(self):
+        source = self._migration_source()
+        forbidden = [
+            "user_id =",
+            ".update(",
+            ".bulk_update(",
+            "get_user_model",
+            "User.objects",
+            ".delete(",
+            "evidence_level =",
+            "visibility =",
+        ]
+        for token in forbidden:
+            self.assertNotIn(token, source, msg=f"Forbidden token in 0003: {token!r}")
+
+
+class Sprint110APhase3CMigrationExecutionTests(TransactionTestCase):
+    """
+    Exercises 0003 precondition by migrating to controlled states.
+    Each test method starts from 0002 (nullable) and cleans up after itself.
+    """
+
+    databases = ["default"]
+
+    def _migrate_to(self, target):
+        from django.db.migrations.executor import MigrationExecutor
+
+        executor = MigrationExecutor(connection)
+        executor.migrate([target])
+
+    def setUp(self):
+        self._migrate_to(("skill_ledger", "0002_skillentry_user"))
+
+    def tearDown(self):
+        # Remove any unowned rows left by blocking tests before re-applying 0003.
+        H = self._historical_model()
+        H.objects.filter(user_id__isnull=True).delete()
+        self._migrate_to(("skill_ledger", "0003_require_skillentry_user"))
+
+    def _historical_model(self):
+        from django.db.migrations.executor import MigrationExecutor
+        executor = MigrationExecutor(connection)
+        state = executor.loader.project_state(
+            [("skill_ledger", "0002_skillentry_user")]
+        )
+        return state.apps.get_model("skill_ledger", "SkillEntry")
+
+    def _create_owned_entry(self, user, skill="SQL"):
+        H = self._historical_model()
+        return H.objects.create(
+            user_id=user.pk,
+            skill_name=skill,
+            category="programming",
+            evidence_level="VERIFIED",
+        )
+
+    def _create_unowned_entry(self, skill="Orphan"):
+        H = self._historical_model()
+        return H.objects.create(
+            user_id=None,
+            skill_name=skill,
+            category="programming",
+            evidence_level="NO_EVIDENCE",
+        )
+
+    # 9
+    def test_0003_succeeds_on_fresh_empty_database(self):
+        H = self._historical_model()
+        H.objects.all().delete()
+        self._migrate_to(("skill_ledger", "0003_require_skillentry_user"))
+
+    # 10
+    def test_0003_succeeds_when_all_rows_are_owned(self):
+        user = User.objects.create_user(username="p3c_exec_owner", password="x")
+        self._create_owned_entry(user, skill="Python")
+        self._create_owned_entry(user, skill="SQL")
+        self._migrate_to(("skill_ledger", "0003_require_skillentry_user"))
+
+    # 11
+    def test_0003_preserves_existing_owned_rows(self):
+        user = User.objects.create_user(username="p3c_preserve_owner", password="x")
+        self._create_owned_entry(user, skill="dbt")
+        self._migrate_to(("skill_ledger", "0003_require_skillentry_user"))
+        from apps.skill_ledger.models import SkillEntry as CurrentSkillEntry
+        self.assertTrue(
+            CurrentSkillEntry.objects.filter(user=user, skill_name="dbt").exists()
+        )
+
+    # 12
+    def test_0003_blocks_when_one_unowned_row_exists(self):
+        self._create_unowned_entry(skill="Orphan1")
+        with self.assertRaises(RuntimeError) as ctx:
+            self._migrate_to(("skill_ledger", "0003_require_skillentry_user"))
+        self.assertIn("unowned_count=1", str(ctx.exception))
+
+    # 13
+    def test_0003_blocks_when_multiple_unowned_rows_exist(self):
+        for i in range(3):
+            self._create_unowned_entry(skill=f"Orphan{i}")
+        with self.assertRaises(RuntimeError) as ctx:
+            self._migrate_to(("skill_ledger", "0003_require_skillentry_user"))
+        self.assertIn("unowned_count=3", str(ctx.exception))
+
+    # 14
+    def test_0003_error_reports_count_without_private_row_content(self):
+        User.objects.create_user(
+            username="p3c_private_check", password="x", email="private@example.com"
+        )
+        self._create_unowned_entry(skill="SecretSkill")
+        with self.assertRaises(RuntimeError) as ctx:
+            self._migrate_to(("skill_ledger", "0003_require_skillentry_user"))
+        msg = str(ctx.exception)
+        self.assertIn("unowned_count=", msg)
+        self.assertNotIn("SecretSkill", msg)
+        self.assertNotIn("p3c_private_check", msg)
+        self.assertNotIn("private@example.com", msg)
+
+    # 15
+    def test_failed_precondition_leaves_database_at_nullable_state(self):
+        self._create_unowned_entry(skill="StillNullable")
+        with self.assertRaises(RuntimeError):
+            self._migrate_to(("skill_ledger", "0003_require_skillentry_user"))
+        from django.db.migrations.executor import MigrationExecutor as _ME
+
+        executor = _ME(connection)
+        applied = {
+            mig
+            for (app, mig) in executor.loader.applied_migrations
+            if app == "skill_ledger"
+        }
+        self.assertNotIn("0003_require_skillentry_user", applied)
+        # Failed precondition must leave the physical schema nullable at 0002.
+        H = self._historical_model()
+        H.objects.create(
+            user_id=None,
+            skill_name="SecondNullable",
+            category="programming",
+            evidence_level="NO_EVIDENCE",
+        )
+        self.assertEqual(H.objects.filter(user_id__isnull=True).count(), 2)
+
+    # 16
+    def test_0003_can_run_after_unowned_rows_are_explicitly_resolved(self):
+        user = User.objects.create_user(username="p3c_resolver", password="x")
+        entry = self._create_unowned_entry(skill="WillBeFixed")
+        H = self._historical_model()
+        H.objects.filter(pk=entry.pk).update(user_id=user.pk)
+        self._migrate_to(("skill_ledger", "0003_require_skillentry_user"))
+
+
+class Sprint110APhase3CBackfillHistoricalCompatibilityTests(TransactionTestCase):
+    """
+    Verifies that the backfill command contract remains valid against the 0002
+    nullable schema, where unowned rows can actually exist.
+    """
+
+    databases = ["default"]
+
+    def _migrate_to(self, target):
+        from django.db.migrations.executor import MigrationExecutor
+
+        executor = MigrationExecutor(connection)
+        executor.migrate([target])
+
+    def setUp(self):
+        self._migrate_to(("skill_ledger", "0002_skillentry_user"))
+
+    def tearDown(self):
+        # Remove any unowned rows before re-applying 0003.
+        H = self._historical_model()
+        H.objects.filter(user_id__isnull=True).delete()
+        self._migrate_to(("skill_ledger", "0003_require_skillentry_user"))
+
+    def _historical_model(self):
+        from django.db.migrations.executor import MigrationExecutor
+        executor = MigrationExecutor(connection)
+        state = executor.loader.project_state(
+            [("skill_ledger", "0002_skillentry_user")]
+        )
+        return state.apps.get_model("skill_ledger", "SkillEntry")
+
+    def _create_unowned(self, skill="UnownedHistorical"):
+        H = self._historical_model()
+        return H.objects.create(
+            user_id=None,
+            skill_name=skill,
+            category="programming",
+            evidence_level="NO_EVIDENCE",
+        )
+
+    def _create_owned(self, user, skill="OwnedHistorical"):
+        H = self._historical_model()
+        return H.objects.create(
+            user_id=user.pk,
+            skill_name=skill,
+            category="programming",
+            evidence_level="VERIFIED",
+        )
+
+    # 17
+    def test_backfill_apply_remains_tested_against_0002_nullable_schema(self):
+        owner = User.objects.create_user(username="p3c_bf_owner1", password="x")
+        self._create_unowned(skill="ShouldBeOwned")
+        out = StringIO()
+        call_command(
+            "backfill_skillentry_ownership",
+            f"--user-id={owner.pk}",
+            "--expected-unowned-count=1",
+            f"--confirm={CONFIRMATION_TOKEN}",
+            "--apply",
+            stdout=out,
+        )
+        H = self._historical_model()
+        self.assertEqual(H.objects.filter(user__isnull=True).count(), 0)
+
+    # 18
+    def test_backfill_rerun_guard_remains_tested_against_0002_nullable_schema(self):
+        owner = User.objects.create_user(username="p3c_bf_owner2", password="x")
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command(
+                "backfill_skillentry_ownership",
+                f"--user-id={owner.pk}",
+                "--expected-unowned-count=1",
+                f"--confirm={CONFIRMATION_TOKEN}",
+                "--apply",
+                stdout=out,
+            )
+
+    # 19
+    def test_backfill_does_not_reassign_owned_historical_rows(self):
+        original_owner = User.objects.create_user(username="p3c_bf_orig", password="x")
+        new_owner = User.objects.create_user(username="p3c_bf_new", password="x")
+        self._create_owned(original_owner, skill="AlreadyOwned")
+        out = StringIO()
+        call_command(
+            "backfill_skillentry_ownership",
+            f"--user-id={new_owner.pk}",
+            "--expected-unowned-count=0",
+            f"--confirm={CONFIRMATION_TOKEN}",
+            "--apply",
+            stdout=out,
+        )
+        H = self._historical_model()
+        entry = H.objects.get(skill_name="AlreadyOwned")
+        self.assertEqual(entry.user_id, original_owner.pk)
+
+    # 20
+    def test_backfill_failure_rolls_back_historical_nullable_rows(self):
+        owner = User.objects.create_user(username="p3c_bf_rollback", password="x")
+        self._create_unowned(skill="Rollback1")
+        self._create_unowned(skill="Rollback2")
+        out = StringIO()
+        with self.assertRaises(CommandError):
+            call_command(
+                "backfill_skillentry_ownership",
+                f"--user-id={owner.pk}",
+                "--expected-unowned-count=99",
+                f"--confirm={CONFIRMATION_TOKEN}",
+                "--apply",
+                stdout=out,
+            )
+        H = self._historical_model()
+        self.assertEqual(H.objects.filter(user__isnull=True).count(), 2)

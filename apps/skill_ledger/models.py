@@ -40,8 +40,6 @@ class SkillEntry(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="skill_entries",
-        null=True,
-        blank=True,
     )
     skill_name = models.CharField(max_length=255)
     category = models.CharField(
