@@ -14,6 +14,7 @@ from django.urls import reverse
 from apps.applications.choices import ApplicationStatus
 from apps.applications.models import JobApplication
 from apps.skill_ledger.models import SkillEntry
+from apps.skill_ledger.selectors import get_skill_ledger_evidence_summary
 
 from . import ai_providers
 from .ai_career_coach import (
@@ -454,6 +455,7 @@ class JdRequirementEnrichmentPageTests(TestCase):
     def test_enrichment_page_does_not_save_output(self):
         application = self._create_application()
         skill_entry = SkillEntry.objects.create(
+            user=self.user,
             skill_name="Python",
             category=SkillEntry.Category.PROGRAMMING,
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
@@ -1050,6 +1052,7 @@ class SkillGapDashboardTests(TestCase):
 
     def _create_skill_entry(self, **overrides):
         defaults = {
+            "user": self.user,
             "skill_name": "Python",
             "category": SkillEntry.Category.PROGRAMMING,
             "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
@@ -3904,6 +3907,7 @@ class SkillGapMockedAiCareerCoachPageTests(TestCase):
 
     def _create_skill_entry(self, skill_name, evidence_level):
         return SkillEntry.objects.create(
+            user=self.user,
             skill_name=skill_name,
             category=SkillEntry.Category.PROGRAMMING,
             evidence_level=evidence_level,
@@ -4242,6 +4246,7 @@ class SkillGapLiveProviderSpikeTests(TestCase):
 
     def _create_skill_entry(self, skill_name, evidence_level):
         return SkillEntry.objects.create(
+            user=self.user,
             skill_name=skill_name,
             category=SkillEntry.Category.PROGRAMMING,
             evidence_level=evidence_level,
@@ -4612,6 +4617,7 @@ class SkillIntelligenceDashboardSafetyWordingRegressionTests(TestCase):
 
     def _create_skill_entry(self, *, skill_name, evidence_level):
         return SkillEntry.objects.create(
+            user=self.user,
             skill_name=skill_name,
             category=SkillEntry.Category.PROGRAMMING,
             evidence_level=evidence_level,
@@ -4764,3 +4770,109 @@ class SkillIntelligenceDashboardSafetyWordingRegressionTests(TestCase):
 
         self.assertContains(response, "No live AI model is used in this version.")
         self.assertContains(response, "Documents are not generated here.")
+
+
+class Sprint110APhase3ASkillGapOwnershipIsolationTests(TestCase):
+    """Sprint 110A Phase 3A: skill-gap dashboard and coach SkillEntry isolation."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(username="p3a_gap_owner", password="pass")
+        self.other = User.objects.create_user(username="p3a_gap_other", password="pass")
+        self.owner_app = JobApplication.objects.create(
+            user=self.owner,
+            company_name="Owner Co",
+            job_title="Data Analyst",
+            date_applied=date(2026, 5, 10),
+            required_skills="Python Snowflake",
+        )
+        self.other_app = JobApplication.objects.create(
+            user=self.other,
+            company_name="Other Co",
+            job_title="BI Analyst",
+            date_applied=date(2026, 5, 11),
+            required_skills="Python Snowflake",
+        )
+        ApplicationSkillGap.objects.create(
+            application=self.owner_app,
+            stage=SkillGapStage.APPLICATION,
+            skill_name="Python",
+            current_tier=SkillTier.MISSING,
+            priority=SkillGapPriority.HIGH,
+            goal_weight=Decimal("1.00"),
+            failure_count=2,
+            stage_weight=Decimal("1.00"),
+            priority_score=Decimal("6.00"),
+            identified_by=SkillGapIdentifiedBy.MANUAL,
+            suggested_action="Review Python manually.",
+        )
+        ApplicationSkillGap.objects.create(
+            application=self.other_app,
+            stage=SkillGapStage.APPLICATION,
+            skill_name="Snowflake",
+            current_tier=SkillTier.MISSING,
+            priority=SkillGapPriority.HIGH,
+            goal_weight=Decimal("1.00"),
+            failure_count=2,
+            stage_weight=Decimal("1.00"),
+            priority_score=Decimal("6.00"),
+            identified_by=SkillGapIdentifiedBy.MANUAL,
+            suggested_action="Review Snowflake manually.",
+        )
+
+    def test_skill_gap_dashboard_excludes_another_users_skillentry_evidence(self):
+        SkillEntry.objects.create(
+            user=self.other,
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+        self.client.login(username="p3a_gap_owner", password="pass")
+        response = self.client.get(reverse("skill_gaps:dashboard"))
+        self.assertEqual(response.status_code, 200)
+        summary = response.context["skill_ledger_summary"]
+        self.assertEqual(summary["total_entries"], 0)
+        match_rows = response.context["skill_gap_ledger_match_rows"]
+        python_rows = [row for row in match_rows if row["term"] == "Python"]
+        self.assertTrue(python_rows)
+        self.assertEqual(python_rows[0]["ledger_status"], "NOT_IN_LEDGER")
+
+    def test_ai_career_coach_excludes_another_users_skillentry_evidence(self):
+        SkillEntry.objects.create(
+            user=self.other,
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+        self.client.login(username="p3a_gap_owner", password="pass")
+        response = self.client.get(reverse("skill_gaps:ai_career_coach"))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["has_skill_ledger_entries"])
+        self.assertEqual(get_skill_ledger_evidence_summary(self.owner)["total_entries"], 0)
+
+    def test_user_owned_application_skill_gap_not_combined_with_other_ledger(self):
+        SkillEntry.objects.create(
+            user=self.owner,
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+        SkillEntry.objects.create(
+            user=self.other,
+            skill_name="Python",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+        self.client.login(username="p3a_gap_owner", password="pass")
+        response = self.client.get(reverse("skill_gaps:dashboard"))
+        summary = response.context["skill_ledger_summary"]
+        self.assertEqual(summary["total_entries"], 1)
+        self.assertEqual(
+            summary["counts"][SkillEntry.EvidenceLevel.LEARNING_TARGET],
+            1,
+        )
+        self.assertEqual(summary["counts"][SkillEntry.EvidenceLevel.VERIFIED], 0)
+        match_rows = {
+            row["term"]: row["ledger_status"]
+            for row in response.context["skill_gap_ledger_match_rows"]
+        }
+        self.assertEqual(match_rows.get("Python"), "LEARNING_TARGET")

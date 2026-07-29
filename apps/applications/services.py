@@ -285,8 +285,11 @@ def _find_skill_ledger_match(term: str, skill_entries: list[SkillEntry]) -> Skil
 
 def compare_aggregated_terms_with_skill_ledger(
     aggregated_terms: tuple[AggregatedTrackedTerm, ...],
+    user,
 ) -> tuple[AggregatedTrackedTerm, ...]:
-    skill_entries = list(SkillEntry.objects.all().order_by("skill_name", "pk"))
+    skill_entries = list(
+        SkillEntry.objects.for_user(user).order_by("skill_name", "pk"),
+    )
     compared_terms: list[AggregatedTrackedTerm] = []
     for aggregated_term in aggregated_terms:
         skill_entry = _find_skill_ledger_match(aggregated_term.term, skill_entries)
@@ -324,7 +327,7 @@ def _build_jd_gap_category_groups(
 def build_jd_gap_aggregation_context(user) -> JdGapAggregationContext:
     jd_ready_applications = get_jd_ready_applications_for_gap_aggregation(user)
     aggregated_terms = aggregate_tracked_jd_terms(jd_ready_applications)
-    compared_terms = compare_aggregated_terms_with_skill_ledger(aggregated_terms)
+    compared_terms = compare_aggregated_terms_with_skill_ledger(aggregated_terms, user)
     unmatched_terms = tuple(term for term in compared_terms if term.is_unmatched)
     verified_terms = tuple(term for term in compared_terms if term.is_verified)
     return JdGapAggregationContext(

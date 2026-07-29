@@ -104,7 +104,7 @@ def final_career_intelligence_workflow(request):
         request,
         "skills/final_career_intelligence_workflow.html",
         {
-            "skill_ledger_summary": get_skill_ledger_evidence_summary(),
+            "skill_ledger_summary": get_skill_ledger_evidence_summary(request.user),
             "workflow": build_final_career_intelligence_workflow(),
         },
     )

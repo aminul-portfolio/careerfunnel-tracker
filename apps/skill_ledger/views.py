@@ -1,4 +1,3 @@
-from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
@@ -19,33 +18,14 @@ from .ai_explanation import (
     build_skill_advisory_explanations,
     explanation_to_dict,
 )
+from .forms import SkillEntryForm
 from .models import SkillEntry
-
-
-class SkillEntryForm(forms.ModelForm):
-    class Meta:
-        model = SkillEntry
-        fields = [
-            "skill_name",
-            "category",
-            "evidence_level",
-            "sprint_reference",
-            "project_link",
-            "notes",
-            "visibility",
-        ]
-        help_texts = {
-            "evidence_level": (
-                "VERIFIED means portfolio evidence exists in a closed sprint, passing tests, "
-                "or prior work experience - not external certification."
-            ),
-        }
 
 
 @login_required
 def skill_ledger_list(request):
     search_query = request.GET.get("q", "").strip()
-    all_entries = SkillEntry.objects.all()
+    all_entries = SkillEntry.objects.for_user(request.user)
     entries = all_entries
     if search_query:
         entries = entries.filter(skill_name__icontains=search_query)
@@ -146,7 +126,11 @@ def skill_ledger_public(request):
 @login_required
 @require_GET
 def skill_ledger_advisory(request):
-    entries = SkillEntry.objects.all().order_by("evidence_level", "category", "skill_name")
+    entries = SkillEntry.objects.for_user(request.user).order_by(
+        "evidence_level",
+        "category",
+        "skill_name",
+    )
     jd_candidate_terms = collect_jd_candidate_terms(request.user)
     advisory_rows = build_skill_advisory_rows(entries, jd_candidate_terms=jd_candidate_terms)
     template_rows = tuple(advisory_row_to_template_dict(row) for row in advisory_rows)
@@ -166,7 +150,11 @@ def skill_ledger_advisory(request):
 @login_required
 @require_GET
 def skill_ledger_advisory_explanations(request):
-    entries = SkillEntry.objects.all().order_by("evidence_level", "category", "skill_name")
+    entries = SkillEntry.objects.for_user(request.user).order_by(
+        "evidence_level",
+        "category",
+        "skill_name",
+    )
     jd_candidate_terms = collect_jd_candidate_terms(request.user)
     advisory_rows = build_skill_advisory_rows(entries, jd_candidate_terms=jd_candidate_terms)
     explanations = build_skill_advisory_explanations(advisory_rows)
@@ -187,8 +175,9 @@ def skill_ledger_advisory_explanations(request):
 @login_required
 @require_GET
 def skill_ledger_advisory_ai_evidence(request):
-    entries = SkillEntry.objects.all().order_by("evidence_level", "category", "skill_name")
-    skill_entry_count = SkillEntry.objects.count()
+    owned_entries = SkillEntry.objects.for_user(request.user)
+    entries = owned_entries.order_by("evidence_level", "category", "skill_name")
+    skill_entry_count = owned_entries.count()
     jd_candidate_terms = collect_jd_candidate_terms(request.user)
     advisory_rows = build_skill_advisory_rows(entries, jd_candidate_terms=jd_candidate_terms)
     advisory_row_count = len(advisory_rows)
@@ -233,7 +222,8 @@ def skill_ledger_advisory_ai_evidence(request):
 @login_required
 @require_GET
 def skill_ledger_advisory_ai_review_hub(request):
-    entries = SkillEntry.objects.all().order_by("evidence_level", "category", "skill_name")
+    owned_entries = SkillEntry.objects.for_user(request.user)
+    entries = owned_entries.order_by("evidence_level", "category", "skill_name")
     jd_candidate_terms = collect_jd_candidate_terms(request.user)
     advisory_rows = build_skill_advisory_rows(entries, jd_candidate_terms=jd_candidate_terms)
     explanations = build_skill_advisory_explanations(advisory_rows)
@@ -245,7 +235,7 @@ def skill_ledger_advisory_ai_review_hub(request):
             "safety_evidence_url": "/skill-ledger/advisory/ai-evidence/",
             "required_explanation_safety_warning": REQUIRED_EXPLANATION_SAFETY_WARNING,
             "summary_strip": {
-                "Skill Ledger entries": SkillEntry.objects.count(),
+                "Skill Ledger entries": owned_entries.count(),
                 "Advisory rows": len(advisory_rows),
                 "Explanation rows": len(explanations),
                 "Provider mode": SPRINT_87_PROVIDER_MODE_MOCKED,
@@ -384,7 +374,7 @@ def skill_ledger_advisory_manual_review_checklist(request):
 
 @login_required
 def skill_entry_detail(request, pk):
-    entry = get_object_or_404(SkillEntry, pk=pk)
+    entry = get_object_or_404(SkillEntry.objects.for_user(request.user), pk=pk)
     return render(
         request,
         "skill_ledger/skill_entry_detail.html",
@@ -394,7 +384,7 @@ def skill_entry_detail(request, pk):
 
 @login_required
 def skill_entry_edit(request, pk):
-    entry = get_object_or_404(SkillEntry, pk=pk)
+    entry = get_object_or_404(SkillEntry.objects.for_user(request.user), pk=pk)
     if request.method == "POST":
         form = SkillEntryForm(request.POST, instance=entry)
         if form.is_valid():
@@ -419,7 +409,9 @@ def skill_entry_create(request):
     if request.method == "POST":
         form = SkillEntryForm(request.POST)
         if form.is_valid():
-            entry = form.save()
+            entry = form.save(commit=False)
+            entry.user = request.user
+            entry.save()
             return redirect("skill_ledger:detail", pk=entry.pk)
     else:
         form = SkillEntryForm()

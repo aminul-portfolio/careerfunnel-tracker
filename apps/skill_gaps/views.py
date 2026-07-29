@@ -59,7 +59,7 @@ def dashboard(request):
             }
             for gap in context.gaps
         ),
-        SkillEntry.objects.only("skill_name", "evidence_level"),
+        SkillEntry.objects.for_user(request.user).only("skill_name", "evidence_level"),
     )
     skill_gap_ledger_match_rows = tuple(
         {
@@ -98,7 +98,7 @@ def dashboard(request):
             "portfolio_evidence_mapping": context.portfolio_evidence_mapping,
             "interview_story_mapping": context.interview_story_mapping,
             "cv_bullet_mapping": context.cv_bullet_mapping,
-            "skill_ledger_summary": get_skill_ledger_evidence_summary(),
+            "skill_ledger_summary": get_skill_ledger_evidence_summary(request.user),
             "skill_gap_ledger_match_rows": skill_gap_ledger_match_rows,
             "evidence_filter": evidence_filter,
             "evidence_filter_options": EVIDENCE_FILTER_OPTIONS,
@@ -121,7 +121,7 @@ def ai_career_coach_view(request):
             }
             for gap in context.gaps
         ),
-        SkillEntry.objects.only("skill_name", "evidence_level"),
+        SkillEntry.objects.for_user(request.user).only("skill_name", "evidence_level"),
     )
     matched_gap_rows = tuple(
         {
@@ -167,7 +167,7 @@ def ai_career_coach_view(request):
             "provider_error": provider_error,
             "has_evidence_rows": bool(evidence_payload["matched_gap_rows"]),
             "has_skill_ledger_entries": bool(
-                get_skill_ledger_evidence_summary()["total_entries"],
+                get_skill_ledger_evidence_summary(request.user)["total_entries"],
             ),
         },
     )

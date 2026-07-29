@@ -621,6 +621,7 @@ class SkillLedgerAdvisoryPageTests(TestCase):
 
     def _create_skill_entry(self, **overrides):
         defaults = {
+            "user": self.user,
             "skill_name": "Python",
             "category": SkillEntry.Category.PROGRAMMING,
             "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
@@ -801,6 +802,7 @@ class SkillLedgerAdvisoryClassificationKeyTests(TestCase):
 
     def _create_skill_entry(self, **overrides):
         defaults = {
+            "user": self.user,
             "skill_name": "Python",
             "category": SkillEntry.Category.PROGRAMMING,
             "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
@@ -996,6 +998,7 @@ class SkillLedgerAIExplanationPreviewPageTests(TestCase):
 
     def _create_skill_entry(self, **overrides):
         defaults = {
+            "user": self.user,
             "skill_name": "python",
             "category": SkillEntry.Category.PROGRAMMING,
             "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
@@ -1263,6 +1266,7 @@ class SkillLedgerAIExplanationEvidenceDashboardTests(TestCase):
 
     def _create_skill_entry(self, **overrides):
         defaults = {
+            "user": self.user,
             "skill_name": "python",
             "category": SkillEntry.Category.PROGRAMMING,
             "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
@@ -1478,6 +1482,7 @@ class SkillLedgerAIAdvisoryReviewHubTests(TestCase):
 
     def _create_skill_entry(self, **overrides):
         defaults = {
+            "user": self.user,
             "skill_name": "python",
             "category": SkillEntry.Category.PROGRAMMING,
             "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
@@ -1689,6 +1694,7 @@ class SkillLedgerAIAdvisoryManualReviewChecklistTests(TestCase):
 
     def _create_skill_entry(self, **overrides):
         defaults = {
+            "user": self.user,
             "skill_name": "UNIQUE_STATIC_ONLY_SKILL",
             "category": SkillEntry.Category.PROGRAMMING,
             "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
@@ -2142,6 +2148,7 @@ class SkillLedgerAIAdvisorySafetyWordingRegressionTests(TestCase):
 
     def _create_skill_entry(self):
         return SkillEntry.objects.create(
+            user=self.user,
             skill_name="Python",
             category=SkillEntry.Category.PROGRAMMING,
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
@@ -2371,6 +2378,7 @@ class SkillLedgerJdSignalContextTests(TestCase):
 
     def _create_skill_entry(self, **overrides):
         defaults = {
+            "user": self.user,
             "skill_name": "python",
             "category": SkillEntry.Category.PROGRAMMING,
             "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
@@ -2637,6 +2645,7 @@ class SkillLedgerViewTests(TestCase):
 
     def _create_skill_entry(self, **overrides):
         defaults = {
+            "user": self.user,
             "skill_name": "Power BI",
             "category": SkillEntry.Category.BUSINESS_INTELLIGENCE,
             "evidence_level": SkillEntry.EvidenceLevel.STUDYING,
@@ -2697,7 +2706,7 @@ class SkillLedgerViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_skill_entry_detail_view_loads_for_authenticated_user(self):
-        entry = SkillEntry.objects.create(skill_name="Power BI")
+        entry = SkillEntry.objects.create(user=self.user, skill_name="Power BI")
         self.client.login(username="aminul", password="StrongPass12345")
 
         response = self.client.get(reverse("skill_ledger:detail", kwargs={"pk": entry.pk}))
@@ -2728,7 +2737,8 @@ class SkillLedgerViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(SkillEntry.objects.filter(skill_name="dbt").exists())
+        entry = SkillEntry.objects.get(skill_name="dbt")
+        self.assertEqual(entry.user_id, self.user.pk)
 
     def test_skill_entry_edit_loads_for_authenticated_user(self):
         entry = self._create_skill_entry()
@@ -2886,6 +2896,7 @@ class SkillLedgerViewTests(TestCase):
 
     def test_skill_ledger_shows_verified_entries(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Python",
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
         )
@@ -2898,6 +2909,7 @@ class SkillLedgerViewTests(TestCase):
 
     def test_skill_ledger_shows_learning_target_entries(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Snowflake",
             evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
         )
@@ -2910,6 +2922,7 @@ class SkillLedgerViewTests(TestCase):
 
     def test_skill_ledger_shows_studying_entries(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Statistics",
             evidence_level=SkillEntry.EvidenceLevel.STUDYING,
         )
@@ -2922,6 +2935,7 @@ class SkillLedgerViewTests(TestCase):
 
     def test_skill_ledger_shows_no_evidence_entries(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="GraphQL",
             evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE,
         )
@@ -2934,18 +2948,22 @@ class SkillLedgerViewTests(TestCase):
 
     def test_skill_ledger_kpi_strip_renders_counts(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Python",
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
         )
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Snowflake",
             evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
         )
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Statistics",
             evidence_level=SkillEntry.EvidenceLevel.STUDYING,
         )
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="GraphQL",
             evidence_level=SkillEntry.EvidenceLevel.NO_EVIDENCE,
         )
@@ -2966,8 +2984,8 @@ class SkillLedgerViewTests(TestCase):
         self.assertEqual(response.context["kpi_counts"][SkillEntry.EvidenceLevel.NO_EVIDENCE], 1)
 
     def test_skill_ledger_search_filters_by_skill_name(self):
-        SkillEntry.objects.create(skill_name="dbt")
-        SkillEntry.objects.create(skill_name="Snowflake")
+        SkillEntry.objects.create(user=self.user, skill_name="dbt")
+        SkillEntry.objects.create(user=self.user, skill_name="Snowflake")
         self.client.login(username="aminul", password="StrongPass12345")
 
         response = self.client.get(reverse("skill_ledger:list"), {"q": "dbt"})
@@ -2978,10 +2996,12 @@ class SkillLedgerViewTests(TestCase):
 
     def test_skill_ledger_kpi_counts_remain_global_when_search_is_applied(self):
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="dbt",
             evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
         )
         SkillEntry.objects.create(
+            user=self.user,
             skill_name="Snowflake",
             evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
         )
@@ -4068,6 +4088,7 @@ class Sprint104BPhase1SkillEntryFormGrammarAlignmentTests(TestCase):
             category=SkillEntry.Category.ANALYTICS_ENGINEERING,
             evidence_level=SkillEntry.EvidenceLevel.STUDYING,
             visibility=SkillEntry.Visibility.PRIVATE,
+            user=self.user,
         )
         self.client.login(username="aminul", password="StrongPass12345")
         return self.client.get(reverse("skill_ledger:edit", kwargs={"pk": entry.pk}))
@@ -4454,3 +4475,411 @@ class SkillLedgerOwnershipPhase1Tests(TestCase):
         self.assertNotIn("owner_secret@example.com", output)
         self.assertNotIn("secret private note body", output)
         self.assertNotIn(self.superuser.email, output)
+
+
+class Sprint110APhase3APrivateOwnershipIsolationTests(TestCase):
+    """Sprint 110A Phase 3A: authenticated private SkillEntry ownership isolation."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(username="p3a_owner", password="pass")
+        self.other = User.objects.create_user(username="p3a_other", password="pass")
+        self.staff = User.objects.create_user(
+            username="p3a_staff",
+            password="pass",
+            is_staff=True,
+        )
+        self.superuser = User.objects.create_superuser(
+            username="p3a_super",
+            email="p3a_super@example.com",
+            password="pass",
+        )
+
+    def _create_entry(self, *, user, skill_name="Python", evidence_level=None, notes="owner note"):
+        return SkillEntry.objects.create(
+            user=user,
+            skill_name=skill_name,
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=evidence_level or SkillEntry.EvidenceLevel.VERIFIED,
+            notes=notes,
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+
+    def _login(self, user, password="pass"):
+        self.client.login(username=user.username, password=password)
+
+    def test_owner_list_shows_owner_entries(self):
+        own = self._create_entry(user=self.owner, skill_name="OwnerSQL")
+        self._login(self.owner)
+        response = self.client.get(reverse("skill_ledger:list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "OwnerSQL")
+        self.assertIn(own, response.context["entries"])
+
+    def test_owner_list_excludes_another_users_entries(self):
+        self._create_entry(user=self.owner, skill_name="OwnerOnly")
+        self._create_entry(user=self.other, skill_name="OtherOnly")
+        self._login(self.owner)
+        response = self.client.get(reverse("skill_ledger:list"))
+        self.assertContains(response, "OwnerOnly")
+        self.assertNotContains(response, "OtherOnly")
+
+    def test_private_search_excludes_another_users_matching_skill(self):
+        self._create_entry(user=self.owner, skill_name="SharedNameOwner")
+        self._create_entry(user=self.other, skill_name="SharedNameOther")
+        self._login(self.owner)
+        response = self.client.get(reverse("skill_ledger:list"), {"q": "SharedName"})
+        self.assertContains(response, "SharedNameOwner")
+        self.assertNotContains(response, "SharedNameOther")
+
+    def test_kpi_counts_use_only_owner_rows(self):
+        self._create_entry(
+            user=self.owner,
+            skill_name="OwnerVerified",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._create_entry(
+            user=self.other,
+            skill_name="OtherVerified",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._create_entry(
+            user=self.other,
+            skill_name="OtherLearning",
+            evidence_level=SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        self._login(self.owner)
+        response = self.client.get(reverse("skill_ledger:list"))
+        self.assertEqual(response.context["kpi_counts"][SkillEntry.EvidenceLevel.VERIFIED], 1)
+        self.assertEqual(
+            response.context["kpi_counts"][SkillEntry.EvidenceLevel.LEARNING_TARGET],
+            0,
+        )
+
+    def test_same_skill_name_across_users_remains_isolated(self):
+        self._create_entry(user=self.owner, skill_name="Python")
+        self._create_entry(user=self.other, skill_name="Python")
+        self._login(self.owner)
+        response = self.client.get(reverse("skill_ledger:list"))
+        entries = list(response.context["entries"])
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0].user_id, self.owner.pk)
+
+    def test_advisory_route_uses_only_owner_entries(self):
+        self._create_entry(user=self.owner, skill_name="OwnerAdvisory")
+        self._create_entry(user=self.other, skill_name="OtherAdvisory")
+        self._login(self.owner)
+        response = self.client.get(reverse("skill_ledger:advisory"))
+        names = [row["skill_name"] for row in response.context["advisory_rows"]]
+        self.assertIn("OwnerAdvisory", names)
+        self.assertNotIn("OtherAdvisory", names)
+        content = response.content.decode()
+        for phrase in REQUIRED_SKILL_ADVISORY_SAFETY_WORDING:
+            self.assertIn(phrase, content)
+
+    def test_advisory_explanations_use_only_owner_entries(self):
+        self._create_entry(user=self.owner, skill_name="OwnerExplain")
+        self._create_entry(user=self.other, skill_name="OtherExplain")
+        self._login(self.owner)
+        response = self.client.get(reverse("skill_ledger:advisory_explanations"))
+        joined = " ".join(
+            str(value)
+            for row in response.context["explanation_rows"]
+            for value in row.values()
+        )
+        self.assertIn("OwnerExplain", joined)
+        self.assertNotIn("OtherExplain", joined)
+
+    def test_advisory_evidence_uses_only_owner_entries(self):
+        self._create_entry(user=self.owner, skill_name="OwnerEvidence")
+        self._create_entry(user=self.other, skill_name="OtherEvidenceA")
+        self._create_entry(user=self.other, skill_name="OtherEvidenceB")
+        self._login(self.owner)
+        response = self.client.get(reverse("skill_ledger:advisory_ai_evidence"))
+        self.assertEqual(response.context["data_counts"]["Skill Ledger entries"], 1)
+        self.assertEqual(response.context["data_counts"]["Advisory rows generated"], 1)
+
+    def test_advisory_evidence_counts_use_only_owner_entries(self):
+        self._create_entry(user=self.owner, skill_name="CountOne")
+        self._create_entry(user=self.owner, skill_name="CountTwo")
+        for index in range(5):
+            self._create_entry(user=self.other, skill_name=f"OtherCount{index}")
+        self._login(self.owner)
+        response = self.client.get(reverse("skill_ledger:advisory_ai_evidence"))
+        self.assertEqual(response.context["data_counts"]["Skill Ledger entries"], 2)
+
+    def test_review_hub_uses_only_owner_entries(self):
+        self._create_entry(user=self.owner, skill_name="OwnerHub")
+        self._create_entry(user=self.other, skill_name="OtherHub")
+        self._login(self.owner)
+        response = self.client.get(reverse("skill_ledger:advisory_ai_review_hub"))
+        self.assertEqual(response.context["summary_strip"]["Skill Ledger entries"], 1)
+        self.assertEqual(response.context["summary_strip"]["Advisory rows"], 1)
+
+    def test_staff_ordinary_route_receives_only_staff_owned_entries(self):
+        self._create_entry(user=self.staff, skill_name="StaffOwned")
+        self._create_entry(user=self.owner, skill_name="NonStaffOwned")
+        self._login(self.staff)
+        response = self.client.get(reverse("skill_ledger:list"))
+        self.assertContains(response, "StaffOwned")
+        self.assertNotContains(response, "NonStaffOwned")
+
+    def test_superuser_ordinary_route_receives_only_superuser_owned_entries(self):
+        self._create_entry(user=self.superuser, skill_name="SuperOwned")
+        self._create_entry(user=self.owner, skill_name="NonSuperOwned")
+        self._login(self.superuser)
+        response = self.client.get(reverse("skill_ledger:list"))
+        self.assertContains(response, "SuperOwned")
+        self.assertNotContains(response, "NonSuperOwned")
+
+    def test_owner_can_retrieve_own_detail(self):
+        entry = self._create_entry(user=self.owner, skill_name="DetailOwn")
+        self._login(self.owner)
+        response = self.client.get(reverse("skill_ledger:detail", kwargs={"pk": entry.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "DetailOwn")
+
+    def test_non_owner_detail_returns_404(self):
+        entry = self._create_entry(user=self.other, skill_name="DetailOther")
+        self._login(self.owner)
+        response = self.client.get(reverse("skill_ledger:detail", kwargs={"pk": entry.pk}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_owner_can_retrieve_own_edit_page(self):
+        entry = self._create_entry(user=self.owner, skill_name="EditOwn")
+        self._login(self.owner)
+        response = self.client.get(reverse("skill_ledger:edit", kwargs={"pk": entry.pk}))
+        self.assertEqual(response.status_code, 200)
+
+    def test_non_owner_edit_get_returns_404(self):
+        entry = self._create_entry(user=self.other, skill_name="EditOther")
+        self._login(self.owner)
+        response = self.client.get(reverse("skill_ledger:edit", kwargs={"pk": entry.pk}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_non_owner_edit_post_returns_404(self):
+        entry = self._create_entry(user=self.other, skill_name="EditPostOther", notes="before")
+        self._login(self.owner)
+        response = self.client.post(
+            reverse("skill_ledger:edit", kwargs={"pk": entry.pk}),
+            {
+                "skill_name": "Hacked",
+                "category": SkillEntry.Category.PROGRAMMING,
+                "evidence_level": SkillEntry.EvidenceLevel.STUDYING,
+                "sprint_reference": "",
+                "project_link": "",
+                "notes": "after",
+                "visibility": SkillEntry.Visibility.PRIVATE,
+            },
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_non_owner_post_does_not_change_target_row(self):
+        entry = self._create_entry(user=self.other, skill_name="Intact", notes="before")
+        self._login(self.owner)
+        self.client.post(
+            reverse("skill_ledger:edit", kwargs={"pk": entry.pk}),
+            {
+                "skill_name": "Hacked",
+                "category": SkillEntry.Category.PROGRAMMING,
+                "evidence_level": SkillEntry.EvidenceLevel.STUDYING,
+                "sprint_reference": "",
+                "project_link": "",
+                "notes": "after",
+                "visibility": SkillEntry.Visibility.PRIVATE,
+            },
+        )
+        entry.refresh_from_db()
+        self.assertEqual(entry.skill_name, "Intact")
+        self.assertEqual(entry.notes, "before")
+        self.assertEqual(entry.user_id, self.other.pk)
+
+    def test_owner_edit_preserves_user_id(self):
+        entry = self._create_entry(user=self.owner, skill_name="PreserveOwner")
+        self._login(self.owner)
+        response = self.client.post(
+            reverse("skill_ledger:edit", kwargs={"pk": entry.pk}),
+            {
+                "skill_name": "PreserveOwnerUpdated",
+                "category": SkillEntry.Category.PROGRAMMING,
+                "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+                "sprint_reference": "Sprint 110A",
+                "project_link": "",
+                "notes": "updated",
+                "visibility": SkillEntry.Visibility.PRIVATE,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        entry.refresh_from_db()
+        self.assertEqual(entry.user_id, self.owner.pk)
+        self.assertEqual(entry.skill_name, "PreserveOwnerUpdated")
+
+    def test_forged_user_id_post_cannot_reassign_ownership(self):
+        entry = self._create_entry(user=self.owner, skill_name="ForgeTarget")
+        self._login(self.owner)
+        response = self.client.post(
+            reverse("skill_ledger:edit", kwargs={"pk": entry.pk}),
+            {
+                "skill_name": "ForgeTarget",
+                "category": SkillEntry.Category.PROGRAMMING,
+                "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+                "sprint_reference": "",
+                "project_link": "",
+                "notes": "forged",
+                "visibility": SkillEntry.Visibility.PRIVATE,
+                "user": str(self.other.pk),
+                "user_id": str(self.other.pk),
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        entry.refresh_from_db()
+        self.assertEqual(entry.user_id, self.owner.pk)
+
+    def test_normal_form_does_not_expose_user_field(self):
+        from apps.skill_ledger.forms import SkillEntryForm
+
+        form = SkillEntryForm()
+        self.assertNotIn("user", form.fields)
+        entry = self._create_entry(user=self.owner)
+        self._login(self.owner)
+        response = self.client.get(reverse("skill_ledger:edit", kwargs={"pk": entry.pk}))
+        self.assertNotContains(response, 'name="user"')
+        self.assertNotContains(response, 'name="user_id"')
+
+    def test_create_assigns_request_user_server_side(self):
+        self._login(self.owner)
+        response = self.client.post(
+            reverse("skill_ledger:create"),
+            {
+                "skill_name": "CreatedOwned",
+                "category": SkillEntry.Category.PROGRAMMING,
+                "evidence_level": SkillEntry.EvidenceLevel.STUDYING,
+                "sprint_reference": "",
+                "project_link": "",
+                "notes": "created",
+                "visibility": SkillEntry.Visibility.PRIVATE,
+                "user": str(self.other.pk),
+                "user_id": str(self.other.pk),
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        entry = SkillEntry.objects.get(skill_name="CreatedOwned")
+        self.assertEqual(entry.user_id, self.owner.pk)
+
+    def test_evidence_summary_contains_only_owner_entries(self):
+        from apps.skill_ledger.selectors import get_skill_ledger_evidence_summary
+
+        own = self._create_entry(user=self.owner, skill_name="SummaryOwn")
+        self._create_entry(user=self.other, skill_name="SummaryOther")
+        summary = get_skill_ledger_evidence_summary(self.owner)
+        self.assertEqual(summary["total_entries"], 1)
+        self.assertEqual(summary["verified_entries"], [own])
+
+    def test_evidence_summary_excludes_another_users_counts_and_top_evidence(self):
+        from apps.skill_ledger.selectors import get_skill_ledger_evidence_summary
+
+        self._create_entry(
+            user=self.owner,
+            skill_name="OwnerStudying",
+            evidence_level=SkillEntry.EvidenceLevel.STUDYING,
+        )
+        self._create_entry(
+            user=self.other,
+            skill_name="OtherVerified",
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        summary = get_skill_ledger_evidence_summary(self.owner)
+        self.assertEqual(summary["counts"][SkillEntry.EvidenceLevel.VERIFIED], 0)
+        self.assertEqual(summary["counts"][SkillEntry.EvidenceLevel.STUDYING], 1)
+        self.assertEqual(summary["verified_entries"], [])
+
+    def test_evidence_summary_with_none_fails_closed(self):
+        from apps.skill_ledger.selectors import get_skill_ledger_evidence_summary
+
+        self._create_entry(user=self.owner)
+        summary = get_skill_ledger_evidence_summary(None)
+        self.assertEqual(summary["total_entries"], 0)
+        self.assertEqual(summary["verified_entries"], [])
+
+    def test_evidence_summary_with_anonymous_user_fails_closed(self):
+        from apps.skill_ledger.selectors import get_skill_ledger_evidence_summary
+
+        self._create_entry(user=self.owner)
+        summary = get_skill_ledger_evidence_summary(AnonymousUser())
+        self.assertEqual(summary["total_entries"], 0)
+        self.assertEqual(summary["verified_entries"], [])
+
+    def test_private_runtime_paths_do_not_start_from_objects_all(self):
+        from pathlib import Path
+
+        private_files = [
+            Path("apps/skill_ledger/views.py"),
+            Path("apps/skill_ledger/selectors.py"),
+            Path("apps/applications/services.py"),
+            Path("apps/skill_gaps/views.py"),
+            Path("apps/skills/views.py"),
+        ]
+        for path in private_files:
+            source = path.read_text(encoding="utf-8")
+            if path.name == "views.py" and "skill_ledger" in str(path):
+                public_start = source.find("def skill_ledger_public")
+                public_end = source.find("\ndef skill_ledger_advisory")
+                if public_start != -1 and public_end != -1:
+                    source = source[:public_start] + source[public_end:]
+            self.assertNotIn(
+                "SkillEntry.objects.all()",
+                source,
+                msg=f"{path} still uses SkillEntry.objects.all()",
+            )
+
+    def test_detail_and_edit_use_owner_scoped_queryset(self):
+        from pathlib import Path
+
+        source = Path("apps/skill_ledger/views.py").read_text(encoding="utf-8")
+        self.assertIn(
+            "get_object_or_404(SkillEntry.objects.for_user(request.user), pk=pk)",
+            source,
+        )
+        self.assertEqual(
+            source.count(
+                "get_object_or_404(SkillEntry.objects.for_user(request.user), pk=pk)"
+            ),
+            2,
+        )
+
+    def test_public_route_remains_functionally_unchanged(self):
+        SkillEntry.objects.create(
+            skill_name="PublicPython",
+            visibility=SkillEntry.Visibility.PUBLIC,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        SkillEntry.objects.create(
+            user=self.other,
+            skill_name="PrivateHidden",
+            visibility=SkillEntry.Visibility.PRIVATE,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        response = self.client.get(reverse("skill_ledger:public"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "PublicPython")
+        self.assertNotContains(response, "PrivateHidden")
+
+    def test_locked_advisory_wording_present_on_touched_advisory_surfaces(self):
+        self._create_entry(user=self.owner, skill_name="WordingCheck")
+        self._login(self.owner)
+        advisory_routes = (
+            "skill_ledger:advisory",
+            "skill_ledger:advisory_explanations",
+        )
+        for route_name in advisory_routes:
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                self.assertEqual(response.status_code, 200)
+                content = response.content.decode()
+                for phrase in REQUIRED_SKILL_ADVISORY_SAFETY_WORDING:
+                    self.assertIn(phrase, content)
+        evidence_response = self.client.get(reverse("skill_ledger:advisory_ai_evidence"))
+        self.assertEqual(evidence_response.status_code, 200)
+        evidence_content = evidence_response.content.decode()
+        self.assertIn(REQUIRED_EXPLANATION_SAFETY_WARNING, evidence_content)
+        self.assertIn("A JD signal does not prove proficiency.", evidence_content)
+        self.assertIn("This dashboard is advisory evidence only.", evidence_content)
