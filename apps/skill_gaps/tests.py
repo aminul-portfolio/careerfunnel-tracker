@@ -5662,3 +5662,292 @@ class Sprint110BPhase2JDGapAnalysisViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Open JD Gap Analysis")
         self.assertContains(response, reverse("skill_gaps:jd_gap_analysis"))
+
+
+class Sprint110BPhase3DeterministicGapBoundaryTests(TestCase):
+    """Sprint 110B Phase 3: boundary hardening and final regression tests."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(username="p3_owner", password="pass")
+        self.url = reverse("skill_gaps:jd_gap_analysis")
+
+    def _create_owner_entry(self, **overrides):
+        defaults = {
+            "user": self.owner,
+            "skill_name": "Python",
+            "category": SkillEntry.Category.DOMAIN,
+            "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+            "sprint_reference": "P3-SENTINEL-SPRINT",
+            "project_link": "https://example.com/p3-private-project",
+            "notes": "P3_PRIVATE_NOTES_SENTINEL_DO_NOT_PROJECT",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        defaults.update(overrides)
+        return SkillEntry.objects.create(**defaults)
+
+    def _select_list_for_skillentry(self, captured_queries):
+        import re
+
+        table = SkillEntry._meta.db_table
+        for query in captured_queries:
+            sql = query["sql"]
+            stripped = (
+                sql.replace("`", "")
+                .replace('"', "")
+                .replace("[", "")
+                .replace("]", "")
+            )
+            if not re.search(rf"\bfrom\s+{re.escape(table)}\b", stripped, re.I):
+                continue
+            if not re.match(r"^\s*select\b", stripped, re.I):
+                continue
+            match = re.search(
+                r"^\s*select\s+(.*?)\s+from\s+",
+                stripped,
+                flags=re.I | re.S,
+            )
+            if match:
+                return match.group(1), sql
+        return None, None
+
+    def _select_list_column_names(self, select_list, table_name):
+        columns = []
+        for part in select_list.split(","):
+            token = part.strip().split()[0]
+            if "." in token:
+                qualifier, column = token.rsplit(".", 1)
+                if qualifier.lower() == table_name.lower():
+                    columns.append(column.lower())
+                else:
+                    columns.append(column.lower())
+            else:
+                columns.append(token.lower())
+        return columns
+
+    def test_view_uses_three_field_values_projection_and_excludes_private_fields(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        entry = self._create_owner_entry()
+        self.client.login(username="p3_owner", password="pass")
+        with CaptureQueriesContext(connection) as captured:
+            response = self.client.post(
+                self.url,
+                {"requirements": "Python"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["analysis_performed"])
+        results = response.context["results"]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].classification.value, "VERIFIED_MATCH")
+        self.assertEqual(results[0].matched_skill_entry_id, entry.pk)
+        self.assertNotContains(response, "P3_PRIVATE_NOTES_SENTINEL_DO_NOT_PROJECT")
+        self.assertNotContains(response, "https://example.com/p3-private-project")
+        self.assertNotContains(response, "P3-SENTINEL-SPRINT")
+
+        select_list, sql = self._select_list_for_skillentry(captured)
+        self.assertIsNotNone(select_list, msg="Expected a SkillEntry SELECT query")
+        table = SkillEntry._meta.db_table
+        columns = self._select_list_column_names(select_list, table)
+        pk_column = SkillEntry._meta.pk.column.lower()
+        skill_name_column = SkillEntry._meta.get_field("skill_name").column.lower()
+        evidence_column = SkillEntry._meta.get_field("evidence_level").column.lower()
+        self.assertCountEqual(
+            columns,
+            [pk_column, skill_name_column, evidence_column],
+        )
+        excluded = [
+            SkillEntry._meta.get_field(name).column.lower()
+            for name in (
+                "notes",
+                "project_link",
+                "sprint_reference",
+                "category",
+                "visibility",
+                "date_added",
+                "last_updated",
+            )
+        ]
+        for column in excluded:
+            self.assertNotIn(column, columns)
+        # user_id may appear in WHERE for ownership, but not in the SELECT list.
+        user_column = SkillEntry._meta.get_field("user").column.lower()
+        self.assertNotIn(user_column, columns)
+        self.assertIn(user_column, sql.replace('"', "").replace("`", "").lower())
+
+    def test_valid_and_invalid_posts_preserve_all_three_model_counts(self):
+        self._create_owner_entry(skill_name="Power BI")
+        self.client.login(username="p3_owner", password="pass")
+
+        before_valid = {
+            "skill_entry": SkillEntry.objects.count(),
+            "job_application": JobApplication.objects.count(),
+            "application_skill_gap": ApplicationSkillGap.objects.count(),
+        }
+        valid_response = self.client.post(
+            self.url,
+            {"requirements": "Power BI"},
+        )
+        self.assertEqual(valid_response.status_code, 200)
+        self.assertTrue(valid_response.context["analysis_performed"])
+        self.assertEqual(SkillEntry.objects.count(), before_valid["skill_entry"])
+        self.assertEqual(
+            JobApplication.objects.count(),
+            before_valid["job_application"],
+        )
+        self.assertEqual(
+            ApplicationSkillGap.objects.count(),
+            before_valid["application_skill_gap"],
+        )
+
+        before_invalid = {
+            "skill_entry": SkillEntry.objects.count(),
+            "job_application": JobApplication.objects.count(),
+            "application_skill_gap": ApplicationSkillGap.objects.count(),
+        }
+        invalid_response = self.client.post(
+            self.url,
+            {"requirements": "PowerBI\nPower BI"},
+        )
+        self.assertEqual(invalid_response.status_code, 200)
+        self.assertFalse(invalid_response.context["analysis_performed"])
+        self.assertEqual(SkillEntry.objects.count(), before_invalid["skill_entry"])
+        self.assertEqual(
+            JobApplication.objects.count(),
+            before_invalid["job_application"],
+        )
+        self.assertEqual(
+            ApplicationSkillGap.objects.count(),
+            before_invalid["application_skill_gap"],
+        )
+
+    def test_deterministic_modules_have_no_provider_or_network_dependency(self):
+        import ast
+        import socket
+
+        module_paths = (
+            REPO_ROOT / "apps" / "skill_gaps" / "deterministic_gap_classifier.py",
+            REPO_ROOT / "apps" / "skill_gaps" / "forms.py",
+            REPO_ROOT / "apps" / "skill_gaps" / "deterministic_gap_views.py",
+        )
+        forbidden_prefixes = (
+            "apps.skill_gaps.ai_providers",
+            "apps.skill_gaps.ai_career_coach",
+            "apps.skill_gaps.jd_requirement_enrichment",
+            "apps.skill_gaps.views",
+            "provider_factory",
+            "anthropic",
+            "openai",
+            "requests",
+            "httpx",
+            "urllib",
+            "socket",
+        )
+        package_root = "apps.skill_gaps"
+
+        def resolve_imports(path):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            resolved = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        resolved.append(alias.name)
+                elif isinstance(node, ast.ImportFrom):
+                    if node.level:
+                        parts = package_root.split(".")
+                        base_parts = parts[: len(parts) - (node.level - 1)]
+                        base = ".".join(base_parts)
+                        if node.module:
+                            module_name = f"{base}.{node.module}"
+                        else:
+                            module_name = base
+                    else:
+                        module_name = node.module or ""
+                    for alias in node.names:
+                        if alias.name == "*":
+                            resolved.append(module_name)
+                        elif module_name:
+                            resolved.append(f"{module_name}.{alias.name}")
+                        else:
+                            resolved.append(alias.name)
+            return resolved
+
+        def is_forbidden(name):
+            lowered = name.lower()
+            for prefix in forbidden_prefixes:
+                if lowered == prefix or lowered.startswith(prefix + "."):
+                    return True
+            return False
+
+        forbidden_hits = []
+        for path in module_paths:
+            for imported in resolve_imports(path):
+                if is_forbidden(imported):
+                    forbidden_hits.append((str(path), imported))
+        self.assertEqual(forbidden_hits, [])
+
+        self._create_owner_entry(skill_name="Python")
+        self.client.login(username="p3_owner", password="pass")
+        with patch.object(
+            socket,
+            "create_connection",
+            side_effect=AssertionError("network create_connection must not be called"),
+        ) as mock_connect:
+            response = self.client.post(
+                self.url,
+                {"requirements": "Python"},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["analysis_performed"])
+        results = response.context["results"]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].classification.value, "VERIFIED_MATCH")
+        mock_connect.assert_not_called()
+
+    def test_page_preserves_all_safety_wording_and_forbids_unsafe_claims(self):
+        self.client.login(username="p3_owner", password="pass")
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+
+        required_statements = (
+            (
+                "Skill gap signals are advisory only. They indicate learning "
+                "priorities, not current proficiency."
+            ),
+            (
+                "Learning recommendations are planning aids. A recommendation does "
+                "not mean the skill is portfolio-evidenced or ready to claim."
+            ),
+            (
+                "Before adding a skill to your CV or public profile, ensure it is "
+                "supported by project evidence, tests, screenshots, or prior work "
+                "experience."
+            ),
+            (
+                "This comparison uses your current Skill Ledger records only. It "
+                "does not verify professional proficiency, seniority or employer "
+                "suitability."
+            ),
+            (
+                "This analysis is transient. Submitted requirements and results "
+                "are not saved."
+            ),
+        )
+        for statement in required_statements:
+            with self.subTest(statement=statement[:48]):
+                self.assertContains(response, statement)
+
+        content_lower = response.content.decode("utf-8").lower()
+        forbidden_claims = (
+            "you meet the requirement",
+            "employer requirement satisfied",
+            "verified professional proficiency",
+            "job suitability confirmed",
+            "application readiness confirmed",
+            "guaranteed employability",
+            "verified employer fit",
+        )
+        for claim in forbidden_claims:
+            with self.subTest(claim=claim):
+                self.assertNotIn(claim, content_lower)
