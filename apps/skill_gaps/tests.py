@@ -4876,3 +4876,1078 @@ class Sprint110APhase3ASkillGapOwnershipIsolationTests(TestCase):
             for row in response.context["skill_gap_ledger_match_rows"]
         }
         self.assertEqual(match_rows.get("Python"), "LEARNING_TARGET")
+
+
+class Sprint110BPhase1DeterministicGapClassifierTests(TestCase):
+    """Sprint 110B Phase 1: pure deterministic JD gap classifier."""
+
+    def _evidence(self, entry_id, skill_name, evidence_level):
+        from .deterministic_gap_classifier import SkillLedgerEvidence
+
+        return SkillLedgerEvidence(
+            entry_id=entry_id,
+            skill_name=skill_name,
+            evidence_level=evidence_level,
+        )
+
+    def _classify_one(self, raw_text, evidence):
+        from .deterministic_gap_classifier import (
+            classify_requirement,
+            normalise_requirement,
+        )
+
+        requirement = normalise_requirement(0, raw_text)
+        return classify_requirement(requirement, evidence)
+
+    def test_exact_verified_entry_returns_verified_match(self):
+        from .deterministic_gap_classifier import (
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "Python",
+            (self._evidence(1, "Python", "VERIFIED"),),
+        )
+        self.assertEqual(result.classification, RequirementClassification.VERIFIED_MATCH)
+        self.assertEqual(result.match_basis, MatchBasis.EXACT_NAME)
+        self.assertEqual(result.matched_skill_name, "Python")
+        self.assertEqual(result.matched_evidence_level, "VERIFIED")
+        self.assertEqual(result.matched_skill_entry_id, 1)
+
+    def test_exact_learning_target_entry_returns_learning_target_match(self):
+        from .deterministic_gap_classifier import (
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "Snowflake",
+            (self._evidence(2, "Snowflake", "LEARNING_TARGET"),),
+        )
+        self.assertEqual(
+            result.classification,
+            RequirementClassification.LEARNING_TARGET_MATCH,
+        )
+        self.assertEqual(result.match_basis, MatchBasis.EXACT_NAME)
+        self.assertEqual(result.matched_evidence_level, "LEARNING_TARGET")
+
+    def test_exact_studying_entry_returns_studying_match(self):
+        from .deterministic_gap_classifier import (
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "Statistics",
+            (self._evidence(3, "Statistics", "STUDYING"),),
+        )
+        self.assertEqual(result.classification, RequirementClassification.STUDYING_MATCH)
+        self.assertEqual(result.match_basis, MatchBasis.EXACT_NAME)
+        self.assertEqual(result.matched_evidence_level, "STUDYING")
+
+    def test_exact_no_evidence_entry_returns_no_evidence_gap(self):
+        from .deterministic_gap_classifier import (
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "GraphQL",
+            (self._evidence(4, "GraphQL", "NO_EVIDENCE"),),
+        )
+        self.assertEqual(result.classification, RequirementClassification.NO_EVIDENCE_GAP)
+        self.assertEqual(result.match_basis, MatchBasis.NO_EVIDENCE)
+        self.assertEqual(result.matched_skill_entry_id, 4)
+
+    def test_missing_entry_returns_no_match_gap(self):
+        from .deterministic_gap_classifier import (
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "Airflow",
+            (self._evidence(1, "Python", "VERIFIED"),),
+        )
+        self.assertEqual(result.classification, RequirementClassification.NO_EVIDENCE_GAP)
+        self.assertEqual(result.match_basis, MatchBasis.NO_MATCH)
+        self.assertIsNone(result.matched_skill_name)
+        self.assertIsNone(result.matched_skill_entry_id)
+
+    def test_curated_alias_returns_curated_alias_basis(self):
+        from .deterministic_gap_classifier import (
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        cases = (
+            ("PowerBI", "Power BI"),
+            ("power-bi", "Power BI"),
+            ("SQL Server", "SQL"),
+            ("dbt core", "dbt"),
+        )
+        for requirement_text, ledger_name in cases:
+            with self.subTest(requirement_text=requirement_text):
+                result = self._classify_one(
+                    requirement_text,
+                    (self._evidence(10, ledger_name, "VERIFIED"),),
+                )
+                self.assertEqual(
+                    result.classification,
+                    RequirementClassification.VERIFIED_MATCH,
+                )
+                self.assertEqual(result.match_basis, MatchBasis.CURATED_ALIAS)
+
+    def test_sql_does_not_match_nosql(self):
+        from .deterministic_gap_classifier import (
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "SQL",
+            (self._evidence(1, "NoSQL", "VERIFIED"),),
+        )
+        self.assertEqual(result.classification, RequirementClassification.NO_EVIDENCE_GAP)
+        self.assertEqual(result.match_basis, MatchBasis.NO_MATCH)
+
+    def test_ai_does_not_match_substrings(self):
+        from .deterministic_gap_classifier import (
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "AI",
+            (self._evidence(1, "Email", "VERIFIED"),),
+        )
+        self.assertEqual(result.classification, RequirementClassification.NO_EVIDENCE_GAP)
+        self.assertEqual(result.match_basis, MatchBasis.NO_MATCH)
+
+    def test_same_level_duplicate_entries_require_review(self):
+        from .deterministic_gap_classifier import (
+            DUPLICATE_SKILL_ENTRIES,
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "Python",
+            (
+                self._evidence(1, "Python", "VERIFIED"),
+                self._evidence(2, "Python", "VERIFIED"),
+            ),
+        )
+        self.assertEqual(result.classification, RequirementClassification.REVIEW_REQUIRED)
+        self.assertEqual(result.match_basis, MatchBasis.DUPLICATE_EVIDENCE)
+        self.assertIn(DUPLICATE_SKILL_ENTRIES, result.reason_codes)
+
+    def test_different_level_duplicate_entries_require_conflict_review(self):
+        from .deterministic_gap_classifier import (
+            CONFLICTING_EVIDENCE_LEVELS,
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "Python",
+            (
+                self._evidence(1, "Python", "VERIFIED"),
+                self._evidence(2, "Python", "LEARNING_TARGET"),
+            ),
+        )
+        self.assertEqual(result.classification, RequirementClassification.REVIEW_REQUIRED)
+        self.assertEqual(result.match_basis, MatchBasis.CONFLICTING_EVIDENCE)
+        self.assertIn(CONFLICTING_EVIDENCE_LEVELS, result.reason_codes)
+
+    def test_conflicting_evidence_precedes_duplicate_evidence(self):
+        from .deterministic_gap_classifier import (
+            CONFLICTING_EVIDENCE_LEVELS,
+            DUPLICATE_SKILL_ENTRIES,
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "Python",
+            (
+                self._evidence(1, "Python", "VERIFIED"),
+                self._evidence(2, "Python", "VERIFIED"),
+                self._evidence(3, "Python", "STUDYING"),
+            ),
+        )
+        self.assertEqual(result.classification, RequirementClassification.REVIEW_REQUIRED)
+        self.assertEqual(result.match_basis, MatchBasis.CONFLICTING_EVIDENCE)
+        self.assertIn(CONFLICTING_EVIDENCE_LEVELS, result.reason_codes)
+        self.assertNotIn(DUPLICATE_SKILL_ENTRIES, result.reason_codes)
+
+    def test_duplicate_and_conflict_results_do_not_expose_entry_id(self):
+        from .deterministic_gap_classifier import MatchBasis
+
+        duplicate = self._classify_one(
+            "Python",
+            (
+                self._evidence(1, "Python", "VERIFIED"),
+                self._evidence(2, "Python", "VERIFIED"),
+            ),
+        )
+        conflict = self._classify_one(
+            "SQL",
+            (
+                self._evidence(3, "SQL", "VERIFIED"),
+                self._evidence(4, "SQL", "STUDYING"),
+            ),
+        )
+        for result in (duplicate, conflict):
+            with self.subTest(match_basis=result.match_basis):
+                self.assertIsNone(result.matched_skill_name)
+                self.assertIsNone(result.matched_evidence_level)
+                self.assertIsNone(result.matched_skill_entry_id)
+                self.assertIn(
+                    result.match_basis,
+                    (MatchBasis.DUPLICATE_EVIDENCE, MatchBasis.CONFLICTING_EVIDENCE),
+                )
+
+    def test_years_wording_requires_claim_scope_review(self):
+        from .deterministic_gap_classifier import (
+            YEARS_OF_EXPERIENCE_WORDING,
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        for text in ("5 years Python", "3+ yrs SQL", "two years dbt"):
+            with self.subTest(text=text):
+                result = self._classify_one(
+                    text,
+                    (self._evidence(1, "Python", "VERIFIED"),),
+                )
+                self.assertEqual(
+                    result.classification,
+                    RequirementClassification.REVIEW_REQUIRED,
+                )
+                self.assertEqual(result.match_basis, MatchBasis.CLAIM_SCOPE_REVIEW)
+                self.assertIn(YEARS_OF_EXPERIENCE_WORDING, result.reason_codes)
+
+    def test_seniority_wording_requires_claim_scope_review(self):
+        from .deterministic_gap_classifier import (
+            SENIORITY_WORDING,
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        for text in ("Senior Python", "head of analytics", "team lead SQL"):
+            with self.subTest(text=text):
+                result = self._classify_one(
+                    text,
+                    (self._evidence(1, "Python", "VERIFIED"),),
+                )
+                self.assertEqual(
+                    result.classification,
+                    RequirementClassification.REVIEW_REQUIRED,
+                )
+                self.assertEqual(result.match_basis, MatchBasis.CLAIM_SCOPE_REVIEW)
+                self.assertIn(SENIORITY_WORDING, result.reason_codes)
+
+    def test_expert_wording_requires_claim_scope_review(self):
+        from .deterministic_gap_classifier import (
+            EXPERT_PROFICIENCY_WORDING,
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "expert Python",
+            (self._evidence(1, "Python", "VERIFIED"),),
+        )
+        self.assertEqual(result.classification, RequirementClassification.REVIEW_REQUIRED)
+        self.assertEqual(result.match_basis, MatchBasis.CLAIM_SCOPE_REVIEW)
+        self.assertIn(EXPERT_PROFICIENCY_WORDING, result.reason_codes)
+
+    def test_production_wording_requires_claim_scope_review(self):
+        from .deterministic_gap_classifier import (
+            PRODUCTION_EXPERIENCE_WORDING,
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "production-grade Python",
+            (self._evidence(1, "Python", "VERIFIED"),),
+        )
+        self.assertEqual(result.classification, RequirementClassification.REVIEW_REQUIRED)
+        self.assertEqual(result.match_basis, MatchBasis.CLAIM_SCOPE_REVIEW)
+        self.assertIn(PRODUCTION_EXPERIENCE_WORDING, result.reason_codes)
+
+    def test_enterprise_scale_wording_requires_claim_scope_review(self):
+        from .deterministic_gap_classifier import (
+            ENTERPRISE_SCALE_WORDING,
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "enterprise-scale SQL",
+            (self._evidence(1, "SQL", "VERIFIED"),),
+        )
+        self.assertEqual(result.classification, RequirementClassification.REVIEW_REQUIRED)
+        self.assertEqual(result.match_basis, MatchBasis.CLAIM_SCOPE_REVIEW)
+        self.assertIn(ENTERPRISE_SCALE_WORDING, result.reason_codes)
+
+    def test_commercial_deployment_wording_requires_claim_scope_review(self):
+        from .deterministic_gap_classifier import (
+            COMMERCIAL_DEPLOYMENT_WORDING,
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "commercial deployment of Python",
+            (self._evidence(1, "Python", "VERIFIED"),),
+        )
+        self.assertEqual(result.classification, RequirementClassification.REVIEW_REQUIRED)
+        self.assertEqual(result.match_basis, MatchBasis.CLAIM_SCOPE_REVIEW)
+        self.assertIn(COMMERCIAL_DEPLOYMENT_WORDING, result.reason_codes)
+
+    def test_leadership_wording_requires_claim_scope_review(self):
+        from .deterministic_gap_classifier import (
+            LEADERSHIP_OWNERSHIP_WORDING,
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "led a team using Python",
+            (self._evidence(1, "Python", "VERIFIED"),),
+        )
+        self.assertEqual(result.classification, RequirementClassification.REVIEW_REQUIRED)
+        self.assertEqual(result.match_basis, MatchBasis.CLAIM_SCOPE_REVIEW)
+        self.assertIn(LEADERSHIP_OWNERSHIP_WORDING, result.reason_codes)
+
+    def test_administration_wording_requires_claim_scope_review(self):
+        from .deterministic_gap_classifier import (
+            ADMINISTRATION_RESPONSIBILITY_WORDING,
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "SQL administration",
+            (self._evidence(1, "SQL", "VERIFIED"),),
+        )
+        self.assertEqual(result.classification, RequirementClassification.REVIEW_REQUIRED)
+        self.assertEqual(result.match_basis, MatchBasis.CLAIM_SCOPE_REVIEW)
+        self.assertIn(ADMINISTRATION_RESPONSIBILITY_WORDING, result.reason_codes)
+
+    def test_security_wording_requires_claim_scope_review(self):
+        from .deterministic_gap_classifier import (
+            SECURITY_RESPONSIBILITY_WORDING,
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "security clearance for Python role",
+            (self._evidence(1, "Python", "VERIFIED"),),
+        )
+        self.assertEqual(result.classification, RequirementClassification.REVIEW_REQUIRED)
+        self.assertEqual(result.match_basis, MatchBasis.CLAIM_SCOPE_REVIEW)
+        self.assertIn(SECURITY_RESPONSIBILITY_WORDING, result.reason_codes)
+
+    def test_compliance_wording_requires_claim_scope_review(self):
+        from .deterministic_gap_classifier import (
+            COMPLIANCE_REGULATORY_WORDING,
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "compliance reporting with SQL",
+            (self._evidence(1, "SQL", "VERIFIED"),),
+        )
+        self.assertEqual(result.classification, RequirementClassification.REVIEW_REQUIRED)
+        self.assertEqual(result.match_basis, MatchBasis.CLAIM_SCOPE_REVIEW)
+        self.assertIn(COMPLIANCE_REGULATORY_WORDING, result.reason_codes)
+
+    def test_recognised_skill_separators_require_compound_review(self):
+        from .deterministic_gap_classifier import (
+            COMPOUND_REQUIREMENT,
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        evidence = (
+            self._evidence(1, "Python", "VERIFIED"),
+            self._evidence(2, "SQL", "VERIFIED"),
+            self._evidence(3, "Power BI", "VERIFIED"),
+            self._evidence(4, "Tableau", "VERIFIED"),
+            self._evidence(5, "Django", "VERIFIED"),
+            self._evidence(6, "dbt", "VERIFIED"),
+        )
+        cases = (
+            "Python and SQL",
+            "Power BI / Tableau",
+            "Python, Django",
+            "SQL & dbt",
+        )
+        for text in cases:
+            with self.subTest(text=text):
+                result = self._classify_one(text, evidence)
+                self.assertEqual(
+                    result.classification,
+                    RequirementClassification.REVIEW_REQUIRED,
+                )
+                self.assertEqual(
+                    result.match_basis,
+                    MatchBasis.COMPOUND_REQUIREMENT_REVIEW,
+                )
+                self.assertIn(COMPOUND_REQUIREMENT, result.reason_codes)
+
+    def test_soft_phrase_with_and_is_not_automatically_compound(self):
+        from .deterministic_gap_classifier import (
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "Research and development",
+            (
+                self._evidence(1, "Python", "VERIFIED"),
+                self._evidence(2, "SQL", "VERIFIED"),
+            ),
+        )
+        self.assertNotEqual(result.match_basis, MatchBasis.COMPOUND_REQUIREMENT_REVIEW)
+        self.assertEqual(result.classification, RequirementClassification.NO_EVIDENCE_GAP)
+        self.assertEqual(result.match_basis, MatchBasis.NO_MATCH)
+
+    def test_compound_review_precedes_claim_scope_review(self):
+        from .deterministic_gap_classifier import (
+            COMPOUND_REQUIREMENT,
+            YEARS_OF_EXPERIENCE_WORDING,
+            MatchBasis,
+            RequirementClassification,
+        )
+
+        result = self._classify_one(
+            "Python, SQL, 5 years experience",
+            (
+                self._evidence(1, "Python", "VERIFIED"),
+                self._evidence(2, "SQL", "VERIFIED"),
+            ),
+        )
+        self.assertEqual(result.classification, RequirementClassification.REVIEW_REQUIRED)
+        self.assertEqual(result.match_basis, MatchBasis.COMPOUND_REQUIREMENT_REVIEW)
+        self.assertIn(COMPOUND_REQUIREMENT, result.reason_codes)
+        self.assertIn(YEARS_OF_EXPERIENCE_WORDING, result.reason_codes)
+
+    def test_bullet_prefixes_are_removed_only_from_comparison_text(self):
+        from .deterministic_gap_classifier import (
+            MatchBasis,
+            RequirementClassification,
+            normalise_requirement,
+        )
+
+        cases = (
+            "- Python",
+            "* Python",
+            "\u2022 Python",
+            "1. Python",
+            "1) Python",
+        )
+        for text in cases:
+            with self.subTest(text=text):
+                requirement = normalise_requirement(0, text)
+                self.assertEqual(requirement.original_text, text.strip())
+                self.assertEqual(requirement.normalised_text, "python")
+                result = self._classify_one(
+                    text,
+                    (self._evidence(1, "Python", "VERIFIED"),),
+                )
+                self.assertEqual(
+                    result.classification,
+                    RequirementClassification.VERIFIED_MATCH,
+                )
+                self.assertEqual(result.match_basis, MatchBasis.EXACT_NAME)
+                self.assertEqual(result.original_text, text.strip())
+
+    def test_unicode_nfkc_preserves_original_and_does_not_transliterate(self):
+        from .deterministic_gap_classifier import normalise_requirement
+
+        # Compatibility ligature fi (U+FB01) NFKC-normalises to "fi".
+        raw = "\ufb01le Python"
+        requirement = normalise_requirement(0, raw)
+        self.assertEqual(requirement.original_text, raw)
+        self.assertEqual(requirement.normalised_text, "file python")
+
+        # Non-ASCII skill name must not be ASCII-transliterated away.
+        japanese = normalise_requirement(0, "\u30d1\u30a4\u30bd\u30f3")
+        self.assertEqual(japanese.original_text, "\u30d1\u30a4\u30bd\u30f3")
+        self.assertNotEqual(japanese.normalised_text, "python")
+        self.assertTrue(japanese.normalised_text)
+
+    def test_results_preserve_input_order_and_are_repeatable(self):
+        from .deterministic_gap_classifier import (
+            classify_requirements,
+            normalise_requirement,
+        )
+
+        evidence = (
+            self._evidence(1, "Airflow", "VERIFIED"),
+            self._evidence(2, "Python", "VERIFIED"),
+            self._evidence(3, "SQL", "LEARNING_TARGET"),
+        )
+        texts = ("SQL", "Airflow", "Python", "Kafka")
+        requirements = tuple(
+            normalise_requirement(index, text) for index, text in enumerate(texts)
+        )
+        first = classify_requirements(requirements, evidence)
+        second = classify_requirements(requirements, evidence)
+        self.assertEqual(tuple(item.requirement_index for item in first), (0, 1, 2, 3))
+        self.assertEqual(tuple(item.original_text for item in first), texts)
+        self.assertEqual(first, second)
+
+    def test_existing_normalise_skill_match_key_contract_is_unchanged(self):
+        from .services import SKILL_ALIAS_MAP
+
+        self.assertEqual(normalise_skill_match_key(""), "")
+        self.assertEqual(normalise_skill_match_key("   "), "")
+        self.assertEqual(normalise_skill_match_key(None), "")
+        self.assertEqual(normalise_skill_match_key("PowerBI"), "power bi")
+        self.assertEqual(normalise_skill_match_key("power-bi"), "power bi")
+        self.assertEqual(normalise_skill_match_key("SQL Server"), "sql")
+        self.assertEqual(normalise_skill_match_key("  POWER   BI  "), "power bi")
+        for alias, canonical in SKILL_ALIAS_MAP.items():
+            with self.subTest(alias=alias):
+                self.assertEqual(normalise_skill_match_key(alias), canonical)
+
+    def test_existing_build_skill_gap_ledger_match_rows_contract_is_unchanged(self):
+        rows = build_skill_gap_ledger_match_rows(
+            [
+                {"term": "sql", "frequency": 5},
+                {"term": "PowerBI", "frequency": 2},
+                {"term": "Airflow", "frequency": 1},
+            ],
+            [
+                SimpleNamespace(skill_name="NoSQL", evidence_level="VERIFIED"),
+                SimpleNamespace(skill_name="Power BI", evidence_level="VERIFIED"),
+            ],
+        )
+        self.assertEqual([row["term"] for row in rows], ["sql", "PowerBI", "Airflow"])
+        self.assertEqual(rows[0]["ledger_status"], "NOT_IN_LEDGER")
+        self.assertFalse(rows[0]["is_in_ledger"])
+        self.assertEqual(rows[1]["ledger_status"], "VERIFIED")
+        self.assertTrue(rows[1]["is_in_ledger"])
+        self.assertEqual(rows[1]["matched_skill_name"], "Power BI")
+        self.assertEqual(rows[2]["ledger_status"], "NOT_IN_LEDGER")
+
+
+class Sprint110BPhase2JDGapAnalysisViewTests(TestCase):
+    """Sprint 110B Phase 2: private transient JD Gap Analysis page."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(username="p2_owner", password="pass")
+        self.other = User.objects.create_user(username="p2_other", password="pass")
+        self.staff = User.objects.create_user(
+            username="p2_staff",
+            password="pass",
+            is_staff=True,
+        )
+        self.superuser = User.objects.create_superuser(
+            username="p2_super",
+            email="p2_super@example.com",
+            password="pass",
+        )
+        self.public_owner = User.objects.create_user(
+            username="p2_public_owner",
+            password="pass",
+        )
+        self.url = reverse("skill_gaps:jd_gap_analysis")
+
+    def _create_entry(self, user, skill_name, evidence_level):
+        return SkillEntry.objects.create(
+            user=user,
+            skill_name=skill_name,
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=evidence_level,
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+
+    def test_anonymous_user_is_redirected_to_login(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("accounts:login"), response.url)
+        self.assertNotIn("results", getattr(response, "context", {}) or {})
+
+    def test_authenticated_get_renders_empty_transient_form(self):
+        from .forms import JDGapAnalysisForm
+
+        self.client.login(username="p2_owner", password="pass")
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.context["form"], JDGapAnalysisForm)
+        self.assertEqual(response.context["results"], ())
+        self.assertFalse(response.context["analysis_performed"])
+        self.assertContains(response, "JD Gap Analysis")
+        self.assertContains(response, "Analyse requirements")
+        self.assertContains(
+            response,
+            "This analysis is transient. Submitted requirements and results are not saved.",
+        )
+
+    def test_valid_post_renders_ordered_results_and_manual_links(self):
+        from apps.skill_gaps.deterministic_gap_views import classify_requirements
+
+        python_entry = self._create_entry(
+            self.owner,
+            "Python",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        sql_entry = self._create_entry(
+            self.owner,
+            "SQL",
+            SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        self.client.login(username="p2_owner", password="pass")
+        with patch(
+            "apps.skill_gaps.deterministic_gap_views.classify_requirements",
+            wraps=classify_requirements,
+        ) as mock_classify:
+            response = self.client.post(
+                self.url,
+                {"requirements": "Kafka\nPython\nSQL"},
+            )
+            mock_classify.assert_called_once()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["analysis_performed"])
+        results = response.context["results"]
+        self.assertEqual(len(results), 3)
+        self.assertEqual(
+            tuple(row.original_text for row in results),
+            ("Kafka", "Python", "SQL"),
+        )
+        self.assertEqual(results[0].match_basis.value, "no_match")
+        self.assertIsNone(results[0].matched_skill_entry_id)
+        self.assertEqual(results[1].classification.value, "VERIFIED_MATCH")
+        self.assertEqual(results[1].matched_skill_entry_id, python_entry.pk)
+        self.assertEqual(results[2].classification.value, "LEARNING_TARGET_MATCH")
+        self.assertEqual(results[2].matched_skill_entry_id, sql_entry.pk)
+        self.assertContains(response, "Review Skill Ledger")
+        self.assertContains(response, reverse("skill_ledger:list"))
+        self.assertContains(response, "Add Skill Entry")
+        self.assertContains(response, reverse("skill_ledger:create"))
+        self.assertContains(response, "Edit Evidence", count=2)
+        self.assertContains(
+            response,
+            reverse("skill_ledger:edit", args=[python_entry.pk]),
+        )
+        self.assertContains(
+            response,
+            reverse("skill_ledger:edit", args=[sql_entry.pk]),
+        )
+        self.assertNotContains(response, f">{python_entry.pk}</td>")
+        self.assertNotContains(response, f"#{python_entry.pk}")
+        self.assertNotContains(response, f"{sql_entry.pk}</td>")
+        self.assertNotContains(response, f"#{sql_entry.pk}")
+
+    def test_form_enforces_total_line_and_character_limits(self):
+        from .forms import JDGapAnalysisForm
+
+        cases = {
+            "raw_over_6000": "x" * 6001,
+            "thirty_one_lines": "\n".join(f"Skill{i}" for i in range(31)),
+            "line_over_300": "y" * 301,
+            "blank_only": "\n\n   \n",
+            "empty_after_marker": "-\n",
+        }
+        for label, payload in cases.items():
+            with self.subTest(case=label):
+                form = JDGapAnalysisForm(data={"requirements": payload})
+                self.assertFalse(form.is_valid())
+                self.assertNotIn("normalised_requirements", form.cleaned_data)
+
+    def test_duplicate_normalised_input_is_rejected_before_analysis(self):
+        self._create_entry(
+            self.owner,
+            "Power BI",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self.client.login(username="p2_owner", password="pass")
+        with patch(
+            "apps.skill_gaps.deterministic_gap_views.classify_requirements"
+        ) as mock_classify:
+            response = self.client.post(
+                self.url,
+                {"requirements": "PowerBI\nPower BI"},
+            )
+            mock_classify.assert_not_called()
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["analysis_performed"])
+        self.assertEqual(response.context["results"], ())
+        self.assertTrue(response.context["form"].errors)
+
+    def test_view_isolates_owner_staff_superuser_and_public_owner_evidence(self):
+        owner_entry = self._create_entry(
+            self.owner,
+            "Python",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._create_entry(
+            self.other,
+            "Python",
+            SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        self._create_entry(
+            self.staff,
+            "SQL",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._create_entry(
+            self.superuser,
+            "dbt",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._create_entry(
+            self.public_owner,
+            "Tableau",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+
+        scenarios = (
+            ("p2_owner", "Python", "VERIFIED_MATCH", "Python"),
+            ("p2_owner", "SQL", "NO_EVIDENCE_GAP", None),
+            ("p2_staff", "SQL", "VERIFIED_MATCH", "SQL"),
+            ("p2_staff", "Python", "NO_EVIDENCE_GAP", None),
+            ("p2_super", "dbt", "VERIFIED_MATCH", "dbt"),
+            ("p2_super", "Python", "NO_EVIDENCE_GAP", None),
+            ("p2_other", "Tableau", "NO_EVIDENCE_GAP", None),
+            ("p2_other", "Python", "LEARNING_TARGET_MATCH", "Python"),
+        )
+        for username, requirement, classification, matched_name in scenarios:
+            with self.subTest(username=username, requirement=requirement):
+                self.client.logout()
+                self.client.login(username=username, password="pass")
+                response = self.client.post(
+                    self.url,
+                    {"requirements": requirement},
+                )
+                self.assertEqual(response.status_code, 200)
+                results = response.context["results"]
+                self.assertEqual(len(results), 1)
+                self.assertEqual(results[0].classification.value, classification)
+                self.assertEqual(results[0].matched_skill_name, matched_name)
+                if username == "p2_owner" and requirement == "Python":
+                    self.assertEqual(results[0].matched_skill_entry_id, owner_entry.pk)
+                if username != "p2_owner":
+                    self.assertNotEqual(
+                        results[0].matched_skill_entry_id,
+                        owner_entry.pk,
+                    )
+
+        # Zero owned entries produces honest no_match results.
+        empty_user = User.objects.create_user(username="p2_empty", password="pass")
+        self.client.logout()
+        self.client.login(username="p2_empty", password="pass")
+        response = self.client.post(self.url, {"requirements": "Python\nSQL"})
+        self.assertTrue(response.context["analysis_performed"])
+        results = response.context["results"]
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].match_basis.value, "no_match")
+        self.assertEqual(results[1].match_basis.value, "no_match")
+        self.assertIsNone(results[0].matched_skill_entry_id)
+        del empty_user
+
+    def test_skill_gap_dashboard_links_to_jd_gap_analysis(self):
+        self.client.login(username="p2_owner", password="pass")
+        response = self.client.get(reverse("skill_gaps:dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Open JD Gap Analysis")
+        self.assertContains(response, reverse("skill_gaps:jd_gap_analysis"))
+
+
+class Sprint110BPhase3DeterministicGapBoundaryTests(TestCase):
+    """Sprint 110B Phase 3: boundary hardening and final regression tests."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(username="p3_owner", password="pass")
+        self.url = reverse("skill_gaps:jd_gap_analysis")
+
+    def _create_owner_entry(self, **overrides):
+        defaults = {
+            "user": self.owner,
+            "skill_name": "Python",
+            "category": SkillEntry.Category.DOMAIN,
+            "evidence_level": SkillEntry.EvidenceLevel.VERIFIED,
+            "sprint_reference": "P3-SENTINEL-SPRINT",
+            "project_link": "https://example.com/p3-private-project",
+            "notes": "P3_PRIVATE_NOTES_SENTINEL_DO_NOT_PROJECT",
+            "visibility": SkillEntry.Visibility.PRIVATE,
+        }
+        defaults.update(overrides)
+        return SkillEntry.objects.create(**defaults)
+
+    def _select_list_for_skillentry(self, captured_queries):
+        import re
+
+        table = SkillEntry._meta.db_table
+        for query in captured_queries:
+            sql = query["sql"]
+            stripped = (
+                sql.replace("`", "")
+                .replace('"', "")
+                .replace("[", "")
+                .replace("]", "")
+            )
+            if not re.search(rf"\bfrom\s+{re.escape(table)}\b", stripped, re.I):
+                continue
+            if not re.match(r"^\s*select\b", stripped, re.I):
+                continue
+            match = re.search(
+                r"^\s*select\s+(.*?)\s+from\s+",
+                stripped,
+                flags=re.I | re.S,
+            )
+            if match:
+                return match.group(1), sql
+        return None, None
+
+    def _select_list_column_names(self, select_list, table_name):
+        columns = []
+        for part in select_list.split(","):
+            token = part.strip().split()[0]
+            if "." in token:
+                qualifier, column = token.rsplit(".", 1)
+                if qualifier.lower() == table_name.lower():
+                    columns.append(column.lower())
+                else:
+                    columns.append(column.lower())
+            else:
+                columns.append(token.lower())
+        return columns
+
+    def test_view_uses_three_field_values_projection_and_excludes_private_fields(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        entry = self._create_owner_entry()
+        self.client.login(username="p3_owner", password="pass")
+        with CaptureQueriesContext(connection) as captured:
+            response = self.client.post(
+                self.url,
+                {"requirements": "Python"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["analysis_performed"])
+        results = response.context["results"]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].classification.value, "VERIFIED_MATCH")
+        self.assertEqual(results[0].matched_skill_entry_id, entry.pk)
+        self.assertNotContains(response, "P3_PRIVATE_NOTES_SENTINEL_DO_NOT_PROJECT")
+        self.assertNotContains(response, "https://example.com/p3-private-project")
+        self.assertNotContains(response, "P3-SENTINEL-SPRINT")
+
+        select_list, sql = self._select_list_for_skillentry(captured)
+        self.assertIsNotNone(select_list, msg="Expected a SkillEntry SELECT query")
+        table = SkillEntry._meta.db_table
+        columns = self._select_list_column_names(select_list, table)
+        pk_column = SkillEntry._meta.pk.column.lower()
+        skill_name_column = SkillEntry._meta.get_field("skill_name").column.lower()
+        evidence_column = SkillEntry._meta.get_field("evidence_level").column.lower()
+        self.assertCountEqual(
+            columns,
+            [pk_column, skill_name_column, evidence_column],
+        )
+        excluded = [
+            SkillEntry._meta.get_field(name).column.lower()
+            for name in (
+                "notes",
+                "project_link",
+                "sprint_reference",
+                "category",
+                "visibility",
+                "date_added",
+                "last_updated",
+            )
+        ]
+        for column in excluded:
+            self.assertNotIn(column, columns)
+        # user_id may appear in WHERE for ownership, but not in the SELECT list.
+        user_column = SkillEntry._meta.get_field("user").column.lower()
+        self.assertNotIn(user_column, columns)
+        self.assertIn(user_column, sql.replace('"', "").replace("`", "").lower())
+
+    def test_valid_and_invalid_posts_preserve_all_three_model_counts(self):
+        self._create_owner_entry(skill_name="Power BI")
+        self.client.login(username="p3_owner", password="pass")
+
+        before_valid = {
+            "skill_entry": SkillEntry.objects.count(),
+            "job_application": JobApplication.objects.count(),
+            "application_skill_gap": ApplicationSkillGap.objects.count(),
+        }
+        valid_response = self.client.post(
+            self.url,
+            {"requirements": "Power BI"},
+        )
+        self.assertEqual(valid_response.status_code, 200)
+        self.assertTrue(valid_response.context["analysis_performed"])
+        self.assertEqual(SkillEntry.objects.count(), before_valid["skill_entry"])
+        self.assertEqual(
+            JobApplication.objects.count(),
+            before_valid["job_application"],
+        )
+        self.assertEqual(
+            ApplicationSkillGap.objects.count(),
+            before_valid["application_skill_gap"],
+        )
+
+        before_invalid = {
+            "skill_entry": SkillEntry.objects.count(),
+            "job_application": JobApplication.objects.count(),
+            "application_skill_gap": ApplicationSkillGap.objects.count(),
+        }
+        invalid_response = self.client.post(
+            self.url,
+            {"requirements": "PowerBI\nPower BI"},
+        )
+        self.assertEqual(invalid_response.status_code, 200)
+        self.assertFalse(invalid_response.context["analysis_performed"])
+        self.assertEqual(SkillEntry.objects.count(), before_invalid["skill_entry"])
+        self.assertEqual(
+            JobApplication.objects.count(),
+            before_invalid["job_application"],
+        )
+        self.assertEqual(
+            ApplicationSkillGap.objects.count(),
+            before_invalid["application_skill_gap"],
+        )
+
+    def test_deterministic_modules_have_no_provider_or_network_dependency(self):
+        import ast
+        import socket
+
+        module_paths = (
+            REPO_ROOT / "apps" / "skill_gaps" / "deterministic_gap_classifier.py",
+            REPO_ROOT / "apps" / "skill_gaps" / "forms.py",
+            REPO_ROOT / "apps" / "skill_gaps" / "deterministic_gap_views.py",
+        )
+        forbidden_prefixes = (
+            "apps.skill_gaps.ai_providers",
+            "apps.skill_gaps.ai_career_coach",
+            "apps.skill_gaps.jd_requirement_enrichment",
+            "apps.skill_gaps.views",
+            "provider_factory",
+            "anthropic",
+            "openai",
+            "requests",
+            "httpx",
+            "urllib",
+            "socket",
+        )
+        package_root = "apps.skill_gaps"
+
+        def resolve_imports(path):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            resolved = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        resolved.append(alias.name)
+                elif isinstance(node, ast.ImportFrom):
+                    if node.level:
+                        parts = package_root.split(".")
+                        base_parts = parts[: len(parts) - (node.level - 1)]
+                        base = ".".join(base_parts)
+                        if node.module:
+                            module_name = f"{base}.{node.module}"
+                        else:
+                            module_name = base
+                    else:
+                        module_name = node.module or ""
+                    for alias in node.names:
+                        if alias.name == "*":
+                            resolved.append(module_name)
+                        elif module_name:
+                            resolved.append(f"{module_name}.{alias.name}")
+                        else:
+                            resolved.append(alias.name)
+            return resolved
+
+        def is_forbidden(name):
+            lowered = name.lower()
+            for prefix in forbidden_prefixes:
+                if lowered == prefix or lowered.startswith(prefix + "."):
+                    return True
+            return False
+
+        forbidden_hits = []
+        for path in module_paths:
+            for imported in resolve_imports(path):
+                if is_forbidden(imported):
+                    forbidden_hits.append((str(path), imported))
+        self.assertEqual(forbidden_hits, [])
+
+        self._create_owner_entry(skill_name="Python")
+        self.client.login(username="p3_owner", password="pass")
+        with patch.object(
+            socket,
+            "create_connection",
+            side_effect=AssertionError("network create_connection must not be called"),
+        ) as mock_connect:
+            response = self.client.post(
+                self.url,
+                {"requirements": "Python"},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["analysis_performed"])
+        results = response.context["results"]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].classification.value, "VERIFIED_MATCH")
+        mock_connect.assert_not_called()
+
+    def test_page_preserves_all_safety_wording_and_forbids_unsafe_claims(self):
+        self.client.login(username="p3_owner", password="pass")
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+
+        required_statements = (
+            (
+                "Skill gap signals are advisory only. They indicate learning "
+                "priorities, not current proficiency."
+            ),
+            (
+                "Learning recommendations are planning aids. A recommendation does "
+                "not mean the skill is portfolio-evidenced or ready to claim."
+            ),
+            (
+                "Before adding a skill to your CV or public profile, ensure it is "
+                "supported by project evidence, tests, screenshots, or prior work "
+                "experience."
+            ),
+            (
+                "This comparison uses your current Skill Ledger records only. It "
+                "does not verify professional proficiency, seniority or employer "
+                "suitability."
+            ),
+            (
+                "This analysis is transient. Submitted requirements and results "
+                "are not saved."
+            ),
+        )
+        for statement in required_statements:
+            with self.subTest(statement=statement[:48]):
+                self.assertContains(response, statement)
+
+        content_lower = response.content.decode("utf-8").lower()
+        forbidden_claims = (
+            "you meet the requirement",
+            "employer requirement satisfied",
+            "verified professional proficiency",
+            "job suitability confirmed",
+            "application readiness confirmed",
+            "guaranteed employability",
+            "verified employer fit",
+        )
+        for claim in forbidden_claims:
+            with self.subTest(claim=claim):
+                self.assertNotIn(claim, content_lower)
