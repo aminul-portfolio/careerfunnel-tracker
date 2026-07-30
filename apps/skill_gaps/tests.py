@@ -5439,3 +5439,226 @@ class Sprint110BPhase1DeterministicGapClassifierTests(TestCase):
         self.assertTrue(rows[1]["is_in_ledger"])
         self.assertEqual(rows[1]["matched_skill_name"], "Power BI")
         self.assertEqual(rows[2]["ledger_status"], "NOT_IN_LEDGER")
+
+
+class Sprint110BPhase2JDGapAnalysisViewTests(TestCase):
+    """Sprint 110B Phase 2: private transient JD Gap Analysis page."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(username="p2_owner", password="pass")
+        self.other = User.objects.create_user(username="p2_other", password="pass")
+        self.staff = User.objects.create_user(
+            username="p2_staff",
+            password="pass",
+            is_staff=True,
+        )
+        self.superuser = User.objects.create_superuser(
+            username="p2_super",
+            email="p2_super@example.com",
+            password="pass",
+        )
+        self.public_owner = User.objects.create_user(
+            username="p2_public_owner",
+            password="pass",
+        )
+        self.url = reverse("skill_gaps:jd_gap_analysis")
+
+    def _create_entry(self, user, skill_name, evidence_level):
+        return SkillEntry.objects.create(
+            user=user,
+            skill_name=skill_name,
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=evidence_level,
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+
+    def test_anonymous_user_is_redirected_to_login(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("accounts:login"), response.url)
+        self.assertNotIn("results", getattr(response, "context", {}) or {})
+
+    def test_authenticated_get_renders_empty_transient_form(self):
+        from .forms import JDGapAnalysisForm
+
+        self.client.login(username="p2_owner", password="pass")
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.context["form"], JDGapAnalysisForm)
+        self.assertEqual(response.context["results"], ())
+        self.assertFalse(response.context["analysis_performed"])
+        self.assertContains(response, "JD Gap Analysis")
+        self.assertContains(response, "Analyse requirements")
+        self.assertContains(
+            response,
+            "This analysis is transient. Submitted requirements and results are not saved.",
+        )
+
+    def test_valid_post_renders_ordered_results_and_manual_links(self):
+        from apps.skill_gaps.deterministic_gap_views import classify_requirements
+
+        python_entry = self._create_entry(
+            self.owner,
+            "Python",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        sql_entry = self._create_entry(
+            self.owner,
+            "SQL",
+            SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        self.client.login(username="p2_owner", password="pass")
+        with patch(
+            "apps.skill_gaps.deterministic_gap_views.classify_requirements",
+            wraps=classify_requirements,
+        ) as mock_classify:
+            response = self.client.post(
+                self.url,
+                {"requirements": "Kafka\nPython\nSQL"},
+            )
+            mock_classify.assert_called_once()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["analysis_performed"])
+        results = response.context["results"]
+        self.assertEqual(len(results), 3)
+        self.assertEqual(
+            tuple(row.original_text for row in results),
+            ("Kafka", "Python", "SQL"),
+        )
+        self.assertEqual(results[0].match_basis.value, "no_match")
+        self.assertIsNone(results[0].matched_skill_entry_id)
+        self.assertEqual(results[1].classification.value, "VERIFIED_MATCH")
+        self.assertEqual(results[1].matched_skill_entry_id, python_entry.pk)
+        self.assertEqual(results[2].classification.value, "LEARNING_TARGET_MATCH")
+        self.assertEqual(results[2].matched_skill_entry_id, sql_entry.pk)
+        self.assertContains(response, "Review Skill Ledger")
+        self.assertContains(response, reverse("skill_ledger:list"))
+        self.assertContains(response, "Add Skill Entry")
+        self.assertContains(response, reverse("skill_ledger:create"))
+        self.assertContains(response, "Edit Evidence", count=2)
+        self.assertContains(
+            response,
+            reverse("skill_ledger:edit", args=[python_entry.pk]),
+        )
+        self.assertContains(
+            response,
+            reverse("skill_ledger:edit", args=[sql_entry.pk]),
+        )
+        self.assertNotContains(response, f">{python_entry.pk}</td>")
+        self.assertNotContains(response, f"#{python_entry.pk}")
+        self.assertNotContains(response, f"{sql_entry.pk}</td>")
+        self.assertNotContains(response, f"#{sql_entry.pk}")
+
+    def test_form_enforces_total_line_and_character_limits(self):
+        from .forms import JDGapAnalysisForm
+
+        cases = {
+            "raw_over_6000": "x" * 6001,
+            "thirty_one_lines": "\n".join(f"Skill{i}" for i in range(31)),
+            "line_over_300": "y" * 301,
+            "blank_only": "\n\n   \n",
+            "empty_after_marker": "-\n",
+        }
+        for label, payload in cases.items():
+            with self.subTest(case=label):
+                form = JDGapAnalysisForm(data={"requirements": payload})
+                self.assertFalse(form.is_valid())
+                self.assertNotIn("normalised_requirements", form.cleaned_data)
+
+    def test_duplicate_normalised_input_is_rejected_before_analysis(self):
+        self._create_entry(
+            self.owner,
+            "Power BI",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self.client.login(username="p2_owner", password="pass")
+        with patch(
+            "apps.skill_gaps.deterministic_gap_views.classify_requirements"
+        ) as mock_classify:
+            response = self.client.post(
+                self.url,
+                {"requirements": "PowerBI\nPower BI"},
+            )
+            mock_classify.assert_not_called()
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["analysis_performed"])
+        self.assertEqual(response.context["results"], ())
+        self.assertTrue(response.context["form"].errors)
+
+    def test_view_isolates_owner_staff_superuser_and_public_owner_evidence(self):
+        owner_entry = self._create_entry(
+            self.owner,
+            "Python",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._create_entry(
+            self.other,
+            "Python",
+            SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        self._create_entry(
+            self.staff,
+            "SQL",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._create_entry(
+            self.superuser,
+            "dbt",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self._create_entry(
+            self.public_owner,
+            "Tableau",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+
+        scenarios = (
+            ("p2_owner", "Python", "VERIFIED_MATCH", "Python"),
+            ("p2_owner", "SQL", "NO_EVIDENCE_GAP", None),
+            ("p2_staff", "SQL", "VERIFIED_MATCH", "SQL"),
+            ("p2_staff", "Python", "NO_EVIDENCE_GAP", None),
+            ("p2_super", "dbt", "VERIFIED_MATCH", "dbt"),
+            ("p2_super", "Python", "NO_EVIDENCE_GAP", None),
+            ("p2_other", "Tableau", "NO_EVIDENCE_GAP", None),
+            ("p2_other", "Python", "LEARNING_TARGET_MATCH", "Python"),
+        )
+        for username, requirement, classification, matched_name in scenarios:
+            with self.subTest(username=username, requirement=requirement):
+                self.client.logout()
+                self.client.login(username=username, password="pass")
+                response = self.client.post(
+                    self.url,
+                    {"requirements": requirement},
+                )
+                self.assertEqual(response.status_code, 200)
+                results = response.context["results"]
+                self.assertEqual(len(results), 1)
+                self.assertEqual(results[0].classification.value, classification)
+                self.assertEqual(results[0].matched_skill_name, matched_name)
+                if username == "p2_owner" and requirement == "Python":
+                    self.assertEqual(results[0].matched_skill_entry_id, owner_entry.pk)
+                if username != "p2_owner":
+                    self.assertNotEqual(
+                        results[0].matched_skill_entry_id,
+                        owner_entry.pk,
+                    )
+
+        # Zero owned entries produces honest no_match results.
+        empty_user = User.objects.create_user(username="p2_empty", password="pass")
+        self.client.logout()
+        self.client.login(username="p2_empty", password="pass")
+        response = self.client.post(self.url, {"requirements": "Python\nSQL"})
+        self.assertTrue(response.context["analysis_performed"])
+        results = response.context["results"]
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].match_basis.value, "no_match")
+        self.assertEqual(results[1].match_basis.value, "no_match")
+        self.assertIsNone(results[0].matched_skill_entry_id)
+        del empty_user
+
+    def test_skill_gap_dashboard_links_to_jd_gap_analysis(self):
+        self.client.login(username="p2_owner", password="pass")
+        response = self.client.get(reverse("skill_gaps:dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Open JD Gap Analysis")
+        self.assertContains(response, reverse("skill_gaps:jd_gap_analysis"))

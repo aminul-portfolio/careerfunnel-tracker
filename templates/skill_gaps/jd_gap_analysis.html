@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}JD Gap Analysis | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}JD Gap Analysis{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <section class="hero-panel">
+        <p class="eyebrow">Private planning tool</p>
+        <h1>JD Gap Analysis</h1>
+        <p class="cf69-advisory-info">
+            Private and transient. Compare one atomic job requirement per line against your
+            current Skill Ledger records only. Submitted requirements and results are not saved.
+        </p>
+        <div class="hero-actions">
+            <a href="{% url 'skill_ledger:list' %}" class="btn btn-secondary">Review Skill Ledger</a>
+            <a href="{% url 'skill_ledger:create' %}" class="btn btn-secondary">Add Skill Entry</a>
+        </div>
+    </section>
+
+    <section class="content-card" aria-label="Safety wording">
+        <div class="card-header">
+            <p class="eyebrow">Advisory boundaries</p>
+            <h2>Safety wording</h2>
+        </div>
+        <ul class="workflow-list">
+            <li>Skill gap signals are advisory only. They indicate learning priorities, not current proficiency.</li>
+            <li>Learning recommendations are planning aids. A recommendation does not mean the skill is portfolio-evidenced or ready to claim.</li>
+            <li>Before adding a skill to your CV or public profile, ensure it is supported by project evidence, tests, screenshots, or prior work experience.</li>
+            <li>This comparison uses your current Skill Ledger records only. It does not verify professional proficiency, seniority or employer suitability.</li>
+            <li>This analysis is transient. Submitted requirements and results are not saved.</li>
+        </ul>
+    </section>
+
+    <section class="content-card form-card" aria-label="Job requirements form">
+        <div class="card-header">
+            <p class="eyebrow">Manual input</p>
+            <h2>Job requirements</h2>
+            <p class="section-note">
+                Enter one atomic job requirement per line. Blank lines are ignored.
+                No full job-description extraction is performed on this page.
+            </p>
+        </div>
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="cf69-advisory-warning" role="alert">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+            {% if form.requirements.errors %}
+            <div class="cf69-advisory-warning" role="alert">
+                {{ form.requirements.errors }}
+            </div>
+            {% endif %}
+            <div class="form-group">
+                <label for="{{ form.requirements.id_for_label }}">{{ form.requirements.label }}</label>
+                {{ form.requirements }}
+                {% if form.requirements.help_text %}
+                <p class="muted-text">{{ form.requirements.help_text }}</p>
+                {% endif %}
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Analyse requirements</button>
+            </div>
+        </form>
+    </section>
+
+    {% if analysis_performed %}
+    <section class="content-card" aria-label="JD gap analysis results">
+        <div class="card-header">
+            <p class="eyebrow">Transient results</p>
+            <h2>Analysis results</h2>
+            <p class="section-note cf69-advisory-manual">
+                Results are advisory only and are not saved. Review matched evidence manually
+                in your Skill Ledger before changing a CV or public profile claim.
+            </p>
+        </div>
+        {% if results %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Requirement</th>
+                        <th scope="col">Classification</th>
+                        <th scope="col">Match basis</th>
+                        <th scope="col">Matched skill</th>
+                        <th scope="col">Evidence level</th>
+                        <th scope="col">Reason codes</th>
+                        <th scope="col">Manual next step</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in results %}
+                    <tr>
+                        <td>{{ row.original_text }}</td>
+                        <td><span class="cf69-badge">{{ row.classification.value }}</span></td>
+                        <td>{{ row.match_basis.value }}</td>
+                        <td>{% if row.matched_skill_name %}{{ row.matched_skill_name }}{% else %}-{% endif %}</td>
+                        <td>{% if row.matched_evidence_level %}{{ row.matched_evidence_level }}{% else %}-{% endif %}</td>
+                        <td>
+                            {% if row.reason_codes %}
+                            {{ row.reason_codes|join:", " }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.matched_skill_entry_id %}
+                            <a href="{% url 'skill_ledger:edit' row.matched_skill_entry_id %}" class="table-link">Edit Evidence</a>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state cf69-empty">
+            <h3>No result rows</h3>
+            <p>No accepted requirements were available to classify.</p>
+        </div>
+        {% endif %}
+    </section>
+    {% elif form.errors %}
+    <section class="content-card" aria-label="Invalid analysis state">
+        <div class="empty-state cf69-empty">
+            <h3>Analysis not performed</h3>
+            <p>Fix the form errors above, then submit again. No Skill Ledger comparison ran.</p>
+        </div>
+    </section>
+    {% else %}
+    <section class="content-card" aria-label="Empty analysis state">
+        <div class="empty-state cf69-empty">
+            <h3>No analysis yet</h3>
+            <p>Enter requirements and choose Analyse requirements to review transient advisory results.</p>
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
