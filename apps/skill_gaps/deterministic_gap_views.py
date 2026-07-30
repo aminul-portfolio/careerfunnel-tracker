@@ -8,6 +8,7 @@ from django.shortcuts import render
 
 from apps.skill_ledger.models import SkillEntry
 
+from .deterministic_evidence_alignment import summarise_evidence_alignment
 from .deterministic_gap_classifier import (
     SkillLedgerEvidence,
     classify_requirements,
@@ -35,6 +36,7 @@ def _user_skill_ledger_evidence(user) -> tuple[SkillLedgerEvidence, ...]:
 def jd_gap_analysis_view(request):
     results = ()
     analysis_performed = False
+    summary = None
 
     if request.method == "POST":
         form = JDGapAnalysisForm(request.POST)
@@ -42,6 +44,7 @@ def jd_gap_analysis_view(request):
             requirements = form.cleaned_data["normalised_requirements"]
             evidence = _user_skill_ledger_evidence(request.user)
             results = classify_requirements(requirements, evidence)
+            summary = summarise_evidence_alignment(results)
             analysis_performed = True
     else:
         form = JDGapAnalysisForm()
@@ -53,5 +56,6 @@ def jd_gap_analysis_view(request):
             "form": form,
             "results": results,
             "analysis_performed": analysis_performed,
+            "summary": summary,
         },
     )

@@ -29,6 +29,7 @@
             <li>Before adding a skill to your CV or public profile, ensure it is supported by project evidence, tests, screenshots, or prior work experience.</li>
             <li>This comparison uses your current Skill Ledger records only. It does not verify professional proficiency, seniority or employer suitability.</li>
             <li>This analysis is transient. Submitted requirements and results are not saved.</li>
+            <li>This summary describes evidence alignment only. It does not verify application readiness, candidate strength, hiring likelihood or guaranteed employability.</li>
         </ul>
     </section>
 
@@ -67,6 +68,70 @@
     </section>
 
     {% if analysis_performed %}
+    {% if summary %}
+    <section class="content-card" aria-label="Evidence alignment summary">
+        <div class="card-header">
+            <p class="eyebrow">Transient summary</p>
+            <h2>Evidence alignment summary</h2>
+            <p class="section-note cf69-advisory-info">
+                Aggregate evidence alignment across the accepted requirement rows below.
+                This summary is advisory only and is not saved.
+            </p>
+        </div>
+        <p class="cf69-advisory-manual">
+            <span class="cf69-badge">
+                {% if summary.outcome.value == "NO_ACCEPTED_REQUIREMENTS" %}
+                No requirements to assess
+                {% elif summary.outcome.value == "MANUAL_REVIEW_REQUIRED" %}
+                Manual review needed
+                {% elif summary.outcome.value == "ALL_REQUIREMENTS_VERIFIED" %}
+                All requirements match verified Skill Ledger evidence
+                {% elif summary.outcome.value == "SOME_REQUIREMENTS_VERIFIED" %}
+                Some requirements match verified Skill Ledger evidence
+                {% elif summary.outcome.value == "DEVELOPMENT_RECORDS_ONLY" %}
+                Learning or studying records only
+                {% elif summary.outcome.value == "NO_VERIFIED_EVIDENCE" %}
+                No verified Skill Ledger evidence found
+                {% endif %}
+            </span>
+        </p>
+        <p class="section-note">
+            {% if summary.outcome.value == "NO_ACCEPTED_REQUIREMENTS" %}
+            No accepted requirements were available for this summary.
+            {% elif summary.outcome.value == "MANUAL_REVIEW_REQUIRED" %}
+            One or more requirement rows need manual review before an aggregate evidence conclusion can be shown.
+            {% elif summary.outcome.value == "ALL_REQUIREMENTS_VERIFIED" %}
+            Every accepted requirement matched a Skill Ledger entry marked VERIFIED.
+            {% elif summary.outcome.value == "SOME_REQUIREMENTS_VERIFIED" %}
+            At least one accepted requirement matched verified Skill Ledger evidence. Other requirements have different evidence states.
+            {% elif summary.outcome.value == "DEVELOPMENT_RECORDS_ONLY" %}
+            No requirement matched verified Skill Ledger evidence. One or more requirements matched learning-target or studying records.
+            {% elif summary.outcome.value == "NO_VERIFIED_EVIDENCE" %}
+            No accepted requirement matched verified Skill Ledger evidence.
+            {% endif %}
+        </p>
+        <ul class="workflow-list">
+            <li>Total requirements: {{ summary.total_requirements }}</li>
+            <li>Verified evidence: {{ summary.verified_count }}</li>
+            <li>Learning targets: {{ summary.learning_target_count }}</li>
+            <li>Studying: {{ summary.studying_count }}</li>
+            <li>No current evidence: {{ summary.no_current_evidence_count }}</li>
+            <li>Not recorded in Skill Ledger: {{ summary.no_match_count }}</li>
+            <li>Existing entry marked no evidence: {{ summary.explicit_no_evidence_count }}</li>
+            <li>Manual review: {{ summary.review_required_count }}</li>
+            <li>Rule version: {{ summary.rule_version }}</li>
+            <li>Decision rule: {{ summary.triggered_rule }}</li>
+        </ul>
+        {% if summary.unresolved_requirement_indexes %}
+        <p class="cf69-advisory-warning">
+            Unresolved requirement lines:
+            {% for index in summary.unresolved_requirement_indexes %}
+            {{ index|add:1 }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        </p>
+        {% endif %}
+    </section>
+    {% endif %}
     <section class="content-card" aria-label="JD gap analysis results">
         <div class="card-header">
             <p class="eyebrow">Transient results</p>
