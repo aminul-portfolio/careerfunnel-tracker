@@ -5951,3 +5951,561 @@ class Sprint110BPhase3DeterministicGapBoundaryTests(TestCase):
         for claim in forbidden_claims:
             with self.subTest(claim=claim):
                 self.assertNotIn(claim, content_lower)
+
+
+class Sprint111BPhase1EvidenceAlignmentTests(TestCase):
+    """Sprint 111B Phase 1: pure deterministic evidence alignment aggregation."""
+
+    def _result(
+        self,
+        requirement_index,
+        classification,
+        match_basis,
+        *,
+        original_text="Python",
+        normalised_text="python",
+        matched_skill_name=None,
+        matched_evidence_level=None,
+        matched_skill_entry_id=None,
+        reason_codes=(),
+    ):
+        from .deterministic_gap_classifier import RequirementMatchResult
+
+        return RequirementMatchResult(
+            requirement_index=requirement_index,
+            original_text=original_text,
+            normalised_text=normalised_text,
+            classification=classification,
+            match_basis=match_basis,
+            matched_skill_name=matched_skill_name,
+            matched_evidence_level=matched_evidence_level,
+            matched_skill_entry_id=matched_skill_entry_id,
+            reason_codes=reason_codes,
+        )
+
+    def test_empty_requirements_returns_no_accepted_requirements(self):
+        from .deterministic_evidence_alignment import (
+            EvidenceAlignmentOutcome,
+            summarise_evidence_alignment,
+        )
+
+        summary = summarise_evidence_alignment(())
+        self.assertEqual(
+            summary.outcome,
+            EvidenceAlignmentOutcome.NO_ACCEPTED_REQUIREMENTS,
+        )
+        self.assertEqual(summary.triggered_rule, "rule_1_no_accepted_requirements")
+        self.assertEqual(summary.total_requirements, 0)
+        self.assertEqual(summary.verified_count, 0)
+        self.assertEqual(summary.review_required_count, 0)
+        self.assertEqual(summary.unresolved_requirement_indexes, ())
+        self.assertEqual(summary.per_requirement_results, ())
+
+    def test_any_review_required_row_returns_manual_review_required(self):
+        from .deterministic_evidence_alignment import (
+            EvidenceAlignmentOutcome,
+            summarise_evidence_alignment,
+        )
+        from .deterministic_gap_classifier import MatchBasis, RequirementClassification
+
+        cases = (
+            ("compound", MatchBasis.COMPOUND_REQUIREMENT_REVIEW),
+            ("claim_scope", MatchBasis.CLAIM_SCOPE_REVIEW),
+            ("duplicate", MatchBasis.DUPLICATE_EVIDENCE),
+            ("conflicting", MatchBasis.CONFLICTING_EVIDENCE),
+        )
+        for label, match_basis in cases:
+            with self.subTest(case=label):
+                results = (
+                    self._result(
+                        0,
+                        RequirementClassification.REVIEW_REQUIRED,
+                        match_basis,
+                        original_text="Senior Python",
+                        normalised_text="senior python",
+                    ),
+                )
+                summary = summarise_evidence_alignment(results)
+                self.assertEqual(
+                    summary.outcome,
+                    EvidenceAlignmentOutcome.MANUAL_REVIEW_REQUIRED,
+                )
+                self.assertEqual(
+                    summary.triggered_rule,
+                    "rule_2_review_required_or_malformed_present",
+                )
+                self.assertEqual(summary.review_required_count, 1)
+                self.assertEqual(summary.unresolved_requirement_indexes, (0,))
+                self.assertEqual(summary.verified_count, 0)
+
+    def test_all_verified_returns_all_requirements_verified(self):
+        from .deterministic_evidence_alignment import (
+            EvidenceAlignmentOutcome,
+            summarise_evidence_alignment,
+        )
+        from .deterministic_gap_classifier import MatchBasis, RequirementClassification
+
+        results = (
+            self._result(
+                0,
+                RequirementClassification.VERIFIED_MATCH,
+                MatchBasis.EXACT_NAME,
+                matched_skill_name="Python",
+                matched_evidence_level="VERIFIED",
+                matched_skill_entry_id=1,
+            ),
+            self._result(
+                1,
+                RequirementClassification.VERIFIED_MATCH,
+                MatchBasis.CURATED_ALIAS,
+                original_text="PowerBI",
+                normalised_text="power bi",
+                matched_skill_name="Power BI",
+                matched_evidence_level="VERIFIED",
+                matched_skill_entry_id=2,
+            ),
+        )
+        summary = summarise_evidence_alignment(results)
+        self.assertEqual(
+            summary.outcome,
+            EvidenceAlignmentOutcome.ALL_REQUIREMENTS_VERIFIED,
+        )
+        self.assertEqual(summary.triggered_rule, "rule_3_all_requirements_verified")
+        self.assertEqual(summary.total_requirements, 2)
+        self.assertEqual(summary.verified_count, 2)
+        self.assertEqual(summary.review_required_count, 0)
+        self.assertEqual(summary.unresolved_requirement_indexes, ())
+
+    def test_some_verified_returns_some_requirements_verified(self):
+        from .deterministic_evidence_alignment import (
+            EvidenceAlignmentOutcome,
+            summarise_evidence_alignment,
+        )
+        from .deterministic_gap_classifier import MatchBasis, RequirementClassification
+
+        results = (
+            self._result(
+                0,
+                RequirementClassification.VERIFIED_MATCH,
+                MatchBasis.EXACT_NAME,
+                matched_skill_name="Python",
+                matched_evidence_level="VERIFIED",
+                matched_skill_entry_id=1,
+            ),
+            self._result(
+                1,
+                RequirementClassification.NO_EVIDENCE_GAP,
+                MatchBasis.NO_MATCH,
+                original_text="GraphQL",
+                normalised_text="graphql",
+            ),
+        )
+        summary = summarise_evidence_alignment(results)
+        self.assertEqual(
+            summary.outcome,
+            EvidenceAlignmentOutcome.SOME_REQUIREMENTS_VERIFIED,
+        )
+        self.assertEqual(summary.triggered_rule, "rule_4_some_requirements_verified")
+        self.assertEqual(summary.verified_count, 1)
+        self.assertEqual(summary.no_match_count, 1)
+        self.assertEqual(summary.no_current_evidence_count, 1)
+
+    def test_development_records_only_outcomes(self):
+        from .deterministic_evidence_alignment import (
+            EvidenceAlignmentOutcome,
+            summarise_evidence_alignment,
+        )
+        from .deterministic_gap_classifier import MatchBasis, RequirementClassification
+
+        cases = {
+            "learning_only": (
+                self._result(
+                    0,
+                    RequirementClassification.LEARNING_TARGET_MATCH,
+                    MatchBasis.EXACT_NAME,
+                    original_text="Snowflake",
+                    normalised_text="snowflake",
+                    matched_skill_name="Snowflake",
+                    matched_evidence_level="LEARNING_TARGET",
+                    matched_skill_entry_id=2,
+                ),
+            ),
+            "studying_only": (
+                self._result(
+                    0,
+                    RequirementClassification.STUDYING_MATCH,
+                    MatchBasis.CURATED_ALIAS,
+                    original_text="Statistics",
+                    normalised_text="statistics",
+                    matched_skill_name="Statistics",
+                    matched_evidence_level="STUDYING",
+                    matched_skill_entry_id=3,
+                ),
+            ),
+            "learning_and_studying_mixed_with_gaps": (
+                self._result(
+                    0,
+                    RequirementClassification.LEARNING_TARGET_MATCH,
+                    MatchBasis.EXACT_NAME,
+                    original_text="Snowflake",
+                    normalised_text="snowflake",
+                    matched_skill_name="Snowflake",
+                    matched_evidence_level="LEARNING_TARGET",
+                    matched_skill_entry_id=2,
+                ),
+                self._result(
+                    1,
+                    RequirementClassification.STUDYING_MATCH,
+                    MatchBasis.EXACT_NAME,
+                    original_text="Statistics",
+                    normalised_text="statistics",
+                    matched_skill_name="Statistics",
+                    matched_evidence_level="STUDYING",
+                    matched_skill_entry_id=3,
+                ),
+                self._result(
+                    2,
+                    RequirementClassification.NO_EVIDENCE_GAP,
+                    MatchBasis.NO_MATCH,
+                    original_text="GraphQL",
+                    normalised_text="graphql",
+                ),
+                self._result(
+                    3,
+                    RequirementClassification.NO_EVIDENCE_GAP,
+                    MatchBasis.NO_EVIDENCE,
+                    original_text="Kafka",
+                    normalised_text="kafka",
+                    matched_skill_name="Kafka",
+                    matched_evidence_level="NO_EVIDENCE",
+                    matched_skill_entry_id=4,
+                ),
+            ),
+        }
+        for label, results in cases.items():
+            with self.subTest(case=label):
+                summary = summarise_evidence_alignment(results)
+                self.assertEqual(
+                    summary.outcome,
+                    EvidenceAlignmentOutcome.DEVELOPMENT_RECORDS_ONLY,
+                )
+                self.assertEqual(
+                    summary.triggered_rule,
+                    "rule_5_development_records_only",
+                )
+                self.assertEqual(summary.verified_count, 0)
+                self.assertGreater(
+                    summary.learning_target_count + summary.studying_count,
+                    0,
+                )
+
+    def test_all_no_match_returns_no_verified_evidence(self):
+        from .deterministic_evidence_alignment import (
+            EvidenceAlignmentOutcome,
+            summarise_evidence_alignment,
+        )
+        from .deterministic_gap_classifier import MatchBasis, RequirementClassification
+
+        results = (
+            self._result(
+                0,
+                RequirementClassification.NO_EVIDENCE_GAP,
+                MatchBasis.NO_MATCH,
+                original_text="GraphQL",
+                normalised_text="graphql",
+            ),
+            self._result(
+                1,
+                RequirementClassification.NO_EVIDENCE_GAP,
+                MatchBasis.NO_MATCH,
+                original_text="Rust",
+                normalised_text="rust",
+            ),
+        )
+        summary = summarise_evidence_alignment(results)
+        self.assertEqual(
+            summary.outcome,
+            EvidenceAlignmentOutcome.NO_VERIFIED_EVIDENCE,
+        )
+        self.assertEqual(summary.triggered_rule, "rule_6_no_verified_evidence")
+        self.assertEqual(summary.verified_count, 0)
+        self.assertEqual(summary.no_match_count, 2)
+        self.assertEqual(summary.explicit_no_evidence_count, 0)
+        self.assertEqual(summary.no_current_evidence_count, 2)
+
+    def test_all_explicit_no_evidence_returns_no_verified_evidence(self):
+        from .deterministic_evidence_alignment import (
+            EvidenceAlignmentOutcome,
+            summarise_evidence_alignment,
+        )
+        from .deterministic_gap_classifier import MatchBasis, RequirementClassification
+
+        results = (
+            self._result(
+                0,
+                RequirementClassification.NO_EVIDENCE_GAP,
+                MatchBasis.NO_EVIDENCE,
+                original_text="Kafka",
+                normalised_text="kafka",
+                matched_skill_name="Kafka",
+                matched_evidence_level="NO_EVIDENCE",
+                matched_skill_entry_id=4,
+            ),
+        )
+        summary = summarise_evidence_alignment(results)
+        self.assertEqual(
+            summary.outcome,
+            EvidenceAlignmentOutcome.NO_VERIFIED_EVIDENCE,
+        )
+        self.assertEqual(summary.triggered_rule, "rule_6_no_verified_evidence")
+        self.assertEqual(summary.explicit_no_evidence_count, 1)
+        self.assertEqual(summary.no_match_count, 0)
+        self.assertEqual(summary.no_current_evidence_count, 1)
+
+    def test_mixed_no_match_and_explicit_no_evidence_counts(self):
+        from .deterministic_evidence_alignment import summarise_evidence_alignment
+        from .deterministic_gap_classifier import MatchBasis, RequirementClassification
+
+        results = (
+            self._result(
+                0,
+                RequirementClassification.NO_EVIDENCE_GAP,
+                MatchBasis.NO_MATCH,
+                original_text="GraphQL",
+                normalised_text="graphql",
+            ),
+            self._result(
+                1,
+                RequirementClassification.NO_EVIDENCE_GAP,
+                MatchBasis.NO_EVIDENCE,
+                original_text="Kafka",
+                normalised_text="kafka",
+                matched_skill_name="Kafka",
+                matched_evidence_level="NO_EVIDENCE",
+                matched_skill_entry_id=4,
+            ),
+        )
+        summary = summarise_evidence_alignment(results)
+        self.assertEqual(summary.no_match_count, 1)
+        self.assertEqual(summary.explicit_no_evidence_count, 1)
+        self.assertEqual(summary.no_current_evidence_count, 2)
+        self.assertEqual(summary.verified_count, 0)
+
+    def test_count_invariants_including_no_current_evidence_sum(self):
+        from .deterministic_evidence_alignment import summarise_evidence_alignment
+        from .deterministic_gap_classifier import MatchBasis, RequirementClassification
+
+        results = (
+            self._result(
+                0,
+                RequirementClassification.VERIFIED_MATCH,
+                MatchBasis.EXACT_NAME,
+                matched_skill_name="Python",
+                matched_evidence_level="VERIFIED",
+                matched_skill_entry_id=1,
+            ),
+            self._result(
+                1,
+                RequirementClassification.LEARNING_TARGET_MATCH,
+                MatchBasis.EXACT_NAME,
+                original_text="Snowflake",
+                normalised_text="snowflake",
+                matched_skill_name="Snowflake",
+                matched_evidence_level="LEARNING_TARGET",
+                matched_skill_entry_id=2,
+            ),
+            self._result(
+                2,
+                RequirementClassification.STUDYING_MATCH,
+                MatchBasis.EXACT_NAME,
+                original_text="Statistics",
+                normalised_text="statistics",
+                matched_skill_name="Statistics",
+                matched_evidence_level="STUDYING",
+                matched_skill_entry_id=3,
+            ),
+            self._result(
+                3,
+                RequirementClassification.NO_EVIDENCE_GAP,
+                MatchBasis.NO_MATCH,
+                original_text="GraphQL",
+                normalised_text="graphql",
+            ),
+            self._result(
+                4,
+                RequirementClassification.NO_EVIDENCE_GAP,
+                MatchBasis.NO_EVIDENCE,
+                original_text="Kafka",
+                normalised_text="kafka",
+                matched_skill_name="Kafka",
+                matched_evidence_level="NO_EVIDENCE",
+                matched_skill_entry_id=4,
+            ),
+            self._result(
+                5,
+                RequirementClassification.REVIEW_REQUIRED,
+                MatchBasis.CLAIM_SCOPE_REVIEW,
+                original_text="Senior Python",
+                normalised_text="senior python",
+            ),
+        )
+        summary = summarise_evidence_alignment(results)
+        self.assertEqual(summary.total_requirements, 6)
+        self.assertEqual(summary.verified_count, 1)
+        self.assertEqual(summary.learning_target_count, 1)
+        self.assertEqual(summary.studying_count, 1)
+        self.assertEqual(summary.no_match_count, 1)
+        self.assertEqual(summary.explicit_no_evidence_count, 1)
+        self.assertEqual(
+            summary.no_current_evidence_count,
+            summary.no_match_count + summary.explicit_no_evidence_count,
+        )
+        self.assertEqual(summary.review_required_count, 1)
+        counted = (
+            summary.verified_count
+            + summary.learning_target_count
+            + summary.studying_count
+            + summary.no_match_count
+            + summary.explicit_no_evidence_count
+            + summary.review_required_count
+        )
+        self.assertEqual(counted, summary.total_requirements)
+
+    def test_unresolved_requirement_indexes_preserve_input_order(self):
+        from .deterministic_evidence_alignment import summarise_evidence_alignment
+        from .deterministic_gap_classifier import MatchBasis, RequirementClassification
+
+        results = (
+            self._result(
+                2,
+                RequirementClassification.REVIEW_REQUIRED,
+                MatchBasis.DUPLICATE_EVIDENCE,
+                original_text="SQL",
+                normalised_text="sql",
+            ),
+            self._result(
+                0,
+                RequirementClassification.VERIFIED_MATCH,
+                MatchBasis.EXACT_NAME,
+                matched_skill_name="Python",
+                matched_evidence_level="VERIFIED",
+                matched_skill_entry_id=1,
+            ),
+            self._result(
+                5,
+                RequirementClassification.REVIEW_REQUIRED,
+                MatchBasis.CONFLICTING_EVIDENCE,
+                original_text="dbt",
+                normalised_text="dbt",
+            ),
+            self._result(
+                1,
+                RequirementClassification.VERIFIED_MATCH,
+                MatchBasis.NO_MATCH,
+                original_text="Broken",
+                normalised_text="broken",
+            ),
+        )
+        summary = summarise_evidence_alignment(results)
+        self.assertEqual(summary.unresolved_requirement_indexes, (2, 5, 1))
+        self.assertEqual(summary.review_required_count, 3)
+
+    def test_per_requirement_results_tuple_is_unmodified(self):
+        from .deterministic_evidence_alignment import summarise_evidence_alignment
+        from .deterministic_gap_classifier import MatchBasis, RequirementClassification
+
+        results = (
+            self._result(
+                0,
+                RequirementClassification.VERIFIED_MATCH,
+                MatchBasis.EXACT_NAME,
+                matched_skill_name="Python",
+                matched_evidence_level="VERIFIED",
+                matched_skill_entry_id=1,
+            ),
+            self._result(
+                1,
+                RequirementClassification.NO_EVIDENCE_GAP,
+                MatchBasis.NO_MATCH,
+                original_text="GraphQL",
+                normalised_text="graphql",
+            ),
+        )
+        summary = summarise_evidence_alignment(results)
+        self.assertIs(summary.per_requirement_results, results)
+
+    def test_rule_version_is_evidence_alignment_v1(self):
+        from .deterministic_evidence_alignment import (
+            RULE_VERSION,
+            summarise_evidence_alignment,
+        )
+
+        summary = summarise_evidence_alignment(())
+        self.assertEqual(RULE_VERSION, "evidence_alignment_v1")
+        self.assertEqual(summary.rule_version, "evidence_alignment_v1")
+
+    def test_repeated_aggregation_is_equal(self):
+        from .deterministic_evidence_alignment import summarise_evidence_alignment
+        from .deterministic_gap_classifier import MatchBasis, RequirementClassification
+
+        results = (
+            self._result(
+                0,
+                RequirementClassification.VERIFIED_MATCH,
+                MatchBasis.EXACT_NAME,
+                matched_skill_name="Python",
+                matched_evidence_level="VERIFIED",
+                matched_skill_entry_id=1,
+            ),
+            self._result(
+                1,
+                RequirementClassification.LEARNING_TARGET_MATCH,
+                MatchBasis.CURATED_ALIAS,
+                original_text="Snowflake",
+                normalised_text="snowflake",
+                matched_skill_name="Snowflake",
+                matched_evidence_level="LEARNING_TARGET",
+                matched_skill_entry_id=2,
+            ),
+        )
+        first = summarise_evidence_alignment(results)
+        second = summarise_evidence_alignment(results)
+        self.assertEqual(first, second)
+
+    def test_malformed_classification_basis_pair_fail_closed(self):
+        from .deterministic_evidence_alignment import (
+            EvidenceAlignmentOutcome,
+            summarise_evidence_alignment,
+        )
+        from .deterministic_gap_classifier import MatchBasis, RequirementClassification
+
+        results = (
+            self._result(
+                0,
+                RequirementClassification.VERIFIED_MATCH,
+                MatchBasis.NO_MATCH,
+                original_text="Broken verified pair",
+                normalised_text="broken verified pair",
+            ),
+        )
+        try:
+            summary = summarise_evidence_alignment(results)
+        except Exception as exc:  # pragma: no cover - fail if raised
+            self.fail(f"malformed pair raised unexpectedly: {exc!r}")
+
+        self.assertEqual(
+            summary.outcome,
+            EvidenceAlignmentOutcome.MANUAL_REVIEW_REQUIRED,
+        )
+        self.assertEqual(
+            summary.triggered_rule,
+            "rule_2_review_required_or_malformed_present",
+        )
+        self.assertEqual(summary.verified_count, 0)
+        self.assertEqual(summary.learning_target_count, 0)
+        self.assertEqual(summary.studying_count, 0)
+        self.assertEqual(summary.no_match_count, 0)
+        self.assertEqual(summary.explicit_no_evidence_count, 0)
+        self.assertEqual(summary.no_current_evidence_count, 0)
+        self.assertEqual(summary.review_required_count, 1)
+        self.assertEqual(summary.unresolved_requirement_indexes, (0,))
