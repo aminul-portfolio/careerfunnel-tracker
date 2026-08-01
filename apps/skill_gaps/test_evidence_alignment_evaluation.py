@@ -7,8 +7,14 @@ production mutations.
 
 from __future__ import annotations
 
-from django.test import SimpleTestCase
+import socket
+from unittest.mock import patch
 
+from django.contrib.auth.models import User
+from django.test import SimpleTestCase, TestCase
+from django.urls import reverse
+
+from apps.applications.models import JobApplication
 from apps.skill_gaps.deterministic_evidence_alignment import (
     EvidenceAlignmentOutcome,
     summarise_evidence_alignment,
@@ -21,6 +27,8 @@ from apps.skill_gaps.deterministic_gap_classifier import (
     classify_requirements,
     normalise_requirement,
 )
+from apps.skill_gaps.models import ApplicationSkillGap
+from apps.skill_ledger.models import SkillEntry
 
 # Locked literal; do not import RULE_VERSION from production for this assertion.
 EXPECTED_RULE_VERSION = "evidence_alignment_v1"
@@ -459,3 +467,287 @@ class Sprint111CPhase1GoldenDomainEvaluationTests(SimpleTestCase):
             member = EvidenceAlignmentOutcome[expected]
             self.assertEqual(member.name, expected)
             self.assertEqual(member.value, expected)
+
+
+class Sprint111CPhase2GoldenRouteEvaluationTests(TestCase):
+    """Golden route evaluation for Sprint 111B evidence-alignment workflow."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="p111c2_owner",
+            password="pass",
+        )
+        self.other = User.objects.create_user(
+            username="p111c2_other",
+            password="pass",
+        )
+        self.url = reverse("skill_gaps:jd_gap_analysis")
+
+    def _create_entry(self, user, skill_name, evidence_level):
+        return SkillEntry.objects.create(
+            user=user,
+            skill_name=skill_name,
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=evidence_level,
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+
+    def _model_counts(self):
+        return {
+            "skill_entry": SkillEntry.objects.count(),
+            "job_application": JobApplication.objects.count(),
+            "application_skill_gap": ApplicationSkillGap.objects.count(),
+        }
+
+    def test_owned_skill_ledger_only_and_requirement_order_preserved(self):
+        owner_python = self._create_entry(
+            self.owner,
+            "Python",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        owner_snowflake = self._create_entry(
+            self.owner,
+            "Snowflake",
+            SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        other_kafka = self._create_entry(
+            self.other,
+            "Kafka",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+
+        # Non-alphabetical deliberate order: Snowflake, Python, Kafka.
+        input_order = ("Snowflake", "Python", "Kafka")
+        for_user_users = []
+        values_calls = []
+        original_for_user = SkillEntry.objects.for_user
+
+        def for_user_spy(user):
+            for_user_users.append(user)
+            queryset = original_for_user(user)
+            original_values = queryset.values
+
+            def values_spy(*fields, **kwargs):
+                values_calls.append(fields)
+                return original_values(*fields, **kwargs)
+
+            queryset.values = values_spy
+            return queryset
+
+        self.client.login(username="p111c2_owner", password="pass")
+        with patch.object(SkillEntry.objects, "for_user", side_effect=for_user_spy):
+            response = self.client.post(
+                self.url,
+                {"requirements": "Snowflake\nPython\nKafka"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["analysis_performed"])
+        summary = response.context["summary"]
+        results = response.context["results"]
+        self.assertIsNotNone(summary)
+        self.assertEqual(for_user_users, [self.owner])
+        self.assertEqual(len(values_calls), 1)
+        self.assertEqual(values_calls[0], ("id", "skill_name", "evidence_level"))
+
+        self.assertEqual(
+            tuple(row.original_text for row in results),
+            input_order,
+        )
+        self.assertEqual(
+            tuple(row.requirement_index for row in results),
+            (0, 1, 2),
+        )
+        self.assertIs(summary.per_requirement_results, results)
+        self.assertEqual(
+            tuple(row.original_text for row in summary.per_requirement_results),
+            input_order,
+        )
+
+        self.assertEqual(
+            results[0].classification,
+            RequirementClassification.LEARNING_TARGET_MATCH,
+        )
+        self.assertEqual(results[0].matched_skill_entry_id, owner_snowflake.pk)
+        self.assertEqual(
+            results[1].classification,
+            RequirementClassification.VERIFIED_MATCH,
+        )
+        self.assertEqual(results[1].matched_skill_entry_id, owner_python.pk)
+        self.assertEqual(
+            results[2].classification,
+            RequirementClassification.NO_EVIDENCE_GAP,
+        )
+        self.assertEqual(results[2].match_basis, MatchBasis.NO_MATCH)
+        self.assertIsNone(results[2].matched_skill_entry_id)
+        self.assertIsNone(results[2].matched_skill_name)
+
+        matched_ids = {
+            row.matched_skill_entry_id
+            for row in results
+            if row.matched_skill_entry_id is not None
+        }
+        self.assertNotIn(other_kafka.pk, matched_ids)
+        self.assertEqual(matched_ids, {owner_python.pk, owner_snowflake.pk})
+
+        self.assertEqual(summary.rule_version, EXPECTED_RULE_VERSION)
+        self.assertEqual(
+            summary.outcome,
+            EvidenceAlignmentOutcome.SOME_REQUIREMENTS_VERIFIED,
+        )
+        self.assertEqual(summary.triggered_rule, "rule_4_some_requirements_verified")
+        self.assertEqual(summary.total_requirements, 3)
+        self.assertEqual(summary.verified_count, 1)
+        self.assertEqual(summary.learning_target_count, 1)
+        self.assertEqual(summary.studying_count, 0)
+        self.assertEqual(summary.no_match_count, 1)
+        self.assertEqual(summary.explicit_no_evidence_count, 0)
+        self.assertEqual(summary.no_current_evidence_count, 1)
+        self.assertEqual(summary.review_required_count, 0)
+        self.assertEqual(summary.unresolved_requirement_indexes, ())
+
+    def test_valid_post_is_transient_and_preserves_model_counts(self):
+        entry = self._create_entry(
+            self.owner,
+            "Python",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        before_values = SkillEntry.objects.values(
+            "id",
+            "skill_name",
+            "evidence_level",
+            "notes",
+            "visibility",
+        ).get(pk=entry.pk)
+        before_counts = self._model_counts()
+
+        self.client.login(username="p111c2_owner", password="pass")
+        response = self.client.post(
+            self.url,
+            {"requirements": "Python\nGraphQL"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["analysis_performed"])
+        summary = response.context["summary"]
+        self.assertIsNotNone(summary)
+        self.assertEqual(
+            summary.outcome,
+            EvidenceAlignmentOutcome.SOME_REQUIREMENTS_VERIFIED,
+        )
+        self.assertEqual(summary.triggered_rule, "rule_4_some_requirements_verified")
+        self.assertEqual(self._model_counts(), before_counts)
+        self.assertEqual(
+            SkillEntry.objects.values(
+                "id",
+                "skill_name",
+                "evidence_level",
+                "notes",
+                "visibility",
+            ).get(pk=entry.pk),
+            before_values,
+        )
+
+        content = response.content.decode("utf-8")
+        content_lower = content.lower()
+        self.assertNotIn("pre-fill add application", content_lower)
+        self.assertNotIn("save analysis", content_lower)
+        self.assertNotIn("save to application", content_lower)
+        page_start = content_lower.find('class="page-content"')
+        self.assertNotEqual(page_start, -1)
+        page_content = content_lower[page_start:]
+        self.assertNotIn("/applications/add/", page_content)
+        self.assertNotIn("pre-fill add application", page_content)
+
+    def test_invalid_post_and_get_do_not_evaluate(self):
+        self._create_entry(
+            self.owner,
+            "Python",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self.client.login(username="p111c2_owner", password="pass")
+        before_counts = self._model_counts()
+
+        paths = (
+            ("get", lambda: self.client.get(self.url)),
+            (
+                "invalid_post",
+                lambda: self.client.post(self.url, {"requirements": "\n\n"}),
+            ),
+        )
+        for label, request_callable in paths:
+            with self.subTest(path=label):
+                with (
+                    patch(
+                        "apps.skill_gaps.deterministic_gap_views.classify_requirements"
+                    ) as mock_classify,
+                    patch(
+                        "apps.skill_gaps.deterministic_gap_views."
+                        "summarise_evidence_alignment"
+                    ) as mock_summarise,
+                ):
+                    response = request_callable()
+                    mock_classify.assert_not_called()
+                    mock_summarise.assert_not_called()
+
+                self.assertEqual(response.status_code, 200)
+                self.assertFalse(response.context["analysis_performed"])
+                self.assertIsNone(response.context["summary"])
+                self.assertEqual(response.context["results"], ())
+                self.assertEqual(self._model_counts(), before_counts)
+                if label == "invalid_post":
+                    self.assertTrue(response.context["form"].errors)
+
+    def test_route_succeeds_with_network_blocked(self):
+        self._create_entry(
+            self.owner,
+            "Python",
+            SkillEntry.EvidenceLevel.VERIFIED,
+        )
+        self.client.login(username="p111c2_owner", password="pass")
+        before_counts = self._model_counts()
+
+        with (
+            patch.object(
+                socket,
+                "create_connection",
+                side_effect=AssertionError(
+                    "network create_connection must not be called"
+                ),
+            ) as mock_create_connection,
+            patch.object(
+                socket.socket,
+                "connect",
+                side_effect=AssertionError(
+                    "network socket.connect must not be called"
+                ),
+            ) as mock_socket_connect,
+        ):
+            response = self.client.post(
+                self.url,
+                {"requirements": "Python\nGraphQL"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["analysis_performed"])
+        summary = response.context["summary"]
+        results = response.context["results"]
+        self.assertIsNotNone(summary)
+        self.assertEqual(
+            summary.outcome,
+            EvidenceAlignmentOutcome.SOME_REQUIREMENTS_VERIFIED,
+        )
+        self.assertEqual(summary.triggered_rule, "rule_4_some_requirements_verified")
+        self.assertEqual(summary.rule_version, EXPECTED_RULE_VERSION)
+        self.assertEqual(len(results), 2)
+        self.assertEqual(
+            tuple(row.original_text for row in results),
+            ("Python", "GraphQL"),
+        )
+        mock_create_connection.assert_not_called()
+        mock_socket_connect.assert_not_called()
+        self.assertEqual(self._model_counts(), before_counts)
+        content_lower = response.content.decode("utf-8").lower()
+        self.assertNotIn("provider_factory", content_lower)
+        self.assertNotIn("openai", content_lower)
+        self.assertNotIn("anthropic", content_lower)
