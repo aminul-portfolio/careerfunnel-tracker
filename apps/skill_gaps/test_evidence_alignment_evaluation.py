@@ -7,12 +7,16 @@ production mutations.
 
 from __future__ import annotations
 
+import html
+import re
 import socket
+from dataclasses import fields
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
+from django.utils.html import strip_tags
 
 from apps.applications.models import JobApplication
 from apps.skill_gaps.deterministic_evidence_alignment import (
@@ -751,3 +755,275 @@ class Sprint111CPhase2GoldenRouteEvaluationTests(TestCase):
         self.assertNotIn("provider_factory", content_lower)
         self.assertNotIn("openai", content_lower)
         self.assertNotIn("anthropic", content_lower)
+
+
+class Sprint111CPhase3ClaimSafetyEvaluationTests(TestCase):
+    """Sprint 111C Phase 3: claim-safety evaluation and full-page assertion proof."""
+
+    OUTCOME_LABELS = {
+        EvidenceAlignmentOutcome.NO_ACCEPTED_REQUIREMENTS: (
+            "No requirements to assess"
+        ),
+        EvidenceAlignmentOutcome.MANUAL_REVIEW_REQUIRED: "Manual review needed",
+        EvidenceAlignmentOutcome.ALL_REQUIREMENTS_VERIFIED: (
+            "All requirements match verified Skill Ledger evidence"
+        ),
+        EvidenceAlignmentOutcome.SOME_REQUIREMENTS_VERIFIED: (
+            "Some requirements match verified Skill Ledger evidence"
+        ),
+        EvidenceAlignmentOutcome.DEVELOPMENT_RECORDS_ONLY: (
+            "Learning or studying records only"
+        ),
+        EvidenceAlignmentOutcome.NO_VERIFIED_EVIDENCE: (
+            "No verified Skill Ledger evidence found"
+        ),
+    }
+
+    SAFETY_STATEMENTS = (
+        (
+            "Skill gap signals are advisory only. They indicate learning "
+            "priorities, not current proficiency."
+        ),
+        (
+            "Learning recommendations are planning aids. A recommendation does "
+            "not mean the skill is portfolio-evidenced or ready to claim."
+        ),
+        (
+            "Before adding a skill to your CV or public profile, ensure it is "
+            "supported by project evidence, tests, screenshots, or prior work "
+            "experience."
+        ),
+        (
+            "This comparison uses your current Skill Ledger records only. It "
+            "does not verify professional proficiency, seniority or employer "
+            "suitability."
+        ),
+        (
+            "This analysis is transient. Submitted requirements and results "
+            "are not saved."
+        ),
+        (
+            "This summary describes evidence alignment only. It does not verify "
+            "application readiness, candidate strength, hiring likelihood or "
+            "guaranteed employability."
+        ),
+    )
+
+    FORBIDDEN_AFFIRMATIVE_CLAIMS = (
+        "you are qualified",
+        "you meet the requirement",
+        "employer requirements satisfied",
+        "employer requirement satisfied",
+        "strong candidate",
+        "candidate strength confirmed",
+        "application ready",
+        "application readiness confirmed",
+        "job suitability confirmed",
+        "employer fit confirmed",
+        "verified employer fit",
+        "hiring probability",
+        "likely to be hired",
+        "guaranteed employability",
+        "verified professional proficiency",
+    )
+
+    FORBIDDEN_NUMERIC_SIGNALS = (
+        "%",
+        "percent",
+        "percentage",
+        "fit score",
+        "evidence score",
+        "alignment score",
+        "confidence score",
+        "confidence level",
+        "probability",
+        "likelihood score",
+        "suitability score",
+        "readiness score",
+    )
+
+    FORBIDDEN_SUMMARY_ATTRIBUTES = (
+        "score",
+        "percentage",
+        "ratio",
+        "confidence",
+        "probability",
+        "suitability",
+        "readiness",
+    )
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="p111c3_owner",
+            password="pass",
+        )
+        self.url = reverse("skill_gaps:jd_gap_analysis")
+
+    def _evidence(self, entry_id, skill_name, evidence_level):
+        return SkillLedgerEvidence(
+            entry_id=entry_id,
+            skill_name=skill_name,
+            evidence_level=evidence_level,
+        )
+
+    def _classify(self, *raw_texts, evidence):
+        requirements = tuple(
+            normalise_requirement(index, text)
+            for index, text in enumerate(raw_texts)
+        )
+        return classify_requirements(requirements, evidence)
+
+    def _build_outcome_case(self, outcome):
+        if outcome is EvidenceAlignmentOutcome.NO_ACCEPTED_REQUIREMENTS:
+            results = ()
+            summary = summarise_evidence_alignment(results)
+            return results, summary
+
+        if outcome is EvidenceAlignmentOutcome.MANUAL_REVIEW_REQUIRED:
+            results = self._classify(
+                "Senior Python",
+                evidence=(self._evidence(1, "Python", "VERIFIED"),),
+            )
+        elif outcome is EvidenceAlignmentOutcome.ALL_REQUIREMENTS_VERIFIED:
+            results = self._classify(
+                "Python",
+                CURATED_ALIAS_INPUT,
+                evidence=(
+                    self._evidence(1, "Python", "VERIFIED"),
+                    self._evidence(2, CURATED_ALIAS_LEDGER_NAME, "VERIFIED"),
+                ),
+            )
+        elif outcome is EvidenceAlignmentOutcome.SOME_REQUIREMENTS_VERIFIED:
+            results = self._classify(
+                "Python",
+                "GraphQL",
+                evidence=(self._evidence(1, "Python", "VERIFIED"),),
+            )
+        elif outcome is EvidenceAlignmentOutcome.DEVELOPMENT_RECORDS_ONLY:
+            results = self._classify(
+                "Snowflake",
+                evidence=(self._evidence(2, "Snowflake", "LEARNING_TARGET"),),
+            )
+        elif outcome is EvidenceAlignmentOutcome.NO_VERIFIED_EVIDENCE:
+            results = self._classify(
+                "Kafka",
+                "GraphQL",
+                evidence=(self._evidence(4, "Kafka", "NO_EVIDENCE"),),
+            )
+        else:  # pragma: no cover - locked taxonomy guard
+            raise AssertionError(f"unexpected outcome: {outcome!r}")
+
+        summary = summarise_evidence_alignment(results)
+        return results, summary
+
+    def _visible_page_text(self, content):
+        text = strip_tags(content)
+        text = html.unescape(text)
+        return re.sub(r"\s+", " ", text).strip()
+
+    def _assert_no_forbidden_summary_attributes(self, summary):
+        field_names = {field.name for field in fields(summary)}
+        for attr in self.FORBIDDEN_SUMMARY_ATTRIBUTES:
+            with self.subTest(attribute=attr):
+                self.assertNotIn(attr, field_names)
+                self.assertFalse(hasattr(summary, attr))
+
+    def test_golden_outcomes_render_exact_claim_safe_copy(self):
+        self.client.login(username="p111c3_owner", password="pass")
+        all_labels = tuple(self.OUTCOME_LABELS.values())
+
+        for outcome, expected_label in self.OUTCOME_LABELS.items():
+            with self.subTest(outcome=outcome.value):
+                results, summary = self._build_outcome_case(outcome)
+                self.assertEqual(summary.outcome, outcome)
+                self.assertEqual(summary.rule_version, EXPECTED_RULE_VERSION)
+
+                with (
+                    patch(
+                        "apps.skill_gaps.deterministic_gap_views.classify_requirements",
+                        return_value=results,
+                    ),
+                    patch(
+                        "apps.skill_gaps.deterministic_gap_views."
+                        "summarise_evidence_alignment",
+                        return_value=summary,
+                    ),
+                ):
+                    response = self.client.post(
+                        self.url,
+                        {"requirements": "Python"},
+                    )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTrue(response.context["analysis_performed"])
+                self.assertEqual(response.context["summary"], summary)
+                self.assertEqual(response.context["summary"].outcome, outcome)
+                self.assertEqual(
+                    response.context["summary"].rule_version,
+                    EXPECTED_RULE_VERSION,
+                )
+                self.assertContains(response, expected_label)
+
+                content = response.content.decode("utf-8")
+                summary_start = content.find(
+                    'aria-label="Evidence alignment summary"'
+                )
+                self.assertNotEqual(summary_start, -1)
+                summary_end = content.find(
+                    'aria-label="JD gap analysis results"',
+                    summary_start,
+                )
+                self.assertNotEqual(summary_end, -1)
+                badge_html = content[summary_start:summary_end]
+                self.assertIn(expected_label, badge_html)
+                for other_label in all_labels:
+                    if other_label == expected_label:
+                        continue
+                    self.assertNotIn(other_label, badge_html)
+
+                for statement in self.SAFETY_STATEMENTS:
+                    self.assertEqual(content.count(statement), 1)
+
+    def test_no_scores_percentages_or_affirmative_employability_claims_full_page(
+        self,
+    ):
+        SkillEntry.objects.create(
+            user=self.owner,
+            skill_name="Python",
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=SkillEntry.EvidenceLevel.VERIFIED,
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+        self.client.login(username="p111c3_owner", password="pass")
+        response = self.client.post(
+            self.url,
+            {"requirements": "Python\nGraphQL"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["analysis_performed"])
+        summary = response.context["summary"]
+        self.assertIsNotNone(summary)
+        self._assert_no_forbidden_summary_attributes(summary)
+
+        content = response.content.decode("utf-8")
+        for statement in self.SAFETY_STATEMENTS:
+            self.assertEqual(content.count(statement), 1)
+
+        visible_text = self._visible_page_text(content)
+        scan_text = visible_text.lower()
+        for statement in self.SAFETY_STATEMENTS:
+            scan_text = scan_text.replace(statement.lower(), " ")
+
+        for claim in self.FORBIDDEN_AFFIRMATIVE_CLAIMS:
+            with self.subTest(claim=claim):
+                if claim == "application ready":
+                    self.assertIsNone(
+                        re.search(r"\bapplication ready\b(?!ness)", scan_text)
+                    )
+                else:
+                    self.assertNotIn(claim, scan_text)
+
+        for signal in self.FORBIDDEN_NUMERIC_SIGNALS:
+            with self.subTest(signal=signal):
+                self.assertNotIn(signal, scan_text)
