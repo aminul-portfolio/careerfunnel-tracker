@@ -189,6 +189,74 @@
         </div>
         {% endif %}
     </section>
+
+    {% if summary and explanation_allowed %}
+    <section class="content-card" aria-label="Advisory explanation">
+        <div class="card-header">
+            <p class="eyebrow">Optional advisory</p>
+            <h2>Advisory explanation</h2>
+        </div>
+        <p class="cf69-advisory-info">
+            AI-generated explanations are advisory and may be incomplete or contain errors. The deterministic evidence-alignment result above remains authoritative; this explanation does not add, change or verify any evidence.
+        </p>
+        <p class="cf69-advisory-info">
+            This explanation is generated only when you request it and is not saved.
+        </p>
+        {% if advisory_explanation_failed %}
+        <p class="cf69-advisory-warning" role="alert">
+            The advisory explanation could not be generated. Your deterministic evidence-alignment result remains available below.
+        </p>
+        {% endif %}
+        {% if advisory_explanation %}
+        <p class="section-note">{{ advisory_explanation.summary }}</p>
+        {% if advisory_explanation.verified_evidence %}
+        <h3>Verified evidence</h3>
+        <ul class="workflow-list">
+            {% for item in advisory_explanation.verified_evidence %}
+            <li>
+                Requirement {{ item.requirement_index|add:"1" }}:
+                {{ item.skill_names|join:", " }} -
+                {{ item.explanation }}
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% if advisory_explanation.development_evidence %}
+        <h3>Development evidence</h3>
+        <ul class="workflow-list">
+            {% for item in advisory_explanation.development_evidence %}
+            <li>
+                Requirement {{ item.requirement_index|add:"1" }}:
+                {{ item.skill_names|join:", " }}
+                ({{ item.evidence_level }}) -
+                {{ item.explanation }}
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% if advisory_explanation.missing_evidence %}
+        <h3>Missing evidence</h3>
+        <ul class="workflow-list">
+            {% for item in advisory_explanation.missing_evidence %}
+            <li>
+                Requirement {{ item.requirement_index|add:"1" }}:
+                {{ item.explanation }}
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% elif not explanation_requested %}
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <textarea name="requirements" hidden>{{ form.requirements.value }}</textarea>
+            <input type="hidden" name="generate_explanation" value="1">
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Generate advisory explanation</button>
+            </div>
+        </form>
+        {% endif %}
+    </section>
+    {% endif %}
     {% elif form.errors %}
     <section class="content-card" aria-label="Invalid analysis state">
         <div class="empty-state cf69-empty">
