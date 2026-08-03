@@ -11,6 +11,11 @@ AI_EXPLANATION_PROVIDER = config(
     "AI_EXPLANATION_PROVIDER",
     default="mock",
 )
+AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED = config(
+    "AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED",
+    default=False,
+    cast=bool,
+)
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
     default="127.0.0.1,localhost",

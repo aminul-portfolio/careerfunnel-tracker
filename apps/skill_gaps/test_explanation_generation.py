@@ -1,11 +1,17 @@
-"""Sprint 114 evidence-alignment explanation payload and validator tests.
+"""Sprint 114 evidence-alignment explanation payload, validator and provider tests.
 
-Pure domain tests. No ORM, providers, network I/O or production mutations.
+Pure/domain and mocked-provider boundary tests. No real provider or network I/O.
 """
 
 from __future__ import annotations
 
-from django.test import SimpleTestCase
+import inspect
+import json
+from types import SimpleNamespace
+from unittest.mock import patch
+
+from django.conf import settings
+from django.test import SimpleTestCase, override_settings
 
 from apps.skill_gaps.deterministic_evidence_alignment import (
     EvidenceAlignmentOutcome,
@@ -1018,3 +1024,352 @@ class Sprint114Phase2ExplanationOutputValidatorTests(SimpleTestCase):
         self.assertEqual(validated["verified_evidence"], [])
         self.assertEqual(validated["development_evidence"], [])
         self.assertEqual(validated["missing_evidence"], [])
+
+
+def _phase3_allowlisted_payload() -> dict:
+    return _phase2_provider_payload()
+
+
+def _phase3_provider_output_json() -> str:
+    return json.dumps(
+        {
+            "summary": "Advisory evidence-alignment summary for planning only.",
+            "verified_evidence": [
+                {
+                    "requirement_index": 0,
+                    "skill_names": ["Python"],
+                    "explanation": "Python matches verified Skill Ledger evidence.",
+                }
+            ],
+            "development_evidence": [],
+            "missing_evidence": [
+                {
+                    "requirement_index": 3,
+                    "explanation": "GraphQL has no current Skill Ledger evidence.",
+                }
+            ],
+        }
+    )
+
+
+def _phase3_fake_message(
+    *,
+    text: str,
+    model: str = "claude-haiku-4-5-20251001",
+    stop_reason: str = "end_turn",
+):
+    return SimpleNamespace(
+        model=model,
+        stop_reason=stop_reason,
+        content=[SimpleNamespace(type="text", text=text)],
+        usage=SimpleNamespace(input_tokens=11, output_tokens=7),
+    )
+
+
+class Sprint114Phase3EvidenceAlignmentProviderBoundaryTests(SimpleTestCase):
+    """Dormant provider factory and composition gate for evidence-alignment explanation."""
+
+    def test_new_claude_factory_dict_in_dict_out_contract(self):
+        from apps.ai_agents.claude_provider import (
+            make_claude_evidence_alignment_explanation_provider,
+        )
+
+        payload = _phase3_allowlisted_payload()
+        mock_response = _phase3_fake_message(text=_phase3_provider_output_json())
+        with patch(
+            "apps.ai_agents.claude_provider.anthropic.Anthropic"
+        ) as mock_cls:
+            mock_cls.return_value.messages.create.return_value = mock_response
+            provider = make_claude_evidence_alignment_explanation_provider("sk-test")
+            self.assertTrue(callable(provider))
+            result = provider(payload)
+        self.assertIsInstance(result, dict)
+        self.assertEqual(
+            set(result.keys()),
+            {
+                "summary",
+                "verified_evidence",
+                "development_evidence",
+                "missing_evidence",
+            },
+        )
+        mock_cls.assert_called_once()
+        create_kwargs = mock_cls.return_value.messages.create.call_args.kwargs
+        user_content = create_kwargs["messages"][0]["content"]
+        self.assertIn('"rule_version"', user_content)
+        self.assertIn('"requirements"', user_content)
+        self.assertNotIn("matched_skill_entry_id", user_content)
+
+    def test_new_claude_factory_uses_fixed_model_and_dedicated_token_ceiling(self):
+        from apps.ai_agents import claude_provider as claude_provider_module
+        from apps.ai_agents.claude_provider import (
+            CLAUDE_EVIDENCE_ALIGNMENT_MAX_TOKENS,
+            CLAUDE_MAX_RETRIES,
+            CLAUDE_MAX_TOKENS,
+            CLAUDE_MODEL,
+            CLAUDE_TIMEOUT_SECONDS,
+            make_claude_evidence_alignment_explanation_provider,
+        )
+
+        self.assertEqual(CLAUDE_EVIDENCE_ALIGNMENT_MAX_TOKENS, 512)
+        self.assertEqual(CLAUDE_MAX_TOKENS, 1024)
+        self.assertEqual(CLAUDE_MODEL, "claude-haiku-4-5-20251001")
+        self.assertEqual(CLAUDE_TIMEOUT_SECONDS, 15)
+        self.assertEqual(CLAUDE_MAX_RETRIES, 0)
+
+        mock_response = _phase3_fake_message(text=_phase3_provider_output_json())
+        with patch(
+            "apps.ai_agents.claude_provider.anthropic.Anthropic"
+        ) as mock_cls:
+            mock_cls.return_value.messages.create.return_value = mock_response
+            provider = make_claude_evidence_alignment_explanation_provider("sk-test")
+            provider(_phase3_allowlisted_payload())
+            mock_cls.assert_called_once_with(
+                api_key="sk-test",
+                timeout=CLAUDE_TIMEOUT_SECONDS,
+                max_retries=CLAUDE_MAX_RETRIES,
+            )
+            create_kwargs = mock_cls.return_value.messages.create.call_args.kwargs
+        self.assertEqual(create_kwargs["model"], CLAUDE_MODEL)
+        self.assertEqual(create_kwargs["max_tokens"], 512)
+        self.assertNotIn("temperature", create_kwargs)
+        self.assertEqual(claude_provider_module.CLAUDE_MAX_TOKENS, 1024)
+
+    def test_new_claude_factory_reuses_existing_truncation_and_null_byte_checks(self):
+        from apps.ai_agents.claude_provider import (
+            make_claude_evidence_alignment_explanation_provider,
+        )
+
+        payload = _phase3_allowlisted_payload()
+        with self.subTest(case="truncation"):
+            truncated = _phase3_fake_message(
+                text=_phase3_provider_output_json(),
+                stop_reason="max_tokens",
+            )
+            with patch(
+                "apps.ai_agents.claude_provider.anthropic.Anthropic"
+            ) as mock_cls:
+                mock_cls.return_value.messages.create.return_value = truncated
+                with patch(
+                    "apps.ai_agents.claude_provider._parse_claude_response",
+                    wraps=__import__(
+                        "apps.ai_agents.claude_provider",
+                        fromlist=["_parse_claude_response"],
+                    )._parse_claude_response,
+                ) as parse_spy:
+                    provider = make_claude_evidence_alignment_explanation_provider(
+                        "sk-test"
+                    )
+                    with self.assertRaises(ValueError) as ctx:
+                        provider(payload)
+                    self.assertIn("truncated", str(ctx.exception).lower())
+                    parse_spy.assert_called_once()
+
+        with self.subTest(case="null_byte"):
+            poisoned = _phase3_provider_output_json()
+            poisoned = poisoned[:10] + "\x00" + poisoned[10:]
+            null_response = _phase3_fake_message(text=poisoned)
+            with patch(
+                "apps.ai_agents.claude_provider.anthropic.Anthropic"
+            ) as mock_cls:
+                mock_cls.return_value.messages.create.return_value = null_response
+                with patch(
+                    "apps.ai_agents.claude_provider._parse_claude_response",
+                    wraps=__import__(
+                        "apps.ai_agents.claude_provider",
+                        fromlist=["_parse_claude_response"],
+                    )._parse_claude_response,
+                ) as parse_spy:
+                    provider = make_claude_evidence_alignment_explanation_provider(
+                        "sk-test"
+                    )
+                    with self.assertRaises(ValueError) as ctx:
+                        provider(payload)
+                    self.assertIn("null", str(ctx.exception).lower())
+                    parse_spy.assert_called_once()
+
+    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=False)
+    def test_compose_provider_returns_none_when_flag_disabled(self):
+        from apps.ai_agents import provider_factory
+
+        with (
+            patch.object(
+                provider_factory,
+                "live_providers_permitted",
+                return_value=True,
+            ) as live_gate,
+            patch.object(provider_factory, "_api_key") as api_key,
+            patch.object(
+                provider_factory,
+                "make_claude_evidence_alignment_explanation_provider",
+            ) as make_factory,
+            patch.object(
+                provider_factory,
+                "make_claude_provider",
+                wraps=provider_factory.make_claude_provider,
+            ) as fit_factory,
+            patch.object(
+                provider_factory,
+                "make_claude_cv_tailoring_provider",
+                wraps=provider_factory.make_claude_cv_tailoring_provider,
+            ) as cv_factory,
+        ):
+            result = provider_factory.compose_evidence_alignment_explanation_provider()
+            self.assertIsNone(result)
+            live_gate.assert_not_called()
+            api_key.assert_not_called()
+            make_factory.assert_not_called()
+            # Existing composers remain independently gated by live_providers_permitted.
+            with patch.object(
+                provider_factory,
+                "live_providers_permitted",
+                return_value=False,
+            ):
+                self.assertIsNone(provider_factory.compose_fit_scoring_provider())
+                self.assertIsNone(provider_factory.compose_cv_tailoring_provider())
+            fit_factory.assert_not_called()
+            cv_factory.assert_not_called()
+
+    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    def test_compose_provider_returns_none_when_live_not_permitted(self):
+        from apps.ai_agents import provider_factory
+
+        with (
+            patch.object(
+                provider_factory,
+                "live_providers_permitted",
+                return_value=False,
+            ) as live_gate,
+            patch.object(
+                provider_factory,
+                "make_claude_evidence_alignment_explanation_provider",
+            ) as make_factory,
+            patch(
+                "apps.ai_agents.claude_provider.anthropic.Anthropic"
+            ) as anthropic_cls,
+        ):
+            result = provider_factory.compose_evidence_alignment_explanation_provider()
+            self.assertIsNone(result)
+            live_gate.assert_called_once()
+            make_factory.assert_not_called()
+            anthropic_cls.assert_not_called()
+
+    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    def test_compose_provider_gate_does_not_duplicate_key_check(self):
+        from apps.ai_agents import provider_factory
+
+        source = inspect.getsource(
+            provider_factory.compose_evidence_alignment_explanation_provider
+        )
+        self.assertIn("AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED", source)
+        self.assertIn("live_providers_permitted()", source)
+        self.assertIn("_api_key()", source)
+        self.assertNotIn("if not _api_key()", source)
+        self.assertNotIn("if not bool(_api_key())", source)
+
+        sentinel = object()
+        with (
+            patch.object(
+                provider_factory,
+                "live_providers_permitted",
+                return_value=True,
+            ) as live_gate,
+            patch.object(
+                provider_factory,
+                "_api_key",
+                return_value="sk-test-key",
+            ) as api_key,
+            patch.object(
+                provider_factory,
+                "make_claude_evidence_alignment_explanation_provider",
+                return_value=sentinel,
+            ) as make_factory,
+        ):
+            result = provider_factory.compose_evidence_alignment_explanation_provider()
+            self.assertIs(result, sentinel)
+            live_gate.assert_called_once()
+            api_key.assert_called_once()
+            make_factory.assert_called_once_with("sk-test-key")
+
+    def test_existing_fit_and_cv_factories_unchanged(self):
+        from apps.ai_agents import provider_factory
+        from apps.ai_agents.claude_provider import (
+            CLAUDE_EVIDENCE_ALIGNMENT_MAX_TOKENS,
+            CLAUDE_MAX_TOKENS,
+            make_claude_cv_tailoring_provider,
+            make_claude_evidence_alignment_explanation_provider,
+            make_claude_provider,
+        )
+
+        self.assertTrue(callable(provider_factory.compose_fit_scoring_provider))
+        self.assertTrue(callable(provider_factory.compose_cv_tailoring_provider))
+        self.assertTrue(
+            callable(provider_factory.compose_evidence_alignment_explanation_provider)
+        )
+        self.assertEqual(CLAUDE_MAX_TOKENS, 1024)
+        self.assertEqual(CLAUDE_EVIDENCE_ALIGNMENT_MAX_TOKENS, 512)
+        self.assertIsNot(
+            make_claude_provider,
+            make_claude_evidence_alignment_explanation_provider,
+        )
+        self.assertIsNot(
+            make_claude_cv_tailoring_provider,
+            make_claude_evidence_alignment_explanation_provider,
+        )
+
+        with override_settings(
+            AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=False,
+            AI_EXPLANATION_PROVIDER="live",
+            ANTHROPIC_API_KEY="sk-test-key",
+        ):
+            with (
+                patch.object(
+                    provider_factory,
+                    "make_claude_provider",
+                    return_value=object(),
+                ) as fit_make,
+                patch.object(
+                    provider_factory,
+                    "make_claude_cv_tailoring_provider",
+                    return_value=object(),
+                ) as cv_make,
+                patch.object(
+                    provider_factory,
+                    "make_claude_evidence_alignment_explanation_provider",
+                ) as evidence_make,
+            ):
+                fit = provider_factory.compose_fit_scoring_provider()
+                cv = provider_factory.compose_cv_tailoring_provider()
+                evidence = (
+                    provider_factory.compose_evidence_alignment_explanation_provider()
+                )
+                self.assertIsNotNone(fit)
+                self.assertIsNotNone(cv)
+                self.assertIsNone(evidence)
+                fit_make.assert_called_once()
+                cv_make.assert_called_once()
+                evidence_make.assert_not_called()
+
+        fit_source = inspect.getsource(provider_factory.compose_fit_scoring_provider)
+        cv_source = inspect.getsource(provider_factory.compose_cv_tailoring_provider)
+        self.assertNotIn(
+            "compose_evidence_alignment_explanation_provider",
+            fit_source,
+        )
+        self.assertNotIn(
+            "make_claude_evidence_alignment_explanation_provider",
+            fit_source,
+        )
+        self.assertNotIn(
+            "AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED",
+            fit_source,
+        )
+        self.assertNotIn(
+            "AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED",
+            cv_source,
+        )
+
+        self.assertEqual(
+            getattr(settings, "AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED"),
+            False,
+        )

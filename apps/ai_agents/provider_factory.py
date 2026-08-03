@@ -13,6 +13,7 @@ from .claude_provider import (
     ClaudeTelemetryProvider,
     make_claude_cv_tailoring_provider,
     make_claude_cv_tailoring_telemetry_provider,
+    make_claude_evidence_alignment_explanation_provider,
     make_claude_fit_telemetry_provider,
     make_claude_provider,
 )
@@ -76,3 +77,17 @@ def compose_cv_tailoring_telemetry_provider() -> ClaudeTelemetryProvider | None:
     if not live_providers_permitted():
         return None
     return make_claude_cv_tailoring_telemetry_provider(_api_key())
+
+
+def compose_evidence_alignment_explanation_provider() -> ExplanationProvider | None:
+    """Return the evidence-alignment explanation provider, or None when gated off.
+
+    Requires the dedicated feature flag and live_providers_permitted(). Does not
+    add a separate key-presence Boolean gate; _api_key() is used only to obtain
+    the already-permitted key for factory construction.
+    """
+    if not getattr(settings, "AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED", False):
+        return None
+    if not live_providers_permitted():
+        return None
+    return make_claude_evidence_alignment_explanation_provider(_api_key())
