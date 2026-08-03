@@ -5,8 +5,10 @@ Pure/domain and mocked-provider boundary tests. No real provider or network I/O.
 
 from __future__ import annotations
 
+import ast
 import inspect
 import json
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -1988,3 +1990,247 @@ class Sprint114Phase4EvidenceAlignmentExplanationRouteTests(TestCase):
         )
         self.assertFalse(blocked.context["explanation_allowed"])
         self.assertNotContains(blocked, "Generate advisory explanation")
+
+
+class Sprint114Phase5BoundaryAndClaimSafetyRegressionTests(TestCase):
+    """Sprint 114 Phase 5: provider-boundary and claim-safety regressions."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="p114p5_owner",
+            password="pass",
+        )
+        self.url = reverse("skill_gaps:jd_gap_analysis")
+        self.client.login(username="p114p5_owner", password="pass")
+
+    def _create_entry(self, skill_name, evidence_level):
+        return SkillEntry.objects.create(
+            user=self.owner,
+            skill_name=skill_name,
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=evidence_level,
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+
+    def _permitted_requirements(self):
+        self._create_entry("Python", SkillEntry.EvidenceLevel.VERIFIED)
+        self._create_entry(
+            "Snowflake",
+            SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        return "Python\nSnowflake\nGraphQL"
+
+    def _advisory_section_html(self, content: str) -> str:
+        start = content.find('aria-label="Advisory explanation"')
+        self.assertNotEqual(start, -1)
+        end = content.find("</section>", start)
+        self.assertNotEqual(end, -1)
+        return content[start:end]
+
+    def test_no_direct_provider_construction_or_key_access_outside_boundary(self):
+        import apps.ai_agents.claude_provider as claude_provider
+        import apps.ai_agents.provider_factory as provider_factory
+        import apps.skill_gaps.deterministic_explanation_payload as payload_mod
+        import apps.skill_gaps.deterministic_gap_views as views_mod
+        import apps.skill_gaps.explanation_output_validator as validator_mod
+
+        view_source = inspect.getsource(views_mod)
+        view_tree = ast.parse(view_source)
+        payload_source = inspect.getsource(payload_mod)
+        validator_source = inspect.getsource(validator_mod)
+        factory_source = inspect.getsource(provider_factory)
+        claude_source = inspect.getsource(claude_provider)
+
+        self.assertIn(
+            "compose_evidence_alignment_explanation_provider",
+            view_source,
+        )
+        self.assertIn(
+            "from apps.ai_agents.provider_factory import",
+            view_source,
+        )
+        self.assertNotIn(
+            "make_claude_evidence_alignment_explanation_provider",
+            view_source,
+        )
+        self.assertNotIn("import anthropic", view_source)
+        self.assertNotIn("from anthropic", view_source)
+        self.assertNotIn("anthropic.Anthropic", view_source)
+        self.assertNotIn("_api_key", view_source)
+        self.assertNotIn("ANTHROPIC_API_KEY", view_source)
+        self.assertNotIn("os.getenv", view_source)
+        self.assertNotIn("os.environ", view_source)
+        self.assertNotIn("decouple.config", view_source)
+        self.assertNotIn("from decouple", view_source)
+
+        imported_names: set[str] = set()
+        for node in ast.walk(view_tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imported_names.add(alias.name.split(".", 1)[0])
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    imported_names.add(node.module.split(".", 1)[0])
+                for alias in node.names:
+                    imported_names.add(alias.name)
+        self.assertNotIn("anthropic", imported_names)
+        self.assertIn(
+            "compose_evidence_alignment_explanation_provider",
+            imported_names,
+        )
+        self.assertNotIn(
+            "make_claude_evidence_alignment_explanation_provider",
+            imported_names,
+        )
+
+        for pure_source, label in (
+            (payload_source, "payload"),
+            (validator_source, "validator"),
+        ):
+            with self.subTest(module=label):
+                self.assertNotIn("compose_evidence_alignment", pure_source)
+                self.assertNotIn("make_claude_", pure_source)
+                self.assertNotIn("import anthropic", pure_source)
+                self.assertNotIn("from anthropic", pure_source)
+                self.assertNotIn("anthropic.Anthropic", pure_source)
+                self.assertNotIn("_api_key", pure_source)
+                self.assertNotIn("ANTHROPIC_API_KEY", pure_source)
+                self.assertNotIn("os.getenv", pure_source)
+                self.assertNotIn("os.environ", pure_source)
+                self.assertNotIn("decouple.config", pure_source)
+                self.assertNotIn("django.conf", pure_source)
+                self.assertNotIn("from django.conf", pure_source)
+                self.assertNotIn("django.db", pure_source)
+                self.assertNotIn(".objects.", pure_source)
+                self.assertNotIn("SkillEntry", pure_source)
+
+        self.assertIn(
+            "make_claude_evidence_alignment_explanation_provider",
+            factory_source,
+        )
+        self.assertIn(
+            "compose_evidence_alignment_explanation_provider",
+            factory_source,
+        )
+        self.assertIn("def _api_key", factory_source)
+        self.assertIn(
+            "make_claude_evidence_alignment_explanation_provider(_api_key())",
+            factory_source,
+        )
+        self.assertNotIn("anthropic.Anthropic", factory_source)
+        self.assertNotIn("import anthropic", factory_source)
+
+        self.assertIn("import anthropic", claude_source)
+        self.assertIn("anthropic.Anthropic", claude_source)
+        self.assertIn(
+            "def make_claude_evidence_alignment_explanation_provider",
+            claude_source,
+        )
+        self.assertIn("def _new_client", claude_source)
+
+    def test_new_safety_wording_present_on_advisory_surface(self):
+        import apps.skill_gaps.deterministic_gap_views as views_mod
+
+        template_path = (
+            Path(settings.BASE_DIR) / "templates" / "skill_gaps" / "jd_gap_analysis.html"
+        )
+        template_source = template_path.read_text(encoding="utf-8")
+        self.assertNotIn("|safe", template_source)
+        self.assertNotIn("{% autoescape off %}", template_source)
+        self.assertNotIn("{% autoescape false %}", template_source)
+        self.assertNotIn("mark_safe", template_source)
+
+        view_source = inspect.getsource(views_mod)
+        self.assertNotIn("mark_safe", view_source)
+        self.assertNotIn("format_html", view_source)
+        self.assertNotIn("conditional_escape", view_source)
+        self.assertNotIn("SafeString", view_source)
+        self.assertNotIn("SafeData", view_source)
+
+        requirements = self._permitted_requirements()
+
+        before = self.client.post(self.url, {"requirements": requirements})
+        self.assertEqual(before.status_code, 200)
+        self.assertTrue(before.context["explanation_allowed"])
+        self.assertFalse(before.context["explanation_requested"])
+        before_content = before.content.decode("utf-8")
+        before_advisory = self._advisory_section_html(before_content)
+        for statement in NEW_SAFETY_STATEMENTS:
+            self.assertEqual(before_advisory.count(statement), 1)
+        self.assertEqual(before_content.count(FALLBACK_STATEMENT), 0)
+        self.assertContains(before, "Generate advisory explanation")
+        for statement in EXISTING_SIX_SAFETY_STATEMENTS:
+            self.assertEqual(before_content.count(statement), 1)
+
+        escapable_explanation = (
+            "Python & SQL evidence is represented by the supplied records."
+        )
+
+        def fake_provider(payload):
+            raw = _phase4_valid_provider_output(payload)
+            if raw["verified_evidence"]:
+                raw["verified_evidence"][0]["explanation"] = escapable_explanation
+            return raw
+
+        with patch(
+            "apps.skill_gaps.deterministic_gap_views."
+            "compose_evidence_alignment_explanation_provider",
+            return_value=fake_provider,
+        ):
+            success = self.client.post(
+                self.url,
+                {
+                    "requirements": requirements,
+                    "generate_explanation": "1",
+                },
+            )
+        self.assertEqual(success.status_code, 200)
+        advisory = success.context["advisory_explanation"]
+        self.assertIsNotNone(advisory)
+        self.assertFalse(success.context["advisory_explanation_failed"])
+        self.assertEqual(
+            advisory["verified_evidence"][0]["explanation"],
+            escapable_explanation,
+        )
+        success_content = success.content.decode("utf-8")
+        success_advisory = self._advisory_section_html(success_content)
+        for statement in NEW_SAFETY_STATEMENTS:
+            self.assertEqual(success_advisory.count(statement), 1)
+        self.assertEqual(success_content.count(FALLBACK_STATEMENT), 0)
+        self.assertNotContains(success, "Generate advisory explanation")
+        self.assertIn("Python &amp; SQL", success_advisory)
+        self.assertNotIn(escapable_explanation, success_advisory)
+        self.assertNotIn('"rule_version"', success_content)
+        self.assertNotIn("<<<UNTRUSTED_JOB_POSTING_DATA_BEGIN>>>", success_content)
+        self.assertNotIn("claude-haiku", success_content.lower())
+        self.assertNotIn("anthropic", success_content.lower())
+        self.assertNotIn("api_key", success_content.lower())
+        self.assertNotIn("runtimeerror", success_content.lower())
+        self.assertNotIn("|safe", success_advisory)
+        self.assertNotIn("mark_safe", success_advisory)
+
+        with patch(
+            "apps.skill_gaps.deterministic_gap_views."
+            "compose_evidence_alignment_explanation_provider",
+            return_value=None,
+        ):
+            failed = self.client.post(
+                self.url,
+                {
+                    "requirements": requirements,
+                    "generate_explanation": "1",
+                },
+            )
+        self.assertEqual(failed.status_code, 200)
+        self.assertIsNone(failed.context["advisory_explanation"])
+        self.assertTrue(failed.context["advisory_explanation_failed"])
+        failed_content = failed.content.decode("utf-8")
+        failed_advisory = self._advisory_section_html(failed_content)
+        for statement in NEW_SAFETY_STATEMENTS:
+            self.assertEqual(failed_advisory.count(statement), 1)
+        self.assertEqual(failed_content.count(FALLBACK_STATEMENT), 1)
+        self.assertNotContains(failed, "Generate advisory explanation")
+        self.assertNotIn("runtimeerror", failed_content.lower())
+        self.assertNotIn("traceback", failed_content.lower())
+        self.assertNotIn("ANTHROPIC_API_KEY", failed_content)
+        self.assertNotIn("|safe", failed_advisory)
