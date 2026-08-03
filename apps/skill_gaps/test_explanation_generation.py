@@ -8,13 +8,17 @@ from __future__ import annotations
 import inspect
 import json
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.conf import settings
-from django.test import SimpleTestCase, override_settings
+from django.contrib.auth.models import User
+from django.test import SimpleTestCase, TestCase, override_settings
+from django.urls import reverse
 
+from apps.applications.models import JobApplication
 from apps.skill_gaps.deterministic_evidence_alignment import (
     EvidenceAlignmentOutcome,
+    EvidenceAlignmentSummary,
     summarise_evidence_alignment,
 )
 from apps.skill_gaps.deterministic_explanation_payload import (
@@ -34,6 +38,8 @@ from apps.skill_gaps.explanation_output_validator import (
     EvidenceAlignmentExplanationValidationError,
     validate_evidence_alignment_explanation_output,
 )
+from apps.skill_gaps.models import ApplicationSkillGap
+from apps.skill_ledger.models import SkillEntry
 
 EXPECTED_RULE_VERSION = "evidence_alignment_v1"
 
@@ -1373,3 +1379,612 @@ class Sprint114Phase3EvidenceAlignmentProviderBoundaryTests(SimpleTestCase):
             getattr(settings, "AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED"),
             False,
         )
+
+
+NEW_SAFETY_STATEMENTS = (
+    (
+        "AI-generated explanations are advisory and may be incomplete or "
+        "contain errors. The deterministic evidence-alignment result above "
+        "remains authoritative; this explanation does not add, change or "
+        "verify any evidence."
+    ),
+    "This explanation is generated only when you request it and is not saved.",
+)
+
+FALLBACK_STATEMENT = (
+    "The advisory explanation could not be generated. Your deterministic "
+    "evidence-alignment result remains available below."
+)
+
+EXISTING_SIX_SAFETY_STATEMENTS = (
+    (
+        "Skill gap signals are advisory only. They indicate learning "
+        "priorities, not current proficiency."
+    ),
+    (
+        "Learning recommendations are planning aids. A recommendation does "
+        "not mean the skill is portfolio-evidenced or ready to claim."
+    ),
+    (
+        "Before adding a skill to your CV or public profile, ensure it is "
+        "supported by project evidence, tests, screenshots, or prior work "
+        "experience."
+    ),
+    (
+        "This comparison uses your current Skill Ledger records only. It "
+        "does not verify professional proficiency, seniority or employer "
+        "suitability."
+    ),
+    (
+        "This analysis is transient. Submitted requirements and results "
+        "are not saved."
+    ),
+    (
+        "This summary describes evidence alignment only. It does not verify "
+        "application readiness, candidate strength, hiring likelihood or "
+        "guaranteed employability."
+    ),
+)
+
+
+def _phase4_valid_provider_output(payload: dict) -> dict:
+    """Build validator-passing provider output from an allowlisted payload."""
+    verified: list[dict] = []
+    development: list[dict] = []
+    missing: list[dict] = []
+    for req in payload["requirements"]:
+        index = req["requirement_index"]
+        skill = req.get("matched_skill_name")
+        classification = req["classification"]
+        if classification == "VERIFIED_MATCH":
+            verified.append(
+                {
+                    "requirement_index": index,
+                    "skill_names": [skill],
+                    "explanation": (
+                        f"{skill} matches verified Skill Ledger evidence."
+                    ),
+                }
+            )
+        elif classification in {"LEARNING_TARGET_MATCH", "STUDYING_MATCH"}:
+            development.append(
+                {
+                    "requirement_index": index,
+                    "skill_names": [skill],
+                    "evidence_level": req["matched_evidence_level"],
+                    "explanation": (
+                        f"{skill} is present as a development Skill Ledger record."
+                    ),
+                }
+            )
+        elif classification == "NO_EVIDENCE_GAP":
+            missing.append(
+                {
+                    "requirement_index": index,
+                    "explanation": (
+                        "No current Skill Ledger evidence for this requirement."
+                    ),
+                }
+            )
+    return {
+        "summary": (
+            "Deterministic evidence alignment explained from supplied "
+            "Skill Ledger records only."
+        ),
+        "verified_evidence": verified,
+        "development_evidence": development,
+        "missing_evidence": missing,
+    }
+
+
+class Sprint114Phase4EvidenceAlignmentExplanationRouteTests(TestCase):
+    """Explicit second-POST advisory explanation route and UI (Phase 4)."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="p114p4_owner",
+            password="pass",
+        )
+        self.url = reverse("skill_gaps:jd_gap_analysis")
+        self.client.login(username="p114p4_owner", password="pass")
+
+    def _create_entry(self, skill_name, evidence_level):
+        return SkillEntry.objects.create(
+            user=self.owner,
+            skill_name=skill_name,
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=evidence_level,
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+
+    def _permitted_requirements(self):
+        self._create_entry("Python", SkillEntry.EvidenceLevel.VERIFIED)
+        self._create_entry(
+            "Snowflake",
+            SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        return "Python\nSnowflake\nGraphQL"
+
+    def test_get_invalid_post_and_standard_analysis_post_do_not_compose_provider(self):
+        self._create_entry("Python", SkillEntry.EvidenceLevel.VERIFIED)
+        with (
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "compose_evidence_alignment_explanation_provider"
+            ) as compose,
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "build_evidence_alignment_explanation_payload"
+            ) as build_payload,
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "validate_evidence_alignment_explanation_output"
+            ) as validate_output,
+        ):
+            get_response = self.client.get(self.url)
+            invalid_response = self.client.post(
+                self.url,
+                {"requirements": "\n\n"},
+            )
+            analysis_response = self.client.post(
+                self.url,
+                {"requirements": "Python"},
+            )
+            compose.assert_not_called()
+            build_payload.assert_not_called()
+            validate_output.assert_not_called()
+
+        self.assertEqual(get_response.status_code, 200)
+        self.assertFalse(get_response.context["explanation_requested"])
+        self.assertFalse(get_response.context["explanation_allowed"])
+        self.assertIsNone(get_response.context["advisory_explanation"])
+        self.assertFalse(get_response.context["advisory_explanation_failed"])
+
+        self.assertEqual(invalid_response.status_code, 200)
+        self.assertTrue(invalid_response.context["form"].errors)
+        self.assertFalse(invalid_response.context["analysis_performed"])
+        self.assertFalse(invalid_response.context["explanation_requested"])
+
+        self.assertEqual(analysis_response.status_code, 200)
+        self.assertTrue(analysis_response.context["analysis_performed"])
+        self.assertIsNotNone(analysis_response.context["summary"])
+        self.assertFalse(analysis_response.context["explanation_requested"])
+        self.assertTrue(analysis_response.context["explanation_allowed"])
+        self.assertContains(analysis_response, "Generate advisory explanation")
+
+    def test_explicit_explanation_post_revalidates_and_recomputes_fresh_result(self):
+        from apps.skill_gaps.deterministic_gap_views import (
+            classify_requirements,
+        )
+        from apps.skill_gaps.deterministic_gap_views import (
+            summarise_evidence_alignment as summarise_fn,
+        )
+        from apps.skill_gaps.forms import JDGapAnalysisForm
+
+        requirements = self._permitted_requirements()
+        first = self.client.post(self.url, {"requirements": requirements})
+        self.assertEqual(first.status_code, 200)
+        self.assertTrue(first.context["analysis_performed"])
+        self.assertFalse(first.context["explanation_requested"])
+
+        with (
+            patch(
+                "apps.skill_gaps.deterministic_gap_views.classify_requirements",
+                wraps=classify_requirements,
+            ) as classify_spy,
+            patch(
+                "apps.skill_gaps.deterministic_gap_views.summarise_evidence_alignment",
+                wraps=summarise_fn,
+            ) as summarise_spy,
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "_user_skill_ledger_evidence",
+                wraps=__import__(
+                    "apps.skill_gaps.deterministic_gap_views",
+                    fromlist=["_user_skill_ledger_evidence"],
+                )._user_skill_ledger_evidence,
+            ) as evidence_spy,
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "compose_evidence_alignment_explanation_provider",
+                return_value=None,
+            ),
+        ):
+            second = self.client.post(
+                self.url,
+                {
+                    "requirements": requirements,
+                    "generate_explanation": "1",
+                },
+            )
+            classify_spy.assert_called_once()
+            summarise_spy.assert_called_once()
+            evidence_spy.assert_called_once()
+
+        self.assertEqual(second.status_code, 200)
+        self.assertIsInstance(second.context["form"], JDGapAnalysisForm)
+        self.assertTrue(second.context["form"].is_valid())
+        self.assertTrue(second.context["explanation_requested"])
+        self.assertTrue(second.context["analysis_performed"])
+        self.assertIsNotNone(second.context["summary"])
+        self.assertIsNotNone(second.context["results"])
+        self.assertNotIn("advisory_explanation", second.client.session)
+        self.assertNotIn("evidence_alignment_summary", second.client.session)
+        content = second.content.decode("utf-8")
+        self.assertNotIn("hidden json", content.lower())
+        self.assertNotIn('name="summary"', content)
+
+    def test_explicit_explanation_post_calls_allowlisted_pipeline_once(self):
+        from apps.skill_gaps.deterministic_explanation_payload import (
+            build_evidence_alignment_explanation_payload as real_builder,
+        )
+        from apps.skill_gaps.explanation_output_validator import (
+            validate_evidence_alignment_explanation_output as real_validator,
+        )
+
+        requirements = self._permitted_requirements()
+        captured: dict = {}
+
+        def fake_provider(payload):
+            captured["payload"] = payload
+            raw = _phase4_valid_provider_output(payload)
+            captured["raw"] = raw
+            return raw
+
+        provider = MagicMock(side_effect=fake_provider)
+
+        def capturing_builder(summary):
+            payload = real_builder(summary)
+            captured["built"] = payload
+            return payload
+
+        def capturing_validator(raw_output, provider_payload):
+            captured["validated_args"] = (raw_output, provider_payload)
+            return real_validator(raw_output, provider_payload)
+
+        with (
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "compose_evidence_alignment_explanation_provider",
+                return_value=provider,
+            ) as compose,
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "build_evidence_alignment_explanation_payload",
+                side_effect=capturing_builder,
+            ) as build_payload,
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "validate_evidence_alignment_explanation_output",
+                side_effect=capturing_validator,
+            ) as validate_output,
+        ):
+            response = self.client.post(
+                self.url,
+                {
+                    "requirements": requirements,
+                    "generate_explanation": "1",
+                },
+            )
+            compose.assert_called_once()
+            build_payload.assert_called_once()
+            provider.assert_called_once()
+            validate_output.assert_called_once()
+            self.assertIs(provider.call_args.args[0], captured["built"])
+            self.assertIs(captured["payload"], captured["built"])
+            self.assertIs(captured["validated_args"][0], captured["raw"])
+            self.assertIs(captured["validated_args"][1], captured["built"])
+
+        self.assertEqual(response.status_code, 200)
+        advisory = response.context["advisory_explanation"]
+        self.assertIsInstance(advisory, dict)
+        self.assertEqual(advisory["summary"], captured["raw"]["summary"])
+        self.assertIsNot(advisory, captured["raw"])
+        content = response.content.decode("utf-8")
+        self.assertNotIn('"rule_version"', content)
+        self.assertNotIn(json.dumps(captured["raw"]), content)
+        self.assertNotIn("<<<UNTRUSTED_JOB_POSTING_DATA_BEGIN>>>", content)
+
+    def test_manual_review_and_no_accepted_outcomes_block_generation(self):
+        cases = {
+            "MANUAL_REVIEW_REQUIRED": {
+                "setup": lambda: self._create_entry(
+                    "Python",
+                    SkillEntry.EvidenceLevel.VERIFIED,
+                ),
+                "requirements": "Senior Python",
+                "outcome": EvidenceAlignmentOutcome.MANUAL_REVIEW_REQUIRED,
+                "patch_summary": None,
+            },
+            "NO_ACCEPTED_REQUIREMENTS": {
+                "setup": lambda: None,
+                "requirements": "Python",
+                "outcome": EvidenceAlignmentOutcome.NO_ACCEPTED_REQUIREMENTS,
+                "patch_summary": EvidenceAlignmentSummary(
+                    rule_version=EXPECTED_RULE_VERSION,
+                    outcome=EvidenceAlignmentOutcome.NO_ACCEPTED_REQUIREMENTS,
+                    triggered_rule="NO_ACCEPTED_REQUIREMENTS",
+                    total_requirements=0,
+                    verified_count=0,
+                    learning_target_count=0,
+                    studying_count=0,
+                    no_match_count=0,
+                    explicit_no_evidence_count=0,
+                    no_current_evidence_count=0,
+                    review_required_count=0,
+                    unresolved_requirement_indexes=(),
+                    per_requirement_results=(),
+                ),
+            },
+        }
+        for label, case in cases.items():
+            with self.subTest(outcome=label):
+                SkillEntry.objects.filter(user=self.owner).delete()
+                case["setup"]()
+                compose_patch = patch(
+                    "apps.skill_gaps.deterministic_gap_views."
+                    "compose_evidence_alignment_explanation_provider"
+                )
+                build_patch = patch(
+                    "apps.skill_gaps.deterministic_gap_views."
+                    "build_evidence_alignment_explanation_payload"
+                )
+                validate_patch = patch(
+                    "apps.skill_gaps.deterministic_gap_views."
+                    "validate_evidence_alignment_explanation_output"
+                )
+                summary_patch = None
+                if case["patch_summary"] is not None:
+                    summary_patch = patch(
+                        "apps.skill_gaps.deterministic_gap_views."
+                        "summarise_evidence_alignment",
+                        return_value=case["patch_summary"],
+                    )
+                with (
+                    compose_patch as compose,
+                    build_patch as build_payload,
+                    validate_patch as validate_output,
+                ):
+                    if summary_patch is not None:
+                        with summary_patch:
+                            response = self.client.post(
+                                self.url,
+                                {
+                                    "requirements": case["requirements"],
+                                    "generate_explanation": "1",
+                                },
+                            )
+                    else:
+                        response = self.client.post(
+                            self.url,
+                            {
+                                "requirements": case["requirements"],
+                                "generate_explanation": "1",
+                            },
+                        )
+                    compose.assert_not_called()
+                    build_payload.assert_not_called()
+                    validate_output.assert_not_called()
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTrue(response.context["explanation_requested"])
+                self.assertFalse(response.context["explanation_allowed"])
+                self.assertEqual(response.context["summary"].outcome, case["outcome"])
+                self.assertIsNone(response.context["advisory_explanation"])
+                self.assertFalse(response.context["advisory_explanation_failed"])
+                self.assertNotContains(response, "Generate advisory explanation")
+                self.assertNotContains(response, FALLBACK_STATEMENT)
+
+    def test_disabled_failing_and_invalid_provider_results_use_single_fallback(self):
+        requirements = self._permitted_requirements()
+        scenarios = {
+            "composer_none": {
+                "compose_return": None,
+                "provider": None,
+            },
+            "provider_raises": {
+                "compose_return": "callable",
+                "provider": MagicMock(side_effect=RuntimeError("boom")),
+            },
+            "invalid_output": {
+                "compose_return": "callable",
+                "provider": MagicMock(
+                    return_value={
+                        "summary": "bad",
+                        "verified_evidence": [],
+                        "development_evidence": [],
+                        "missing_evidence": [],
+                        "extra_field": "rejected",
+                    }
+                ),
+            },
+        }
+        for label, scenario in scenarios.items():
+            with self.subTest(case=label):
+                if scenario["compose_return"] is None:
+                    compose_target = None
+                else:
+                    compose_target = scenario["provider"]
+                with patch(
+                    "apps.skill_gaps.deterministic_gap_views."
+                    "compose_evidence_alignment_explanation_provider",
+                    return_value=compose_target,
+                ):
+                    response = self.client.post(
+                        self.url,
+                        {
+                            "requirements": requirements,
+                            "generate_explanation": "1",
+                        },
+                    )
+                self.assertEqual(response.status_code, 200)
+                self.assertTrue(response.context["analysis_performed"])
+                self.assertIsNotNone(response.context["summary"])
+                self.assertContains(response, "Evidence alignment summary")
+                self.assertIsNone(response.context["advisory_explanation"])
+                self.assertTrue(response.context["advisory_explanation_failed"])
+                content = response.content.decode("utf-8")
+                self.assertEqual(content.count(FALLBACK_STATEMENT), 1)
+                self.assertNotIn("RuntimeError", content)
+                self.assertNotIn("boom", content)
+                self.assertNotIn("extra_field", content)
+                self.assertNotIn("EvidenceAlignmentExplanationValidationError", content)
+                self.assertNotIn("try again", content.lower())
+                self.assertNotIn("retry", content.lower())
+                self.assertNotIn("contact support", content.lower())
+                self.assertNotContains(response, "Generate advisory explanation")
+                if scenario["provider"] is not None:
+                    self.assertLessEqual(scenario["provider"].call_count, 1)
+
+    def test_successful_explanation_renders_exact_safety_copy_and_sections(self):
+        requirements = self._permitted_requirements()
+
+        def fake_provider(payload):
+            return _phase4_valid_provider_output(payload)
+
+        with patch(
+            "apps.skill_gaps.deterministic_gap_views."
+            "compose_evidence_alignment_explanation_provider",
+            return_value=fake_provider,
+        ):
+            response = self.client.post(
+                self.url,
+                {
+                    "requirements": requirements,
+                    "generate_explanation": "1",
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        advisory = response.context["advisory_explanation"]
+        self.assertIsNotNone(advisory)
+        content = response.content.decode("utf-8")
+        self.assertIn(advisory["summary"], content)
+        self.assertIn("Verified evidence", content)
+        self.assertIn("Development evidence", content)
+        self.assertIn("Missing evidence", content)
+        self.assertIn("Requirement 1:", content)
+        self.assertIn("Requirement 2:", content)
+        self.assertIn("Requirement 3:", content)
+        self.assertNotRegex(content, r"Requirement 0:")
+        for statement in NEW_SAFETY_STATEMENTS:
+            self.assertEqual(content.count(statement), 1)
+        advisory_start = content.find('aria-label="Advisory explanation"')
+        self.assertNotEqual(advisory_start, -1)
+        advisory_end = content.find("</section>", advisory_start)
+        self.assertNotEqual(advisory_end, -1)
+        advisory_html = content[advisory_start:advisory_end]
+        advisory_lower = advisory_html.lower()
+        for term in (
+            "score",
+            "percentage",
+            "confidence",
+            "probability",
+            "suitability",
+            "hiring",
+        ):
+            self.assertNotIn(term, advisory_lower)
+        for term in ("readiness", "qualification", "proficiency"):
+            # Allowed only inside the locked new safety statements.
+            outside = advisory_html
+            for statement in NEW_SAFETY_STATEMENTS:
+                outside = outside.replace(statement, "")
+            self.assertNotIn(term, outside.lower())
+        self.assertNotIn('"verified_evidence"', content)
+        self.assertNotIn("```", content)
+        self.assertNotIn("<script", advisory_lower)
+        self.assertNotContains(response, "Generate advisory explanation")
+        self.assertNotIn("|safe", advisory_html)
+
+    def test_explanation_request_is_transient_and_preserves_model_counts(self):
+        requirements = self._permitted_requirements()
+        before_skills = SkillEntry.objects.count()
+        before_apps = JobApplication.objects.count()
+        before_gaps = ApplicationSkillGap.objects.count()
+        session_keys_before = set(self.client.session.keys())
+
+        def fake_provider(payload):
+            return _phase4_valid_provider_output(payload)
+
+        with patch(
+            "apps.skill_gaps.deterministic_gap_views."
+            "compose_evidence_alignment_explanation_provider",
+            return_value=fake_provider,
+        ):
+            response = self.client.post(
+                self.url,
+                {
+                    "requirements": requirements,
+                    "generate_explanation": "1",
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(response.context["advisory_explanation"])
+        self.assertEqual(SkillEntry.objects.count(), before_skills)
+        self.assertEqual(JobApplication.objects.count(), before_apps)
+        self.assertEqual(ApplicationSkillGap.objects.count(), before_gaps)
+        self.assertEqual(set(self.client.session.keys()), session_keys_before)
+        content = response.content.decode("utf-8")
+        content_lower = content.lower()
+        self.assertNotIn("save analysis", content_lower)
+        self.assertNotIn("save explanation", content_lower)
+        self.assertNotIn("pre-fill add application", content_lower)
+        self.assertNotIn("submit application", content_lower)
+        self.assertNotIn("generate document", content_lower)
+        self.assertNotIn("export explanation", content_lower)
+        advisory_start = content.find('aria-label="Advisory explanation"')
+        self.assertNotEqual(advisory_start, -1)
+        advisory_end = content.find("</section>", advisory_start)
+        advisory_html = content[advisory_start:advisory_end].lower()
+        self.assertNotIn("download", advisory_html)
+        self.assertNotIn("save", advisory_html.replace("is not saved", ""))
+
+        follow_get = self.client.get(self.url)
+        self.assertEqual(follow_get.status_code, 200)
+        self.assertIsNone(follow_get.context["advisory_explanation"])
+        self.assertFalse(follow_get.context["explanation_requested"])
+        self.assertNotContains(follow_get, "Verified evidence")
+        self.assertNotContains(
+            follow_get,
+            "Deterministic evidence alignment explained from supplied",
+        )
+
+    def test_existing_route_form_results_links_and_safety_wording_remain(self):
+        from apps.skill_gaps.forms import JDGapAnalysisForm
+
+        self.assertEqual(self.url, "/skill-gaps/jd-gap-analysis/")
+        requirements = self._permitted_requirements()
+        response = self.client.post(self.url, {"requirements": requirements})
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.context["form"], JDGapAnalysisForm)
+        self.assertTrue(response.context["analysis_performed"])
+        self.assertIsNotNone(response.context["summary"])
+        self.assertTrue(response.context["results"])
+        self.assertContains(response, "Evidence alignment summary")
+        self.assertContains(response, "Analysis results")
+        self.assertContains(response, "Review Skill Ledger")
+        self.assertContains(response, reverse("skill_ledger:list"))
+        self.assertContains(response, "Add Skill Entry")
+        self.assertContains(response, reverse("skill_ledger:create"))
+        self.assertContains(response, "Edit Evidence")
+        content = response.content.decode("utf-8")
+        for statement in EXISTING_SIX_SAFETY_STATEMENTS:
+            self.assertEqual(content.count(statement), 1)
+        self.assertTrue(response.context["explanation_allowed"])
+        self.assertContains(response, "Generate advisory explanation")
+        self.assertContains(
+            response,
+            'name="generate_explanation"',
+        )
+        self.assertContains(response, 'value="1"')
+        for statement in NEW_SAFETY_STATEMENTS:
+            self.assertEqual(content.count(statement), 1)
+
+        # Blocked outcome hides the button.
+        SkillEntry.objects.filter(user=self.owner).delete()
+        self._create_entry("Python", SkillEntry.EvidenceLevel.VERIFIED)
+        blocked = self.client.post(
+            self.url,
+            {"requirements": "Senior Python"},
+        )
+        self.assertFalse(blocked.context["explanation_allowed"])
+        self.assertNotContains(blocked, "Generate advisory explanation")
