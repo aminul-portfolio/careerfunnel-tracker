@@ -8,6 +8,7 @@ provider, network or persistence access.
 from __future__ import annotations
 
 import re
+from enum import Enum
 from typing import Any
 
 from apps.skill_gaps.deterministic_evidence_alignment import (
@@ -111,17 +112,48 @@ _CLAIM_SAFETY_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 
 
+class ExplanationRejectionCode(str, Enum):
+    """Stable rejection categories produced by this validator."""
+
+    SCHEMA_MISMATCH = "SCHEMA_MISMATCH"
+    INVALID_FIELD_TYPE = "INVALID_FIELD_TYPE"
+    NULL_BYTE_DETECTED = "NULL_BYTE_DETECTED"
+    EMPTY_OUTPUT = "EMPTY_OUTPUT"
+    OVERSIZED_FIELD = "OVERSIZED_FIELD"
+    MARKUP_DETECTED = "MARKUP_DETECTED"
+    URL_DETECTED = "URL_DETECTED"
+    PROHIBITED_CLAIM = "PROHIBITED_CLAIM"
+    INVALID_INDEX = "INVALID_INDEX"
+    DUPLICATE_INDEX = "DUPLICATE_INDEX"
+    EVIDENCE_LEVEL_MISMATCH = "EVIDENCE_LEVEL_MISMATCH"
+    SKILL_NAME_MISMATCH = "SKILL_NAME_MISMATCH"
+    UNSUPPORTED_EVIDENCE = "UNSUPPORTED_EVIDENCE"
+    SEMANTIC_CONTRADICTION = "SEMANTIC_CONTRADICTION"
+    CATEGORY_MISMATCH = "CATEGORY_MISMATCH"
+
+
 class EvidenceAlignmentExplanationValidationError(ValueError):
     """Raised when explanation output fails schema, traceability or claim-safety."""
 
+    def __init__(
+        self,
+        message: str,
+        code: ExplanationRejectionCode | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
 
-def _fail(message: str) -> None:
-    raise EvidenceAlignmentExplanationValidationError(message)
+
+def _fail(message: str, code: ExplanationRejectionCode) -> None:
+    raise EvidenceAlignmentExplanationValidationError(message, code=code)
 
 
 def _require_dict(value: object, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
-        _fail(f"{label} must be a dictionary.")
+        _fail(
+            f"{label} must be a dictionary.",
+            ExplanationRejectionCode.INVALID_FIELD_TYPE,
+        )
     return value
 
 
@@ -132,18 +164,27 @@ def _require_exact_keys(
 ) -> None:
     keys = frozenset(mapping.keys())
     if keys != allowed:
-        _fail(f"{label} has invalid fields.")
+        _fail(
+            f"{label} has invalid fields.",
+            ExplanationRejectionCode.SCHEMA_MISMATCH,
+        )
 
 
 def _require_int(value: object, label: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
-        _fail(f"{label} must be an integer.")
+        _fail(
+            f"{label} must be an integer.",
+            ExplanationRejectionCode.INVALID_FIELD_TYPE,
+        )
     return value
 
 
 def _require_bool(value: object, label: str) -> bool:
     if not isinstance(value, bool):
-        _fail(f"{label} must be a boolean.")
+        _fail(
+            f"{label} must be a boolean.",
+            ExplanationRejectionCode.INVALID_FIELD_TYPE,
+        )
     return value
 
 
@@ -154,14 +195,26 @@ def _require_plain_string(
     max_length: int,
 ) -> str:
     if not isinstance(value, str):
-        _fail(f"{label} must be a string.")
+        _fail(
+            f"{label} must be a string.",
+            ExplanationRejectionCode.INVALID_FIELD_TYPE,
+        )
     if "\x00" in value:
-        _fail(f"{label} contains a null byte.")
+        _fail(
+            f"{label} contains a null byte.",
+            ExplanationRejectionCode.NULL_BYTE_DETECTED,
+        )
     stripped = value.strip()
     if not stripped:
-        _fail(f"{label} must be a non-empty string.")
+        _fail(
+            f"{label} must be a non-empty string.",
+            ExplanationRejectionCode.EMPTY_OUTPUT,
+        )
     if len(stripped) > max_length:
-        _fail(f"{label} exceeds maximum length.")
+        _fail(
+            f"{label} exceeds maximum length.",
+            ExplanationRejectionCode.OVERSIZED_FIELD,
+        )
     _assert_plain_text_and_claim_safe(stripped, label=label)
     return stripped
 
@@ -169,22 +222,40 @@ def _require_plain_string(
 def _assert_plain_text_and_claim_safe(text: str, *, label: str) -> None:
     for pattern in _MARKDOWN_OR_HTML_PATTERNS:
         if pattern.search(text):
-            _fail(f"{label} contains Markdown or HTML content.")
+            _fail(
+                f"{label} contains Markdown or HTML content.",
+                ExplanationRejectionCode.MARKUP_DETECTED,
+            )
     for pattern in _URL_PATTERNS:
         if pattern.search(text):
-            _fail(f"{label} contains a URL.")
+            _fail(
+                f"{label} contains a URL.",
+                ExplanationRejectionCode.URL_DETECTED,
+            )
     for pattern, code in _CLAIM_SAFETY_PATTERNS:
         if pattern.search(text):
-            _fail(f"{label} contains prohibited claim-safety content ({code}).")
+            _fail(
+                f"{label} contains prohibited claim-safety content ({code}).",
+                ExplanationRejectionCode.PROHIBITED_CLAIM,
+            )
 
 
 def _require_requirement_text(value: object) -> str:
     if not isinstance(value, str):
-        _fail("requirement_text must be a string.")
+        _fail(
+            "requirement_text must be a string.",
+            ExplanationRejectionCode.INVALID_FIELD_TYPE,
+        )
     if "\x00" in value:
-        _fail("requirement_text contains a null byte.")
+        _fail(
+            "requirement_text contains a null byte.",
+            ExplanationRejectionCode.NULL_BYTE_DETECTED,
+        )
     if not value.strip():
-        _fail("requirement_text must be a non-empty string.")
+        _fail(
+            "requirement_text must be a non-empty string.",
+            ExplanationRejectionCode.EMPTY_OUTPUT,
+        )
     return value
 
 
@@ -196,15 +267,24 @@ def _index_provider_payload(
 
     rule_version = payload.get("rule_version")
     if rule_version != RULE_VERSION:
-        _fail("provider_payload.rule_version is invalid.")
+        _fail(
+            "provider_payload.rule_version is invalid.",
+            ExplanationRejectionCode.SCHEMA_MISMATCH,
+        )
 
     overall_outcome = payload.get("overall_outcome")
     if not isinstance(overall_outcome, str) or overall_outcome not in _OUTCOME_VALUES:
-        _fail("provider_payload.overall_outcome is invalid.")
+        _fail(
+            "provider_payload.overall_outcome is invalid.",
+            ExplanationRejectionCode.SCHEMA_MISMATCH,
+        )
 
     requirements = payload.get("requirements")
     if not isinstance(requirements, list):
-        _fail("provider_payload.requirements must be a list.")
+        _fail(
+            "provider_payload.requirements must be a list.",
+            ExplanationRejectionCode.INVALID_FIELD_TYPE,
+        )
 
     indexed: dict[int, dict[str, Any]] = {}
     for item in requirements:
@@ -216,9 +296,15 @@ def _index_provider_payload(
         )
         index = _require_int(row.get("requirement_index"), "requirement_index")
         if index < 0:
-            _fail("requirement_index must be zero or greater.")
+            _fail(
+                "requirement_index must be zero or greater.",
+                ExplanationRejectionCode.INVALID_INDEX,
+            )
         if index in indexed:
-            _fail("provider_payload requirement indexes must be unique.")
+            _fail(
+                "provider_payload requirement indexes must be unique.",
+                ExplanationRejectionCode.DUPLICATE_INDEX,
+            )
 
         _require_requirement_text(row.get("requirement_text"))
 
@@ -227,11 +313,17 @@ def _index_provider_payload(
             not isinstance(classification, str)
             or classification not in _CLASSIFICATION_VALUES
         ):
-            _fail("provider_payload classification is invalid.")
+            _fail(
+                "provider_payload classification is invalid.",
+                ExplanationRejectionCode.SCHEMA_MISMATCH,
+            )
 
         match_basis = row.get("match_basis")
         if not isinstance(match_basis, str) or match_basis not in _MATCH_BASIS_VALUES:
-            _fail("provider_payload match_basis is invalid.")
+            _fail(
+                "provider_payload match_basis is invalid.",
+                ExplanationRejectionCode.SCHEMA_MISMATCH,
+            )
 
         matched_evidence_level = row.get("matched_evidence_level")
         if matched_evidence_level is not None:
@@ -239,12 +331,18 @@ def _index_provider_payload(
                 not isinstance(matched_evidence_level, str)
                 or matched_evidence_level not in _EVIDENCE_LEVEL_VALUES
             ):
-                _fail("matched_evidence_level is invalid.")
+                _fail(
+                    "matched_evidence_level is invalid.",
+                    ExplanationRejectionCode.EVIDENCE_LEVEL_MISMATCH,
+                )
 
         matched_skill_name = row.get("matched_skill_name")
         if matched_skill_name is not None:
             if not isinstance(matched_skill_name, str) or not matched_skill_name.strip():
-                _fail("matched_skill_name must be a non-empty string or None.")
+                _fail(
+                    "matched_skill_name must be a non-empty string or None.",
+                    ExplanationRejectionCode.INVALID_FIELD_TYPE,
+                )
             matched_skill_name = matched_skill_name.strip()
 
         unresolved = _require_bool(row.get("unresolved"), "unresolved")
@@ -260,9 +358,15 @@ def _index_provider_payload(
 
 def _require_list(value: object, label: str) -> list[Any]:
     if not isinstance(value, list):
-        _fail(f"{label} must be a list.")
+        _fail(
+            f"{label} must be a list.",
+            ExplanationRejectionCode.INVALID_FIELD_TYPE,
+        )
     if len(value) > _ARRAY_MAX_ITEMS:
-        _fail(f"{label} exceeds maximum item count.")
+        _fail(
+            f"{label} exceeds maximum item count.",
+            ExplanationRejectionCode.OVERSIZED_FIELD,
+        )
     return value
 
 
@@ -273,16 +377,28 @@ def _validate_skill_names(
     label: str,
 ) -> list[str]:
     if not isinstance(value, list):
-        _fail(f"{label} must be a list.")
+        _fail(
+            f"{label} must be a list.",
+            ExplanationRejectionCode.INVALID_FIELD_TYPE,
+        )
     if len(value) != 1:
-        _fail(f"{label} must contain exactly one skill name.")
+        _fail(
+            f"{label} must contain exactly one skill name.",
+            ExplanationRejectionCode.SKILL_NAME_MISMATCH,
+        )
     skill = value[0]
     if not isinstance(skill, str) or not skill.strip():
-        _fail(f"{label} must contain exactly one non-empty string.")
+        _fail(
+            f"{label} must contain exactly one non-empty string.",
+            ExplanationRejectionCode.SKILL_NAME_MISMATCH,
+        )
     cleaned = skill.strip()
     _assert_plain_text_and_claim_safe(cleaned, label=label)
     if expected_skill_name is None or cleaned != expected_skill_name:
-        _fail(f"{label} does not match the deterministic matched_skill_name.")
+        _fail(
+            f"{label} does not match the deterministic matched_skill_name.",
+            ExplanationRejectionCode.SKILL_NAME_MISMATCH,
+        )
     return [cleaned]
 
 
@@ -295,14 +411,26 @@ def _validate_requirement_index(
 ) -> tuple[int, dict[str, Any]]:
     index = _require_int(value, label)
     if index not in payload_index:
-        _fail(f"{label} is not present in provider_payload requirements.")
+        _fail(
+            f"{label} is not present in provider_payload requirements.",
+            ExplanationRejectionCode.INVALID_INDEX,
+        )
     if index in seen_indexes:
-        _fail(f"{label} appears more than once across output categories.")
+        _fail(
+            f"{label} appears more than once across output categories.",
+            ExplanationRejectionCode.DUPLICATE_INDEX,
+        )
     row = payload_index[index]
     if row["unresolved"]:
-        _fail(f"{label} refers to an unresolved requirement.")
+        _fail(
+            f"{label} refers to an unresolved requirement.",
+            ExplanationRejectionCode.UNSUPPORTED_EVIDENCE,
+        )
     if row["classification"] == "REVIEW_REQUIRED":
-        _fail(f"{label} refers to a REVIEW_REQUIRED requirement.")
+        _fail(
+            f"{label} refers to a REVIEW_REQUIRED requirement.",
+            ExplanationRejectionCode.UNSUPPORTED_EVIDENCE,
+        )
     seen_indexes.add(index)
     return index, row
 
@@ -313,15 +441,27 @@ def _assert_missing_source_consistent(source: dict[str, Any]) -> None:
     level = source["matched_evidence_level"]
     if basis == "no_match":
         if skill is not None or level is not None:
-            _fail("NO_EVIDENCE_GAP no_match row fields are inconsistent.")
+            _fail(
+                "NO_EVIDENCE_GAP no_match row fields are inconsistent.",
+                ExplanationRejectionCode.SEMANTIC_CONTRADICTION,
+            )
         return
     if basis == "no_evidence":
         if not isinstance(skill, str) or not skill:
-            _fail("NO_EVIDENCE_GAP no_evidence row requires matched_skill_name.")
+            _fail(
+                "NO_EVIDENCE_GAP no_evidence row requires matched_skill_name.",
+                ExplanationRejectionCode.SEMANTIC_CONTRADICTION,
+            )
         if level != "NO_EVIDENCE":
-            _fail("NO_EVIDENCE_GAP no_evidence row requires NO_EVIDENCE level.")
+            _fail(
+                "NO_EVIDENCE_GAP no_evidence row requires NO_EVIDENCE level.",
+                ExplanationRejectionCode.EVIDENCE_LEVEL_MISMATCH,
+            )
         return
-    _fail("NO_EVIDENCE_GAP match_basis is invalid for missing_evidence.")
+    _fail(
+        "NO_EVIDENCE_GAP match_basis is invalid for missing_evidence.",
+        ExplanationRejectionCode.CATEGORY_MISMATCH,
+    )
 
 
 def _validate_verified_item(
@@ -339,7 +479,10 @@ def _validate_verified_item(
         label="verified_evidence.requirement_index",
     )
     if source["classification"] != "VERIFIED_MATCH":
-        _fail("verified_evidence item classification mismatch.")
+        _fail(
+            "verified_evidence item classification mismatch.",
+            ExplanationRejectionCode.CATEGORY_MISMATCH,
+        )
     skill_names = _validate_skill_names(
         row.get("skill_names"),
         expected_skill_name=source["matched_skill_name"],
@@ -373,17 +516,32 @@ def _validate_development_item(
     )
     classification = source["classification"]
     if classification not in _CLASSIFICATION_TO_DEVELOPMENT_LEVEL:
-        _fail("development_evidence item classification mismatch.")
+        _fail(
+            "development_evidence item classification mismatch.",
+            ExplanationRejectionCode.CATEGORY_MISMATCH,
+        )
     expected_level = _CLASSIFICATION_TO_DEVELOPMENT_LEVEL[classification]
     evidence_level = row.get("evidence_level")
     if not isinstance(evidence_level, str):
-        _fail("development_evidence.evidence_level must be a string.")
+        _fail(
+            "development_evidence.evidence_level must be a string.",
+            ExplanationRejectionCode.INVALID_FIELD_TYPE,
+        )
     if evidence_level not in _DEVELOPMENT_LEVELS:
-        _fail("development_evidence.evidence_level has an invalid value.")
+        _fail(
+            "development_evidence.evidence_level has an invalid value.",
+            ExplanationRejectionCode.EVIDENCE_LEVEL_MISMATCH,
+        )
     if evidence_level != expected_level:
-        _fail("development_evidence.evidence_level classification mismatch.")
+        _fail(
+            "development_evidence.evidence_level classification mismatch.",
+            ExplanationRejectionCode.EVIDENCE_LEVEL_MISMATCH,
+        )
     if evidence_level != source["matched_evidence_level"]:
-        _fail("development_evidence.evidence_level does not match payload.")
+        _fail(
+            "development_evidence.evidence_level does not match payload.",
+            ExplanationRejectionCode.EVIDENCE_LEVEL_MISMATCH,
+        )
     skill_names = _validate_skill_names(
         row.get("skill_names"),
         expected_skill_name=source["matched_skill_name"],
@@ -417,7 +575,10 @@ def _validate_missing_item(
         label="missing_evidence.requirement_index",
     )
     if source["classification"] != "NO_EVIDENCE_GAP":
-        _fail("missing_evidence item classification mismatch.")
+        _fail(
+            "missing_evidence item classification mismatch.",
+            ExplanationRejectionCode.CATEGORY_MISMATCH,
+        )
     _assert_missing_source_consistent(source)
     explanation = _require_plain_string(
         row.get("explanation"),
