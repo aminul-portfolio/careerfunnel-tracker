@@ -17,10 +17,23 @@ from types import MappingProxyType
 
 from django.test import SimpleTestCase
 
+from apps.skill_gaps.deterministic_evidence_alignment import (
+    summarise_evidence_alignment,
+)
+from apps.skill_gaps.deterministic_explanation_payload import (
+    build_evidence_alignment_explanation_payload,
+)
+from apps.skill_gaps.deterministic_gap_classifier import (
+    SkillLedgerEvidence,
+    classify_requirements,
+    normalise_requirement,
+)
 from apps.skill_gaps.evaluation.explanation_evaluation_cases import (
     CASE_SCHEMA_VERSION,
     EVALUATION_VERSION,
     EVIDENCE_ALIGNMENT_RULE_VERSION,
+    GOLDEN_EVALUATION_CASES,
+    LOCKED_GOLDEN_CASE_IDS,
     EvaluationCase,
     EvaluationCaseContractError,
     EvaluationCategory,
@@ -746,3 +759,314 @@ class Sprint115Phase1ExplanationEvaluationContractTests(SimpleTestCase):
             ),
             first_bytes.decode("utf-8"),
         )
+
+
+def _golden_by_id(case_id: str) -> EvaluationCase:
+    for case in GOLDEN_EVALUATION_CASES:
+        if case.case_id == case_id:
+            return case
+    raise AssertionError(f"missing golden case: {case_id}")
+
+
+def _immutable_to_plain(value: object) -> object:
+    """Convert frozen MappingProxyType/tuple structures into plain dict/list."""
+    if isinstance(value, MappingProxyType):
+        return {key: _immutable_to_plain(item) for key, item in value.items()}
+    if isinstance(value, dict):
+        return {key: _immutable_to_plain(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_immutable_to_plain(item) for item in value]
+    return value
+
+
+def _deepcopy_jsonable(value: object) -> object:
+    return json.loads(json.dumps(value, ensure_ascii=False))
+
+
+def _execute_golden_pipeline(case: EvaluationCase) -> dict[str, object]:
+    """Run one golden case through the real deterministic Sprint 114 pipeline."""
+    builder_input = case.builder_input
+    assert builder_input is not None
+    requirements_raw = builder_input["requirements"]
+    evidence_raw = builder_input["evidence"]
+
+    evidence = tuple(
+        SkillLedgerEvidence(
+            entry_id=int(item["entry_id"]),
+            skill_name=str(item["skill_name"]),
+            evidence_level=str(item["evidence_level"]),
+        )
+        for item in evidence_raw
+    )
+    requirements = tuple(
+        normalise_requirement(index, str(text))
+        for index, text in enumerate(requirements_raw)
+    )
+    results = classify_requirements(requirements, evidence)
+    summary = summarise_evidence_alignment(results)
+    actual_payload = build_evidence_alignment_explanation_payload(summary)
+    return {
+        "results": results,
+        "summary": summary,
+        "actual_payload": actual_payload,
+    }
+
+
+class Sprint115Phase2GoldenExplanationEvaluationTests(SimpleTestCase):
+    """Phase 2 golden valid-case set through the real Sprint 114 pipeline."""
+
+    def _assert_golden_pipeline(self, case: EvaluationCase) -> dict[str, object]:
+        expected_payload = _immutable_to_plain(case.expected_provider_payload)
+        parsed_output = json.loads(case.simulated_provider_output)
+        self.assertIsInstance(case.simulated_provider_output, str)
+        self.assertIsInstance(parsed_output, dict)
+
+        original_parsed = _deepcopy_jsonable(parsed_output)
+        pipeline = _execute_golden_pipeline(case)
+        summary = pipeline["summary"]
+        actual_payload = pipeline["actual_payload"]
+        original_payload = _deepcopy_jsonable(actual_payload)
+
+        self.assertEqual(summary.outcome.value, case.deterministic_outcome)
+        self.assertNotIn(
+            summary.outcome.value,
+            {"MANUAL_REVIEW_REQUIRED", "NO_ACCEPTED_REQUIREMENTS"},
+        )
+        self.assertEqual(actual_payload, expected_payload)
+
+        validated = validate_evidence_alignment_explanation_output(
+            parsed_output,
+            actual_payload,
+        )
+        self.assertEqual(
+            set(validated.keys()),
+            {
+                "summary",
+                "verified_evidence",
+                "development_evidence",
+                "missing_evidence",
+            },
+        )
+        self.assertEqual(
+            [row["requirement_index"] for row in validated["verified_evidence"]],
+            [
+                row["requirement_index"]
+                for row in parsed_output["verified_evidence"]
+            ],
+        )
+        self.assertEqual(
+            [row["skill_names"] for row in validated["verified_evidence"]],
+            [row["skill_names"] for row in parsed_output["verified_evidence"]],
+        )
+        self.assertEqual(
+            [row.get("evidence_level") for row in validated["development_evidence"]],
+            [
+                row.get("evidence_level")
+                for row in parsed_output["development_evidence"]
+            ],
+        )
+        for row in validated["development_evidence"]:
+            payload_row = actual_payload["requirements"][row["requirement_index"]]
+            self.assertEqual(
+                row["evidence_level"],
+                payload_row["matched_evidence_level"],
+            )
+            self.assertEqual(
+                row["skill_names"],
+                [payload_row["matched_skill_name"]],
+            )
+        for row in validated["verified_evidence"]:
+            payload_row = actual_payload["requirements"][row["requirement_index"]]
+            self.assertEqual(
+                row["skill_names"],
+                [payload_row["matched_skill_name"]],
+            )
+
+        self.assertEqual(parsed_output, original_parsed)
+        self.assertEqual(actual_payload, original_payload)
+        self.assertIs(case.expected_rejection_code, None)
+        self.assertIs(case.expected_acceptance, True)
+        self.assertEqual(summary.outcome.value, case.deterministic_outcome)
+        return {
+            "validated": validated,
+            "actual_payload": actual_payload,
+            "summary": summary,
+        }
+
+    def test_golden_all_verified_single(self):
+        self.assertEqual(len(GOLDEN_EVALUATION_CASES), 6)
+        self.assertEqual(
+            tuple(case.case_id for case in GOLDEN_EVALUATION_CASES),
+            LOCKED_GOLDEN_CASE_IDS,
+        )
+        self.assertEqual(
+            {case.category for case in GOLDEN_EVALUATION_CASES},
+            {EvaluationCategory.GOLDEN_VALID_OUTPUT},
+        )
+        for case in GOLDEN_EVALUATION_CASES:
+            with self.subTest(case_id=case.case_id):
+                self.assertIs(case.is_synthetic, True)
+                self.assertIs(case.expected_acceptance, True)
+                self.assertIsNone(case.expected_rejection_code)
+
+        outcomes = {case.deterministic_outcome for case in GOLDEN_EVALUATION_CASES}
+        self.assertEqual(
+            outcomes,
+            {
+                "ALL_REQUIREMENTS_VERIFIED",
+                "SOME_REQUIREMENTS_VERIFIED",
+                "DEVELOPMENT_RECORDS_ONLY",
+                "NO_VERIFIED_EVIDENCE",
+            },
+        )
+
+        first_hash = compute_case_set_hash(GOLDEN_EVALUATION_CASES)
+        second_hash = compute_case_set_hash(GOLDEN_EVALUATION_CASES)
+        reversed_hash = compute_case_set_hash(tuple(reversed(GOLDEN_EVALUATION_CASES)))
+        self.assertEqual(len(first_hash), 64)
+        self.assertTrue(first_hash.islower())
+        self.assertTrue(all(ch in "0123456789abcdef" for ch in first_hash))
+        self.assertEqual(first_hash, second_hash)
+        self.assertEqual(first_hash, reversed_hash)
+        self.assertEqual(
+            first_hash,
+            hashlib.sha256(
+                canonical_case_set_bytes(GOLDEN_EVALUATION_CASES)
+            ).hexdigest(),
+        )
+
+        case = _golden_by_id("golden-001-all-verified-single")
+        result = self._assert_golden_pipeline(case)
+        validated = result["validated"]
+        self.assertEqual(len(validated["verified_evidence"]), 1)
+        self.assertEqual(validated["development_evidence"], [])
+        self.assertEqual(validated["missing_evidence"], [])
+        self.assertEqual(
+            validated["verified_evidence"][0]["skill_names"],
+            ["Python"],
+        )
+
+    def test_golden_all_verified_multiple(self):
+        case = _golden_by_id("golden-002-all-verified-multiple")
+        result = self._assert_golden_pipeline(case)
+        validated = result["validated"]
+        self.assertEqual(len(validated["verified_evidence"]), 3)
+        self.assertEqual(validated["development_evidence"], [])
+        self.assertEqual(validated["missing_evidence"], [])
+        self.assertEqual(
+            [row["requirement_index"] for row in validated["verified_evidence"]],
+            [0, 1, 2],
+        )
+        self.assertEqual(
+            [row["skill_names"][0] for row in validated["verified_evidence"]],
+            ["Python", "SQL", "Django"],
+        )
+
+    def test_golden_some_verified_mixed(self):
+        case = _golden_by_id("golden-003-some-verified-mixed")
+        result = self._assert_golden_pipeline(case)
+        validated = result["validated"]
+        actual_payload = result["actual_payload"]
+        self.assertEqual(len(validated["verified_evidence"]), 1)
+        self.assertEqual(len(validated["development_evidence"]), 2)
+        self.assertEqual(len(validated["missing_evidence"]), 2)
+        self.assertEqual(
+            validated["verified_evidence"][0]["skill_names"],
+            ["Python"],
+        )
+        self.assertEqual(
+            [
+                (row["skill_names"][0], row["evidence_level"])
+                for row in validated["development_evidence"]
+            ],
+            [("Snowflake", "LEARNING_TARGET"), ("Kafka", "STUDYING")],
+        )
+        self.assertEqual(
+            [row["requirement_index"] for row in validated["missing_evidence"]],
+            [3, 4],
+        )
+        classifications = [
+            row["classification"] for row in actual_payload["requirements"]
+        ]
+        match_bases = [row["match_basis"] for row in actual_payload["requirements"]]
+        self.assertEqual(
+            classifications,
+            [
+                "VERIFIED_MATCH",
+                "LEARNING_TARGET_MATCH",
+                "STUDYING_MATCH",
+                "NO_EVIDENCE_GAP",
+                "NO_EVIDENCE_GAP",
+            ],
+        )
+        self.assertEqual(
+            match_bases,
+            ["exact_name", "exact_name", "exact_name", "no_match", "no_evidence"],
+        )
+
+    def test_golden_development_records_only(self):
+        case = _golden_by_id("golden-004-development-records-only")
+        result = self._assert_golden_pipeline(case)
+        validated = result["validated"]
+        self.assertEqual(validated["verified_evidence"], [])
+        self.assertEqual(len(validated["development_evidence"]), 2)
+        self.assertEqual(validated["missing_evidence"], [])
+        joined = " ".join(
+            [
+                validated["summary"],
+                *[row["explanation"] for row in validated["development_evidence"]],
+            ]
+        ).lower()
+        self.assertNotIn("verified", joined)
+
+    def test_golden_no_verified_evidence(self):
+        case = _golden_by_id("golden-005-no-verified-evidence")
+        result = self._assert_golden_pipeline(case)
+        validated = result["validated"]
+        actual_payload = result["actual_payload"]
+        self.assertEqual(validated["verified_evidence"], [])
+        self.assertEqual(validated["development_evidence"], [])
+        self.assertEqual(len(validated["missing_evidence"]), 2)
+        self.assertEqual(
+            [row["requirement_index"] for row in validated["missing_evidence"]],
+            [0, 1],
+        )
+        self.assertEqual(
+            [
+                (row["classification"], row["match_basis"])
+                for row in actual_payload["requirements"]
+            ],
+            [
+                ("NO_EVIDENCE_GAP", "no_match"),
+                ("NO_EVIDENCE_GAP", "no_evidence"),
+            ],
+        )
+
+    def test_golden_multi_underscore_safe_text(self):
+        case = _golden_by_id("golden-006-multi-underscore-safe-text")
+        result = self._assert_golden_pipeline(case)
+        validated = result["validated"]
+        self.assertEqual(len(validated["verified_evidence"]), 1)
+        self.assertEqual(validated["development_evidence"], [])
+        self.assertEqual(validated["missing_evidence"], [])
+        explanation = validated["verified_evidence"][0]["explanation"]
+        self.assertIn("scikit_learn_pipeline_v2", explanation)
+        self.assertIn("&", explanation)
+        self.assertIn("'", explanation)
+        lowered = explanation.lower()
+        for banned in (
+            "score",
+            "percent",
+            "probability",
+            "confidence",
+            "readiness",
+            "suitability",
+            "proficiency",
+            "hiring",
+            "http://",
+            "https://",
+            "<",
+            ">",
+            "**",
+        ):
+            self.assertNotIn(banned, lowered)

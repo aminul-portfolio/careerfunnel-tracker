@@ -74,7 +74,7 @@ _MARKDOWN_OR_HTML_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\*\*[^*\n]+?\*\*"),  # **bold**
     re.compile(r"__[^_\n]+?__"),  # __bold__
     re.compile(r"(?<!\*)\*[^*\n]+?\*(?!\*)"),  # *italic*
-    re.compile(r"(?<!_)_[^_\n]+?_(?!_)"),  # _italic_
+    re.compile(r"(?<!\w)_[^_\n]+?_(?!\w)"),  # _italic_, not intraword identifiers
     re.compile(r"<[^>]+>"),  # HTML tags
 )
 

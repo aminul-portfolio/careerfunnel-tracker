@@ -38,6 +38,7 @@ from apps.skill_gaps.deterministic_gap_classifier import (
 )
 from apps.skill_gaps.explanation_output_validator import (
     EvidenceAlignmentExplanationValidationError,
+    ExplanationRejectionCode,
     validate_evidence_alignment_explanation_output,
 )
 from apps.skill_gaps.models import ApplicationSkillGap
@@ -974,6 +975,111 @@ class Sprint114Phase2ExplanationOutputValidatorTests(SimpleTestCase):
                 validated["verified_evidence"][0]["skill_names"],
                 ["feature_engineering"],
             )
+
+    def test_validator_accepts_multi_underscore_technical_identifiers_without_weakening_markdown_rejection(  # noqa: E501
+        self,
+    ):
+        accepted_identifiers = (
+            "scikit_learn_pipeline_v2",
+            "alpha_beta_gamma_delta",
+            "feature_engineering",
+        )
+        for identifier in accepted_identifiers:
+            with self.subTest(identifier=identifier):
+                payload = _phase2_provider_payload()
+                payload["requirements"][0]["matched_skill_name"] = identifier
+                original_payload = {
+                    "rule_version": payload["rule_version"],
+                    "overall_outcome": payload["overall_outcome"],
+                    "requirements": [dict(row) for row in payload["requirements"]],
+                }
+                if identifier == "scikit_learn_pipeline_v2":
+                    summary = (
+                        "Advisory summary: scikit_learn_pipeline_v2 is supported "
+                        "by verified Skill Ledger evidence."
+                    )
+                    explanation = (
+                        "scikit_learn_pipeline_v2 matches verified Skill Ledger "
+                        "evidence for this pipeline's fit & transform workflow."
+                    )
+                else:
+                    summary = (
+                        f"Advisory summary: {identifier} is supported by "
+                        "verified Skill Ledger evidence."
+                    )
+                    explanation = (
+                        f"{identifier} matches verified Skill Ledger evidence."
+                    )
+                raw = _valid_output(
+                    summary=summary,
+                    verified_evidence=[
+                        {
+                            "requirement_index": 0,
+                            "skill_names": [identifier],
+                            "explanation": explanation,
+                        }
+                    ],
+                    development_evidence=[],
+                    missing_evidence=[],
+                )
+                original_raw = {
+                    "summary": raw["summary"],
+                    "verified_evidence": [dict(raw["verified_evidence"][0])],
+                    "development_evidence": list(raw["development_evidence"]),
+                    "missing_evidence": list(raw["missing_evidence"]),
+                }
+                validated = validate_evidence_alignment_explanation_output(
+                    raw,
+                    payload,
+                )
+                self.assertEqual(
+                    validated["verified_evidence"][0]["skill_names"],
+                    [identifier],
+                )
+                self.assertEqual(
+                    validated["verified_evidence"][0]["requirement_index"],
+                    0,
+                )
+                self.assertIn(identifier, validated["summary"])
+                self.assertIn(identifier, validated["verified_evidence"][0]["explanation"])
+                self.assertEqual(
+                    payload["requirements"][0]["matched_skill_name"],
+                    identifier,
+                )
+                self.assertEqual(raw, original_raw)
+                self.assertEqual(payload, original_payload)
+
+        rejected_samples = {
+            "bare_italic": (
+                "_italic_",
+                "summary contains Markdown or HTML content.",
+            ),
+            "uses_italic": (
+                "Uses _italic_ emphasis.",
+                "summary contains Markdown or HTML content.",
+            ),
+            "paren_italic": (
+                "(_italic_)",
+                "summary contains Markdown or HTML content.",
+            ),
+            "bold_underscores": (
+                "Uses __bold__ emphasis",
+                "summary contains Markdown or HTML content.",
+            ),
+        }
+        for name, (text, expected_message) in rejected_samples.items():
+            with self.subTest(rejected=name):
+                raw = _valid_output(summary=text)
+                with self.assertRaises(
+                    EvidenceAlignmentExplanationValidationError
+                ) as raised:
+                    validate_evidence_alignment_explanation_output(
+                        raw,
+                        _phase2_provider_payload(),
+                    )
+                error = raised.exception
+                self.assertEqual(str(error), expected_message)
+                self.assertEqual(error.code, ExplanationRejectionCode.MARKUP_DETECTED)
 
     def test_validator_rejects_url_content(self):
         samples = {
