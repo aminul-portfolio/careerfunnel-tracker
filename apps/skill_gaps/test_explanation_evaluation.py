@@ -11,10 +11,16 @@ import hashlib
 import inspect
 import json
 import re
+import tempfile
 import unicodedata
+from dataclasses import replace
 from pathlib import Path
 from types import MappingProxyType
+from unittest.mock import patch
 
+from django.conf import settings
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import SimpleTestCase
 
 from apps.skill_gaps.deterministic_evidence_alignment import (
@@ -45,10 +51,23 @@ from apps.skill_gaps.evaluation.explanation_evaluation_cases import (
     make_evaluation_case,
     validate_and_sort_evaluation_cases,
 )
+from apps.skill_gaps.evaluation.explanation_evaluation_runner import (
+    REPORT_SCHEMA_VERSION,
+    RUNNER_VERSION,
+    EvaluationRunnerCode,
+    canonical_evaluation_report_bytes,
+    compute_evaluation_report_hash,
+    evaluation_report_to_canonical_dict,
+    evaluation_report_to_json_dict,
+    run_evidence_alignment_explanation_evaluation,
+)
 from apps.skill_gaps.explanation_output_validator import (
     EvidenceAlignmentExplanationValidationError,
     ExplanationRejectionCode,
     validate_evidence_alignment_explanation_output,
+)
+from apps.skill_gaps.management.commands.evaluate_evidence_alignment_explanations import (
+    resolve_external_output_file,
 )
 
 
@@ -1342,3 +1361,388 @@ class Sprint115Phase3AdversarialExplanationEvaluationTests(SimpleTestCase):
         self.assertEqual(unexpected_acceptance_count, 0)
         self.assertEqual(rejection_code_mismatch_count, 0)
         self.assertEqual(rejection_message_instability_count, 0)
+
+
+def _authoritative_cases() -> tuple[EvaluationCase, ...]:
+    return GOLDEN_EVALUATION_CASES + ADVERSARIAL_EVALUATION_CASES
+
+
+class Sprint115Phase4OfflineEvaluationRunnerTests(SimpleTestCase):
+    """Phase 4 pure offline evaluation runner and external management command."""
+
+    def test_runner_executes_authoritative_case_set_and_returns_pass_report(self):
+        cases = _authoritative_cases()
+        original_cases = tuple(cases)
+        original_builder = [
+            _deepcopy_jsonable(_immutable_to_plain(case.builder_input))
+            for case in cases
+        ]
+        original_expected = [
+            _deepcopy_jsonable(_immutable_to_plain(case.expected_provider_payload))
+            for case in cases
+        ]
+        original_simulated = [case.simulated_provider_output for case in cases]
+
+        report = run_evidence_alignment_explanation_evaluation(cases)
+
+        self.assertEqual(tuple(cases), original_cases)
+        for index, case in enumerate(cases):
+            self.assertEqual(
+                _immutable_to_plain(case.builder_input),
+                original_builder[index],
+            )
+            self.assertEqual(
+                _immutable_to_plain(case.expected_provider_payload),
+                original_expected[index],
+            )
+            self.assertEqual(
+                case.simulated_provider_output,
+                original_simulated[index],
+            )
+
+        self.assertEqual(report.report_schema_version, REPORT_SCHEMA_VERSION)
+        self.assertEqual(report.runner_version, RUNNER_VERSION)
+        self.assertEqual(report.evaluation_version, EVALUATION_VERSION)
+        self.assertEqual(report.case_schema_version, CASE_SCHEMA_VERSION)
+        self.assertEqual(report.rule_version, EVIDENCE_ALIGNMENT_RULE_VERSION)
+        self.assertEqual(report.overall_result, "PASS")
+        self.assertEqual(report.total_case_count, 24)
+        self.assertEqual(report.passed_case_count, 24)
+        self.assertEqual(report.failed_case_count, 0)
+        self.assertEqual(report.expected_acceptance_count, 6)
+        self.assertEqual(report.expected_rejection_count, 18)
+        self.assertEqual(report.accepted_as_expected_count, 6)
+        self.assertEqual(report.rejected_as_expected_count, 18)
+        self.assertEqual(report.unexpected_acceptance_count, 0)
+        self.assertEqual(report.unexpected_rejection_count, 0)
+        self.assertEqual(report.payload_mismatch_count, 0)
+        self.assertEqual(report.case_schema_failure_count, 0)
+        self.assertEqual(report.runner_contract_failure_count, 0)
+        self.assertEqual(report.provider_failure_count, 0)
+        self.assertEqual(report.validator_call_count, 24)
+        self.assertEqual(report.provider_call_count, 0)
+        self.assertEqual(report.network_call_count, 0)
+        self.assertEqual(report.orm_access_count, 0)
+        self.assertEqual(report.database_write_count, 0)
+        self.assertEqual(report.runner_filesystem_write_count, 0)
+
+        case_ids = tuple(item.case_id for item in report.results)
+        self.assertEqual(case_ids, tuple(sorted(case_ids)))
+        for item in report.results:
+            self.assertIsInstance(item.message, str)
+            self.assertTrue(item.message)
+            self.assertNotIn("\x00", item.message)
+
+        with self.assertRaises(Exception):
+            report.total_case_count = 0  # type: ignore[misc]
+        with self.assertRaises(Exception):
+            report.results[0].passed = False  # type: ignore[misc]
+
+        self.assertEqual(len(report.report_sha256), 64)
+        self.assertTrue(report.report_sha256.islower())
+        self.assertTrue(
+            all(ch in "0123456789abcdef" for ch in report.report_sha256)
+        )
+        self.assertEqual(
+            report.report_sha256,
+            compute_evaluation_report_hash(report),
+        )
+
+    def test_runner_report_and_hash_are_deterministic_across_case_order(self):
+        forward = run_evidence_alignment_explanation_evaluation(
+            GOLDEN_EVALUATION_CASES + ADVERSARIAL_EVALUATION_CASES
+        )
+        reversed_input = tuple(
+            reversed(ADVERSARIAL_EVALUATION_CASES + GOLDEN_EVALUATION_CASES)
+        )
+        reversed_report = run_evidence_alignment_explanation_evaluation(
+            reversed_input
+        )
+
+        self.assertEqual(forward.case_set_sha256, reversed_report.case_set_sha256)
+        self.assertEqual(
+            tuple(item.case_id for item in forward.results),
+            tuple(item.case_id for item in reversed_report.results),
+        )
+        self.assertEqual(
+            canonical_evaluation_report_bytes(forward),
+            canonical_evaluation_report_bytes(reversed_report),
+        )
+        self.assertEqual(forward.report_sha256, reversed_report.report_sha256)
+        self.assertEqual(forward.total_case_count, reversed_report.total_case_count)
+        self.assertEqual(forward.passed_case_count, reversed_report.passed_case_count)
+        self.assertEqual(forward.failed_case_count, reversed_report.failed_case_count)
+        self.assertEqual(
+            forward.accepted_as_expected_count,
+            reversed_report.accepted_as_expected_count,
+        )
+        self.assertEqual(
+            forward.rejected_as_expected_count,
+            reversed_report.rejected_as_expected_count,
+        )
+
+        canonical = evaluation_report_to_canonical_dict(forward)
+        forbidden = {
+            "timestamp",
+            "created_at",
+            "updated_at",
+            "duration",
+            "duration_seconds",
+            "path",
+            "output_path",
+            "report_path",
+            "repository_path",
+        }
+        self.assertTrue(forbidden.isdisjoint(canonical.keys()))
+        for item in canonical["results"]:
+            self.assertTrue(forbidden.isdisjoint(item.keys()))
+
+    def test_runner_fails_closed_on_expected_payload_mismatch(self):
+        base = GOLDEN_EVALUATION_CASES[0]
+        mismatched_payload = _immutable_to_plain(base.expected_provider_payload)
+        assert isinstance(mismatched_payload, dict)
+        mismatched_payload = dict(mismatched_payload)
+        mismatched_payload["overall_outcome"] = "NO_VERIFIED_EVIDENCE"
+        case = replace(
+            base,
+            case_id="temp-payload-mismatch-001",
+            expected_provider_payload=mismatched_payload,
+        )
+
+        with patch(
+            "apps.skill_gaps.evaluation.explanation_evaluation_runner."
+            "validate_evidence_alignment_explanation_output",
+            side_effect=AssertionError("validator must not be called"),
+        ):
+            report = run_evidence_alignment_explanation_evaluation((case,))
+
+        self.assertEqual(report.overall_result, "FAIL")
+        self.assertEqual(report.total_case_count, 1)
+        self.assertEqual(report.failed_case_count, 1)
+        self.assertEqual(report.payload_mismatch_count, 1)
+        self.assertEqual(report.validator_call_count, 0)
+        self.assertEqual(report.provider_call_count, 0)
+        self.assertEqual(report.network_call_count, 0)
+        self.assertEqual(report.orm_access_count, 0)
+        self.assertEqual(report.database_write_count, 0)
+        self.assertEqual(report.runner_filesystem_write_count, 0)
+        self.assertEqual(
+            report.results[0].runner_code,
+            EvaluationRunnerCode.PAYLOAD_MISMATCH,
+        )
+        self.assertIs(report.results[0].passed, False)
+
+    def test_runner_fails_closed_on_malformed_replay_without_validator_call(self):
+        base = GOLDEN_EVALUATION_CASES[0]
+        case = replace(
+            base,
+            case_id="temp-malformed-json-001",
+            simulated_provider_output="{not-valid-json",
+        )
+
+        with patch(
+            "apps.skill_gaps.evaluation.explanation_evaluation_runner."
+            "validate_evidence_alignment_explanation_output",
+            side_effect=AssertionError("validator must not be called"),
+        ):
+            report = run_evidence_alignment_explanation_evaluation((case,))
+
+        self.assertEqual(report.overall_result, "FAIL")
+        self.assertEqual(report.runner_contract_failure_count, 1)
+        self.assertEqual(report.validator_call_count, 0)
+        self.assertEqual(report.provider_call_count, 0)
+        self.assertEqual(report.network_call_count, 0)
+        self.assertEqual(report.orm_access_count, 0)
+        self.assertEqual(report.database_write_count, 0)
+        self.assertEqual(report.runner_filesystem_write_count, 0)
+        self.assertEqual(
+            report.results[0].runner_code,
+            EvaluationRunnerCode.RUNNER_CONTRACT_FAILURE,
+        )
+        self.assertIs(report.results[0].passed, False)
+
+    def test_runner_has_no_provider_network_orm_or_filesystem_boundary(self):
+        runner_path = Path(
+            inspect.getsourcefile(run_evidence_alignment_explanation_evaluation)
+        )
+        source = runner_path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        forbidden = {
+            "pathlib",
+            "os",
+            "tempfile",
+            "time",
+            "datetime",
+            "socket",
+            "urllib",
+            "requests",
+            "httpx",
+            "provider_factory",
+            "claude_provider",
+            "anthropic",
+            "openai",
+        }
+        imported: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imported.add(alias.name.split(".")[0])
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                imported.add(node.module.split(".")[0])
+                if "provider_factory" in node.module or "claude_provider" in node.module:
+                    self.fail(f"forbidden import module: {node.module}")
+        self.assertTrue(forbidden.isdisjoint(imported))
+        self.assertNotIn("django", imported)
+        self.assertNotIn("provider_factory", source)
+        self.assertNotIn("claude_provider", source)
+        # Fail closed on Django settings import usage, not narrative text.
+        self.assertNotRegex(
+            source,
+            r"(?m)^\s*(from django\.conf import settings|import django\.conf\.settings)\b",
+        )
+
+        def _forbid(*_args, **_kwargs):
+            raise AssertionError("forbidden side effect called")
+
+        with (
+            patch("builtins.open", side_effect=_forbid),
+            patch("socket.socket", side_effect=_forbid),
+        ):
+            report = run_evidence_alignment_explanation_evaluation(
+                _authoritative_cases()
+            )
+
+        self.assertEqual(report.overall_result, "PASS")
+        self.assertEqual(report.provider_call_count, 0)
+        self.assertEqual(report.network_call_count, 0)
+        self.assertEqual(report.orm_access_count, 0)
+        self.assertEqual(report.database_write_count, 0)
+        self.assertEqual(report.runner_filesystem_write_count, 0)
+        self.assertEqual(report.validator_call_count, 24)
+
+    def test_management_command_writes_external_report_and_rejects_repository_paths(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir).resolve()
+            repo_root = Path(settings.BASE_DIR).resolve()
+            self.assertFalse(
+                temp_root == repo_root or repo_root in temp_root.parents
+            )
+
+            first_path = temp_root / "phase4_report_a.json"
+            second_path = temp_root / "phase4_report_b.json"
+
+            call_command(
+                "evaluate_evidence_alignment_explanations",
+                "--output",
+                str(first_path),
+            )
+            self.assertTrue(first_path.is_file())
+            first_bytes = first_path.read_bytes()
+            self.assertFalse(first_bytes.startswith(b"\xef\xbb\xbf"))
+            self.assertNotIn(0, first_bytes)
+            first_text = first_bytes.decode("utf-8")
+            first_data = json.loads(first_text)
+            self.assertEqual(first_data["report_schema_version"], REPORT_SCHEMA_VERSION)
+            self.assertEqual(first_data["runner_version"], RUNNER_VERSION)
+            self.assertEqual(first_data["evaluation_version"], EVALUATION_VERSION)
+            self.assertEqual(first_data["case_schema_version"], CASE_SCHEMA_VERSION)
+            self.assertEqual(first_data["rule_version"], EVIDENCE_ALIGNMENT_RULE_VERSION)
+            self.assertEqual(first_data["total_case_count"], 24)
+            self.assertEqual(first_data["passed_case_count"], 24)
+            self.assertEqual(first_data["failed_case_count"], 0)
+            self.assertEqual(first_data["overall_result"], "PASS")
+            self.assertNotIn("timestamp", first_data)
+            self.assertNotIn("duration", first_data)
+            self.assertNotIn("output_path", first_data)
+            self.assertNotIn(str(first_path), first_text)
+            self.assertNotIn(str(temp_root), first_text)
+
+            report = run_evidence_alignment_explanation_evaluation(
+                _authoritative_cases()
+            )
+            self.assertEqual(first_data["report_sha256"], report.report_sha256)
+            self.assertEqual(
+                first_data["report_sha256"],
+                compute_evaluation_report_hash(report),
+            )
+            self.assertEqual(
+                first_data,
+                evaluation_report_to_json_dict(report),
+            )
+
+            call_command(
+                "evaluate_evidence_alignment_explanations",
+                "--output",
+                str(second_path),
+            )
+            second_bytes = second_path.read_bytes()
+            self.assertEqual(first_bytes, second_bytes)
+            self.assertEqual(
+                json.loads(second_bytes.decode("utf-8"))["report_sha256"],
+                first_data["report_sha256"],
+            )
+
+            with self.assertRaises(CommandError):
+                call_command(
+                    "evaluate_evidence_alignment_explanations",
+                    "--output",
+                    "relative_report.json",
+                )
+            with self.assertRaises(CommandError):
+                call_command(
+                    "evaluate_evidence_alignment_explanations",
+                    "--output",
+                    str(repo_root / "phase4_inside_repo.json"),
+                )
+            with self.assertRaises(CommandError):
+                call_command(
+                    "evaluate_evidence_alignment_explanations",
+                    "--output",
+                    str(first_path),
+                )
+            missing_parent = temp_root / "missing-parent" / "report.json"
+            with self.assertRaises(CommandError):
+                call_command(
+                    "evaluate_evidence_alignment_explanations",
+                    "--output",
+                    str(missing_parent),
+                )
+            with self.assertRaises(CommandError):
+                call_command(
+                    "evaluate_evidence_alignment_explanations",
+                    "--output",
+                    str(temp_root),
+                )
+            self.assertFalse(missing_parent.exists())
+            self.assertFalse((repo_root / "phase4_inside_repo.json").exists())
+
+            with self.assertRaises(CommandError):
+                resolve_external_output_file("relative_report.json")
+            with self.assertRaises(CommandError):
+                resolve_external_output_file(str(repo_root / "x.json"))
+
+            race_path = temp_root / "phase4_race_report.json"
+            real_resolver = resolve_external_output_file
+            sentinel = b"existing-race-sentinel"
+
+            def _resolve_then_create(path_value):
+                resolved = real_resolver(path_value)
+                resolved.write_bytes(sentinel)
+                return resolved
+
+            with patch(
+                "apps.skill_gaps.management.commands."
+                "evaluate_evidence_alignment_explanations."
+                "resolve_external_output_file",
+                side_effect=_resolve_then_create,
+            ):
+                with self.assertRaises(CommandError):
+                    call_command(
+                        "evaluate_evidence_alignment_explanations",
+                        "--output",
+                        str(race_path),
+                    )
+            self.assertTrue(race_path.exists())
+            self.assertEqual(race_path.read_bytes(), sentinel)
