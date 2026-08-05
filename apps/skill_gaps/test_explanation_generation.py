@@ -38,6 +38,7 @@ from apps.skill_gaps.deterministic_gap_classifier import (
 )
 from apps.skill_gaps.explanation_output_validator import (
     EvidenceAlignmentExplanationValidationError,
+    ExplanationRejectionCode,
     validate_evidence_alignment_explanation_output,
 )
 from apps.skill_gaps.models import ApplicationSkillGap
@@ -974,6 +975,111 @@ class Sprint114Phase2ExplanationOutputValidatorTests(SimpleTestCase):
                 validated["verified_evidence"][0]["skill_names"],
                 ["feature_engineering"],
             )
+
+    def test_validator_accepts_multi_underscore_technical_identifiers_without_weakening_markdown_rejection(  # noqa: E501
+        self,
+    ):
+        accepted_identifiers = (
+            "scikit_learn_pipeline_v2",
+            "alpha_beta_gamma_delta",
+            "feature_engineering",
+        )
+        for identifier in accepted_identifiers:
+            with self.subTest(identifier=identifier):
+                payload = _phase2_provider_payload()
+                payload["requirements"][0]["matched_skill_name"] = identifier
+                original_payload = {
+                    "rule_version": payload["rule_version"],
+                    "overall_outcome": payload["overall_outcome"],
+                    "requirements": [dict(row) for row in payload["requirements"]],
+                }
+                if identifier == "scikit_learn_pipeline_v2":
+                    summary = (
+                        "Advisory summary: scikit_learn_pipeline_v2 is supported "
+                        "by verified Skill Ledger evidence."
+                    )
+                    explanation = (
+                        "scikit_learn_pipeline_v2 matches verified Skill Ledger "
+                        "evidence for this pipeline's fit & transform workflow."
+                    )
+                else:
+                    summary = (
+                        f"Advisory summary: {identifier} is supported by "
+                        "verified Skill Ledger evidence."
+                    )
+                    explanation = (
+                        f"{identifier} matches verified Skill Ledger evidence."
+                    )
+                raw = _valid_output(
+                    summary=summary,
+                    verified_evidence=[
+                        {
+                            "requirement_index": 0,
+                            "skill_names": [identifier],
+                            "explanation": explanation,
+                        }
+                    ],
+                    development_evidence=[],
+                    missing_evidence=[],
+                )
+                original_raw = {
+                    "summary": raw["summary"],
+                    "verified_evidence": [dict(raw["verified_evidence"][0])],
+                    "development_evidence": list(raw["development_evidence"]),
+                    "missing_evidence": list(raw["missing_evidence"]),
+                }
+                validated = validate_evidence_alignment_explanation_output(
+                    raw,
+                    payload,
+                )
+                self.assertEqual(
+                    validated["verified_evidence"][0]["skill_names"],
+                    [identifier],
+                )
+                self.assertEqual(
+                    validated["verified_evidence"][0]["requirement_index"],
+                    0,
+                )
+                self.assertIn(identifier, validated["summary"])
+                self.assertIn(identifier, validated["verified_evidence"][0]["explanation"])
+                self.assertEqual(
+                    payload["requirements"][0]["matched_skill_name"],
+                    identifier,
+                )
+                self.assertEqual(raw, original_raw)
+                self.assertEqual(payload, original_payload)
+
+        rejected_samples = {
+            "bare_italic": (
+                "_italic_",
+                "summary contains Markdown or HTML content.",
+            ),
+            "uses_italic": (
+                "Uses _italic_ emphasis.",
+                "summary contains Markdown or HTML content.",
+            ),
+            "paren_italic": (
+                "(_italic_)",
+                "summary contains Markdown or HTML content.",
+            ),
+            "bold_underscores": (
+                "Uses __bold__ emphasis",
+                "summary contains Markdown or HTML content.",
+            ),
+        }
+        for name, (text, expected_message) in rejected_samples.items():
+            with self.subTest(rejected=name):
+                raw = _valid_output(summary=text)
+                with self.assertRaises(
+                    EvidenceAlignmentExplanationValidationError
+                ) as raised:
+                    validate_evidence_alignment_explanation_output(
+                        raw,
+                        _phase2_provider_payload(),
+                    )
+                error = raised.exception
+                self.assertEqual(str(error), expected_message)
+                self.assertEqual(error.code, ExplanationRejectionCode.MARKUP_DETECTED)
 
     def test_validator_rejects_url_content(self):
         samples = {
@@ -2234,3 +2340,245 @@ class Sprint114Phase5BoundaryAndClaimSafetyRegressionTests(TestCase):
         self.assertNotIn("traceback", failed_content.lower())
         self.assertNotIn("ANTHROPIC_API_KEY", failed_content)
         self.assertNotIn("|safe", failed_advisory)
+
+
+class Sprint115Phase5RouteAndProviderBoundaryRegressionTests(TestCase):
+    """Sprint 115 Phase 5: route and provider-boundary regressions (test-only)."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="p115p5_owner",
+            password="pass",
+        )
+        self.url = reverse("skill_gaps:jd_gap_analysis")
+        self.client.login(username="p115p5_owner", password="pass")
+
+    def _create_entry(self, skill_name, evidence_level):
+        return SkillEntry.objects.create(
+            user=self.owner,
+            skill_name=skill_name,
+            category=SkillEntry.Category.PROGRAMMING,
+            evidence_level=evidence_level,
+            visibility=SkillEntry.Visibility.PRIVATE,
+        )
+
+    def _permitted_requirements(self):
+        self._create_entry("Python", SkillEntry.EvidenceLevel.VERIFIED)
+        self._create_entry(
+            "Snowflake",
+            SkillEntry.EvidenceLevel.LEARNING_TARGET,
+        )
+        return "Python\nSnowflake\nGraphQL"
+
+    def _model_counts(self):
+        return (
+            SkillEntry.objects.count(),
+            JobApplication.objects.count(),
+            ApplicationSkillGap.objects.count(),
+        )
+
+    def test_get_request_remains_provider_free(self):
+        self._create_entry("Python", SkillEntry.EvidenceLevel.VERIFIED)
+        provider = MagicMock()
+        before_counts = self._model_counts()
+        with patch(
+            "apps.skill_gaps.deterministic_gap_views."
+            "compose_evidence_alignment_explanation_provider",
+            return_value=provider,
+        ) as compose:
+            response = self.client.get(self.url)
+            compose.assert_not_called()
+            provider.assert_not_called()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["analysis_performed"])
+        self.assertFalse(response.context["explanation_requested"])
+        self.assertFalse(response.context["explanation_allowed"])
+        self.assertIsNone(response.context["advisory_explanation"])
+        self.assertFalse(response.context["advisory_explanation_failed"])
+        self.assertContains(response, "JD Gap Analysis")
+        self.assertContains(response, "No analysis yet")
+        self.assertEqual(self._model_counts(), before_counts)
+        self.assertEqual(provider.call_count, 0)
+
+    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=False)
+    def test_explanation_post_while_flag_disabled_remains_provider_free(self):
+        from apps.ai_agents.provider_factory import (
+            compose_evidence_alignment_explanation_provider as real_compose,
+        )
+
+        requirements = self._permitted_requirements()
+        before_counts = self._model_counts()
+        with (
+            patch(
+                "apps.ai_agents.provider_factory."
+                "make_claude_evidence_alignment_explanation_provider",
+            ) as make_provider,
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "compose_evidence_alignment_explanation_provider",
+                wraps=real_compose,
+            ) as compose,
+        ):
+            response = self.client.post(
+                self.url,
+                {
+                    "requirements": requirements,
+                    "generate_explanation": "1",
+                },
+            )
+            compose.assert_called_once()
+            make_provider.assert_not_called()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["analysis_performed"])
+        self.assertTrue(response.context["explanation_requested"])
+        self.assertTrue(response.context["explanation_allowed"])
+        self.assertIsNotNone(response.context["summary"])
+        self.assertIsNone(response.context["advisory_explanation"])
+        self.assertTrue(response.context["advisory_explanation_failed"])
+        self.assertContains(response, "Evidence alignment summary")
+        self.assertContains(response, FALLBACK_STATEMENT)
+        self.assertEqual(self._model_counts(), before_counts)
+        self.assertEqual(make_provider.call_count, 0)
+
+    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    def test_blocked_deterministic_outcome_remains_provider_free(self):
+        self._create_entry("Python", SkillEntry.EvidenceLevel.VERIFIED)
+        before_counts = self._model_counts()
+        provider = MagicMock(
+            side_effect=AssertionError("provider must not be called")
+        )
+        with (
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "compose_evidence_alignment_explanation_provider",
+                return_value=provider,
+            ) as compose,
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "build_evidence_alignment_explanation_payload",
+            ) as build_payload,
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "validate_evidence_alignment_explanation_output",
+            ) as validate_output,
+        ):
+            response = self.client.post(
+                self.url,
+                {
+                    "requirements": "Senior Python",
+                    "generate_explanation": "1",
+                },
+            )
+            compose.assert_not_called()
+            build_payload.assert_not_called()
+            validate_output.assert_not_called()
+            provider.assert_not_called()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["analysis_performed"])
+        self.assertTrue(response.context["explanation_requested"])
+        self.assertFalse(response.context["explanation_allowed"])
+        self.assertEqual(
+            response.context["summary"].outcome,
+            EvidenceAlignmentOutcome.MANUAL_REVIEW_REQUIRED,
+        )
+        self.assertIsNone(response.context["advisory_explanation"])
+        self.assertFalse(response.context["advisory_explanation_failed"])
+        self.assertContains(response, "Evidence alignment summary")
+        self.assertNotContains(response, "Generate advisory explanation")
+        self.assertEqual(self._model_counts(), before_counts)
+        self.assertEqual(provider.call_count, 0)
+
+    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    def test_eligible_explicit_explanation_invokes_provider_once(self):
+        requirements = self._permitted_requirements()
+        before_counts = self._model_counts()
+
+        def fake_provider(payload):
+            return _phase4_valid_provider_output(payload)
+
+        provider = MagicMock(side_effect=fake_provider)
+        with patch(
+            "apps.skill_gaps.deterministic_gap_views."
+            "compose_evidence_alignment_explanation_provider",
+            return_value=provider,
+        ) as compose:
+            response = self.client.post(
+                self.url,
+                {
+                    "requirements": requirements,
+                    "generate_explanation": "1",
+                },
+            )
+            compose.assert_called_once()
+            provider.assert_called_once()
+
+            follow_get = self.client.get(self.url)
+            compose.assert_called_once()
+            provider.assert_called_once()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["analysis_performed"])
+        self.assertTrue(response.context["explanation_requested"])
+        self.assertTrue(response.context["explanation_allowed"])
+        self.assertIsNotNone(response.context["summary"])
+        self.assertIsNotNone(response.context["advisory_explanation"])
+        self.assertFalse(response.context["advisory_explanation_failed"])
+        self.assertEqual(follow_get.status_code, 200)
+        self.assertIsNone(follow_get.context["advisory_explanation"])
+        self.assertFalse(follow_get.context["explanation_requested"])
+        self.assertEqual(self._model_counts(), before_counts)
+        self.assertEqual(provider.call_count, 1)
+
+    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    def test_route_uses_real_output_validator_exactly_once(self):
+        from apps.skill_gaps.explanation_output_validator import (
+            validate_evidence_alignment_explanation_output as real_validator,
+        )
+
+        requirements = self._permitted_requirements()
+        before_counts = self._model_counts()
+
+        def fake_provider(payload):
+            return _phase4_valid_provider_output(payload)
+
+        provider = MagicMock(side_effect=fake_provider)
+        with (
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "compose_evidence_alignment_explanation_provider",
+                return_value=provider,
+            ) as compose,
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "validate_evidence_alignment_explanation_output",
+                wraps=real_validator,
+            ) as validate_output,
+        ):
+            response = self.client.post(
+                self.url,
+                {
+                    "requirements": requirements,
+                    "generate_explanation": "1",
+                },
+            )
+            compose.assert_called_once()
+            provider.assert_called_once()
+            validate_output.assert_called_once()
+            validated_raw, validated_payload = validate_output.call_args.args
+            self.assertIs(validated_payload, provider.call_args.args[0])
+            self.assertEqual(
+                validated_raw,
+                _phase4_valid_provider_output(validated_payload),
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(response.context["advisory_explanation"])
+        self.assertFalse(response.context["advisory_explanation_failed"])
+        self.assertIsNotNone(response.context["summary"])
+        self.assertTrue(response.context["analysis_performed"])
+        self.assertEqual(self._model_counts(), before_counts)
+        self.assertEqual(provider.call_count, 1)
+        self.assertEqual(validate_output.call_count, 1)
