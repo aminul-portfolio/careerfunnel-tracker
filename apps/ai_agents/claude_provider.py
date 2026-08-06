@@ -251,6 +251,27 @@ def make_claude_evidence_alignment_explanation_provider(
     return _call_evidence_alignment_explanation
 
 
+def make_claude_evidence_alignment_explanation_telemetry_provider(
+    api_key: str,
+) -> ClaudeTelemetryProvider:
+    """Return evidence-alignment telemetry using the production request seam."""
+
+    client = _new_client(api_key)
+
+    def _call_evidence_alignment_telemetry(
+        payload: dict,
+    ) -> ClaudeTelemetryResult:
+        request_kwargs = build_evidence_alignment_messages_create_kwargs(payload)
+        response, latency_ms = _execute_messages_create(client, request_kwargs)
+        return _build_telemetry_result(
+            response,
+            request_kwargs=request_kwargs,
+            latency_ms=latency_ms,
+        )
+
+    return _call_evidence_alignment_telemetry
+
+
 def _serialize_message(response: anthropic.types.Message) -> str:
     if hasattr(response, "model_dump"):
         data = response.model_dump(mode="json")
