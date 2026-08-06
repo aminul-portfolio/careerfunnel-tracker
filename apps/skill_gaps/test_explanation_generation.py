@@ -1613,6 +1613,7 @@ class Sprint114Phase4EvidenceAlignmentExplanationRouteTests(TestCase):
         )
         return "Python\nSnowflake\nGraphQL"
 
+    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
     def test_get_invalid_post_and_standard_analysis_post_do_not_compose_provider(self):
         self._create_entry("Python", SkillEntry.EvidenceLevel.VERIFIED)
         with (
@@ -1722,6 +1723,7 @@ class Sprint114Phase4EvidenceAlignmentExplanationRouteTests(TestCase):
         self.assertNotIn("hidden json", content.lower())
         self.assertNotIn('name="summary"', content)
 
+    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
     def test_explicit_explanation_post_calls_allowlisted_pipeline_once(self):
         from apps.skill_gaps.deterministic_explanation_payload import (
             build_evidence_alignment_explanation_payload as real_builder,
@@ -1883,7 +1885,8 @@ class Sprint114Phase4EvidenceAlignmentExplanationRouteTests(TestCase):
                 self.assertNotContains(response, "Generate advisory explanation")
                 self.assertNotContains(response, FALLBACK_STATEMENT)
 
-    def test_disabled_failing_and_invalid_provider_results_use_single_fallback(self):
+    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    def test_enabled_failing_and_invalid_provider_results_use_single_fallback(self):
         requirements = self._permitted_requirements()
         scenarios = {
             "composer_none": {
@@ -1944,6 +1947,7 @@ class Sprint114Phase4EvidenceAlignmentExplanationRouteTests(TestCase):
                 if scenario["provider"] is not None:
                     self.assertLessEqual(scenario["provider"].call_count, 1)
 
+    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
     def test_successful_explanation_renders_exact_safety_copy_and_sections(self):
         requirements = self._permitted_requirements()
 
@@ -2003,6 +2007,7 @@ class Sprint114Phase4EvidenceAlignmentExplanationRouteTests(TestCase):
         self.assertNotContains(response, "Generate advisory explanation")
         self.assertNotIn("|safe", advisory_html)
 
+    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
     def test_explanation_request_is_transient_and_preserves_model_counts(self):
         requirements = self._permitted_requirements()
         before_skills = SkillEntry.objects.count()
@@ -2056,6 +2061,7 @@ class Sprint114Phase4EvidenceAlignmentExplanationRouteTests(TestCase):
             "Deterministic evidence alignment explained from supplied",
         )
 
+    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
     def test_existing_route_form_results_links_and_safety_wording_remain(self):
         from apps.skill_gaps.forms import JDGapAnalysisForm
 
@@ -2078,6 +2084,7 @@ class Sprint114Phase4EvidenceAlignmentExplanationRouteTests(TestCase):
         for statement in EXISTING_SIX_SAFETY_STATEMENTS:
             self.assertEqual(content.count(statement), 1)
         self.assertTrue(response.context["explanation_allowed"])
+        self.assertTrue(response.context["explanation_feature_enabled"])
         self.assertContains(response, "Generate advisory explanation")
         self.assertContains(
             response,
@@ -2234,6 +2241,7 @@ class Sprint114Phase5BoundaryAndClaimSafetyRegressionTests(TestCase):
         )
         self.assertIn("def _new_client", claude_source)
 
+    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
     def test_new_safety_wording_present_on_advisory_surface(self):
         import apps.skill_gaps.deterministic_gap_views as views_mod
 
@@ -2403,22 +2411,25 @@ class Sprint115Phase5RouteAndProviderBoundaryRegressionTests(TestCase):
 
     @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=False)
     def test_explanation_post_while_flag_disabled_remains_provider_free(self):
-        from apps.ai_agents.provider_factory import (
-            compose_evidence_alignment_explanation_provider as real_compose,
-        )
-
         requirements = self._permitted_requirements()
         before_counts = self._model_counts()
+        provider = MagicMock(
+            side_effect=AssertionError("provider must not be called")
+        )
         with (
-            patch(
-                "apps.ai_agents.provider_factory."
-                "make_claude_evidence_alignment_explanation_provider",
-            ) as make_provider,
             patch(
                 "apps.skill_gaps.deterministic_gap_views."
                 "compose_evidence_alignment_explanation_provider",
-                wraps=real_compose,
+                return_value=provider,
             ) as compose,
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "build_evidence_alignment_explanation_payload",
+            ) as build_payload,
+            patch(
+                "apps.skill_gaps.deterministic_gap_views."
+                "validate_evidence_alignment_explanation_output",
+            ) as validate_output,
         ):
             response = self.client.post(
                 self.url,
@@ -2427,20 +2438,25 @@ class Sprint115Phase5RouteAndProviderBoundaryRegressionTests(TestCase):
                     "generate_explanation": "1",
                 },
             )
-            compose.assert_called_once()
-            make_provider.assert_not_called()
+            compose.assert_not_called()
+            build_payload.assert_not_called()
+            validate_output.assert_not_called()
+            provider.assert_not_called()
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["analysis_performed"])
         self.assertTrue(response.context["explanation_requested"])
         self.assertTrue(response.context["explanation_allowed"])
+        self.assertFalse(response.context["explanation_feature_enabled"])
         self.assertIsNotNone(response.context["summary"])
+        self.assertIsNotNone(response.context["results"])
         self.assertIsNone(response.context["advisory_explanation"])
-        self.assertTrue(response.context["advisory_explanation_failed"])
+        self.assertFalse(response.context["advisory_explanation_failed"])
         self.assertContains(response, "Evidence alignment summary")
-        self.assertContains(response, FALLBACK_STATEMENT)
+        self.assertNotContains(response, "Generate advisory explanation")
+        self.assertNotContains(response, FALLBACK_STATEMENT)
         self.assertEqual(self._model_counts(), before_counts)
-        self.assertEqual(make_provider.call_count, 0)
+        self.assertEqual(provider.call_count, 0)
 
     @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
     def test_blocked_deterministic_outcome_remains_provider_free(self):
