@@ -14,6 +14,7 @@ from .claude_provider import (
     make_claude_cv_tailoring_provider,
     make_claude_cv_tailoring_telemetry_provider,
     make_claude_evidence_alignment_explanation_provider,
+    make_claude_evidence_alignment_explanation_telemetry_provider,
     make_claude_fit_telemetry_provider,
     make_claude_provider,
 )
@@ -91,3 +92,12 @@ def compose_evidence_alignment_explanation_provider() -> ExplanationProvider | N
     if not live_providers_permitted():
         return None
     return make_claude_evidence_alignment_explanation_provider(_api_key())
+
+
+def compose_evidence_alignment_explanation_telemetry_provider(
+) -> ClaudeTelemetryProvider | None:
+    """Return evidence-alignment telemetry when existing live gates permit it."""
+
+    if not live_providers_permitted():
+        return None
+    return make_claude_evidence_alignment_explanation_telemetry_provider(_api_key())
