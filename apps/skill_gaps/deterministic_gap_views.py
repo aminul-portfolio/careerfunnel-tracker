@@ -2,8 +2,10 @@
 
 Isolated from provider-capable skill_gaps.views workflows.
 Sprint 114 Phase 4 adds an explicit second-POST advisory explanation path.
+Sprint 117 Phase 2 adds a page-level feature-flag availability gate.
 """
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
@@ -36,6 +38,15 @@ _PERMITTED_EXPLANATION_OUTCOMES = frozenset(
         EvidenceAlignmentOutcome.NO_VERIFIED_EVIDENCE,
     }
 )
+
+
+def _explanation_feature_enabled() -> bool:
+    """Fail-closed Boolean gate. Only an exact True enables the feature."""
+
+    return (
+        getattr(settings, "AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED", False)
+        is True
+    )
 
 
 def _user_skill_ledger_evidence(user) -> tuple[SkillLedgerEvidence, ...]:
@@ -84,6 +95,7 @@ def jd_gap_analysis_view(request):
         and request.POST.get("generate_explanation") == "1"
     )
     explanation_allowed = False
+    explanation_feature_enabled = _explanation_feature_enabled()
     advisory_explanation = None
     advisory_explanation_failed = False
 
@@ -96,7 +108,11 @@ def jd_gap_analysis_view(request):
             summary = summarise_evidence_alignment(results)
             analysis_performed = True
             explanation_allowed = summary.outcome in _PERMITTED_EXPLANATION_OUTCOMES
-            if explanation_requested and explanation_allowed:
+            if (
+                explanation_requested
+                and explanation_allowed
+                and explanation_feature_enabled
+            ):
                 advisory_explanation, advisory_explanation_failed = (
                     _attempt_advisory_explanation(summary)
                 )
@@ -113,6 +129,7 @@ def jd_gap_analysis_view(request):
             "summary": summary,
             "explanation_requested": explanation_requested,
             "explanation_allowed": explanation_allowed,
+            "explanation_feature_enabled": explanation_feature_enabled,
             "advisory_explanation": advisory_explanation,
             "advisory_explanation_failed": advisory_explanation_failed,
         },
