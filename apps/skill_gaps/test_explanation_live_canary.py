@@ -6,10 +6,16 @@ import hashlib
 import inspect
 import json
 import re
+from contextlib import ExitStack
 from dataclasses import FrozenInstanceError, replace
+from decimal import Decimal
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from types import ModuleType, SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import SimpleTestCase, override_settings
 
 from apps.ai_agents import claude_provider as claude_provider_module
@@ -50,6 +56,25 @@ from apps.skill_gaps.live_evaluation.evidence_alignment_explanation_canary_runne
     EvidenceAlignmentCanaryOutcome,
     EvidenceAlignmentCanaryRunResult,
     run_evidence_alignment_explanation_canary,
+)
+from apps.skill_gaps.management.commands import (
+    run_evidence_alignment_explanation_canary as canary_command_module,
+)
+from apps.skill_gaps.management.commands.run_evidence_alignment_explanation_canary import (
+    CONFIRMATION_VALUE,
+    RAW_FILENAME,
+    READINESS_FILENAME,
+    RESULTS_FILENAME,
+    RETENTION_INSTRUCTION,
+    SUMMARY_FILENAME,
+    CanaryReadinessReport,
+    GitRepositoryState,
+    assess_spend,
+    authoritative_production_request_kwargs,
+    authoritative_request_payload_sha256,
+    evaluate_canary_readiness,
+    production_request_message_contents,
+    scan_redacted_reports_for_leakage,
 )
 
 
@@ -1111,3 +1136,1181 @@ class EvidenceAlignmentExplanationCanaryRunnerTests(SimpleTestCase):
         self.assertFalse(hasattr(result, "__dict__"))
         with self.assertRaises(FrozenInstanceError):
             result.persistence_count = 1  # type: ignore[misc]
+
+
+def _clean_git_state(
+    *,
+    branch: str = "feature/sprint-116-evidence-alignment-explanation-live-canary",
+    head_sha: str = "b6d154a2487468cecf05de9b584ddbc97c74afa0",
+) -> GitRepositoryState:
+    return GitRepositoryState(
+        branch=branch,
+        head_sha=head_sha,
+        worktree_clean=True,
+        index_clean=True,
+        untracked_clean=True,
+        head_is_commit=True,
+    )
+
+
+def _external_pair(tmp: TemporaryDirectory) -> tuple[Path, Path]:
+    root = Path(tmp.name)
+    output_dir = root / "output"
+    raw_dir = root / "raw"
+    output_dir.mkdir()
+    raw_dir.mkdir()
+    return output_dir, raw_dir
+
+
+@override_settings(
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_LIVE_CANARY_ENABLED=True,
+    AI_EXPLANATION_PROVIDER="live",
+    ANTHROPIC_API_KEY="test-not-a-real-key",
+)
+class EvidenceAlignmentExplanationCanaryReadinessTests(SimpleTestCase):
+    """Pure readiness-gate coverage for the Phase 3 command boundary."""
+
+    def setUp(self):
+        self.contract_hash = CONTRACT_MANIFEST_SHA256
+        self.request_hash = authoritative_request_payload_sha256()
+        self.head = "b6d154a2487468cecf05de9b584ddbc97c74afa0"
+        self.branch = "feature/sprint-116-evidence-alignment-explanation-live-canary"
+        self.tmp = TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.output_dir, self.raw_dir = _external_pair(self.tmp)
+
+    def _evaluate(self, **overrides) -> CanaryReadinessReport:
+        kwargs = {
+            "expected_branch": self.branch,
+            "expected_head_sha": self.head,
+            "expected_contract_manifest_sha256": self.contract_hash,
+            "expected_request_payload_sha256": self.request_hash,
+            "call_cap": 1,
+            "monetary_ceiling_usd": "0.05",
+            "confirm": None,
+            "readiness_only": True,
+            "output_dir": self.output_dir,
+            "raw_evidence_dir": self.raw_dir,
+            "git_state": _clean_git_state(branch=self.branch, head_sha=self.head),
+            "contract_hash": self.contract_hash,
+            "request_hash": self.request_hash,
+            "canary_setting_enabled": True,
+            "live_mode_permitted": True,
+            "checked_at_utc": "2026-08-06T12:00:00+00:00",
+            "repo_root": Path(self.tmp.name) / "repo",
+        }
+        (Path(self.tmp.name) / "repo").mkdir(exist_ok=True)
+        kwargs.update(overrides)
+        return evaluate_canary_readiness(**kwargs)
+
+    def test_correct_readiness_inputs_pass(self):
+        report = self._evaluate()
+        self.assertEqual(report.readiness_result, "PASS")
+        self.assertIsNone(report.failure_category)
+
+    def test_wrong_branch_fails(self):
+        report = self._evaluate(expected_branch="wrong-branch")
+        self.assertEqual(report.readiness_result, "FAIL")
+        self.assertEqual(report.failure_category, "branch_mismatch")
+
+    def test_wrong_head_fails(self):
+        report = self._evaluate(expected_head_sha="a" * 40)
+        self.assertEqual(report.readiness_result, "FAIL")
+        self.assertEqual(report.failure_category, "head_mismatch")
+
+    def test_dirty_worktree_fails(self):
+        dirty = _clean_git_state(branch=self.branch, head_sha=self.head)
+        dirty = GitRepositoryState(
+            branch=dirty.branch,
+            head_sha=dirty.head_sha,
+            worktree_clean=False,
+            index_clean=True,
+            untracked_clean=True,
+            head_is_commit=True,
+        )
+        report = self._evaluate(git_state=dirty)
+        self.assertEqual(report.failure_category, "worktree_dirty")
+
+    def test_staged_index_fails(self):
+        dirty = GitRepositoryState(
+            branch=self.branch,
+            head_sha=self.head,
+            worktree_clean=True,
+            index_clean=False,
+            untracked_clean=True,
+            head_is_commit=True,
+        )
+        report = self._evaluate(git_state=dirty)
+        self.assertEqual(report.failure_category, "index_dirty")
+
+    def test_untracked_repository_file_fails(self):
+        dirty = GitRepositoryState(
+            branch=self.branch,
+            head_sha=self.head,
+            worktree_clean=True,
+            index_clean=True,
+            untracked_clean=False,
+            head_is_commit=True,
+        )
+        report = self._evaluate(git_state=dirty)
+        self.assertEqual(report.failure_category, "untracked_files_present")
+
+    def test_contract_hash_mismatch_fails(self):
+        report = self._evaluate(expected_contract_manifest_sha256="a" * 64)
+        self.assertEqual(report.failure_category, "contract_manifest_hash_mismatch")
+
+    def test_request_hash_mismatch_fails(self):
+        report = self._evaluate(expected_request_payload_sha256="b" * 64)
+        self.assertEqual(report.failure_category, "request_payload_hash_mismatch")
+
+    def test_contract_and_request_hashes_must_be_distinct(self):
+        report = self._evaluate(
+            contract_hash=self.contract_hash,
+            request_hash=self.contract_hash,
+            expected_request_payload_sha256=self.contract_hash,
+        )
+        self.assertEqual(report.failure_category, "hash_type_collision")
+
+    def test_call_cap_other_than_one_fails(self):
+        report = self._evaluate(call_cap=2)
+        self.assertEqual(report.failure_category, "call_cap_mismatch")
+
+    def test_monetary_ceiling_other_than_exactly_usd_0_05_fails(self):
+        report = self._evaluate(monetary_ceiling_usd="0.06")
+        self.assertEqual(report.failure_category, "monetary_ceiling_mismatch")
+
+    def test_disabled_canary_setting_fails(self):
+        report = self._evaluate(canary_setting_enabled=False)
+        self.assertEqual(report.failure_category, "canary_setting_disabled")
+
+    def test_non_live_provider_mode_fails(self):
+        report = self._evaluate(live_mode_permitted=False)
+        self.assertEqual(report.failure_category, "live_provider_mode_not_permitted")
+
+    def test_nested_evidence_directories_fail(self):
+        nested_raw = self.output_dir / "nested-raw"
+        nested_raw.mkdir()
+        report = self._evaluate(raw_evidence_dir=nested_raw)
+        self.assertEqual(
+            report.failure_category,
+            "evidence_directories_nested_or_equal",
+        )
+
+    def test_evidence_directory_inside_repository_fails(self):
+        repo = Path(self.tmp.name) / "repo"
+        repo.mkdir(exist_ok=True)
+        inside = repo / "inside-output"
+        inside.mkdir()
+        report = self._evaluate(output_dir=inside, repo_root=repo)
+        self.assertEqual(
+            report.failure_category,
+            "evidence_directory_inside_repository",
+        )
+
+    def test_non_empty_evidence_directory_fails(self):
+        (self.output_dir / "stale.txt").write_text("x", encoding="utf-8")
+        report = self._evaluate()
+        self.assertEqual(report.failure_category, "evidence_directory_not_empty")
+
+    def test_invalid_sha_syntax_fails(self):
+        report = self._evaluate(expected_head_sha="not-a-sha")
+        self.assertEqual(report.failure_category, "expected_head_sha_invalid")
+
+    def test_readiness_only_repository_state_mutation_fails(self):
+        compose = MagicMock()
+        mutated = GitRepositoryState(
+            branch=self.branch,
+            head_sha=self.head,
+            worktree_clean=False,
+            index_clean=True,
+            untracked_clean=True,
+            head_is_commit=True,
+        )
+        with (
+            patch.object(
+                canary_command_module,
+                "inspect_git_repository",
+                side_effect=[
+                    _clean_git_state(branch=self.branch, head_sha=self.head),
+                    mutated,
+                ],
+            ),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                compose,
+            ),
+        ):
+            with self.assertRaises(CommandError) as ctx:
+                call_command(
+                    "run_evidence_alignment_explanation_canary",
+                    output_dir=str(self.output_dir),
+                    raw_evidence_dir=str(self.raw_dir),
+                    expected_branch=self.branch,
+                    expected_head_sha=self.head,
+                    expected_contract_manifest_sha256=self.contract_hash,
+                    expected_request_payload_sha256=self.request_hash,
+                    call_cap=1,
+                    monetary_ceiling_usd="0.05",
+                    readiness_only=True,
+                )
+        self.assertEqual(str(ctx.exception), "repository_state_changed")
+        self.assertNotIn("Traceback", str(ctx.exception))
+        compose.assert_not_called()
+
+
+@override_settings(
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_LIVE_CANARY_ENABLED=True,
+    AI_EXPLANATION_PROVIDER="live",
+    ANTHROPIC_API_KEY="test-not-a-real-key",
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=False,
+)
+class RunEvidenceAlignmentExplanationCanaryCommandTests(SimpleTestCase):
+    """Offline management-command tests with all provider behaviour mocked."""
+
+    def setUp(self):
+        self.contract_hash = CONTRACT_MANIFEST_SHA256
+        self.request_hash = authoritative_request_payload_sha256()
+        self.head = "b6d154a2487468cecf05de9b584ddbc97c74afa0"
+        self.branch = "feature/sprint-116-evidence-alignment-explanation-live-canary"
+        self.tmp = TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.output_dir, self.raw_dir = _external_pair(self.tmp)
+        self.git = _clean_git_state(branch=self.branch, head_sha=self.head)
+        self.payload, _kwargs, _outcome = (
+            runner_module._build_authoritative_payload_and_request()
+        )
+
+    def _base_options(self, *, readiness_only: bool = False) -> dict:
+        options = {
+            "output_dir": str(self.output_dir),
+            "raw_evidence_dir": str(self.raw_dir),
+            "expected_branch": self.branch,
+            "expected_head_sha": self.head,
+            "expected_contract_manifest_sha256": self.contract_hash,
+            "expected_request_payload_sha256": self.request_hash,
+            "call_cap": 1,
+            "monetary_ceiling_usd": "0.05",
+            "readiness_only": readiness_only,
+        }
+        if not readiness_only:
+            options["confirm"] = CONFIRMATION_VALUE
+        return options
+
+    def _patch_git(self):
+        return patch.object(
+            canary_command_module,
+            "inspect_git_repository",
+            return_value=self.git,
+        )
+
+    def _accepted_result(self) -> EvidenceAlignmentCanaryRunResult:
+        telemetry = _canary_telemetry(self.payload)
+        run = run_evidence_alignment_explanation_canary(
+            telemetry_provider=lambda payload: telemetry,
+            expected_contract_manifest_sha256=self.contract_hash,
+            expected_request_payload_sha256=self.request_hash,
+        )
+        return run
+
+    def test_readiness_only_mode_never_composes_a_provider(self):
+        compose = MagicMock()
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                compose,
+            ),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+        ):
+            call_command(
+                "run_evidence_alignment_explanation_canary",
+                **self._base_options(readiness_only=True),
+            )
+        compose.assert_not_called()
+
+    def test_readiness_only_mode_writes_a_safe_readiness_report(self):
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+        ):
+            call_command(
+                "run_evidence_alignment_explanation_canary",
+                **self._base_options(readiness_only=True),
+            )
+        readiness_path = self.output_dir / READINESS_FILENAME
+        self.assertTrue(readiness_path.is_file())
+        document = json.loads(readiness_path.read_text(encoding="utf-8"))
+        self.assertEqual(document["readiness_result"], "PASS")
+        self.assertNotIn("serialised_raw_response", document)
+        self.assertNotIn("api_key", document)
+
+    def test_readiness_only_report_excludes_secrets_and_raw_content(self):
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+        ):
+            call_command(
+                "run_evidence_alignment_explanation_canary",
+                **self._base_options(readiness_only=True),
+            )
+        text = (self.output_dir / READINESS_FILENAME).read_text(encoding="utf-8")
+        self.assertNotIn("sk-ant-", text)
+        self.assertNotIn("Bearer ", text)
+        self.assertNotIn("req_synthetic", text)
+        self.assertNotIn('{"synthetic"', text)
+
+    def test_execution_requires_exact_confirmation(self):
+        options = self._base_options()
+        options["confirm"] = "WRONG"
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+        ):
+            with self.assertRaises(CommandError) as ctx:
+                call_command("run_evidence_alignment_explanation_canary", **options)
+        self.assertEqual(str(ctx.exception), "confirmation_rejected")
+
+    def test_provider_factory_returning_none_fails_safely(self):
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                return_value=None,
+            ),
+        ):
+            with self.assertRaises(CommandError) as ctx:
+                call_command(
+                    "run_evidence_alignment_explanation_canary",
+                    **self._base_options(),
+                )
+        self.assertEqual(str(ctx.exception), "provider_composition_refused")
+
+    def _run_execution(self, provider, **extra_patches):
+        compose = MagicMock(return_value=provider)
+        patches = [
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                compose,
+            ),
+            *extra_patches.get("patches", ()),
+        ]
+        with ExitStack() as stack_cm:
+            for item in patches:
+                stack_cm.enter_context(item)
+            call_command(
+                "run_evidence_alignment_explanation_canary",
+                **self._base_options(),
+            )
+            return compose
+
+    def test_accepted_mocked_run_writes_raw_and_redacted_evidence(self):
+        telemetry = _canary_telemetry(self.payload)
+        provider = MagicMock(return_value=telemetry)
+        compose = self._run_execution(provider)
+        compose.assert_called_once()
+        provider.assert_called_once()
+        self.assertTrue((self.raw_dir / RAW_FILENAME).is_file())
+        self.assertTrue((self.output_dir / RESULTS_FILENAME).is_file())
+        self.assertTrue((self.output_dir / SUMMARY_FILENAME).is_file())
+        self.assertFalse((self.output_dir / RAW_FILENAME).exists())
+        self.assertFalse((self.raw_dir / RESULTS_FILENAME).exists())
+        results = json.loads(
+            (self.output_dir / RESULTS_FILENAME).read_text(encoding="utf-8")
+        )
+        self.assertEqual(results["overall_result"], "PASS")
+        self.assertEqual(results["evidence_retention_instruction"], RETENTION_INSTRUCTION)
+
+    def test_safely_rejected_mocked_run_maps_to_overall_pass(self):
+        invalid = _valid_canary_output(self.payload)
+        invalid.pop("missing_evidence")
+        telemetry = _canary_telemetry(self.payload, parsed_payload=invalid)
+        provider = MagicMock(return_value=telemetry)
+        self._run_execution(provider)
+        results = json.loads(
+            (self.output_dir / RESULTS_FILENAME).read_text(encoding="utf-8")
+        )
+        self.assertEqual(results["overall_result"], "PASS")
+        self.assertEqual(
+            results["run_outcome"],
+            EvidenceAlignmentCanaryOutcome.CONTROL_PASS_OUTPUT_SAFELY_REJECTED.value,
+        )
+
+    def test_provider_is_composed_and_invoked_exactly_once(self):
+        telemetry = _canary_telemetry(self.payload)
+        provider = MagicMock(return_value=telemetry)
+        compose = self._run_execution(provider)
+        compose.assert_called_once()
+        provider.assert_called_once()
+
+    def test_no_retry_after_provider_failure(self):
+        provider = MagicMock(side_effect=RuntimeError("synthetic"))
+        compose = MagicMock(return_value=provider)
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                compose,
+            ),
+        ):
+            with self.assertRaises(CommandError):
+                call_command(
+                    "run_evidence_alignment_explanation_canary",
+                    **self._base_options(),
+                )
+        compose.assert_called_once()
+        provider.assert_called_once()
+
+    def test_no_retry_after_validator_rejection(self):
+        invalid = _valid_canary_output(self.payload)
+        invalid.pop("summary")
+        telemetry = _canary_telemetry(self.payload, parsed_payload=invalid)
+        provider = MagicMock(return_value=telemetry)
+        compose = self._run_execution(provider)
+        compose.assert_called_once()
+        provider.assert_called_once()
+
+    def test_raw_response_absent_from_redacted_reports(self):
+        serialised = '{"synthetic":"secret-raw-body"}'
+        telemetry = _canary_telemetry(
+            self.payload,
+            serialised_raw_response=serialised,
+        )
+        provider = MagicMock(return_value=telemetry)
+        self._run_execution(provider)
+        results_text = (self.output_dir / RESULTS_FILENAME).read_text(encoding="utf-8")
+        summary_text = (self.output_dir / SUMMARY_FILENAME).read_text(encoding="utf-8")
+        self.assertNotIn(serialised, results_text)
+        self.assertNotIn(serialised, summary_text)
+        self.assertNotIn("req_synthetic", results_text)
+        self.assertNotIn("req_synthetic", summary_text)
+
+    def test_raw_response_digest_is_independently_rechecked_before_raw_write(self):
+        serialised = '{"synthetic":"digest-recheck"}'
+        expected = hashlib.sha256(serialised.encode("utf-8")).hexdigest()
+        telemetry = _canary_telemetry(
+            self.payload,
+            serialised_raw_response=serialised,
+        )
+        provider = MagicMock(return_value=telemetry)
+        self._run_execution(provider)
+        raw = json.loads((self.raw_dir / RAW_FILENAME).read_text(encoding="utf-8"))
+        self.assertEqual(raw["raw_response_sha256"], expected)
+        self.assertEqual(raw["serialised_raw_response"], serialised)
+
+    def test_raw_response_digest_mismatch_fails_closed(self):
+        telemetry = _canary_telemetry(self.payload)
+        provider = MagicMock(return_value=telemetry)
+
+        def _run_with_tampered(*args, **kwargs):
+            result = run_evidence_alignment_explanation_canary(*args, **kwargs)
+            return replace(result, raw_response_sha256="a" * 64)
+
+        compose = MagicMock(return_value=provider)
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                compose,
+            ),
+            patch.object(
+                canary_command_module,
+                "run_evidence_alignment_explanation_canary",
+                side_effect=_run_with_tampered,
+            ),
+        ):
+            with self.assertRaises(CommandError) as ctx:
+                call_command(
+                    "run_evidence_alignment_explanation_canary",
+                    **self._base_options(),
+                )
+        self.assertEqual(str(ctx.exception), "raw_response_hash_recheck_mismatch")
+        self.assertFalse((self.raw_dir / RAW_FILENAME).exists())
+
+    def test_leakage_scanner_detects_injected_raw_response_leak(self):
+        serialised = '{"synthetic":"leak-me"}'
+        category = scan_redacted_reports_for_leakage(
+            results_text=f"safe\n{serialised}\n",
+            summary_text="summary",
+            serialised_raw_response=serialised,
+            raw_request_id="req_x",
+            repository_path=Path(self.tmp.name) / "repo",
+            raw_evidence_dir=self.raw_dir,
+        )
+        self.assertEqual(category, "REDACTED_REPORT_LEAKAGE_DETECTED")
+
+    def test_leakage_scanner_detects_api_key_like_content(self):
+        category = scan_redacted_reports_for_leakage(
+            results_text="token sk-ant-secret",
+            summary_text="ok",
+            serialised_raw_response=None,
+            raw_request_id=None,
+            repository_path=Path(self.tmp.name) / "repo",
+            raw_evidence_dir=self.raw_dir,
+        )
+        self.assertEqual(category, "REDACTED_REPORT_LEAKAGE_DETECTED")
+
+    def test_existing_output_file_blocks_execution_before_provider_call(self):
+        (self.output_dir / RESULTS_FILENAME).write_text("{}", encoding="utf-8")
+        compose = MagicMock()
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                compose,
+            ),
+        ):
+            with self.assertRaises(CommandError) as ctx:
+                call_command(
+                    "run_evidence_alignment_explanation_canary",
+                    **self._base_options(),
+                )
+        self.assertEqual(str(ctx.exception), "evidence_directory_not_empty")
+        compose.assert_not_called()
+
+    def test_non_empty_raw_directory_blocks_execution_before_provider_call(self):
+        (self.raw_dir / "stale.json").write_text("{}", encoding="utf-8")
+        compose = MagicMock()
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                compose,
+            ),
+        ):
+            with self.assertRaises(CommandError) as ctx:
+                call_command(
+                    "run_evidence_alignment_explanation_canary",
+                    **self._base_options(),
+                )
+        self.assertEqual(str(ctx.exception), "evidence_directory_not_empty")
+        compose.assert_not_called()
+
+    def test_spend_above_usd_0_05_fails(self):
+        telemetry = _canary_telemetry(self.payload)
+        provider = MagicMock(return_value=telemetry)
+        compose = MagicMock(return_value=provider)
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                compose,
+            ),
+            patch.object(
+                canary_command_module,
+                "assess_spend",
+                return_value=("COMPLETE", Decimal("0.06")),
+            ),
+        ):
+            with self.assertRaises(CommandError) as ctx:
+                call_command(
+                    "run_evidence_alignment_explanation_canary",
+                    **self._base_options(),
+                )
+        self.assertEqual(str(ctx.exception), "monetary_ceiling_exceeded")
+
+    def test_incomplete_pricing_fails(self):
+        telemetry = _canary_telemetry(self.payload, returned_model="other-model")
+        provider = MagicMock(return_value=telemetry)
+        compose = MagicMock(return_value=provider)
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                compose,
+            ),
+        ):
+            with self.assertRaises(CommandError) as ctx:
+                call_command(
+                    "run_evidence_alignment_explanation_canary",
+                    **self._base_options(),
+                )
+        self.assertIn(str(ctx.exception), {"pricing_incomplete", "returned_model_mismatch"})
+
+    def test_correct_spend_within_ceiling_passes(self):
+        telemetry = _canary_telemetry(self.payload)
+        status, spend = assess_spend(
+            run_evidence_alignment_explanation_canary(
+                telemetry_provider=lambda payload: telemetry,
+                expected_contract_manifest_sha256=self.contract_hash,
+                expected_request_payload_sha256=self.request_hash,
+            )
+        )
+        self.assertEqual(status, "COMPLETE")
+        self.assertIsNotNone(spend)
+        self.assertLessEqual(spend, Decimal("0.05"))
+        provider = MagicMock(return_value=telemetry)
+        self._run_execution(provider)
+        results = json.loads(
+            (self.output_dir / RESULTS_FILENAME).read_text(encoding="utf-8")
+        )
+        self.assertEqual(results["pricing_status"], "COMPLETE")
+        self.assertEqual(results["overall_result"], "PASS")
+
+    def test_repository_state_mutation_during_execution_fails(self):
+        telemetry = _canary_telemetry(self.payload)
+        provider = MagicMock(return_value=telemetry)
+        compose = MagicMock(return_value=provider)
+        mutated = GitRepositoryState(
+            branch=self.branch,
+            head_sha=self.head,
+            worktree_clean=False,
+            index_clean=True,
+            untracked_clean=True,
+            head_is_commit=True,
+        )
+        with (
+            patch.object(
+                canary_command_module,
+                "inspect_git_repository",
+                side_effect=[self.git, mutated],
+            ),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                compose,
+            ),
+        ):
+            with self.assertRaises(CommandError) as ctx:
+                call_command(
+                    "run_evidence_alignment_explanation_canary",
+                    **self._base_options(),
+                )
+        self.assertEqual(str(ctx.exception), "repository_state_changed")
+
+    def test_expected_failures_expose_no_traceback_or_raw_exception(self):
+        options = self._base_options()
+        options["confirm"] = "WRONG"
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+        ):
+            with self.assertRaises(CommandError) as ctx:
+                call_command("run_evidence_alignment_explanation_canary", **options)
+        message = str(ctx.exception)
+        self.assertNotIn("Traceback", message)
+        self.assertNotIn("RuntimeError", message)
+        self.assertEqual(message, "confirmation_rejected")
+
+    def test_no_database_query_or_write_occurs(self):
+        telemetry = _canary_telemetry(self.payload)
+        provider = MagicMock(return_value=telemetry)
+        with patch("django.db.backends.utils.CursorWrapper.execute") as execute:
+            self._run_execution(provider)
+        execute.assert_not_called()
+
+    def test_no_real_network_call_occurs(self):
+        telemetry = _canary_telemetry(self.payload)
+        provider = MagicMock(return_value=telemetry)
+        with patch("socket.socket") as socket_cls:
+            self._run_execution(provider)
+        socket_cls.assert_not_called()
+
+    def test_command_source_contains_no_direct_anthropic_construction(self):
+        source = inspect.getsource(canary_command_module)
+        self.assertNotIn("anthropic.Anthropic", source)
+        self.assertNotIn("Anthropic(", source)
+
+    def test_command_source_contains_no_direct_api_key_read(self):
+        source = inspect.getsource(canary_command_module)
+        self.assertNotIn("ANTHROPIC_API_KEY", source)
+        self.assertNotIn("getenv(", source)
+        self.assertNotRegex(source, r"os\.environ\b")
+
+    def test_non_string_raw_response_serialisation_fails_safely(self):
+        base = _canary_telemetry(self.payload)
+        telemetry = ClaudeTelemetryResult(
+            parsed_payload=base.parsed_payload,
+            returned_model=base.returned_model,
+            stop_reason=base.stop_reason,
+            input_tokens=base.input_tokens,
+            output_tokens=base.output_tokens,
+            raw_request_id=base.raw_request_id,
+            latency_ms=base.latency_ms,
+            request_payload_hash=base.request_payload_hash,
+            serialised_raw_response=None,  # type: ignore[arg-type]
+            raw_response_hash=base.raw_response_hash,
+            parse_error_category=base.parse_error_category,
+        )
+        provider = MagicMock(return_value=telemetry)
+        compose = MagicMock(return_value=provider)
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                compose,
+            ),
+        ):
+            with self.assertRaises(CommandError) as ctx:
+                call_command(
+                    "run_evidence_alignment_explanation_canary",
+                    **self._base_options(),
+                )
+        message = str(ctx.exception)
+        self.assertEqual(message, "raw_response_serialisation_unavailable")
+        self.assertNotIn("AttributeError", message)
+        self.assertNotIn("Traceback", message)
+        self.assertNotIn("NoneType", message)
+        compose.assert_called_once()
+        provider.assert_called_once()
+        self.assertFalse((self.raw_dir / RAW_FILENAME).exists())
+
+    def test_empty_raw_response_serialisation_fails_safely(self):
+        telemetry = _canary_telemetry(self.payload, serialised_raw_response="")
+        provider = MagicMock(return_value=telemetry)
+        compose = MagicMock(return_value=provider)
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                compose,
+            ),
+        ):
+            with self.assertRaises(CommandError) as ctx:
+                call_command(
+                    "run_evidence_alignment_explanation_canary",
+                    **self._base_options(),
+                )
+        message = str(ctx.exception)
+        self.assertEqual(message, "raw_response_serialisation_unavailable")
+        self.assertNotIn("AttributeError", message)
+        self.assertNotIn("Traceback", message)
+        compose.assert_called_once()
+        provider.assert_called_once()
+        self.assertFalse((self.raw_dir / RAW_FILENAME).exists())
+
+    def test_leakage_scanner_detects_full_system_message_content(self):
+        request_kwargs = authoritative_production_request_kwargs()
+        contents = production_request_message_contents(request_kwargs)
+        system_text = request_kwargs["system"]
+        self.assertIn(system_text, contents)
+        category = scan_redacted_reports_for_leakage(
+            results_text=f"prefix\n{system_text}\nsuffix",
+            summary_text="summary only",
+            serialised_raw_response=None,
+            raw_request_id=None,
+            repository_path=Path(self.tmp.name) / "repo",
+            raw_evidence_dir=self.raw_dir,
+            request_message_contents=contents,
+        )
+        self.assertEqual(category, "REDACTED_REPORT_LEAKAGE_DETECTED")
+
+    def test_leakage_scanner_detects_full_user_message_content(self):
+        request_kwargs = authoritative_production_request_kwargs()
+        contents = production_request_message_contents(request_kwargs)
+        user_text = request_kwargs["messages"][0]["content"]
+        self.assertIn(user_text, contents)
+        category = scan_redacted_reports_for_leakage(
+            results_text="safe results",
+            summary_text=f"leaked\n{user_text}\nend",
+            serialised_raw_response=None,
+            raw_request_id=None,
+            repository_path=Path(self.tmp.name) / "repo",
+            raw_evidence_dir=self.raw_dir,
+            request_message_contents=contents,
+        )
+        self.assertEqual(category, "REDACTED_REPORT_LEAKAGE_DETECTED")
+
+    def test_raw_evidence_write_failure_is_stable_and_safe(self):
+        telemetry = _canary_telemetry(self.payload)
+        provider = MagicMock(return_value=telemetry)
+        compose = MagicMock(return_value=provider)
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                compose,
+            ),
+            patch.object(
+                canary_command_module,
+                "write_json_document",
+                side_effect=OSError("disk full at /secret/path"),
+            ),
+        ):
+            with self.assertRaises(CommandError) as ctx:
+                call_command(
+                    "run_evidence_alignment_explanation_canary",
+                    **self._base_options(),
+                )
+        message = str(ctx.exception)
+        self.assertEqual(message, "raw_evidence_write_failure")
+        self.assertNotIn("disk full", message)
+        self.assertNotIn("Traceback", message)
+        self.assertNotIn("/secret/path", message)
+        compose.assert_called_once()
+        provider.assert_called_once()
+
+    def test_redacted_report_write_failure_is_stable_and_safe(self):
+        telemetry = _canary_telemetry(self.payload)
+        provider = MagicMock(return_value=telemetry)
+        compose = MagicMock(return_value=provider)
+        real_write_json = canary_command_module.write_json_document
+
+        def write_json_then_fail(path, document):
+            if path.name == RESULTS_FILENAME:
+                raise OSError("permission denied /hidden")
+            return real_write_json(path, document)
+
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                compose,
+            ),
+            patch.object(
+                canary_command_module,
+                "write_json_document",
+                side_effect=write_json_then_fail,
+            ),
+        ):
+            with self.assertRaises(CommandError) as ctx:
+                call_command(
+                    "run_evidence_alignment_explanation_canary",
+                    **self._base_options(),
+                )
+        message = str(ctx.exception)
+        self.assertEqual(message, "redacted_report_write_failure")
+        self.assertNotIn("permission denied", message)
+        self.assertNotIn("Traceback", message)
+        self.assertNotIn("/hidden", message)
+        compose.assert_called_once()
+        provider.assert_called_once()
+
+    def test_redacted_report_read_failure_is_stable_and_safe(self):
+        telemetry = _canary_telemetry(self.payload)
+        provider = MagicMock(return_value=telemetry)
+        compose = MagicMock(return_value=provider)
+        with (
+            self._patch_git(),
+            patch.object(
+                canary_command_module,
+                "live_providers_permitted",
+                return_value=True,
+            ),
+            patch.object(
+                canary_command_module,
+                "authoritative_request_payload_sha256",
+                return_value=self.request_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "contract_manifest_sha256",
+                return_value=self.contract_hash,
+            ),
+            patch.object(
+                canary_command_module,
+                "compose_evidence_alignment_explanation_telemetry_provider",
+                compose,
+            ),
+            patch.object(
+                Path,
+                "read_text",
+                side_effect=OSError("cannot read /secret/report"),
+            ),
+        ):
+            with self.assertRaises(CommandError) as ctx:
+                call_command(
+                    "run_evidence_alignment_explanation_canary",
+                    **self._base_options(),
+                )
+        message = str(ctx.exception)
+        self.assertEqual(message, "redacted_report_read_failure")
+        self.assertNotIn("cannot read", message)
+        self.assertNotIn("Traceback", message)
+        self.assertNotIn("/secret/report", message)
+        compose.assert_called_once()
+        provider.assert_called_once()

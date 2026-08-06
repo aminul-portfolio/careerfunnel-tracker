@@ -16,6 +16,11 @@ AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED = config(
     default=False,
     cast=bool,
 )
+AI_EVIDENCE_ALIGNMENT_EXPLANATION_LIVE_CANARY_ENABLED = config(
+    "AI_EVIDENCE_ALIGNMENT_EXPLANATION_LIVE_CANARY_ENABLED",
+    default=False,
+    cast=bool,
+)
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
     default="127.0.0.1,localhost",
