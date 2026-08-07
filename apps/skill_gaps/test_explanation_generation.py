@@ -1613,7 +1613,10 @@ class Sprint114Phase4EvidenceAlignmentExplanationRouteTests(TestCase):
         )
         return "Python\nSnowflake\nGraphQL"
 
-    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    @override_settings(
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True,
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_DAILY_REQUEST_LIMIT=100,
+)
     def test_get_invalid_post_and_standard_analysis_post_do_not_compose_provider(self):
         self._create_entry("Python", SkillEntry.EvidenceLevel.VERIFIED)
         with (
@@ -1723,7 +1726,10 @@ class Sprint114Phase4EvidenceAlignmentExplanationRouteTests(TestCase):
         self.assertNotIn("hidden json", content.lower())
         self.assertNotIn('name="summary"', content)
 
-    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    @override_settings(
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True,
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_DAILY_REQUEST_LIMIT=100,
+)
     def test_explicit_explanation_post_calls_allowlisted_pipeline_once(self):
         from apps.skill_gaps.deterministic_explanation_payload import (
             build_evidence_alignment_explanation_payload as real_builder,
@@ -1885,7 +1891,10 @@ class Sprint114Phase4EvidenceAlignmentExplanationRouteTests(TestCase):
                 self.assertNotContains(response, "Generate advisory explanation")
                 self.assertNotContains(response, FALLBACK_STATEMENT)
 
-    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    @override_settings(
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True,
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_DAILY_REQUEST_LIMIT=100,
+)
     def test_enabled_failing_and_invalid_provider_results_use_single_fallback(self):
         requirements = self._permitted_requirements()
         scenarios = {
@@ -1947,7 +1956,10 @@ class Sprint114Phase4EvidenceAlignmentExplanationRouteTests(TestCase):
                 if scenario["provider"] is not None:
                     self.assertLessEqual(scenario["provider"].call_count, 1)
 
-    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    @override_settings(
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True,
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_DAILY_REQUEST_LIMIT=100,
+)
     def test_successful_explanation_renders_exact_safety_copy_and_sections(self):
         requirements = self._permitted_requirements()
 
@@ -2007,7 +2019,10 @@ class Sprint114Phase4EvidenceAlignmentExplanationRouteTests(TestCase):
         self.assertNotContains(response, "Generate advisory explanation")
         self.assertNotIn("|safe", advisory_html)
 
-    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    @override_settings(
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True,
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_DAILY_REQUEST_LIMIT=100,
+)
     def test_explanation_request_is_transient_and_preserves_model_counts(self):
         requirements = self._permitted_requirements()
         before_skills = SkillEntry.objects.count()
@@ -2061,7 +2076,10 @@ class Sprint114Phase4EvidenceAlignmentExplanationRouteTests(TestCase):
             "Deterministic evidence alignment explained from supplied",
         )
 
-    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    @override_settings(
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True,
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_DAILY_REQUEST_LIMIT=100,
+)
     def test_existing_route_form_results_links_and_safety_wording_remain(self):
         from apps.skill_gaps.forms import JDGapAnalysisForm
 
@@ -2241,7 +2259,10 @@ class Sprint114Phase5BoundaryAndClaimSafetyRegressionTests(TestCase):
         )
         self.assertIn("def _new_client", claude_source)
 
-    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    @override_settings(
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True,
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_DAILY_REQUEST_LIMIT=100,
+)
     def test_new_safety_wording_present_on_advisory_surface(self):
         import apps.skill_gaps.deterministic_gap_views as views_mod
 
@@ -2458,7 +2479,10 @@ class Sprint115Phase5RouteAndProviderBoundaryRegressionTests(TestCase):
         self.assertEqual(self._model_counts(), before_counts)
         self.assertEqual(provider.call_count, 0)
 
-    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    @override_settings(
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True,
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_DAILY_REQUEST_LIMIT=100,
+)
     def test_blocked_deterministic_outcome_remains_provider_free(self):
         self._create_entry("Python", SkillEntry.EvidenceLevel.VERIFIED)
         before_counts = self._model_counts()
@@ -2507,7 +2531,10 @@ class Sprint115Phase5RouteAndProviderBoundaryRegressionTests(TestCase):
         self.assertEqual(self._model_counts(), before_counts)
         self.assertEqual(provider.call_count, 0)
 
-    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    @override_settings(
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True,
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_DAILY_REQUEST_LIMIT=100,
+)
     def test_eligible_explicit_explanation_invokes_provider_once(self):
         requirements = self._permitted_requirements()
         before_counts = self._model_counts()
@@ -2548,7 +2575,10 @@ class Sprint115Phase5RouteAndProviderBoundaryRegressionTests(TestCase):
         self.assertEqual(self._model_counts(), before_counts)
         self.assertEqual(provider.call_count, 1)
 
-    @override_settings(AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True)
+    @override_settings(
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_ENABLED=True,
+    AI_EVIDENCE_ALIGNMENT_EXPLANATION_DAILY_REQUEST_LIMIT=100,
+)
     def test_route_uses_real_output_validator_exactly_once(self):
         from apps.skill_gaps.explanation_output_validator import (
             validate_evidence_alignment_explanation_output as real_validator,
