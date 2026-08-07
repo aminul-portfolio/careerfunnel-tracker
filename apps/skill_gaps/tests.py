@@ -1403,11 +1403,11 @@ class SkillGapDashboardTests(TestCase):
 
     def test_no_model_changes_or_migrations_added(self):
         migration_dir = REPO_ROOT / "apps" / "skill_gaps" / "migrations"
-        migration_files = [
+        migration_files = sorted(
             path.name
             for path in migration_dir.glob("*.py")
             if path.name != "__init__.py"
-        ]
+        )
         self.assertEqual(
             migration_files,
             [
@@ -2530,11 +2530,11 @@ class SkillGapLearningPlanTests(TestCase):
 
     def test_no_model_changes_or_migrations_added(self):
         migration_dir = REPO_ROOT / "apps" / "skill_gaps" / "migrations"
-        migration_files = [
+        migration_files = sorted(
             path.name
             for path in migration_dir.glob("*.py")
             if path.name != "__init__.py"
-        ]
+        )
         self.assertEqual(
             migration_files,
             [
@@ -2755,11 +2755,11 @@ class SkillGapEvidenceReadinessTests(TestCase):
 
     def test_no_model_changes_or_migrations_added(self):
         migration_dir = REPO_ROOT / "apps" / "skill_gaps" / "migrations"
-        migration_files = [
+        migration_files = sorted(
             path.name
             for path in migration_dir.glob("*.py")
             if path.name != "__init__.py"
-        ]
+        )
         self.assertEqual(
             migration_files,
             [
@@ -2995,11 +2995,11 @@ class SkillGapPortfolioEvidenceMappingTests(TestCase):
 
     def test_no_model_changes_or_migrations_added(self):
         migration_dir = REPO_ROOT / "apps" / "skill_gaps" / "migrations"
-        migration_files = [
+        migration_files = sorted(
             path.name
             for path in migration_dir.glob("*.py")
             if path.name != "__init__.py"
-        ]
+        )
         self.assertEqual(
             migration_files,
             [
@@ -3233,11 +3233,11 @@ class SkillGapInterviewStoryMappingTests(TestCase):
 
     def test_no_model_changes_or_migrations_added(self):
         migration_dir = REPO_ROOT / "apps" / "skill_gaps" / "migrations"
-        migration_files = [
+        migration_files = sorted(
             path.name
             for path in migration_dir.glob("*.py")
             if path.name != "__init__.py"
-        ]
+        )
         self.assertEqual(
             migration_files,
             [
@@ -3467,11 +3467,11 @@ class SkillGapCvBulletMappingTests(TestCase):
 
     def test_no_model_changes_or_migrations_added(self):
         migration_dir = REPO_ROOT / "apps" / "skill_gaps" / "migrations"
-        migration_files = [
+        migration_files = sorted(
             path.name
             for path in migration_dir.glob("*.py")
             if path.name != "__init__.py"
-        ]
+        )
         self.assertEqual(
             migration_files,
             [
@@ -4236,11 +4236,11 @@ class SkillGapMockedAiCareerCoachPageTests(TestCase):
 
     def test_ai_career_coach_no_model_or_migration_change_required(self):
         migration_dir = REPO_ROOT / "apps" / "skill_gaps" / "migrations"
-        migration_files = [
+        migration_files = sorted(
             path.name
             for path in migration_dir.glob("*.py")
             if path.name != "__init__.py"
-        ]
+        )
 
         self.assertEqual(
             migration_files,
