@@ -1408,7 +1408,13 @@ class SkillGapDashboardTests(TestCase):
             for path in migration_dir.glob("*.py")
             if path.name != "__init__.py"
         ]
-        self.assertEqual(migration_files, ["0001_initial.py"])
+        self.assertEqual(
+            migration_files,
+            [
+                "0001_initial.py",
+                "0002_explanationrequestcounter.py",
+            ],
+        )
 
     def test_no_sprint_52_text_on_dashboard_page(self):
         self._login()
@@ -2529,7 +2535,13 @@ class SkillGapLearningPlanTests(TestCase):
             for path in migration_dir.glob("*.py")
             if path.name != "__init__.py"
         ]
-        self.assertEqual(migration_files, ["0001_initial.py"])
+        self.assertEqual(
+            migration_files,
+            [
+                "0001_initial.py",
+                "0002_explanationrequestcounter.py",
+            ],
+        )
 
     def test_sprint_46_changed_files_are_ascii_safe(self):
         ascii_paths = (
@@ -2748,7 +2760,13 @@ class SkillGapEvidenceReadinessTests(TestCase):
             for path in migration_dir.glob("*.py")
             if path.name != "__init__.py"
         ]
-        self.assertEqual(migration_files, ["0001_initial.py"])
+        self.assertEqual(
+            migration_files,
+            [
+                "0001_initial.py",
+                "0002_explanationrequestcounter.py",
+            ],
+        )
 
     def test_sprint_47_changed_files_are_ascii_safe(self):
         ascii_paths = (
@@ -2982,7 +3000,13 @@ class SkillGapPortfolioEvidenceMappingTests(TestCase):
             for path in migration_dir.glob("*.py")
             if path.name != "__init__.py"
         ]
-        self.assertEqual(migration_files, ["0001_initial.py"])
+        self.assertEqual(
+            migration_files,
+            [
+                "0001_initial.py",
+                "0002_explanationrequestcounter.py",
+            ],
+        )
 
     def test_sprint_48_changed_files_are_ascii_safe(self):
         ascii_paths = (
@@ -3214,7 +3238,13 @@ class SkillGapInterviewStoryMappingTests(TestCase):
             for path in migration_dir.glob("*.py")
             if path.name != "__init__.py"
         ]
-        self.assertEqual(migration_files, ["0001_initial.py"])
+        self.assertEqual(
+            migration_files,
+            [
+                "0001_initial.py",
+                "0002_explanationrequestcounter.py",
+            ],
+        )
 
     def test_sprint_49_changed_files_are_ascii_safe(self):
         ascii_paths = (
@@ -3442,7 +3472,13 @@ class SkillGapCvBulletMappingTests(TestCase):
             for path in migration_dir.glob("*.py")
             if path.name != "__init__.py"
         ]
-        self.assertEqual(migration_files, ["0001_initial.py"])
+        self.assertEqual(
+            migration_files,
+            [
+                "0001_initial.py",
+                "0002_explanationrequestcounter.py",
+            ],
+        )
 
     def test_sprint_50_changed_files_are_ascii_safe(self):
         ascii_paths = (
@@ -4206,7 +4242,13 @@ class SkillGapMockedAiCareerCoachPageTests(TestCase):
             if path.name != "__init__.py"
         ]
 
-        self.assertEqual(migration_files, ["0001_initial.py"])
+        self.assertEqual(
+            migration_files,
+            [
+                "0001_initial.py",
+                "0002_explanationrequestcounter.py",
+            ],
+        )
 
 
 class SkillGapLiveProviderSpikeTests(TestCase):

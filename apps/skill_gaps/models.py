@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 from apps.applications.models import JobApplication
@@ -90,3 +91,37 @@ class ApplicationSkillGap(models.Model):
 
     def __str__(self):
         return f"{self.skill_name} ({self.get_stage_display()}) — {self.application}"
+
+
+class ExplanationRequestCounter(models.Model):
+    """Per-user daily request-count governance for advisory explanations."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="explanation_request_counters",
+    )
+    window_date = models.DateField()
+    request_count = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Explanation request counter"
+        verbose_name_plural = "Explanation request counters"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "window_date"],
+                name="uniq_explanation_request_counter_user_date",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(request_count__gte=1),
+                name="chk_explanation_request_counter_count_gte_1",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"ExplanationRequestCounter(user={self.user_id}, "
+            f"window_date={self.window_date}, request_count={self.request_count})"
+        )

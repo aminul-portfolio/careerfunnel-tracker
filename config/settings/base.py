@@ -21,6 +21,11 @@ AI_EVIDENCE_ALIGNMENT_EXPLANATION_LIVE_CANARY_ENABLED = config(
     default=False,
     cast=bool,
 )
+AI_EVIDENCE_ALIGNMENT_EXPLANATION_DAILY_REQUEST_LIMIT = config(
+    "AI_EVIDENCE_ALIGNMENT_EXPLANATION_DAILY_REQUEST_LIMIT",
+    default=0,
+    cast=int,
+)
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
     default="127.0.0.1,localhost",
