@@ -3,6 +3,7 @@
 Isolated from provider-capable skill_gaps.views workflows.
 Sprint 114 Phase 4 adds an explicit second-POST advisory explanation path.
 Sprint 117 Phase 2 adds a page-level feature-flag availability gate.
+Sprint 118 Phase 2B reserves daily request governance before composition.
 """
 
 from django.conf import settings
@@ -28,6 +29,10 @@ from .deterministic_gap_classifier import (
 from .explanation_output_validator import (
     validate_evidence_alignment_explanation_output,
 )
+from .explanation_request_governance import (
+    REASON_COUNT_LIMIT_REACHED,
+    reserve_explanation_request,
+)
 from .forms import JDGapAnalysisForm
 
 _PERMITTED_EXPLANATION_OUTCOMES = frozenset(
@@ -37,6 +42,16 @@ _PERMITTED_EXPLANATION_OUTCOMES = frozenset(
         EvidenceAlignmentOutcome.DEVELOPMENT_RECORDS_ONLY,
         EvidenceAlignmentOutcome.NO_VERIFIED_EVIDENCE,
     }
+)
+
+_GOVERNANCE_COUNT_LIMIT_MESSAGE = (
+    "The advisory explanation is unavailable because the current request "
+    "limit has been reached. Your deterministic evidence-alignment result "
+    "remains available and has not been changed."
+)
+_GOVERNANCE_GENERIC_UNAVAILABLE_MESSAGE = (
+    "The advisory explanation is unavailable. Your deterministic "
+    "evidence-alignment result remains available and has not been changed."
 )
 
 
@@ -85,6 +100,12 @@ def _attempt_advisory_explanation(summary):
         return None, True
 
 
+def _governance_block_message(reason_code: str | None) -> str:
+    if reason_code == REASON_COUNT_LIMIT_REACHED:
+        return _GOVERNANCE_COUNT_LIMIT_MESSAGE
+    return _GOVERNANCE_GENERIC_UNAVAILABLE_MESSAGE
+
+
 @login_required
 def jd_gap_analysis_view(request):
     results = ()
@@ -98,6 +119,8 @@ def jd_gap_analysis_view(request):
     explanation_feature_enabled = _explanation_feature_enabled()
     advisory_explanation = None
     advisory_explanation_failed = False
+    explanation_governance_blocked = False
+    explanation_governance_message = ""
 
     if request.method == "POST":
         form = JDGapAnalysisForm(request.POST)
@@ -113,9 +136,16 @@ def jd_gap_analysis_view(request):
                 and explanation_allowed
                 and explanation_feature_enabled
             ):
-                advisory_explanation, advisory_explanation_failed = (
-                    _attempt_advisory_explanation(summary)
-                )
+                decision = reserve_explanation_request(request.user)
+                if decision.allowed:
+                    advisory_explanation, advisory_explanation_failed = (
+                        _attempt_advisory_explanation(summary)
+                    )
+                else:
+                    explanation_governance_blocked = True
+                    explanation_governance_message = _governance_block_message(
+                        decision.reason_code
+                    )
     else:
         form = JDGapAnalysisForm()
 
@@ -132,5 +162,7 @@ def jd_gap_analysis_view(request):
             "explanation_feature_enabled": explanation_feature_enabled,
             "advisory_explanation": advisory_explanation,
             "advisory_explanation_failed": advisory_explanation_failed,
+            "explanation_governance_blocked": explanation_governance_blocked,
+            "explanation_governance_message": explanation_governance_message,
         },
     )

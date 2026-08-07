@@ -202,6 +202,11 @@
         <p class="cf69-advisory-info">
             This explanation is generated only when you request it and is not saved.
         </p>
+        {% if explanation_governance_blocked %}
+        <p class="cf69-advisory-warning" role="alert">
+            {{ explanation_governance_message }}
+        </p>
+        {% endif %}
         {% if advisory_explanation_failed %}
         <p class="cf69-advisory-warning" role="alert">
             The advisory explanation could not be generated. Your deterministic evidence-alignment result remains available below.
@@ -245,7 +250,7 @@
             {% endfor %}
         </ul>
         {% endif %}
-        {% elif not explanation_requested %}
+        {% elif not explanation_requested and not explanation_governance_blocked %}
         <form method="post" novalidate>
             {% csrf_token %}
             <textarea name="requirements" hidden>{{ form.requirements.value }}</textarea>
