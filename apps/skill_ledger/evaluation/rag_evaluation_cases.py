@@ -1,7 +1,8 @@
-"""Sprint 120 Phase 1: immutable Skill Ledger RAG evaluation case contracts.
+"""Sprint 120: immutable Skill Ledger RAG evaluation case contracts.
 
-Retrieval-quality and adversarial-retrieval cases only in Phase 1.
-No provider, network, ORM, or filesystem access in this module.
+Phase 1: retrieval-quality + adversarial-retrieval.
+Phase 2: attribution, unsupported-output, and zero-evidence safety cases.
+No network, live provider, ORM, or filesystem access in this module.
 """
 
 from __future__ import annotations
@@ -14,8 +15,15 @@ import unicodedata
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
+from types import MappingProxyType
 from typing import Any
 
+from apps.skill_ledger.rag_generation import (
+    UNTRUSTED_RAG_EVIDENCE_BEGIN,
+    UNTRUSTED_RAG_EVIDENCE_END,
+    RagRejectionCode,
+    neutralise_untrusted_rag_sentinels,
+)
 from apps.skill_ledger.rag_retrieval import TOP_K
 
 EVALUATION_VERSION = "skill_ledger_rag_eval_v1"
@@ -509,7 +517,335 @@ class RagAdversarialRetrievalCase:
         )
 
 
-RagEvalCase = RagRetrievalQualityCase | RagAdversarialRetrievalCase
+def _freeze_jsonish_value(value: Any) -> Any:
+    """Freeze provider-output-shaped JSON values (str/int/bool/None/list/dict)."""
+    if isinstance(value, Mapping):
+        frozen: dict[str, Any] = {}
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise RagEvaluationCaseContractError(
+                    "simulated_provider_output mapping keys must be strings."
+                )
+            normalised_key = _canonical_string(key, field_name="mapping key")
+            if _is_reserved_metadata_key(normalised_key):
+                raise RagEvaluationCaseContractError(
+                    "reserved execution metadata key is not permitted: "
+                    f"{normalised_key.strip().casefold()}."
+                )
+            if normalised_key in frozen:
+                raise RagEvaluationCaseContractError(
+                    "mapping keys collide after Unicode and newline normalisation."
+                )
+            frozen[normalised_key] = _freeze_jsonish_value(item)
+        return MappingProxyType(frozen)
+    if isinstance(value, (set, frozenset)):
+        raise RagEvaluationCaseContractError(
+            "set and frozenset values are not permitted in simulated_provider_output."
+        )
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_jsonish_value(item) for item in value)
+    if isinstance(value, str):
+        return _canonical_string(value)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value
+    if value is None:
+        return None
+    if isinstance(value, float):
+        raise RagEvaluationCaseContractError(
+            "floating-point values are not permitted in simulated_provider_output."
+        )
+    raise RagEvaluationCaseContractError(
+        f"unsupported simulated_provider_output value type: {type(value).__name__}."
+    )
+
+
+def _require_provider_output_mapping_or_none(
+    value: object,
+    *,
+    field_name: str,
+) -> Mapping[str, Any] | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise RagEvaluationCaseContractError(
+            f"{field_name} must be an immutable mapping or None."
+        )
+    frozen = _freeze_jsonish_value(value)
+    if not isinstance(frozen, Mapping):
+        raise RagEvaluationCaseContractError(
+            f"{field_name} must be an immutable mapping or None."
+        )
+    return frozen
+
+
+@dataclass(frozen=True)
+class RagRetrievedEvidenceSeed:
+    """Synthetic retrieved-evidence seed for generation-safety cases."""
+
+    local_id: str
+    skill_name: str
+    category: str
+    evidence_level: str
+    sprint_reference: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "local_id",
+            _canonical_string(self.local_id, field_name="local_id"),
+        )
+        if not self.local_id.strip():
+            raise RagEvaluationCaseContractError("local_id must be non-empty.")
+        object.__setattr__(
+            self,
+            "skill_name",
+            _canonical_string(self.skill_name, field_name="skill_name"),
+        )
+        if not self.skill_name.strip():
+            raise RagEvaluationCaseContractError("skill_name must be non-empty.")
+        object.__setattr__(
+            self,
+            "category",
+            _canonical_string(self.category, field_name="category"),
+        )
+        object.__setattr__(
+            self,
+            "evidence_level",
+            _canonical_string(self.evidence_level, field_name="evidence_level"),
+        )
+        object.__setattr__(
+            self,
+            "sprint_reference",
+            _canonical_string(self.sprint_reference, field_name="sprint_reference"),
+        )
+
+
+@dataclass(frozen=True)
+class RagGenerationSafetyCase:
+    """Immutable attribution / unsupported-output / zero-evidence evaluation case."""
+
+    case_id: str
+    schema_version: str
+    category: RagEvalCategory
+    description: str
+    is_synthetic: bool
+    retrieved_seed: tuple[RagRetrievedEvidenceSeed, ...]
+    query_text: str
+    inject_provider: bool
+    simulated_provider_output: Mapping[str, Any] | None
+    expected_acceptance: bool
+    expected_rejection_code: str | None
+    expected_provider_called: bool
+    expected_final_rendered_labels: tuple[str, ...] | None
+    safety_assertions: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        case_id = _canonical_string(self.case_id, field_name="case_id")
+        if not case_id.strip():
+            raise RagEvaluationCaseContractError("case_id must be a non-empty string.")
+        object.__setattr__(self, "case_id", case_id)
+
+        schema_version = _canonical_string(
+            self.schema_version,
+            field_name="schema_version",
+        )
+        if schema_version != CASE_SCHEMA_VERSION:
+            raise RagEvaluationCaseContractError(
+                "schema_version must equal CASE_SCHEMA_VERSION."
+            )
+        object.__setattr__(self, "schema_version", schema_version)
+
+        if self.category not in {
+            RagEvalCategory.ATTRIBUTION_SAFETY,
+            RagEvalCategory.UNSUPPORTED_OUTPUT,
+            RagEvalCategory.ZERO_EVIDENCE,
+        }:
+            raise RagEvaluationCaseContractError(
+                "RagGenerationSafetyCase.category must be ATTRIBUTION_SAFETY, "
+                "UNSUPPORTED_OUTPUT, or ZERO_EVIDENCE."
+            )
+
+        if self.is_synthetic is not True:
+            raise RagEvaluationCaseContractError(
+                "is_synthetic must be exactly True."
+            )
+        if self.inject_provider is not True and self.inject_provider is not False:
+            raise RagEvaluationCaseContractError(
+                "inject_provider must be exactly True or False."
+            )
+        if (
+            self.expected_acceptance is not True
+            and self.expected_acceptance is not False
+        ):
+            raise RagEvaluationCaseContractError(
+                "expected_acceptance must be exactly True or False."
+            )
+        if (
+            self.expected_provider_called is not True
+            and self.expected_provider_called is not False
+        ):
+            raise RagEvaluationCaseContractError(
+                "expected_provider_called must be exactly True or False."
+            )
+
+        object.__setattr__(
+            self,
+            "description",
+            _canonical_string(self.description, field_name="description"),
+        )
+        object.__setattr__(
+            self,
+            "query_text",
+            _canonical_string(self.query_text, field_name="query_text"),
+        )
+        if not self.query_text.strip():
+            raise RagEvaluationCaseContractError("query_text must be non-empty.")
+
+        if isinstance(self.retrieved_seed, (str, bytes, bytearray, Mapping)):
+            raise RagEvaluationCaseContractError(
+                "retrieved_seed must be a non-string sequence of RagRetrievedEvidenceSeed."
+            )
+        if not isinstance(self.retrieved_seed, Sequence):
+            raise RagEvaluationCaseContractError(
+                "retrieved_seed must be a non-string sequence of RagRetrievedEvidenceSeed."
+            )
+        seeds: list[RagRetrievedEvidenceSeed] = []
+        seen_local_ids: set[str] = set()
+        for item in self.retrieved_seed:
+            if not isinstance(item, RagRetrievedEvidenceSeed):
+                raise RagEvaluationCaseContractError(
+                    "retrieved_seed items must be RagRetrievedEvidenceSeed instances."
+                )
+            if item.local_id in seen_local_ids:
+                raise RagEvaluationCaseContractError(
+                    f"duplicate local_id in retrieved_seed: {item.local_id}."
+                )
+            seen_local_ids.add(item.local_id)
+            seeds.append(item)
+        object.__setattr__(self, "retrieved_seed", tuple(seeds))
+
+        if self.category is RagEvalCategory.ZERO_EVIDENCE:
+            if self.expected_acceptance is not False:
+                raise RagEvaluationCaseContractError(
+                    "ZERO_EVIDENCE cases must expect rejection."
+                )
+            if self.expected_provider_called is not False:
+                raise RagEvaluationCaseContractError(
+                    "ZERO_EVIDENCE cases must expect provider_called=False."
+                )
+        if not seeds and self.category is not RagEvalCategory.ZERO_EVIDENCE:
+            raise RagEvaluationCaseContractError(
+                "non-zero-evidence safety cases require a non-empty retrieved_seed."
+            )
+        if (
+            self.category is RagEvalCategory.ZERO_EVIDENCE
+            and not seeds
+            and self.expected_rejection_code
+            != RagRejectionCode.NO_RETRIEVED_EVIDENCE.value
+        ):
+            raise RagEvaluationCaseContractError(
+                "empty retrieved_seed ZERO_EVIDENCE case must expect NO_RETRIEVED_EVIDENCE."
+            )
+        if (
+            self.category is RagEvalCategory.ZERO_EVIDENCE
+            and seeds
+            and self.inject_provider is not False
+        ):
+            raise RagEvaluationCaseContractError(
+                "provider-unavailable ZERO_EVIDENCE case must set inject_provider=False."
+            )
+        if (
+            self.category is RagEvalCategory.ZERO_EVIDENCE
+            and seeds
+            and self.expected_rejection_code
+            != RagRejectionCode.PROVIDER_UNAVAILABLE.value
+        ):
+            raise RagEvaluationCaseContractError(
+                "non-empty retrieved_seed ZERO_EVIDENCE case must expect "
+                "PROVIDER_UNAVAILABLE."
+            )
+
+        if self.inject_provider is False and self.expected_provider_called is True:
+            raise RagEvaluationCaseContractError(
+                "inject_provider=False cannot expect provider_called=True."
+            )
+
+        output = _require_provider_output_mapping_or_none(
+            self.simulated_provider_output,
+            field_name="simulated_provider_output",
+        )
+        if self.inject_provider is True and self.expected_provider_called is True:
+            if output is None:
+                raise RagEvaluationCaseContractError(
+                    "simulated_provider_output is required when the provider is expected "
+                    "to be called."
+                )
+        if self.inject_provider is False and output is not None:
+            raise RagEvaluationCaseContractError(
+                "simulated_provider_output must be None when inject_provider is False."
+            )
+        object.__setattr__(self, "simulated_provider_output", output)
+
+        if self.expected_acceptance is True:
+            if self.expected_rejection_code is not None:
+                raise RagEvaluationCaseContractError(
+                    "accepted cases must set expected_rejection_code=None."
+                )
+        else:
+            if not isinstance(self.expected_rejection_code, str):
+                raise RagEvaluationCaseContractError(
+                    "rejected cases require expected_rejection_code as a string."
+                )
+            code = _canonical_string(
+                self.expected_rejection_code,
+                field_name="expected_rejection_code",
+            )
+            valid_codes = {item.value for item in RagRejectionCode}
+            if code not in valid_codes:
+                raise RagEvaluationCaseContractError(
+                    f"unknown expected_rejection_code: {code}."
+                )
+            object.__setattr__(self, "expected_rejection_code", code)
+
+        labels = self.expected_final_rendered_labels
+        if labels is None:
+            object.__setattr__(self, "expected_final_rendered_labels", None)
+        else:
+            if isinstance(labels, (str, bytes, bytearray)):
+                raise RagEvaluationCaseContractError(
+                    "expected_final_rendered_labels must be a non-string sequence or None."
+                )
+            if not isinstance(labels, Sequence):
+                raise RagEvaluationCaseContractError(
+                    "expected_final_rendered_labels must be a non-string sequence or None."
+                )
+            object.__setattr__(
+                self,
+                "expected_final_rendered_labels",
+                tuple(
+                    _canonical_string(item, field_name="expected_final_rendered_labels item")
+                    for item in labels
+                ),
+            )
+            if self.expected_acceptance is not True:
+                raise RagEvaluationCaseContractError(
+                    "expected_final_rendered_labels is only valid for accepted cases."
+                )
+
+        object.__setattr__(
+            self,
+            "safety_assertions",
+            _normalise_safety_assertions(self.safety_assertions),
+        )
+
+
+RagEvalCase = (
+    RagRetrievalQualityCase
+    | RagAdversarialRetrievalCase
+    | RagGenerationSafetyCase
+)
 
 
 def validate_and_sort_rag_evaluation_cases(
@@ -519,9 +855,17 @@ def validate_and_sort_rag_evaluation_cases(
     materialised = list(cases)
     seen_ids: set[str] = set()
     for case in materialised:
-        if not isinstance(case, (RagRetrievalQualityCase, RagAdversarialRetrievalCase)):
+        if not isinstance(
+            case,
+            (
+                RagRetrievalQualityCase,
+                RagAdversarialRetrievalCase,
+                RagGenerationSafetyCase,
+            ),
+        ):
             raise RagEvaluationCaseContractError(
-                "cases must be RagRetrievalQualityCase or RagAdversarialRetrievalCase."
+                "cases must be RagRetrievalQualityCase, RagAdversarialRetrievalCase, "
+                "or RagGenerationSafetyCase."
             )
         if case.is_synthetic is not True:
             raise RagEvaluationCaseContractError(
@@ -550,6 +894,37 @@ def _corpus_member_to_canonical_dict(member: RagCorpusMember) -> dict[str, Any]:
         "skill_name": member.skill_name,
         "sprint_reference": member.sprint_reference,
     }
+
+
+def _retrieved_seed_to_canonical_dict(seed: RagRetrievedEvidenceSeed) -> dict[str, Any]:
+    return {
+        "category": seed.category,
+        "evidence_level": seed.evidence_level,
+        "local_id": seed.local_id,
+        "skill_name": seed.skill_name,
+        "sprint_reference": seed.sprint_reference,
+    }
+
+
+def _jsonish_to_canonical(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {
+            _canonical_string(key, field_name="mapping key"): _jsonish_to_canonical(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, (list, tuple)):
+        return [_jsonish_to_canonical(item) for item in value]
+    if isinstance(value, str):
+        return _canonical_string(value)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value
+    if value is None:
+        return None
+    raise RagEvaluationCaseContractError(
+        f"unsupported canonical value type: {type(value).__name__}."
+    )
 
 
 def retrieval_quality_case_to_canonical_dict(
@@ -593,11 +968,44 @@ def adversarial_retrieval_case_to_canonical_dict(
     }
 
 
+def generation_safety_case_to_canonical_dict(
+    case: RagGenerationSafetyCase,
+) -> dict[str, Any]:
+    return {
+        "case_id": case.case_id,
+        "category": case.category.value,
+        "description": case.description,
+        "expected_acceptance": case.expected_acceptance,
+        "expected_final_rendered_labels": (
+            None
+            if case.expected_final_rendered_labels is None
+            else list(case.expected_final_rendered_labels)
+        ),
+        "expected_provider_called": case.expected_provider_called,
+        "expected_rejection_code": case.expected_rejection_code,
+        "inject_provider": case.inject_provider,
+        "is_synthetic": case.is_synthetic,
+        "query_text": case.query_text,
+        "retrieved_seed": [
+            _retrieved_seed_to_canonical_dict(item) for item in case.retrieved_seed
+        ],
+        "safety_assertions": list(case.safety_assertions),
+        "schema_version": case.schema_version,
+        "simulated_provider_output": (
+            None
+            if case.simulated_provider_output is None
+            else _jsonish_to_canonical(case.simulated_provider_output)
+        ),
+    }
+
+
 def rag_evaluation_case_to_canonical_dict(case: RagEvalCase) -> dict[str, Any]:
     if isinstance(case, RagRetrievalQualityCase):
         return retrieval_quality_case_to_canonical_dict(case)
     if isinstance(case, RagAdversarialRetrievalCase):
         return adversarial_retrieval_case_to_canonical_dict(case)
+    if isinstance(case, RagGenerationSafetyCase):
+        return generation_safety_case_to_canonical_dict(case)
     raise RagEvaluationCaseContractError("unsupported evaluation case type.")
 
 
@@ -640,6 +1048,23 @@ def _member(
         evidence_level=evidence_level,
         sprint_reference=sprint_reference,
         document_vector=tuple(float(value) for value in vector),
+    )
+
+
+def _seed(
+    local_id: str,
+    skill_name: str,
+    *,
+    evidence_level: str = "VERIFIED",
+    category: str = "programming",
+    sprint_reference: str = "Sprint 120",
+) -> RagRetrievedEvidenceSeed:
+    return RagRetrievedEvidenceSeed(
+        local_id=local_id,
+        skill_name=skill_name,
+        category=category,
+        evidence_level=evidence_level,
+        sprint_reference=sprint_reference,
     )
 
 
@@ -696,6 +1121,66 @@ def _ar_case(
         expected_retrieved_local_ids=tuple(expected_retrieved_local_ids),
         forbidden_local_ids=tuple(forbidden_local_ids),
         cache_exception_local_ids=tuple(cache_exception_local_ids),
+        safety_assertions=tuple(safety_assertions),
+    )
+
+
+def _source_item(
+    local_id: str,
+    *,
+    evidence_level: str,
+    display_label: str,
+) -> dict[str, Any]:
+    return {
+        "source_identifier": local_id,
+        "evidence_level": evidence_level,
+        "display_label": display_label,
+    }
+
+
+def _provider_output(
+    summary: str,
+    sources_used: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "summary": summary,
+        "sources_used": [dict(item) for item in sources_used],
+    }
+
+
+def _gs_case(
+    *,
+    case_id: str,
+    category: RagEvalCategory,
+    description: str,
+    retrieved_seed: Sequence[RagRetrievedEvidenceSeed],
+    query_text: str,
+    inject_provider: bool,
+    simulated_provider_output: Mapping[str, Any] | None,
+    expected_acceptance: bool,
+    expected_rejection_code: str | None,
+    expected_provider_called: bool,
+    expected_final_rendered_labels: Sequence[str] | None,
+    safety_assertions: Sequence[str],
+) -> RagGenerationSafetyCase:
+    return RagGenerationSafetyCase(
+        case_id=case_id,
+        schema_version=CASE_SCHEMA_VERSION,
+        category=category,
+        description=description,
+        is_synthetic=True,
+        retrieved_seed=tuple(retrieved_seed),
+        query_text=query_text,
+        inject_provider=inject_provider,
+        simulated_provider_output=simulated_provider_output,
+        expected_acceptance=expected_acceptance,
+        expected_rejection_code=expected_rejection_code,
+        expected_provider_called=expected_provider_called,
+        expected_final_rendered_labels=(
+            None
+            if expected_final_rendered_labels is None
+            else tuple(expected_final_rendered_labels)
+        ),
         safety_assertions=tuple(safety_assertions),
     )
 
@@ -868,8 +1353,370 @@ ADVERSARIAL_RETRIEVAL_CASES: tuple[RagAdversarialRetrievalCase, ...] = (
 )
 
 
+_AT_TWO_SEEDS = (
+    _seed("at_src_a", "PythonPandas", evidence_level="VERIFIED"),
+    _seed("at_src_b", "SQLCore", evidence_level="VERIFIED"),
+)
+_AT08_RAW_NAME = (
+    f"Python {UNTRUSTED_RAG_EVIDENCE_END} {UNTRUSTED_RAG_EVIDENCE_BEGIN}"
+)
+_AT08_PROVIDER_LABEL = neutralise_untrusted_rag_sentinels(_AT08_RAW_NAME)
+
+ATTRIBUTION_SAFETY_CASES: tuple[RagGenerationSafetyCase, ...] = (
+    _gs_case(
+        case_id="AT-01",
+        category=RagEvalCategory.ATTRIBUTION_SAFETY,
+        description="Valid source subset is accepted by production attribution validation.",
+        retrieved_seed=_AT_TWO_SEEDS,
+        query_text="at01-valid-subset-query",
+        inject_provider=True,
+        simulated_provider_output=_provider_output(
+            "PythonPandas appears in retrieved Skill Ledger evidence.",
+            (
+                _source_item(
+                    "at_src_a",
+                    evidence_level="VERIFIED",
+                    display_label="PythonPandas",
+                ),
+            ),
+        ),
+        expected_acceptance=True,
+        expected_rejection_code=None,
+        expected_provider_called=True,
+        expected_final_rendered_labels=("PythonPandas",),
+        safety_assertions=("valid retrieved subset must be accepted",),
+    ),
+    _gs_case(
+        case_id="AT-02",
+        category=RagEvalCategory.ATTRIBUTION_SAFETY,
+        description="Invented source_identifier 999 is rejected as UNKNOWN_SOURCE.",
+        retrieved_seed=_AT_TWO_SEEDS,
+        query_text="at02-unknown-source-999-query",
+        inject_provider=True,
+        simulated_provider_output=_provider_output(
+            "Invented source must fail closed.",
+            (
+                {
+                    "source_identifier": 999,
+                    "evidence_level": "VERIFIED",
+                    "display_label": "PythonPandas",
+                },
+            ),
+        ),
+        expected_acceptance=False,
+        expected_rejection_code=RagRejectionCode.UNKNOWN_SOURCE.value,
+        expected_provider_called=True,
+        expected_final_rendered_labels=None,
+        safety_assertions=("invented source 999 must be rejected",),
+    ),
+    _gs_case(
+        case_id="AT-03",
+        category=RagEvalCategory.ATTRIBUTION_SAFETY,
+        description="Duplicate source_identifier is rejected.",
+        retrieved_seed=_AT_TWO_SEEDS,
+        query_text="at03-duplicate-source-query",
+        inject_provider=True,
+        simulated_provider_output=_provider_output(
+            "Duplicate source must fail closed.",
+            (
+                _source_item(
+                    "at_src_a",
+                    evidence_level="VERIFIED",
+                    display_label="PythonPandas",
+                ),
+                _source_item(
+                    "at_src_a",
+                    evidence_level="VERIFIED",
+                    display_label="PythonPandas",
+                ),
+            ),
+        ),
+        expected_acceptance=False,
+        expected_rejection_code=RagRejectionCode.DUPLICATE_SOURCE.value,
+        expected_provider_called=True,
+        expected_final_rendered_labels=None,
+        safety_assertions=("duplicate source_identifier must be rejected",),
+    ),
+    _gs_case(
+        case_id="AT-04",
+        category=RagEvalCategory.ATTRIBUTION_SAFETY,
+        description="LEARNING_TARGET must not be promoted to VERIFIED.",
+        retrieved_seed=(
+            _seed("at04_src", "LearningPython", evidence_level="LEARNING_TARGET"),
+        ),
+        query_text="at04-learning-target-promotion-query",
+        inject_provider=True,
+        simulated_provider_output=_provider_output(
+            "Learning target promotion must fail closed.",
+            (
+                _source_item(
+                    "at04_src",
+                    evidence_level="VERIFIED",
+                    display_label="LearningPython",
+                ),
+            ),
+        ),
+        expected_acceptance=False,
+        expected_rejection_code=RagRejectionCode.EVIDENCE_LEVEL_MISMATCH.value,
+        expected_provider_called=True,
+        expected_final_rendered_labels=None,
+        safety_assertions=("LEARNING_TARGET to VERIFIED promotion must be rejected",),
+    ),
+    _gs_case(
+        case_id="AT-05",
+        category=RagEvalCategory.ATTRIBUTION_SAFETY,
+        description="STUDYING must not be promoted to VERIFIED.",
+        retrieved_seed=(
+            _seed("at05_src", "StudyingSQL", evidence_level="STUDYING"),
+        ),
+        query_text="at05-studying-promotion-query",
+        inject_provider=True,
+        simulated_provider_output=_provider_output(
+            "Studying promotion must fail closed.",
+            (
+                _source_item(
+                    "at05_src",
+                    evidence_level="VERIFIED",
+                    display_label="StudyingSQL",
+                ),
+            ),
+        ),
+        expected_acceptance=False,
+        expected_rejection_code=RagRejectionCode.EVIDENCE_LEVEL_MISMATCH.value,
+        expected_provider_called=True,
+        expected_final_rendered_labels=None,
+        safety_assertions=("STUDYING to VERIFIED promotion must be rejected",),
+    ),
+    _gs_case(
+        case_id="AT-06",
+        category=RagEvalCategory.ATTRIBUTION_SAFETY,
+        description="NO_EVIDENCE must not be promoted to VERIFIED.",
+        retrieved_seed=(
+            _seed("at06_src", "GapSkill", evidence_level="NO_EVIDENCE"),
+        ),
+        query_text="at06-no-evidence-promotion-query",
+        inject_provider=True,
+        simulated_provider_output=_provider_output(
+            "No-evidence promotion must fail closed.",
+            (
+                _source_item(
+                    "at06_src",
+                    evidence_level="VERIFIED",
+                    display_label="GapSkill",
+                ),
+            ),
+        ),
+        expected_acceptance=False,
+        expected_rejection_code=RagRejectionCode.EVIDENCE_LEVEL_MISMATCH.value,
+        expected_provider_called=True,
+        expected_final_rendered_labels=None,
+        safety_assertions=("NO_EVIDENCE to VERIFIED promotion must be rejected",),
+    ),
+    _gs_case(
+        case_id="AT-07",
+        category=RagEvalCategory.ATTRIBUTION_SAFETY,
+        description="Mismatched provider display_label is rejected.",
+        retrieved_seed=(
+            _seed("at07_src", "PowerBI", evidence_level="VERIFIED"),
+        ),
+        query_text="at07-display-label-mismatch-query",
+        inject_provider=True,
+        simulated_provider_output=_provider_output(
+            "Display label mismatch must fail closed.",
+            (
+                _source_item(
+                    "at07_src",
+                    evidence_level="VERIFIED",
+                    display_label="WrongProviderLabel",
+                ),
+            ),
+        ),
+        expected_acceptance=False,
+        expected_rejection_code=RagRejectionCode.DISPLAY_LABEL_MISMATCH.value,
+        expected_provider_called=True,
+        expected_final_rendered_labels=None,
+        safety_assertions=("mismatched provider display_label must be rejected",),
+    ),
+    _gs_case(
+        case_id="AT-08",
+        category=RagEvalCategory.ATTRIBUTION_SAFETY,
+        description=(
+            "Trusted ValidatedRagSource.display_label is reconstructed from "
+            "authoritative retrieved skill_name, not provider text."
+        ),
+        retrieved_seed=(
+            _seed("at08_src", _AT08_RAW_NAME, evidence_level="VERIFIED"),
+        ),
+        query_text="at08-trusted-label-reconstruction-query",
+        inject_provider=True,
+        simulated_provider_output=_provider_output(
+            "Sentinel-bearing skill name round-trips through trusted reconstruction.",
+            (
+                _source_item(
+                    "at08_src",
+                    evidence_level="VERIFIED",
+                    display_label=_AT08_PROVIDER_LABEL,
+                ),
+            ),
+        ),
+        expected_acceptance=True,
+        expected_rejection_code=None,
+        expected_provider_called=True,
+        expected_final_rendered_labels=(_AT08_RAW_NAME,),
+        safety_assertions=(
+            "trusted final label equals authoritative retrieved skill_name",
+            "provider-facing label remains sentinel-neutralised",
+        ),
+    ),
+)
+
+
+UNSUPPORTED_OUTPUT_CASES: tuple[RagGenerationSafetyCase, ...] = (
+    _gs_case(
+        case_id="UO-01",
+        category=RagEvalCategory.UNSUPPORTED_OUTPUT,
+        description="Wrong top-level output schema is rejected.",
+        retrieved_seed=(_seed("uo01_src", "Python", evidence_level="VERIFIED"),),
+        query_text="uo01-wrong-schema-query",
+        inject_provider=True,
+        simulated_provider_output={
+            "summary": "Unexpected top-level key must fail closed.",
+            "sources_used": [
+                _source_item(
+                    "uo01_src",
+                    evidence_level="VERIFIED",
+                    display_label="Python",
+                )
+            ],
+            "extra_key": "not-allowed",
+        },
+        expected_acceptance=False,
+        expected_rejection_code=RagRejectionCode.INVALID_OUTPUT.value,
+        expected_provider_called=True,
+        expected_final_rendered_labels=None,
+        safety_assertions=("unexpected top-level keys must be rejected",),
+    ),
+    _gs_case(
+        case_id="UO-02",
+        category=RagEvalCategory.UNSUPPORTED_OUTPUT,
+        description="Empty sources_used is rejected.",
+        retrieved_seed=(_seed("uo02_src", "SQL", evidence_level="VERIFIED"),),
+        query_text="uo02-empty-sources-query",
+        inject_provider=True,
+        simulated_provider_output={
+            "summary": "Answer text without sources must fail closed.",
+            "sources_used": [],
+        },
+        expected_acceptance=False,
+        expected_rejection_code=RagRejectionCode.INVALID_SOURCES_USED.value,
+        expected_provider_called=True,
+        expected_final_rendered_labels=None,
+        safety_assertions=("empty sources_used must be rejected",),
+    ),
+    _gs_case(
+        case_id="UO-03",
+        category=RagEvalCategory.UNSUPPORTED_OUTPUT,
+        description="Prohibited proficiency claim language is rejected.",
+        retrieved_seed=(_seed("uo03_src", "Python", evidence_level="VERIFIED"),),
+        query_text="uo03-claim-safety-query",
+        inject_provider=True,
+        simulated_provider_output=_provider_output(
+            "This proves proficiency in Python for hiring outcomes.",
+            (
+                _source_item(
+                    "uo03_src",
+                    evidence_level="VERIFIED",
+                    display_label="Python",
+                ),
+            ),
+        ),
+        expected_acceptance=False,
+        expected_rejection_code=RagRejectionCode.CLAIM_SAFETY_REJECTION.value,
+        expected_provider_called=True,
+        expected_final_rendered_labels=None,
+        safety_assertions=("prohibited proficiency claim language must be rejected",),
+    ),
+    _gs_case(
+        case_id="UO-04",
+        category=RagEvalCategory.UNSUPPORTED_OUTPUT,
+        description="Boolean source_identifier must never be treated as an integer PK.",
+        retrieved_seed=(_seed("uo04_src", "Python", evidence_level="VERIFIED"),),
+        query_text="uo04-bool-source-identifier-query",
+        inject_provider=True,
+        simulated_provider_output={
+            "summary": "Bool source_identifier must fail closed.",
+            "sources_used": [
+                {
+                    "source_identifier": True,
+                    "evidence_level": "VERIFIED",
+                    "display_label": "Python",
+                }
+            ],
+        },
+        expected_acceptance=False,
+        expected_rejection_code=RagRejectionCode.INVALID_SOURCES_USED.value,
+        expected_provider_called=True,
+        expected_final_rendered_labels=None,
+        safety_assertions=("bool source_identifier must be rejected",),
+    ),
+)
+
+
+ZERO_EVIDENCE_CASES: tuple[RagGenerationSafetyCase, ...] = (
+    _gs_case(
+        case_id="ZE-01",
+        category=RagEvalCategory.ZERO_EVIDENCE,
+        description="No retrieved evidence fails closed without calling the provider.",
+        retrieved_seed=(),
+        query_text="ze01-no-retrieved-evidence-query",
+        inject_provider=True,
+        simulated_provider_output=_provider_output(
+            "This fabricated answer must never be returned.",
+            (
+                {
+                    "source_identifier": 1,
+                    "evidence_level": "VERIFIED",
+                    "display_label": "Fabricated",
+                },
+            ),
+        ),
+        expected_acceptance=False,
+        expected_rejection_code=RagRejectionCode.NO_RETRIEVED_EVIDENCE.value,
+        expected_provider_called=False,
+        expected_final_rendered_labels=None,
+        safety_assertions=("zero retrieval must not call the provider",),
+    ),
+    _gs_case(
+        case_id="ZE-02",
+        category=RagEvalCategory.ZERO_EVIDENCE,
+        description="provider=None fails closed as PROVIDER_UNAVAILABLE without a call.",
+        retrieved_seed=(_seed("ze02_src", "Python", evidence_level="VERIFIED"),),
+        query_text="ze02-provider-unavailable-query",
+        inject_provider=False,
+        simulated_provider_output=None,
+        expected_acceptance=False,
+        expected_rejection_code=RagRejectionCode.PROVIDER_UNAVAILABLE.value,
+        expected_provider_called=False,
+        expected_final_rendered_labels=None,
+        safety_assertions=("provider=None must not invoke any callable provider",),
+    ),
+)
+
+
 PHASE1_EVALUATION_CASES: tuple[RagEvalCase, ...] = (
     validate_and_sort_rag_evaluation_cases(
         tuple(RETRIEVAL_QUALITY_CASES) + tuple(ADVERSARIAL_RETRIEVAL_CASES)
     )
+)
+
+PHASE2_SAFETY_CASES: tuple[RagGenerationSafetyCase, ...] = (
+    validate_and_sort_rag_evaluation_cases(
+        tuple(ATTRIBUTION_SAFETY_CASES)
+        + tuple(UNSUPPORTED_OUTPUT_CASES)
+        + tuple(ZERO_EVIDENCE_CASES)
+    )
+)
+
+ALL_EVALUATION_CASES: tuple[RagEvalCase, ...] = validate_and_sort_rag_evaluation_cases(
+    tuple(PHASE1_EVALUATION_CASES) + tuple(PHASE2_SAFETY_CASES)
 )
