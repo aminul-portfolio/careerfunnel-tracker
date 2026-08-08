@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Skill Ledger RAG Result | CareerFunnel Tracker{% endblock %}
+{% block page_heading %}Skill Ledger grounded evidence result{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    <div class="card-header">
+        <p class="eyebrow">Skill Ledger</p>
+        <h1>Grounded evidence result</h1>
+        <a href="{% url 'skill_ledger:list' %}" class="btn btn-secondary">Back to Skill Ledger</a>
+    </div>
+
+    <p class="cf69-advisory-info">This result is advisory only and is grounded only in the Skill Ledger evidence shown below.</p>
+    <p class="cf69-advisory-info">It does not verify proficiency, certify skills, or predict employer outcomes.</p>
+    <p class="cf69-advisory-info">Review the evidence manually before using any result in a CV, LinkedIn profile, application, or public profile.</p>
+    <p class="cf69-advisory-info">Queries and generated answers are not saved by this workflow.</p>
+    <p class="cf69-advisory-info">Skill gap signals are advisory only.</p>
+    <p class="cf69-advisory-info">Learning recommendations are planning aids.</p>
+
+    <form method="post" class="cf70-skill-search-form">
+        {% csrf_token %}
+        <label for="skill-ledger-rag-query" class="sr-only">Evidence query</label>
+        <input
+            id="skill-ledger-rag-query"
+            type="text"
+            name="q"
+            value="{{ query }}"
+            maxlength="1000"
+            placeholder="Ask about your Skill Ledger evidence"
+        >
+        <button type="submit" class="btn btn-primary">Retrieve evidence</button>
+    </form>
+</div>
+
+{% if form_submitted and error_code == "INVALID_QUERY" %}
+<section class="content-card cf69-card">
+    <div class="card-header">
+        <p class="eyebrow">Query</p>
+        <h2>Query required</h2>
+    </div>
+    <p>Enter a non-empty query of at most 1000 characters.</p>
+</section>
+{% endif %}
+
+{% if form_submitted and retrieved %}
+<section class="content-card cf69-card">
+    <div class="card-header">
+        <p class="eyebrow">Retrieved evidence</p>
+        <h2>Skill Ledger sources</h2>
+    </div>
+    <ul class="workflow-list">
+        {% for item in retrieved %}
+        <li>
+            <strong>{{ item.skill_name }}</strong>
+            <span class="cf69-badge">{{ item.evidence_level }}</span>
+            <span class="cf69-badge">{{ item.category }}</span>
+            {% if item.sprint_reference %}
+            <span>{{ item.sprint_reference }}</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% elif form_submitted and error_code == "NO_RETRIEVED_EVIDENCE" %}
+<section class="content-card cf69-card cf69-empty">
+    <div class="card-header">
+        <p class="eyebrow">Retrieved evidence</p>
+        <h2>No matching Skill Ledger evidence</h2>
+    </div>
+    <p>No owned Skill Ledger evidence was retrieved for this query.</p>
+</section>
+{% elif form_submitted and error_code == "PROVIDER_ERROR" and not retrieved %}
+<section class="content-card cf69-card">
+    <div class="card-header">
+        <p class="eyebrow">Retrieved evidence</p>
+        <h2>Evidence retrieval unavailable</h2>
+    </div>
+    <p>The evidence retrieval step could not be completed. No generated output is shown.</p>
+</section>
+{% endif %}
+
+{% if validated_result %}
+<section class="content-card cf69-card">
+    <div class="card-header">
+        <p class="eyebrow">Generated result</p>
+        <h2>Validated advisory summary</h2>
+    </div>
+    <p>{{ validated_result.summary }}</p>
+    <ul class="workflow-list">
+        {% for source in validated_result.sources_used %}
+        <li>
+            {{ source.display_label }}
+            <span class="cf69-badge">{{ source.evidence_level }}</span>
+            <span>source {{ source.source_identifier }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% elif form_submitted and retrieved and error_code == "PROVIDER_UNAVAILABLE" %}
+<section class="content-card cf69-card">
+    <div class="card-header">
+        <p class="eyebrow">Generation</p>
+        <h2>Advisory generation unavailable</h2>
+    </div>
+    <p>Retrieved evidence is shown above. No compatible generation provider is available in this workflow.</p>
+</section>
+{% elif form_submitted and retrieved and error_code and error_code != "INVALID_QUERY" and error_code != "NO_RETRIEVED_EVIDENCE" and error_code != "PROVIDER_UNAVAILABLE" %}
+<section class="content-card cf69-card">
+    <div class="card-header">
+        <p class="eyebrow">Generation</p>
+        <h2>Generation unavailable</h2>
+    </div>
+    <p>The advisory generation step could not be completed. No partial generated output is shown.</p>
+</section>
+{% endif %}
+{% endblock %}
