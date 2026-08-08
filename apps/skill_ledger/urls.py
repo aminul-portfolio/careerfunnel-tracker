@@ -33,6 +33,7 @@ urlpatterns = [
         views.skill_ledger_advisory_manual_review_checklist,
         name="advisory_manual_review_checklist",
     ),
+    path("rag/", views.skill_ledger_rag_result, name="rag_result"),
     path("public/", views.skill_ledger_public, name="public"),
     path("<int:pk>/edit/", views.skill_entry_edit, name="edit"),
     path("<int:pk>/", views.skill_entry_detail, name="detail"),

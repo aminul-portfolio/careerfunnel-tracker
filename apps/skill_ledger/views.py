@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_http_methods
 
 from .advisory import (
     ADVISORY_CLASSIFICATIONS,
@@ -20,8 +20,15 @@ from .ai_explanation import (
     build_skill_advisory_explanations,
     explanation_to_dict,
 )
+from .embedding_provider import DeterministicOfflineEmbeddingProvider
 from .forms import SkillEntryForm
 from .models import SkillEntry
+from .rag_generation import (
+    QUERY_MAX_LEN,
+    RagRejectionCode,
+    generate_grounded_rag_answer,
+)
+from .rag_retrieval import EvidenceRetrievalError, retrieve_owned_skill_evidence
 
 
 def resolve_skill_ledger_public_owner():
@@ -395,6 +402,63 @@ def skill_ledger_advisory_manual_review_checklist(request):
     return render(
         request,
         "skill_ledger/skill_advisory_manual_review_checklist.html",
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def skill_ledger_rag_result(request):
+    """Minimal authenticated Skill Ledger RAG result surface (Sprint 119 Phase 3).
+
+    Production provider is always None (fail closed). Tests may call the
+    generation service with an injected ExplanationProvider.
+    """
+    query = ""
+    retrieved = ()
+    validated_result = None
+    error_code = None
+    form_submitted = False
+
+    if request.method == "POST":
+        form_submitted = True
+        query = str(request.POST.get("q", "") or "").strip()
+        if not query:
+            error_code = RagRejectionCode.INVALID_QUERY
+        elif len(query) > QUERY_MAX_LEN:
+            error_code = RagRejectionCode.INVALID_QUERY
+        else:
+            try:
+                embedding_provider = DeterministicOfflineEmbeddingProvider()
+                retrieved = retrieve_owned_skill_evidence(
+                    request.user,
+                    query,
+                    provider=embedding_provider,
+                )
+            except EvidenceRetrievalError:
+                error_code = RagRejectionCode.PROVIDER_ERROR
+                retrieved = ()
+            else:
+                # Production: no compatible RAG composer exists. Fail closed.
+                generation = generate_grounded_rag_answer(
+                    query,
+                    retrieved,
+                    provider=None,
+                )
+                if generation.ok:
+                    validated_result = generation.validated
+                else:
+                    error_code = generation.code
+
+    return render(
+        request,
+        "skill_ledger/rag_result.html",
+        {
+            "query": query,
+            "form_submitted": form_submitted,
+            "retrieved": retrieved,
+            "error_code": error_code,
+            "validated_result": validated_result,
+        },
     )
 
 
