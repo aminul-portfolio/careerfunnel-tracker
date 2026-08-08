@@ -71,3 +71,36 @@ class SkillEntry(models.Model):
 
     def __str__(self):
         return f"{self.skill_name} ({self.get_evidence_level_display()})"
+
+
+class EvidenceEmbedding(models.Model):
+    """Offline embedding cache row for one SkillEntry + provider + model."""
+
+    skill_entry = models.ForeignKey(
+        SkillEntry,
+        on_delete=models.CASCADE,
+        related_name="evidence_embeddings",
+    )
+    embedding_provider = models.CharField(max_length=100)
+    embedding_model = models.CharField(max_length=100)
+    content_sha256 = models.CharField(max_length=64)
+    embedding_dimensions = models.PositiveIntegerField()
+    embedding_vector = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Evidence Embedding"
+        verbose_name_plural = "Evidence Embeddings"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["skill_entry", "embedding_provider", "embedding_model"],
+                name="uniq_evidence_embedding_entry_provider_model",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"EvidenceEmbedding(skill_entry={self.skill_entry_id}, "
+            f"provider={self.embedding_provider}, model={self.embedding_model})"
+        )
