@@ -63,6 +63,7 @@ jobs:
 
       - name: Offline AI quality evaluation
         run: |
+          python manage.py migrate --noinput
           mkdir -p "${{ runner.temp }}/careerfunnel-ai-quality"
           python manage.py evaluate_skill_ledger_ai_quality \
             --candidate-sha "${{ github.sha }}" \
