@@ -20,6 +20,11 @@ from .contracts import (
     ToolDefinition,
 )
 from .executor import ExecutorCode, execute_plan
+from .observation import (
+    ObservationCollector,
+    build_assistant_observation,
+    collect_observation,
+)
 from .registry import TOOL_REGISTRY
 from .synthesis_validation import (
     MAX_ANSWER_LENGTH,
@@ -138,6 +143,25 @@ def _assistant(
     )
 
 
+def _observe_and_return(
+    outcome: AssistantOrchestrationResult,
+    *,
+    observation_collector: ObservationCollector | None,
+) -> AssistantOrchestrationResult:
+    """Outer-boundary observation only. Never mutates the assistant result."""
+    observation = build_assistant_observation(
+        outcome_code=outcome.result.code,
+        planner_calls=outcome.planner_calls,
+        tools_executed=outcome.tools_executed,
+        synthesis_calls=outcome.synthesis_calls,
+        tools_used=outcome.result.tools_used,
+        source_count=len(outcome.result.sources_used),
+        answer_length=len(outcome.result.answer),
+    )
+    collect_observation(observation_collector, observation)
+    return outcome
+
+
 def run_skill_ledger_assistant(
     *,
     request_text: str,
@@ -145,8 +169,31 @@ def run_skill_ledger_assistant(
     planner: PlannerProvider | None,
     synthesis_provider: ExplanationProvider | None,
     embedding_provider: EmbeddingProvider | None = None,
+    observation_collector: ObservationCollector | None = None,
 ) -> AssistantOrchestrationResult:
     """Bounded one-shot planner + optional synthesis orchestration."""
+    outcome = _run_skill_ledger_assistant_core(
+        request_text=request_text,
+        user=user,
+        planner=planner,
+        synthesis_provider=synthesis_provider,
+        embedding_provider=embedding_provider,
+    )
+    return _observe_and_return(
+        outcome,
+        observation_collector=observation_collector,
+    )
+
+
+def _run_skill_ledger_assistant_core(
+    *,
+    request_text: str,
+    user,
+    planner: PlannerProvider | None,
+    synthesis_provider: ExplanationProvider | None,
+    embedding_provider: EmbeddingProvider | None = None,
+) -> AssistantOrchestrationResult:
+    """Sprint 121 orchestration body. Observation is applied only at the outer seam."""
     # Authenticated-only service boundary: before planner or executor.
     if (
         user is None

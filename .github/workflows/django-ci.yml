@@ -60,3 +60,10 @@ jobs:
 
       - name: Django tests
         run: python manage.py test
+
+      - name: Offline AI quality evaluation
+        run: |
+          mkdir -p "${{ runner.temp }}/careerfunnel-ai-quality"
+          python manage.py evaluate_skill_ledger_ai_quality \
+            --candidate-sha "${{ github.sha }}" \
+            --output-dir "${{ runner.temp }}/careerfunnel-ai-quality"
