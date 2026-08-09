@@ -710,6 +710,37 @@ class AssistantOrchestrationTests(TestCase):
         self.assertFalse(outcome.result.ok)
         self.assertEqual(outcome.result.code, AssistantOutcomeCode.FAILED)
 
+    def test_execute_plan_unexpected_exception_fails_closed(self):
+        planner = FixedPlanner(_plan(_summary()))
+        synthesis = CountingSynthesis(
+            {"answer": "should not run", "tools_used": [], "sources_used": []}
+        )
+
+        def boom(*args, **kwargs):
+            raise RuntimeError("executor boom secret path /tmp/secret")
+
+        with patch(
+            "apps.skill_ledger.assistant.orchestration.execute_plan",
+            boom,
+        ):
+            outcome = self._run(planner=planner, synthesis=synthesis)
+        self.assertFalse(outcome.result.ok)
+        self.assertEqual(outcome.result.code, AssistantOutcomeCode.FAILED)
+        self.assertEqual(outcome.planner_calls, 1)
+        self.assertEqual(outcome.tools_executed, 0)
+        self.assertEqual(outcome.synthesis_calls, 0)
+        self.assertEqual(synthesis.calls, 0)
+        self.assertEqual(outcome.result.tools_used, ())
+        self.assertEqual(outcome.result.sources_used, ())
+        self.assertEqual(
+            outcome.result.answer,
+            "The Skill Ledger assistant request failed closed.",
+        )
+        self.assertNotIn("boom", outcome.result.answer.casefold())
+        self.assertNotIn("secret", outcome.result.answer.casefold())
+        self.assertNotIn("RuntimeError", outcome.result.answer)
+        self.assertNotIn("/tmp", outcome.result.answer)
+
     def test_executor_internal_api_not_imported_by_orchestration(self):
         import inspect
 

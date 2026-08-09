@@ -219,11 +219,23 @@ def run_skill_ledger_assistant(
             tools_executed=0,
         )
 
-    batch = execute_plan(
-        decision,
-        user=user,
-        embedding_provider=embedding_provider,
-    )
+    try:
+        batch = execute_plan(
+            decision,
+            user=user,
+            embedding_provider=embedding_provider,
+        )
+    except Exception:
+        return _assistant(
+            ok=False,
+            code=AssistantOutcomeCode.FAILED,
+            answer=_SAFE_FAILED_ANSWER,
+            tools_used=(),
+            sources_used=(),
+            planner_calls=1,
+            synthesis_calls=0,
+            tools_executed=0,
+        )
 
     if not batch.ok:
         if (
