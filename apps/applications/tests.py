@@ -4533,6 +4533,23 @@ class ApplicationWorkflowSafetyWordingRegressionTests(TestCase):
 
         self.assertContains(response, "Documents are not generated here.")
 
+    def test_application_form_all_permanent_safety_phrases_present(self):
+        response = self._get_application_form()
+
+        self.assertContains(response, "Pre-filling this form does not save your application.")
+        self.assertContains(response, "Saving creates a tracking record only.")
+        self.assertContains(response, "Documents are not generated here.")
+        self.assertContains(response, "Draft - tracking record only")
+
+    def test_application_form_prefill_all_permanent_safety_phrases_present(self):
+        response = self._get_application_form(with_prefill=True)
+
+        self.assertContains(response, "Pre-filling this form does not save your application.")
+        self.assertContains(response, "Saving creates a tracking record only.")
+        self.assertContains(response, "Documents are not generated here.")
+        self.assertContains(response, "Draft - tracking record only")
+        self.assertContains(response, "Pre-fill Add Application")
+
     def test_application_detail_followup_manual_wording_present(self):
         response = self._get_application_detail()
 
