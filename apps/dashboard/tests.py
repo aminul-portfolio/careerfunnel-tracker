@@ -890,3 +890,198 @@ class Sprint51ReviewerWalkthroughPolishTests(TestCase):
                 all(ord(char) < 128 for char in content),
                 msg=f"Non-ASCII character found in {path}",
             )
+
+
+class Sprint124Phase2AIEngineeringEvidenceContractTests(TestCase):
+    """Sprint 124 Phase 2: read-only AI engineering evidence contract."""
+
+    def test_evidence_contract_builds_with_expected_capability_count(self):
+        from apps.dashboard.ai_engineering_evidence import (
+            build_ai_engineering_evidence,
+            build_ai_engineering_summary,
+        )
+
+        evidence = build_ai_engineering_evidence()
+        summary = build_ai_engineering_summary()
+
+        self.assertEqual(len(evidence), 8)
+        self.assertEqual(summary.capability_count, 8)
+
+    def test_required_capabilities_are_present(self):
+        from apps.dashboard.ai_engineering_evidence import (
+            build_ai_engineering_evidence,
+        )
+
+        capabilities = {
+            item.capability for item in build_ai_engineering_evidence()
+        }
+
+        self.assertEqual(
+            capabilities,
+            {
+                "Evidence-grounded AI application workflow",
+                "Controlled LLM provider boundary",
+                "RAG and retrieval evaluation",
+                "Bounded read-only tool-calling",
+                "Claim-safety controls",
+                "Human-in-the-loop review",
+                "AI quality lifecycle",
+                "Controlled live-provider canary",
+            },
+        )
+
+    def test_execution_types_are_explicit_and_distinct(self):
+        from apps.dashboard.ai_engineering_evidence import (
+            EXECUTION_CONTROLLED_LIVE,
+            EXECUTION_DETERMINISTIC,
+            EXECUTION_HUMAN_REVIEW,
+            EXECUTION_LLM_ASSISTED,
+            EXECUTION_RAG,
+            EXECUTION_RULE_BASED,
+            EXECUTION_TOOL_CALLING,
+            build_ai_engineering_evidence,
+        )
+
+        execution_types = {
+            item.execution_type for item in build_ai_engineering_evidence()
+        }
+
+        self.assertTrue(
+            {
+                EXECUTION_DETERMINISTIC,
+                EXECUTION_RULE_BASED,
+                EXECUTION_HUMAN_REVIEW,
+                EXECUTION_LLM_ASSISTED,
+                EXECUTION_RAG,
+                EXECUTION_TOOL_CALLING,
+                EXECUTION_CONTROLLED_LIVE,
+            }.issubset(execution_types)
+        )
+
+    def test_historical_evaluation_evidence_is_qualified(self):
+        from apps.dashboard.ai_engineering_evidence import (
+            build_ai_engineering_evidence,
+        )
+
+        by_capability = {
+            item.capability: item
+            for item in build_ai_engineering_evidence()
+        }
+
+        rag = by_capability["RAG and retrieval evaluation"]
+        tools = by_capability["Bounded read-only tool-calling"]
+        quality = by_capability["AI quality lifecycle"]
+
+        self.assertIn("31 offline RAG evaluation cases passed", rag.historical_validation)
+        self.assertIn("Sprint 122", rag.historical_validation)
+
+        self.assertIn(
+            "81 offline tool-assistant evaluation cases passed",
+            tools.historical_validation,
+        )
+        self.assertIn("Sprint 122", tools.historical_validation)
+
+        self.assertIn(
+            "54 offline AI quality evaluation cases passed",
+            quality.historical_validation,
+        )
+        self.assertIn("Sprint 122", quality.historical_validation)
+
+    def test_evidence_contract_preserves_claim_boundaries(self):
+        from apps.dashboard.ai_engineering_evidence import (
+            build_ai_engineering_evidence,
+        )
+
+        evidence = build_ai_engineering_evidence()
+
+        combined = " ".join(
+            " ".join(
+                (
+                    item.capability,
+                    item.execution_type,
+                    item.evidence_source,
+                    item.evaluation_mode,
+                    item.historical_validation,
+                    item.claim_boundary,
+                    item.provenance,
+                )
+            )
+            for item in evidence
+        ).lower()
+
+        forbidden_claims = (
+            "production-grade autonomous ai agents",
+            "100% accurate",
+            "guaranteed accuracy",
+            "guaranteed reliable",
+            "autonomous job-application automation",
+        )
+
+        for phrase in forbidden_claims:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, combined)
+
+    def test_unsupported_claim_flags_remain_false(self):
+        from apps.dashboard.ai_engineering_evidence import (
+            build_ai_engineering_summary,
+        )
+
+        summary = build_ai_engineering_summary()
+
+        self.assertTrue(summary.human_review_required)
+        self.assertFalse(summary.autonomous_agent_claim)
+        self.assertFalse(summary.production_vector_database_claim)
+        self.assertFalse(summary.enterprise_rag_claim)
+        self.assertFalse(summary.autonomous_job_application_claim)
+        self.assertFalse(summary.production_reliability_claim)
+
+    def test_evidence_contract_is_deterministic(self):
+        from apps.dashboard.ai_engineering_evidence import (
+            build_ai_engineering_evidence,
+            build_ai_engineering_summary,
+        )
+
+        self.assertEqual(
+            build_ai_engineering_evidence(),
+            build_ai_engineering_evidence(),
+        )
+        self.assertEqual(
+            build_ai_engineering_summary(),
+            build_ai_engineering_summary(),
+        )
+
+    def test_evidence_items_are_immutable(self):
+        from dataclasses import FrozenInstanceError
+
+        from apps.dashboard.ai_engineering_evidence import (
+            build_ai_engineering_evidence,
+        )
+
+        item = build_ai_engineering_evidence()[0]
+
+        with self.assertRaises(FrozenInstanceError):
+            item.capability = "Changed"
+
+    def test_evidence_module_has_no_provider_network_or_orm_dependency(self):
+        import inspect
+
+        import apps.dashboard.ai_engineering_evidence as evidence_module
+
+        source = inspect.getsource(evidence_module).lower()
+
+        forbidden_tokens = (
+            "provider_factory",
+            "claude_provider",
+            "requests",
+            "httpx",
+            "socket",
+            "urllib",
+            "django.db",
+            "subprocess",
+            "os.environ",
+            "getenv(",
+        )
+
+        for token in forbidden_tokens:
+            with self.subTest(token=token):
+                self.assertNotIn(token, source)
