@@ -25,6 +25,35 @@
         </div>
     </section>
 
+    <section class="content-card cf124-ai-evidence-entry">
+        <div class="card-header card-header-row">
+            <div>
+                <p class="eyebrow">AI Engineering Evidence</p>
+                <h2>AI engineering implementation proof</h2>
+                <p>
+                    Review controlled provider boundaries, offline evaluation,
+                    retrieval evidence, bounded tool-calling, claim-safety controls,
+                    and human-review safeguards.
+                </p>
+            </div>
+            <span class="badge badge-info">Read-only</span>
+        </div>
+
+        <p class="cf124-ai-evidence-entry-note">
+            Historical evaluation evidence is qualified by its validated repository
+            state and does not represent production reliability or autonomous operation.
+        </p>
+
+        <div class="form-actions">
+            <a
+                href="{% url 'dashboard:career_evidence_ai_engineering' %}"
+                class="btn btn-primary"
+            >
+                Open AI Engineering Evidence
+            </a>
+        </div>
+    </section>
+
     <section class="career-evidence-card-grid">
         {% for card in cards %}
         <article class="content-card career-evidence-card">
@@ -53,7 +82,13 @@
                 </div>
                 <div>
                     <dt>Last modified</dt>
-                    <dd>{% if card.modified_at %}{{ card.modified_at }}{% else %}<em>Not available</em>{% endif %}</dd>
+                    <dd>
+                        {% if card.modified_at %}
+                            {{ card.modified_at }}
+                        {% else %}
+                            <em>Not available</em>
+                        {% endif %}
+                    </dd>
                 </div>
             </dl>
 

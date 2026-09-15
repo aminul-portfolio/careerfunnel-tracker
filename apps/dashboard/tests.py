@@ -1085,3 +1085,157 @@ class Sprint124Phase2AIEngineeringEvidenceContractTests(TestCase):
         for token in forbidden_tokens:
             with self.subTest(token=token):
                 self.assertNotIn(token, source)
+
+class Sprint124Phase3AIEngineeringEvidencePageTests(TestCase):
+    """Sprint 124 Phase 3: authenticated read-only AI evidence page."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="sprint124-ai-evidence",
+            password="StrongPass12345",
+        )
+        self.url = reverse("dashboard:career_evidence_ai_engineering")
+
+    def test_ai_engineering_evidence_requires_login(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_ai_engineering_evidence_renders_for_authenticated_user(self):
+        self.client.login(
+            username="sprint124-ai-evidence",
+            password="StrongPass12345",
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI Engineering Evidence")
+        self.assertContains(response, "Evidence-grounded AI application workflow")
+        self.assertContains(response, "Controlled LLM provider boundary")
+        self.assertContains(response, "RAG and retrieval evaluation")
+        self.assertContains(response, "Bounded read-only tool-calling")
+        self.assertContains(response, "Claim-safety controls")
+        self.assertContains(response, "Human-in-the-loop review")
+        self.assertContains(response, "AI quality lifecycle")
+        self.assertContains(response, "Controlled live-provider canary")
+
+    def test_ai_engineering_evidence_preserves_qualified_historical_results(self):
+        self.client.login(
+            username="sprint124-ai-evidence",
+            password="StrongPass12345",
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "31 offline RAG evaluation cases passed")
+        self.assertContains(response, "81 offline tool-assistant evaluation cases passed")
+        self.assertContains(response, "54 offline AI quality evaluation cases passed")
+        self.assertContains(response, "validated Sprint 122 repository state")
+
+    def test_ai_engineering_evidence_preserves_claim_boundaries(self):
+        self.client.login(
+            username="sprint124-ai-evidence",
+            password="StrongPass12345",
+        )
+
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        self.assertIn("bounded tool-calling", content)
+        self.assertIn("human review", content)
+        self.assertIn("not production", content)
+        self.assertNotIn("production-grade autonomous ai agents", content)
+        self.assertNotIn("100% accurate", content)
+        self.assertNotIn("guaranteed accuracy", content)
+        self.assertNotIn("autonomous job-application automation", content)
+
+    def test_career_evidence_index_links_to_ai_engineering_evidence(self):
+        self.client.login(
+            username="sprint124-ai-evidence",
+            password="StrongPass12345",
+        )
+
+        response = self.client.get(reverse("dashboard:career_evidence_index"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI engineering implementation proof")
+        self.assertContains(response, self.url)
+        self.assertContains(response, "Open AI Engineering Evidence")
+
+    @patch(
+        "socket.create_connection",
+        side_effect=AssertionError("Network access is forbidden during evidence render."),
+    )
+    @patch(
+        "socket.socket.connect",
+        side_effect=AssertionError("Socket connection is forbidden during evidence render."),
+    )
+    def test_ai_engineering_evidence_render_makes_no_network_calls(
+        self,
+        mock_socket_connect,
+        mock_create_connection,
+    ):
+        self.client.login(
+            username="sprint124-ai-evidence",
+            password="StrongPass12345",
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        mock_create_connection.assert_not_called()
+        mock_socket_connect.assert_not_called()
+
+    @patch(
+        "apps.dashboard.views.career_evidence_views.build_ai_engineering_summary"
+    )
+    @patch(
+        "apps.dashboard.views.career_evidence_views.build_ai_engineering_evidence"
+    )
+    def test_ai_engineering_evidence_render_uses_read_only_evidence_builders(
+        self,
+        mock_build_evidence,
+        mock_build_summary,
+    ):
+        from apps.dashboard.ai_engineering_evidence import (
+            build_ai_engineering_evidence,
+            build_ai_engineering_summary,
+        )
+
+        mock_build_evidence.return_value = build_ai_engineering_evidence()
+        mock_build_summary.return_value = build_ai_engineering_summary()
+
+        self.client.login(
+            username="sprint124-ai-evidence",
+            password="StrongPass12345",
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        mock_build_evidence.assert_called_once_with()
+        mock_build_summary.assert_called_once_with()
+
+    def test_ai_engineering_evidence_view_has_no_provider_dependency(self):
+        import inspect
+
+        from apps.dashboard.views import career_evidence_views
+
+        source = inspect.getsource(
+            career_evidence_views.ai_engineering_evidence_detail
+        ).lower()
+
+        forbidden_tokens = (
+            "provider_factory",
+            "claude_provider",
+            "compose_",
+            "api_key",
+            "requests",
+            "httpx",
+            "socket",
+        )
+
+        for token in forbidden_tokens:
+            with self.subTest(token=token):
+                self.assertNotIn(token, source)
