@@ -50,6 +50,98 @@
     </section>
 
     <section
+        class="content-card cf124-evaluation-evidence"
+        aria-labelledby="cf124-evaluation-evidence-title"
+    >
+        <div class="cf124-evaluation-evidence-heading">
+            <div>
+                <p class="eyebrow">Evaluation &amp; Safety Evidence</p>
+                <h2 id="cf124-evaluation-evidence-title">
+                    How the AI workflow was evaluated
+                </h2>
+            </div>
+            <span class="badge badge-info">Qualified evidence</span>
+        </div>
+
+        <p class="cf124-evaluation-evidence-intro">
+            Offline deterministic evaluation is separated from controlled live-provider
+            integration evidence. Historical results describe validated repository states
+            and are not production accuracy or reliability guarantees.
+        </p>
+
+        <div class="cf124-evaluation-evidence-grid">
+            {% for item in evidence_items %}
+                {% if item.capability == "RAG and retrieval evaluation" or item.capability == "Bounded read-only tool-calling" or item.capability == "AI quality lifecycle" %}
+                <article class="cf124-evaluation-evidence-item">
+                    <div class="cf124-evaluation-evidence-item-header">
+                        <span class="badge badge-info">{{ item.execution_type }}</span>
+                        <span class="cf124-evaluation-mode-label">
+                            Offline deterministic
+                        </span>
+                    </div>
+
+                    <h3>{{ item.capability }}</h3>
+
+                    <p>
+                        <strong>Validation:</strong>
+                        {{ item.historical_validation }}
+                    </p>
+
+                    <p>
+                        <strong>Boundary:</strong>
+                        {{ item.claim_boundary }}
+                    </p>
+                </article>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="cf124-safety-evidence-grid">
+            {% for item in evidence_items %}
+                {% if item.capability == "Claim-safety controls" %}
+                <article class="cf124-safety-evidence-item">
+                    <p class="eyebrow">Claim safety</p>
+                    <h3>{{ item.capability }}</h3>
+                    <p>{{ item.evidence_source }}</p>
+                    <p>
+                        <strong>Evaluation:</strong>
+                        {{ item.evaluation_mode }}
+                    </p>
+                    <p>
+                        <strong>Historical evidence:</strong>
+                        {{ item.historical_validation }}
+                    </p>
+                    <p>
+                        <strong>Boundary:</strong>
+                        {{ item.claim_boundary }}
+                    </p>
+                </article>
+                {% endif %}
+
+                {% if item.capability == "Controlled live-provider canary" %}
+                <article class="cf124-safety-evidence-item">
+                    <p class="eyebrow">Controlled live evidence</p>
+                    <h3>{{ item.capability }}</h3>
+                    <p>{{ item.evidence_source }}</p>
+                    <p>
+                        <strong>Evaluation:</strong>
+                        {{ item.evaluation_mode }}
+                    </p>
+                    <p>
+                        <strong>Historical evidence:</strong>
+                        {{ item.historical_validation }}
+                    </p>
+                    <p>
+                        <strong>Boundary:</strong>
+                        {{ item.claim_boundary }}
+                    </p>
+                </article>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </section>
+
+    <section
         class="cf124-ai-evidence-grid"
         aria-label="AI engineering evidence catalogue"
     >

@@ -1239,3 +1239,73 @@ class Sprint124Phase3AIEngineeringEvidencePageTests(TestCase):
         for token in forbidden_tokens:
             with self.subTest(token=token):
                 self.assertNotIn(token, source)
+
+
+class Sprint124Phase4EvaluationSafetyEvidenceTests(TestCase):
+    """Sprint 124 Phase 4: evaluation and claim-safety presentation."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="sprint124-evaluation-evidence",
+            password="StrongPass12345",
+        )
+        self.client.login(
+            username="sprint124-evaluation-evidence",
+            password="StrongPass12345",
+        )
+        self.url = reverse("dashboard:career_evidence_ai_engineering")
+
+    def test_evaluation_and_safety_section_renders(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Evaluation &amp; Safety Evidence")
+        self.assertContains(response, "How the AI workflow was evaluated")
+        self.assertContains(response, "Qualified evidence")
+
+    def test_offline_evaluation_is_distinguished_from_live_canary(self):
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Offline deterministic")
+        self.assertContains(response, "RAG and retrieval evaluation")
+        self.assertContains(response, "Bounded read-only tool-calling")
+        self.assertContains(response, "AI quality lifecycle")
+        self.assertContains(response, "Controlled live evidence")
+        self.assertContains(response, "Controlled live-provider canary")
+
+    def test_historical_evaluation_counts_are_rendered_from_evidence_contract(self):
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "31 offline RAG evaluation cases passed")
+        self.assertContains(response, "81 offline tool-assistant evaluation cases passed")
+        self.assertContains(response, "54 offline AI quality evaluation cases passed")
+        self.assertContains(response, "validated Sprint 122 repository state")
+
+    def test_claim_safety_evidence_surfaces_safe_rejection_and_alignment(self):
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        self.assertIn("safe-rejection", content)
+        self.assertIn("evidence-alignment", content)
+        self.assertIn("prompt-injection", content)
+        self.assertIn("safe rejection behaviour", content)
+        self.assertIn("prohibited-claim", content)
+
+    def test_live_canary_remains_explicitly_qualified(self):
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        self.assertIn("one-call, zero-retry", content)
+        self.assertIn("controlled integration evidence only", content)
+        self.assertIn("does not prove production reliability", content)
+        self.assertNotIn("production reliability proven", content)
+        self.assertNotIn("production-grade autonomous ai agents", content)
+
+    def test_evaluation_section_does_not_introduce_unsupported_infrastructure_claims(self):
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        self.assertNotIn("production vector database implemented", content)
+        self.assertNotIn("enterprise rag infrastructure implemented", content)
+        self.assertNotIn("autonomous agent implemented", content)
+        self.assertNotIn("guaranteed accuracy", content)
