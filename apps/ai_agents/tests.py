@@ -485,6 +485,60 @@ class ApplicationAgentPackCrossLinkTests(TestCase):
         self.assertTrue(response.context["has_interview_signal"])
 
 
+class ApplicationAgentPackResponsiveOverflowRegressionTests(TestCase):
+    LONG_CV_BASENAME = "Aminul_Islam_CV_Howden_Junior_Data_Analyst_20260509"
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="pack-overflow",
+            password="StrongPass12345",
+        )
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Howden",
+            job_title="Junior Data Analyst",
+            date_applied=date(2026, 5, 9),
+        )
+        self.client.login(username="pack-overflow", password="StrongPass12345")
+        self.pack_url = reverse(
+            "ai_agents:application_agent_pack",
+            kwargs={"pk": self.application.pk},
+        )
+
+    def _get_pack_response(self):
+        return self.client.get(self.pack_url)
+
+    def test_application_agent_pack_renders_page_specific_overflow_wrapper(self):
+        response = self._get_pack_response()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="dashboard-grid cf123-application-agent-pack"')
+
+    def test_application_agent_pack_renders_local_overflow_wrap_contract(self):
+        response = self._get_pack_response()
+
+        self.assertContains(response, ".cf123-application-agent-pack .agent-list,")
+        self.assertContains(response, "overflow-wrap: anywhere")
+        self.assertContains(response, "word-break: break-word")
+
+    def test_application_agent_pack_renders_long_cv_basename_unchanged(self):
+        response = self._get_pack_response()
+
+        self.assertContains(response, self.LONG_CV_BASENAME)
+        self.assertContains(
+            response,
+            f"Confirm CV version and cover letter used for this application "
+            f"({self.LONG_CV_BASENAME}).",
+        )
+
+    def test_application_agent_pack_preserves_advisory_wording_with_overflow_fix(self):
+        response = self._get_pack_response()
+
+        self.assertContains(response, "Application AI Pack is advisory only")
+        self.assertContains(response, "No Gmail, Calendar, OAuth")
+        self.assertContains(response, "CV Tailoring Advisor remains advisory only")
+
+
 class AdvancedAiAgentFeatureTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="advanced", password="StrongPass12345")

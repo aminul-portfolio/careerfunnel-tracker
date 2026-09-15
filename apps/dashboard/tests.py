@@ -198,6 +198,72 @@ class DashboardViewTests(TestCase):
         self.assertContains(response, "Command centre clear")
 
 
+class DashboardMobileNavigationRegressionTests(TestCase):
+    PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="mobile-nav-regression",
+            password="StrongPass12345",
+        )
+        self.client.login(
+            username="mobile-nav-regression",
+            password="StrongPass12345",
+        )
+
+    def _read_css(self, relative_path: str) -> str:
+        return (self.PROJECT_ROOT / relative_path).read_text(encoding="utf-8")
+
+    def test_dashboard_renders_mobile_nav_toggle_markup(self):
+        response = self.client.get(reverse("dashboard:overview"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="mobile-nav-toggle"')
+        self.assertContains(response, "cf-mobile-nav-toggle")
+        self.assertContains(response, 'aria-controls="app-sidebar"')
+        self.assertContains(response, 'aria-expanded="false"')
+        self.assertContains(response, 'aria-label="Open navigation menu"')
+
+    def test_components_css_preserves_base_display_none_contract(self):
+        css = self._read_css("static/css/components.css")
+
+        self.assertIn(
+            ".cf-mobile-nav-toggle {\n"
+            "    display: none;",
+            css,
+        )
+
+    def test_components_css_contains_mobile_max_900_inline_flex_override(self):
+        css = self._read_css("static/css/components.css")
+
+        self.assertIn(
+            "@media (max-width: 900px) {\n"
+            "    .cf-mobile-nav-toggle {\n"
+            "        display: inline-flex;\n"
+            "    }\n"
+            "}",
+            css,
+        )
+
+    def test_components_css_mobile_override_follows_base_display_none(self):
+        css = self._read_css("static/css/components.css")
+        base_pos = css.index(".cf-mobile-nav-toggle {")
+        display_none_pos = css.index("display: none;", base_pos)
+        media_pos = css.index("@media (max-width: 900px)", display_none_pos)
+        mobile_toggle_pos = css.index(".cf-mobile-nav-toggle", media_pos)
+        inline_flex_pos = css.index("display: inline-flex;", mobile_toggle_pos)
+
+        self.assertGreater(display_none_pos, base_pos)
+        self.assertGreater(media_pos, display_none_pos)
+        self.assertGreater(inline_flex_pos, media_pos)
+
+    def test_layout_css_existing_mobile_rule_remains_present(self):
+        css = self._read_css("static/css/layout.css")
+
+        self.assertIn("@media (max-width: 900px)", css)
+        self.assertIn(".cf-mobile-nav-toggle", css)
+        self.assertIn("display: inline-flex", css)
+
 class DashboardWeeklyOsPolishTests(TestCase):
     WEEK_END_SUNDAY = date(2026, 5, 10)
 

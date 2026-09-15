@@ -1,8 +1,19 @@
 {% extends "base.html" %}
 {% block title %}AI Agent Pack | CareerFunnel Tracker{% endblock %}
+{% block extra_css %}
+<style>
+.cf123-application-agent-pack .agent-list,
+.cf123-application-agent-pack .agent-list li {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+</style>
+{% endblock %}
 {% block page_heading %}Application AI Pack{% endblock %}
 {% block content %}
-<div class="dashboard-grid">
+<div class="dashboard-grid cf123-application-agent-pack">
     <section class="hero-panel"><p class="eyebrow">Application AI Pack</p><h1>{{ application.company_name }} — {{ application.job_title }}</h1><p>One page with job fit, CV/project recommendation, follow-up draft, and interview prep.</p>{% include "ai_agents/_agent_nav.html" %}</section>
     <section class="content-card">
         <div class="card-header">

@@ -450,6 +450,12 @@
     cursor: pointer;
 }
 
+@media (max-width: 900px) {
+    .cf-mobile-nav-toggle {
+        display: inline-flex;
+    }
+}
+
 .cf-mobile-nav-toggle-bar {
     display: block;
     width: 18px;
