@@ -1309,3 +1309,67 @@ class Sprint124Phase4EvaluationSafetyEvidenceTests(TestCase):
         self.assertNotIn("enterprise rag infrastructure implemented", content)
         self.assertNotIn("autonomous agent implemented", content)
         self.assertNotIn("guaranteed accuracy", content)
+
+
+class Sprint124Phase5RecruiterPortfolioProofTests(TestCase):
+    """Sprint 124 Phase 5: recruiter-facing AI engineering proof."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="sprint124-recruiter-proof",
+            password="StrongPass12345",
+        )
+        self.client.login(
+            username="sprint124-recruiter-proof",
+            password="StrongPass12345",
+        )
+        self.url = reverse("dashboard:career_evidence_ai_engineering")
+
+    def test_recruiter_proof_section_renders(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Recruiter / Portfolio Proof")
+        self.assertContains(response, "AI engineering evidence at a glance")
+        self.assertContains(response, "Evidence-backed")
+
+    def test_recruiter_proof_surfaces_core_engineering_evidence(self):
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Evidence-grounded AI application workflow")
+        self.assertContains(response, "Controlled LLM provider boundary")
+        self.assertContains(response, "Human-in-the-loop review")
+        self.assertContains(response, "AI quality lifecycle")
+        self.assertContains(response, "Controlled live-provider canary")
+
+    def test_recruiter_summary_uses_approved_claim_safe_wording(self):
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            "Built an evidence-grounded AI application workflow",
+        )
+        self.assertContains(response, "controlled provider boundaries")
+        self.assertContains(response, "offline evaluation")
+        self.assertContains(response, "claim-safety controls")
+        self.assertContains(response, "human review")
+
+    def test_recruiter_proof_preserves_production_boundaries(self):
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        self.assertIn("does not claim autonomous job application", content)
+        self.assertIn("enterprise rag", content)
+        self.assertIn("production vector-database infrastructure", content)
+        self.assertIn("production reliability", content)
+
+    def test_recruiter_proof_does_not_claim_unsupported_capabilities(self):
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        self.assertNotIn("production-grade autonomous ai agents", content)
+        self.assertNotIn("autonomous ai engineer", content)
+        self.assertNotIn("enterprise rag implemented", content)
+        self.assertNotIn("production vector database implemented", content)
+        self.assertNotIn("guaranteed model accuracy", content)
+        self.assertNotIn("fully autonomous job application", content)
