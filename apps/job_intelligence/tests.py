@@ -128,6 +128,57 @@ class JobIntelligenceTests(TestCase):
         response = self.client.get(reverse("job_intelligence:smart_review"))
         self.assertEqual(response.status_code, 302)
 
+    def test_smart_review_page_renders_responsive_scope_class(self):
+        JobApplication.objects.create(
+            user=self.user,
+            company_name="Responsive Review Co",
+            job_title="Junior Data Analyst",
+            date_applied=date(2026, 5, 10),
+        )
+
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("job_intelligence:smart_review"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'class="dashboard-grid cf123-smart-review-list"',
+        )
+
+    def test_application_smart_review_renders_responsive_scope_classes(self):
+        application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Responsive Detail Co",
+            job_title="Junior Data Analyst",
+            date_applied=date(2026, 5, 10),
+        )
+
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse(
+                "job_intelligence:application_smart_review",
+                kwargs={"pk": application.pk},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'class="dashboard-grid cf123-smart-review-detail"',
+        )
+        self.assertContains(
+            response,
+            'class="small-kpi-text cf123-smart-review-cv-text"',
+            count=1,
+        )
+        self.assertContains(
+            response,
+            'class="cf123-smart-review-cv-text"',
+            count=1,
+        )
+
 
 class ApplicationDocumentDraftGenerationTests(TestCase):
     def setUp(self):

@@ -5907,6 +5907,65 @@ class Sprint103ApplicationDetailVisualHierarchySafetyTests(TestCase):
                 self.assertNotIn(phrase, content)
 
 
+class Sprint123ApplicationDetailTabletOverflowRegressionTests(TestCase):
+    LONG_CV_BASENAME = "Aminul_Islam_CV_Howden_Junior_Data_Analyst_20260509"
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="sprint123-detail-overflow",
+            password="StrongPass12345",
+        )
+        self.application = JobApplication.objects.create(
+            user=self.user,
+            company_name="Howden",
+            job_title="Junior Data Analyst",
+            date_applied=date(2026, 5, 9),
+            contact_email="hiring@example.com",
+        )
+        self.client.login(username="sprint123-detail-overflow", password="StrongPass12345")
+        self.detail_url = reverse(
+            "applications:application_detail",
+            kwargs={"pk": self.application.pk},
+        )
+
+    def _get_application_detail(self):
+        return self.client.get(self.detail_url)
+
+    def test_application_detail_renders_successfully(self):
+        response = self._get_application_detail()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Application Assets")
+
+    def test_application_detail_renders_page_local_scope_contract(self):
+        response = self._get_application_detail()
+
+        self.assertContains(response, "cf103-application-detail-page")
+        self.assertContains(response, 'id="assets"')
+
+    def test_application_detail_renders_tablet_overflow_wrap_contract(self):
+        response = self._get_application_detail()
+
+        self.assertContains(response, ".cf103-application-detail-page .cf69d-detail-card,")
+        self.assertContains(response, "min-width: 0")
+        self.assertContains(response, "max-width: 100%")
+        self.assertContains(response, "overflow-wrap: anywhere")
+        self.assertContains(response, "word-break: break-word")
+
+    def test_application_detail_renders_long_cv_basename_unchanged_in_assets(self):
+        response = self._get_application_detail()
+
+        self.assertContains(response, "Generated CV display / basename")
+        self.assertContains(response, self.LONG_CV_BASENAME)
+        self.assertNotContains(response, f"{self.LONG_CV_BASENAME[:40]}...")
+
+    def test_application_detail_preserves_locked_safety_wording_with_overflow_fix(self):
+        response = self._get_application_detail()
+
+        self.assertContains(response, "Follow-up email drafts are for manual use only.")
+        self.assertContains(response, "Documents are not generated here.")
+
+
 class Sprint104BPhase1ApplicationFormGrammarAlignmentTests(TestCase):
     LOCKED_WORDING = (
         "Pre-filling this form does not save your application.",
