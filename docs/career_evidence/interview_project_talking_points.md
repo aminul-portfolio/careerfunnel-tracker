@@ -4,7 +4,7 @@ Interview preparation derived from [portfolio_projects/](portfolio_projects/) an
 
 ## 60-second portfolio overview
 
-"I have nine Django portfolio projects that show different sides of analytics work: governed job-search metrics in CareerFunnel, operational KPIs in BakeOps, market ingestion in DataBridge, FinTech monitoring in MarketVista, pre-trade risk in RiskWise, and supporting work in commerce, post-trade KPIs, BI reporting, and engagement ETL. CareerFunnel is my anchor -- I validated it locally with 900+ validated tests. The others are strong GitHub and archive evidence; I am completing local validation runs so I can speak to terminal proof, not just code review. Everything is portfolio scope -- no fake users, no live SaaS, and no claims about connected production platforms unless I have run and tested the integration."
+"I have nine Django portfolio projects that show different sides of analytics work: governed job-search metrics in CareerFunnel, operational KPIs in BakeOps, market ingestion in DataBridge, FinTech monitoring in MarketVista, pre-trade risk in RiskWise, and supporting work in commerce, post-trade KPIs, BI reporting, and engagement ETL. CareerFunnel is my strongest locally verified project -- it combines governed analytics with a controlled AI engineering layer and was verified at **3,012 passing tests as of Sprint 124B** with GitHub Actions CI #241. The others are strong GitHub and archive evidence; I am completing local validation runs so I can speak to terminal proof, not just code review. Everything is portfolio scope -- no fake users, no live SaaS, and no claims about connected production platforms unless I have run and tested the integration."
 
 ## 2-minute Analytics Engineer explanation
 
@@ -23,10 +23,10 @@ Interview preparation derived from [portfolio_projects/](portfolio_projects/) an
 | Topic | Points |
 |---|---|
 | Business problem | Job-search data is fragmented; hard to see funnel performance, source/CV effectiveness, and data quality. |
-| Technical implementation | Django apps for applications and metrics; rule-based fit review; Career Evidence OS V1-V6; optional Notion metadata sync; Playwright screenshots. |
+| Technical implementation | Django applications and metrics; Skill Ledger/evidence alignment; Career Evidence; fail-closed LLM provider boundary; offline AI evaluation; claim-safety controls; small private-corpus RAG evaluation; bounded read-only tool-calling; authenticated AI evidence surface. |
 | Analytics/reporting value | Funnel metrics, source/CV performance, rejection patterns, data-quality report, workbook export centre. |
-| Evidence/validation status | Verified from current repository; 900+ validated tests; local validation complete. |
-| Limitation answer | Portfolio product, not live SaaS; no external AI, Gmail, Calendar, or auto-apply. |
+| Evidence/validation status | **3,012 / 3,012 PASS as of Sprint 124B; GitHub Actions Django CI #241 PASS.** |
+| Limitation answer | Portfolio-scale project, not live SaaS. AI is configuration-gated, advisory, and human-reviewed. Small private-corpus RAG is not enterprise RAG; tools are bounded/read-only; no autonomous agents, auto-apply, Gmail/Calendar automation, production vector DB, or production AI reliability claim. |
 | Improve next | Keep evidence packs aligned when repo changes; maintain test and CI discipline. |
 
 ### BakeOps Intelligence
@@ -125,7 +125,7 @@ Interview preparation derived from [portfolio_projects/](portfolio_projects/) an
 
 - **Situation:** Job-search data was spread across boards and notes with no consistent metrics.
 - **Task:** Build a Django analytics product with explainable funnel and quality reporting for portfolio proof.
-- **Action:** Modelled applications and metrics in Django; added data-quality checks, workbook exports, and Career Evidence OS with repository-derived V1-V6 documentation; ran 900+ validated tests.
+- **Action:** Modelled applications and metrics in Django; added data-quality checks, exports, Skill Ledger/evidence alignment, a fail-closed LLM provider boundary, offline evaluation, small private-corpus RAG evaluation, bounded read-only tool-calling, claim-safety controls, and authenticated evidence surfaces.
 - **Result:** Recruiters can follow a documented evidence path from metrics to screenshots and generated packs; validated locally in this repository.
 
 ### BakeOps Intelligence
@@ -172,13 +172,24 @@ Interview preparation derived from [portfolio_projects/](portfolio_projects/) an
 
 ---
 
+## CareerFunnel AI interview boundaries
+
+- **RAG:** small private corpus, cached embeddings, deterministic similarity retrieval; not enterprise RAG or a production vector database.
+- **Tool-calling:** bounded, read-only, closed registry, budget constrained; not autonomous agents.
+- **Live provider:** one synthetic, explicitly gated, cost-bounded canary with `cap=1`, `retries=0`; integration evidence only.
+- **Evaluation:** 166 offline cases across AI quality, RAG, and bounded tool-assistant suites; not production-user metrics.
+- **Workflow:** advisory, evidence-grounded, claim-safe, human-reviewed, manual action/save.
+- **Reliability:** no production AI reliability, uptime, scale, or customer-performance claim.
+
 ## Claims I should not say in interviews
 
 - "I have a live SaaS with real users/customers."
 - "All nine projects are integrated in production."
 - "CI is green across the portfolio" (unless you verified each repo recently).
 - "I validated everything locally" (only CareerFunnel is complete today).
-- "CareerFunnel uses OpenAI / Gmail / Calendar / auto-apply" (planned only).
+- "CareerFunnel is an autonomous AI agent" or "CareerFunnel auto-applies for jobs."
+- "CareerFunnel uses enterprise RAG", "a production vector database", or has production AI reliability.
+- "CareerFunnel has Gmail/Calendar automation, scraping, or OAuth-driven inbox automation."
 - "RiskWise guarantees capital protection or profitability."
 - "DataBridge streams real-time market data in production."
 - "TradeIntel has strong automated test coverage" (placeholders found in review).

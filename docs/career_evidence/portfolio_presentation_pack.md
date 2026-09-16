@@ -4,7 +4,7 @@ Recruiter-facing overview of the GitHub portfolio. Evidence source: [portfolio_p
 
 ## Portfolio positioning
 
-**Analytics Engineer | Data Analyst | BI Analyst | Python & Django | ETL, KPI Dashboards, FinTech & BI**
+**AI Application Engineer | Analytics Engineer | Data Analyst | BI Analyst | Python & Django | ETL, KPI Dashboards, FinTech & BI**
 
 Nine Django-based portfolio projects show how operational and market data can be ingested, modelled, governed, and reported for analyst and data-product roles. BakeOps Intelligence and CareerFunnel Tracker lead recruiter-facing packs; CareerFunnel has verified repository evidence and complete local validation in this repository. Other strong projects are reviewed from GitHub and/or archive; local validation remains pending unless stated.
 
@@ -103,9 +103,21 @@ Nine Django-based portfolio projects show how operational and market data can be
 | 4 | DataBridge Market API | Ingestion platform and APIs |
 | 5 | RiskWise Planner | Auth, services, simulation workflows |
 
+## CareerFunnel controlled AI engineering evidence
+
+CareerFunnel's verified AI Application Engineering evidence includes a fail-closed LLM provider boundary, offline evaluation harnesses, claim-safety controls, small private-corpus RAG evaluation, bounded read-only tool-calling, a controlled synthetic one-call live-provider canary, and human-in-the-loop review.
+
+Required qualifications:
+
+- RAG is a small private corpus using cached embeddings and deterministic similarity retrieval; not enterprise RAG or a production vector database.
+- Tool-calling is bounded, read-only, closed-registry, and budget constrained; not autonomous agents.
+- The live canary was synthetic, explicitly gated, `cap=1`, `retries=0`, and cost bounded; integration evidence only.
+- AI-assisted outputs remain advisory and human-reviewed; no autonomous job application or auto-apply.
+- Offline evaluation and the live canary do not establish production AI reliability.
+
 ## Strongest 5 projects to feature first
 
-1. **CareerFunnel Tracker** -- Verified anchor: job-search analytics, Career Evidence OS, 900+ validated tests.
+1. **CareerFunnel Tracker** -- Verified anchor: governed job-search analytics, Career Evidence, controlled AI engineering layer, **3,012 passing tests as of Sprint 124B**, and GitHub Actions Django CI #241 PASS.
 2. **BakeOps Intelligence** -- Operational KPIs, waste-adjusted margin insight, BI CSV exports.
 3. **DataBridge Market API** -- Market ingestion, ETL observability, read-only API, Streamlit.
 4. **RiskWise Planner** -- Pre-trade risk, Monte Carlo, stress tests, 64 test functions in repo.
@@ -122,8 +134,8 @@ Nine Django-based portfolio projects show how operational and market data can be
 
 ## Claims safety summary
 
-- **Do not claim:** live SaaS, real users/customers, production deployment, external AI, Gmail/Calendar automation, auto-apply, live cross-project integrations, CI passed (unless verified), local validation complete (unless terminal proof exists).
-- **CareerFunnel only:** say "900+ validated tests" and "local validation complete" for this repository.
+- **Do not claim:** live SaaS, real users/customers, production deployment, autonomous agents, enterprise RAG, production vector databases, production AI reliability, Gmail/Calendar automation, scraping, auto-apply, live cross-project integrations, CI passed unless verified, or local validation complete unless terminal proof exists.
+- **CareerFunnel only:** say **"3,012 passing tests as of Sprint 124B"** and **"GitHub Actions Django CI #241 PASS"** as point-in-time evidence. Use `controlled AI engineering layer`, `LLM-assisted`, or `AI-assisted, advisory and human-reviewed` rather than unqualified `AI-powered`.
 - **Other repos:** say "portfolio evidence from GitHub/archive review" unless you have run and saved validation commands locally.
 - **FinTech suite:** DataBridge, RiskWise, MarketVista, and TradeIntel are separate portfolio demos -- not a connected production platform.
 

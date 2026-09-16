@@ -1,6 +1,6 @@
-# Career Evidence (Sprint 23 - V1 / V2 / V3)
+# Career Evidence - V1 / V2 / V3 + Sprint 124C Recruiter Evidence
 
-This folder holds **local, repository-derived evidence** for CareerFunnel Tracker. Tools use the Python standard library only and do not call external APIs, LLMs, or integrations.
+This folder holds **local, repository-derived evidence** for CareerFunnel Tracker. The historical V1/V2/V3 generator tools use the Python standard library only and do not call external APIs, LLMs, or integrations. CareerFunnel itself now includes a separately implemented **controlled AI engineering layer**; those generator tools remain local documentation utilities and were not modified or re-run in Sprint 124C.
 
 ## Files
 
@@ -51,7 +51,7 @@ Review `docs/career_evidence/03_recruiter_evidence_pack.md`.
 - Reads existing evidence from README, V1 inventory report, and V2 job-fit matrix.
 - Produces recruiter-facing sections: positioning, CV bullets, LinkedIn summary, interview talking points, and limitations.
 - Uses cautious, evidence-based wording (demonstrates, shows evidence of, supports, portfolio evidence).
-- Does not invent deployment, SaaS status, production users, external AI, or Gmail/Calendar automation.
+- Does not invent deployment, SaaS status, production users, integrations, or automation. Sprint 124C manually refreshed the recruiter pack to include only verified post-Sprint-124B AI engineering evidence.
 
 ### Evidence-only rules for recruiter wording
 
@@ -64,7 +64,7 @@ Review `docs/career_evidence/03_recruiter_evidence_pack.md`.
 
 - Every **Repository Evidence** cell (V2) must point to files that exist in this repo.
 - Use `Missing` when no supporting path is found; do not guess.
-- Do not claim production usage, live demos, external AI, Gmail/Calendar automation, or public REST APIs unless verified in the repository.
+- Do not claim production usage, live demos, Gmail/Calendar automation, scraping, auto-apply, autonomous agents, enterprise RAG, production vector databases, production AI reliability, or public REST APIs unless verified in the repository. CareerFunnel's controlled AI engineering layer may be claimed only with its documented qualifications.
 
 ## Run tool tests
 
@@ -85,7 +85,7 @@ Portfolio-level reviews for the user's major GitHub projects live separately fro
 - [portfolio_project_index.md](portfolio_project_index.md) -- priority table and claim-safety rules
 - [portfolio_projects/](portfolio_projects/) -- one evidence review file per portfolio project
 
-Sprint 24C presentation materials (derived from portfolio evidence; separate from V1-V3 generated reports):
+Recruiter/presentation materials (derived from portfolio evidence; manually refreshed in Sprint 124C and separate from the historical V1-V3 generators):
 
 - [portfolio_presentation_pack.md](portfolio_presentation_pack.md) -- master recruiter-facing portfolio pack
 - [github_pinned_repo_strategy.md](github_pinned_repo_strategy.md) -- GitHub pin order and repo descriptions
@@ -97,4 +97,6 @@ Sprint 24C presentation materials (derived from portfolio evidence; separate fro
 
 - Count and cite only what exists in the repository.
 - Summaries come from README or generated evidence files, not invented marketing copy.
-- V1/V2/V3 are documentation tooling only: no dashboard UI, API, or integration changes.
+- V1/V2/V3 generator tools are documentation tooling only and do not call live AI providers.
+- CareerFunnel's controlled AI engineering layer is separate from those generators and must retain its claim-safety qualifications.
+- Use `controlled AI engineering layer`, `LLM-assisted`, or `AI-assisted, advisory and human-reviewed` rather than unqualified `AI-powered`.

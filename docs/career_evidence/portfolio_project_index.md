@@ -6,7 +6,7 @@ This file summarises the user's main GitHub portfolio projects and shows how eac
 
 | Priority | Project | Evidence File | Main Role Value | Evidence Status | Evidence Strength | Local Validation | Next Action |
 |---:|---|---|---|---|---|---|---|
-| 1 | CareerFunnel Tracker | [careerfunnel_tracker.md](portfolio_projects/careerfunnel_tracker.md) | Job-search analytics, governed metrics, evidence OS, BI exports | Strong but needs cleanup | Strong but needs cleanup | Complete; Sprint 66A cleanup in progress | Keep featured after stale wording cleanup |
+| 1 | CareerFunnel Tracker | [careerfunnel_tracker.md](portfolio_projects/careerfunnel_tracker.md) | Job-search analytics, governed metrics, Career Evidence, controlled AI engineering layer, BI exports | Verified current repository evidence | Strong | **3,012 / 3,012 PASS as of Sprint 124B; CI #241 PASS** | Maintain recruiter evidence through Sprint 124C-124E |
 | 2 | BakeOps Intelligence | [bakeops_intelligence.md](portfolio_projects/bakeops_intelligence.md) | Operational KPI dashboards, profitability, waste analytics, Power BI portfolio publishing evidence | Verified public evidence | Verified public evidence | Public evidence verified | Feature for analytics/BI roles |
 | 3 | bakeops-dbt | bakeops-dbt public README | dbt Core and DuckDB portfolio analytics-engineering evidence through bakeops-dbt | Verified public evidence | Verified public evidence | Public evidence verified | Use for dbt/DuckDB/BigQuery validation wording |
 | 4 | MarketVista Dashboard | [marketvista_dashboard.md](portfolio_projects/marketvista_dashboard.md) | FinTech monitoring, signals, watchlists, threshold alerts | Verified public evidence | Verified public evidence | Public evidence verified | Feature for FinTech analytics |
@@ -28,7 +28,7 @@ This file summarises the user's main GitHub portfolio projects and shows how eac
 
 - Do not claim live SaaS unless deployment evidence exists.
 - Do not claim real users/customers unless proven.
-- Do not claim AI/Gmail/Calendar/external automation unless implemented and tested.
+- Do not use `AI-powered` as an unqualified standalone claim. CareerFunnel may be described as having a **controlled AI engineering layer** only with its verified qualifications: small private-corpus RAG, bounded read-only tool-calling, a controlled one-call live-provider canary, claim-safety controls, and human review. Do not claim Gmail/Calendar automation, scraping, auto-apply, autonomous agents, enterprise RAG, production vector databases, or production AI reliability.
 - Do not claim CI passed unless verified.
 - Do not claim local validation complete unless terminal proof exists.
 - Do not claim project-suite integrations are live unless implemented and tested.
