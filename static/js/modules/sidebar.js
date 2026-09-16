@@ -87,24 +87,31 @@
     }
 
     function setDrawerOpen(docEl, toggle, overlay, sidebar, isOpen) {
-        docEl.classList.toggle("cf-sidebar-open", isOpen);
+        var isMobile = !isDesktopViewport();
+        var drawerIsOpen = isMobile && isOpen;
+
+        docEl.classList.toggle("cf-sidebar-open", drawerIsOpen);
         if (toggle) {
-            toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+            toggle.setAttribute("aria-expanded", drawerIsOpen ? "true" : "false");
             toggle.setAttribute(
                 "aria-label",
-                isOpen ? "Close navigation menu" : "Open navigation menu"
+                drawerIsOpen ? "Close navigation menu" : "Open navigation menu"
             );
         }
         if (overlay) {
-            overlay.hidden = !isOpen;
-            overlay.setAttribute("aria-hidden", isOpen ? "false" : "true");
+            overlay.hidden = !drawerIsOpen;
+            overlay.setAttribute(
+                "aria-hidden",
+                drawerIsOpen ? "false" : "true"
+            );
         }
         if (sidebar) {
-            var isMobile = !isDesktopViewport();
-            if (isMobile && !isOpen) {
+            if (isMobile && !drawerIsOpen) {
                 sidebar.setAttribute("aria-hidden", "true");
+                sidebar.setAttribute("inert", "");
             } else {
                 sidebar.removeAttribute("aria-hidden");
+                sidebar.removeAttribute("inert");
             }
         }
     }
@@ -174,6 +181,15 @@
         initActiveNav(path);
 
         function closeDrawer() {
+            var focusIsInsideSidebar =
+                sidebar &&
+                document.activeElement &&
+                sidebar.contains(document.activeElement);
+
+            if (focusIsInsideSidebar && !isDesktopViewport() && toggle) {
+                toggle.focus();
+            }
+
             setDrawerOpen(docEl, toggle, overlay, sidebar, false);
         }
 
@@ -201,9 +217,7 @@
             }
         });
 
-        if (sidebar && !isDesktopViewport()) {
-            sidebar.setAttribute("aria-hidden", "true");
-        }
+        setDrawerOpen(docEl, toggle, overlay, sidebar, false);
 
         if (collapseToggle) {
             setCollapsed(
@@ -227,9 +241,7 @@
         }
 
         window.addEventListener("resize", function () {
-            if (!isDesktopViewport()) {
-                closeDrawer();
-            }
+            closeDrawer();
             if (collapseToggle) {
                 updateReopenButton(
                     reopenBtn,

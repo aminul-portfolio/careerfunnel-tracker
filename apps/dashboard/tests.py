@@ -214,6 +214,11 @@ class DashboardMobileNavigationRegressionTests(TestCase):
     def _read_css(self, relative_path: str) -> str:
         return (self.PROJECT_ROOT / relative_path).read_text(encoding="utf-8")
 
+    def _read_sidebar_js(self) -> str:
+        return (
+            self.PROJECT_ROOT / "static/js/modules/sidebar.js"
+        ).read_text(encoding="utf-8")
+
     def test_dashboard_renders_mobile_nav_toggle_markup(self):
         response = self.client.get(reverse("dashboard:overview"))
 
@@ -263,6 +268,101 @@ class DashboardMobileNavigationRegressionTests(TestCase):
         self.assertIn("@media (max-width: 900px)", css)
         self.assertIn(".cf-mobile-nav-toggle", css)
         self.assertIn("display: inline-flex", css)
+
+    def test_sidebar_js_applies_inert_for_closed_mobile_drawer(self):
+        js = self._read_sidebar_js()
+
+        self.assertIn(
+            'if (isMobile && !drawerIsOpen) {',
+            js,
+        )
+        self.assertIn(
+            'sidebar.setAttribute("inert", "");',
+            js,
+        )
+
+    def test_sidebar_js_removes_inert_for_interactive_sidebar(self):
+        js = self._read_sidebar_js()
+
+        self.assertIn(
+            'sidebar.removeAttribute("inert");',
+            js,
+        )
+
+    def test_sidebar_js_preserves_closed_mobile_aria_hidden_contract(self):
+        js = self._read_sidebar_js()
+
+        self.assertIn(
+            'sidebar.setAttribute("aria-hidden", "true");',
+            js,
+        )
+        self.assertIn(
+            'sidebar.removeAttribute("aria-hidden");',
+            js,
+        )
+
+    def test_sidebar_js_preserves_mobile_toggle_expanded_contract(self):
+        js = self._read_sidebar_js()
+
+        self.assertIn(
+            '"aria-expanded",',
+            js,
+        )
+        self.assertIn(
+            'drawerIsOpen ? "true" : "false"',
+            js,
+        )
+
+    def test_sidebar_js_restores_focus_before_applying_closed_state(self):
+        js = self._read_sidebar_js()
+
+        close_start = js.index("function closeDrawer()")
+        open_start = js.index("function openDrawer()", close_start)
+        close_drawer = js[close_start:open_start]
+
+        focus_pos = close_drawer.index("toggle.focus();")
+        state_sync_pos = close_drawer.index("setDrawerOpen(")
+
+        self.assertLess(focus_pos, state_sync_pos)
+        self.assertIn(
+            "sidebar.contains(document.activeElement)",
+            close_drawer,
+        )
+
+    def test_sidebar_js_resynchronises_drawer_state_on_resize(self):
+        js = self._read_sidebar_js()
+
+        resize_start = js.index('window.addEventListener("resize"')
+        resize_handler = js[resize_start:]
+
+        self.assertIn("closeDrawer();", resize_handler)
+
+    def test_sidebar_js_desktop_state_clears_stale_inert(self):
+        js = self._read_sidebar_js()
+
+        set_drawer_start = js.index("function setDrawerOpen(")
+        update_button_start = js.index(
+            "function updateReopenButton",
+            set_drawer_start,
+        )
+        set_drawer_open = js[set_drawer_start:update_button_start]
+
+        self.assertIn(
+            "var isMobile = !isDesktopViewport();",
+            set_drawer_open,
+        )
+        self.assertIn(
+            "var drawerIsOpen = isMobile && isOpen;",
+            set_drawer_open,
+        )
+        self.assertIn(
+            'sidebar.removeAttribute("inert");',
+            set_drawer_open,
+        )
+        self.assertIn(
+            'sidebar.removeAttribute("aria-hidden");',
+            set_drawer_open,
+        )
 
 class DashboardWeeklyOsPolishTests(TestCase):
     WEEK_END_SUNDAY = date(2026, 5, 10)
