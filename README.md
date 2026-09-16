@@ -233,35 +233,32 @@ Evidence: `docs/evidence/final_release_review_sprint_52_59.md`, plus per-sprint 
 ## Screenshots
 
 <details>
-<summary><strong>Curated reviewer-facing gallery (8 captures)</strong></summary>
+<summary><strong>Curated reviewer-facing gallery (7 current-state captures)</strong></summary>
 
 <br>
 
-Refreshed after Sprint 21 UI polish using real local browser captures. Reviewer-facing evidence, not a live deployment claim.
+Refreshed in Sprint 124D using controlled local browser captures of the current CareerFunnel Tracker interface. These screenshots provide portfolio and reviewer evidence only; they are not production-deployment, autonomous-operation, or live-user claims.
 
 ![Dashboard overview](docs/screenshots/curated/01-dashboard-overview.png)
-*Dashboard overview - reviewer-friendly tracker rather than a raw admin tool.*
+*Analytics Command Centre overview showing the manual job-search workflow, KPI health signals, evidence readiness, and reviewer-controlled next actions.*
 
-![Evaluation Queue](docs/screenshots/curated/02-evaluation-queue.png)
-*Evaluation Queue for roles found or fit-checked that need a deliberate next step.*
+![Career Evidence overview](docs/screenshots/curated/02-career-evidence-overview.png)
+*Career Evidence OS overview linking the project evidence report, job-fit matrix, recruiter evidence pack, and dedicated AI engineering implementation proof.*
 
-![Job Posting Analyzer](docs/screenshots/curated/03-job-posting-analyzer-conversion.png)
-*Job Posting Analyzer conversion bridge - pre-fills an Add Application form for user review before saving.*
+![Skill Intelligence](docs/screenshots/curated/03-skill-intelligence.png)
+*Manual, evidence-based Skill Intelligence view mapping portfolio-supported skills, role-readiness checklists, and claim-safe review prompts without automated hiring decisions.*
 
-![Funnel Metrics](docs/screenshots/curated/04-funnel-metrics-weekly-trend.png)
-*Funnel Metrics weekly trend using Monday-starting buckets.*
+![JD-gap evidence alignment](docs/screenshots/curated/04-jd-gap-evidence-alignment.png)
+*JD-gap aggregation view comparing repeated terms from saved job descriptions with Skill Ledger evidence, distinguishing verified skills, learning targets, and unmatched signals.*
 
-![Save quality warnings](docs/screenshots/curated/05-save-quality-warnings.png)
-*Post-save advisory warnings for analytics-critical gaps.*
+![Funnel Metrics](docs/screenshots/curated/05-funnel-metrics.png)
+*Funnel Metrics reporting surface showing application throughput, response and interview conversion, data-readiness indicators, and reviewer-facing pipeline analytics.*
 
-![Data Quality Report](docs/screenshots/curated/06-data-quality-impact-report.png)
-*Data Quality Report showing how missing fields affect downstream analytics trust.*
+![Controlled AI-assisted workflows](docs/screenshots/curated/06-ai-agent-hub-controlled-workflows.png)
+*AI workflow hub showing bounded, human-reviewed assistance for job analysis, CV gaps, follow-ups, interview preparation, weekly review, and related next actions; no auto-apply, Gmail, OAuth, or autonomous submission workflow is implied.*
 
-![Visual Analytics](docs/screenshots/curated/07-visual-analytics-dashboard.png)
-*BI-style reporting from dashboard-ready synthetic exports.*
-
-![Interview Evidence Workspace](docs/screenshots/curated/08-interview-evidence-workspace.png)
-*Interview preparation evidence linked to application readiness and Smart Review positioning.*
+![AI Engineering Evidence](docs/screenshots/curated/07-ai-engineering-evidence.png)
+*AI Engineering Evidence surface documenting the controlled provider boundary, offline evaluation, private-corpus retrieval evidence, bounded read-only tool-calling, claim-safety controls, human-in-the-loop review, quality lifecycle, and controlled live-provider canary evidence.*
 
 </details>
 
