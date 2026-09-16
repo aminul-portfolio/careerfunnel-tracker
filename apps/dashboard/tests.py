@@ -1373,3 +1373,197 @@ class Sprint124Phase5RecruiterPortfolioProofTests(TestCase):
         self.assertNotIn("production vector database implemented", content)
         self.assertNotIn("guaranteed model accuracy", content)
         self.assertNotIn("fully autonomous job application", content)
+
+
+class Sprint124Phase6RegressionPrivacyResponsiveUATTests(TestCase):
+    """Sprint 124 Phase 6: regression, privacy, and responsive UAT."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="sprint124-phase6-uat",
+            password="StrongPass12345",
+        )
+        self.url = reverse("dashboard:career_evidence_ai_engineering")
+
+    def test_ai_evidence_page_remains_authenticated_only(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 302)
+
+        self.client.login(
+            username="sprint124-phase6-uat",
+            password="StrongPass12345",
+        )
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "AI Engineering Evidence")
+        self.assertContains(response, "Authenticated access")
+        self.assertContains(response, "Read-only evidence")
+
+    def test_ai_evidence_render_remains_network_isolated(self):
+        from unittest.mock import patch
+
+        self.client.login(
+            username="sprint124-phase6-uat",
+            password="StrongPass12345",
+        )
+
+        with (
+            patch(
+                "socket.create_connection",
+                side_effect=AssertionError(
+                    "Network access is forbidden during AI evidence render."
+                ),
+            ) as mock_create_connection,
+            patch(
+                "socket.socket.connect",
+                side_effect=AssertionError(
+                    "Socket access is forbidden during AI evidence render."
+                ),
+            ) as mock_socket_connect,
+        ):
+            response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        mock_create_connection.assert_not_called()
+        mock_socket_connect.assert_not_called()
+
+    def test_ai_evidence_page_does_not_expose_private_provider_telemetry(self):
+        self.client.login(
+            username="sprint124-phase6-uat",
+            password="StrongPass12345",
+        )
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        forbidden_tokens = (
+            "api_key",
+            "api key:",
+            "authorization:",
+            "bearer ",
+            "raw prompt",
+            "raw response",
+            "request payload sha",
+            "request-payload sha",
+            "response sha",
+            "raw-response hash",
+            "input tokens:",
+            "output tokens:",
+            "actual_spend",
+            "cost_usd",
+        )
+
+        for token in forbidden_tokens:
+            with self.subTest(token=token):
+                self.assertNotIn(token, content)
+
+    def test_permanent_safety_wording_remains_on_authoritative_surfaces(self):
+        from pathlib import Path
+
+        application_form = Path(
+            "templates/applications/application_form.html"
+        ).read_text(encoding="utf-8")
+        application_detail = Path(
+            "templates/applications/application_detail.html"
+        ).read_text(encoding="utf-8")
+        jd_gap = Path(
+            "templates/applications/jd_gap_aggregation.html"
+        ).read_text(encoding="utf-8")
+        learning_recommendations = Path(
+            "templates/skills/learning_recommendations_report.html"
+        ).read_text(encoding="utf-8")
+        analyzer = Path(
+            "templates/ai_agents/job_posting_analyzer.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "Pre-filling this form does not save your application.",
+            application_form,
+        )
+        self.assertIn(
+            "Saving creates a tracking record only.",
+            application_form,
+        )
+        self.assertIn(
+            "Documents are not generated here.",
+            application_form,
+        )
+        self.assertIn(
+            "Draft - tracking record only",
+            application_form,
+        )
+        self.assertIn(
+            "Follow-up email drafts are for manual use only.",
+            application_detail,
+        )
+        self.assertIn(
+            "Skill gap signals are advisory only.",
+            jd_gap,
+        )
+        self.assertIn(
+            "Learning recommendations are planning aids.",
+            learning_recommendations,
+        )
+        self.assertIn(
+            "Pre-fill Add Application",
+            analyzer,
+        )
+
+    def test_ai_evidence_css_preserves_responsive_layout_contracts(self):
+        from pathlib import Path
+
+        css = Path("static/css/career_evidence.css").read_text(
+            encoding="utf-8"
+        )
+
+        required_tokens = (
+            ".cf124-ai-evidence-grid",
+            ".cf124-evaluation-evidence-grid",
+            ".cf124-safety-evidence-grid",
+            ".cf124-recruiter-proof-grid",
+            "@media (max-width: 1100px)",
+            "@media (max-width: 900px)",
+            "grid-template-columns: 1fr;",
+            "min-width: 0;",
+            "max-width: 100%;",
+            "overflow-wrap: anywhere;",
+            "word-break: break-word;",
+        )
+
+        for token in required_tokens:
+            with self.subTest(token=token):
+                self.assertIn(token, css)
+
+    def test_ai_evidence_page_preserves_claim_safe_boundaries(self):
+        self.client.login(
+            username="sprint124-phase6-uat",
+            password="StrongPass12345",
+        )
+        response = self.client.get(self.url)
+        content = response.content.decode().lower()
+
+        required_boundaries = (
+            "does not claim autonomous job application",
+            "not production",
+            "human review",
+            "advisory",
+        )
+
+        for phrase in required_boundaries:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, content)
+
+        forbidden_claims = (
+            "production-grade autonomous ai agents",
+            "fully autonomous job application",
+            "enterprise rag implemented",
+            "production vector database implemented",
+            "guaranteed model accuracy",
+            "production reliability proven",
+            "100% accurate",
+        )
+
+        for phrase in forbidden_claims:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, content)
