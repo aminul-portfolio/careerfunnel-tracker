@@ -1,82 +1,177 @@
+﻿<div align="center">
+
 # CareerFunnel Tracker
 
-CareerFunnel Tracker is a Django portfolio analytics product that turns job-search activity into explainable funnel metrics, data-quality signals, and reviewer-ready evidence for Data Analyst, BI Analyst, Reporting Analyst, Analytics Engineer, Junior Data Engineer, and FinTech analytics roles.
+**A Django analytics platform with a controlled, evaluated AI engineering layer.**
 
-## Live Demo Status
+Turns a single-user job search into governed metrics, data-quality signals, and reviewer-ready evidence.
 
-Deployment is conditional and not yet verified. This README does not claim a live hosted demo, demo login, production configuration, or public customer usage. If a deployment is added later, it should be verified separately and documented with the exact URL and environment assumptions.
+<br>
 
-## Current Status
+![Tests](https://img.shields.io/badge/tests-3%2C005%20passing-2ea043?style=flat-square)
+![CI](https://img.shields.io/badge/CI-passing-2ea043?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.x-3776ab?style=flat-square&logo=python&logoColor=white)
+![Django](https://img.shields.io/badge/Django-092e20?style=flat-square&logo=django&logoColor=white)
+![Ruff](https://img.shields.io/badge/lint-ruff-d7ff64?style=flat-square)
+![Scope](https://img.shields.io/badge/scope-local%20portfolio%20project-64748b?style=flat-square)
 
-CareerFunnel Tracker is a **local Django portfolio application** for a single-user job-search workflow. It is **not** presented as a live SaaS product, production deployment, or commercial platform.
+<br>
 
-Current verified public evidence includes:
+[Reviewer Path](#five-minute-reviewer-path) | [AI Engineering](#ai-engineering-evidence) | [Evaluation Evidence](#evaluation-evidence) | [Architecture](#technical-decisions) | [Setup](#local-setup)
 
-- **2,000+ automated tests** across the full repository suite (repository-wide validation; not specific to any single reviewer module).
-- **GitHub Actions CI** verified.
-- A **deterministic, rule-based** claim-safety reviewer with a version-controlled evaluation dataset: **22** total cases, **20** defined risk categories, **20** conformance cases, and **2** documented known-limitation cases. The reviewer is **not** a live AI/LLM integration.
-- Evidence indexed in `docs/evidence/evidence_index.md`.
+</div>
 
-Passing evaluation cases confirms conformance to defined expected behaviour within the version-controlled dataset. It does not prove general correctness, intelligence, model quality, production readiness, deployment readiness, commercial readiness, or customer value.
+---
 
-This README does not claim Gmail API integration, OAuth, web scraping, auto-apply workflows, automatic saving, calendar integration, a live SaaS deployment, production users, automatic email sending, automatic application status updates, automatic interview prep creation, final CV generation, or cover letter body generation.
+## At a glance
 
-## Career Intelligence Pipeline (Sprints 52-59)
+| | |
+| :--- | :--- |
+| **What it is** | Local Django portfolio application, single user |
+| **Two layers** | Deterministic analytics core + controlled AI engineering layer |
+| **Verified tests** | 3,005 passing at Sprint 124 closure |
+| **CI** | GitHub Actions verified on `main` @ `d3f0ea57` |
+| **Completion tag** | `sprint-124-ai-experience-evidence-ui-complete` |
+| **Live-provider state** | Configuration-gated, **non-live by default** |
+| **Not claimed** | Live deployment, production users, autonomous agents, enterprise RAG |
 
-Sprints 52-59 deliver a completed, read-only Career Intelligence pipeline on `main`. The flow is:
+> **Scope statement.** This is a portfolio-scale local application. No live hosted demo, production deployment, public usage, autonomous job-application system, enterprise RAG platform, production vector database, or production AI service is claimed.
+
+---
+
+## Five-Minute Reviewer Path
+
+The fastest route to verifying everything below, in order.
+
+| # | Step | Where |
+| :-- | :--- | :--- |
+| 1 | Career Command Centre and current workflow | `/dashboard/` |
+| 2 | Career Evidence overview | `/dashboard/career-evidence/` |
+| 3 | **AI Engineering Evidence** - execution types, evaluation, claim boundaries, provider boundary, live-canary qualification | `/dashboard/career-evidence/ai-engineering/` |
+| 4 | Skill Intelligence Dashboard | `/skill-gaps/` |
+| 5 | Career Intelligence pipeline | `/skills/` |
+| 6 | Funnel Metrics, Data Quality, workflow boundaries | `/dashboard/` |
+| 7 | Metric definitions, analytics lineage, evidence index | `docs/analytics/`, `docs/evidence/` |
+| 8 | Test and CI evidence, Sprint 124 completion tag | repository |
+
+---
+
+## AI Engineering Evidence
+
+The AI layer sits **on top of** deterministic, inspectable application and skill evidence - it never replaces it.
 
 ```text
-PPTX / AI Capability Framework
--> AI Readiness Scoring
--> Job-to-AI Capability Matching
--> Learning Recommendations
--> Career Readiness Dashboard
--> Career Strategy Action Plan / Progress Tracking
--> Final Career Intelligence Workflow
+Saved application / skill evidence
+ v
+Deterministic context assembly / retrieval
+ v
+Controlled provider boundary
+ v
+Validated model output
+ v
+Claim-safety / evidence-alignment controls
+ v
+Human review
+ v
+Manual action or save
 ```
 
-Key local platform routes (login required):
+### Execution types are separated, not blended
 
-| Stage | Route |
-| --- | --- |
-| PPTX / AI Capability Framework | `/skills/ai-capability-framework/` |
-| AI Readiness Scoring | `/skills/ai-readiness-report/` |
-| Job-to-AI Capability Matching | `/skills/job-ai-capability-match/` |
-| Learning Recommendations | `/skills/learning-recommendations/` |
-| Career Readiness Dashboard | `/skills/career-readiness-dashboard/` |
-| Career Strategy Action Plan | `/skills/career-strategy-action-plan/` |
-| Final Career Intelligence Workflow | `/skills/final-career-intelligence-workflow/` |
+Each capability is labelled by how it actually executes - rule-based logic is never presented as AI.
 
-The Sprint 53-59 intelligence pipeline is **deterministic, rule-based, manual, advisory, and evidence-based**. It uses portfolio baseline and sample inputs. It does **not** use external AI APIs. It does **not** call OpenAI or Claude. It does **not** scrape jobs. It does **not** auto-apply. It does **not** send emails. It does **not** integrate with Gmail or Calendar. It does **not** claim live SaaS users, customers, billing, subscriptions, or production deployment.
+| Execution type | What it covers | Boundary |
+| :--- | :--- | :--- |
+| **Deterministic / rule-based** | Analytics, evidence checks, claim-safety rules, Career Intelligence, advisory paths | No external API calls |
+| **Retrieval / RAG** | Small-scale private evidence retrieval, cached embeddings, deterministic evaluation | No production vector database |
+| **Bounded read-only tool-calling** | Closed registry, read-only tools, constrained call budgets | Not autonomous agency |
+| **LLM-assisted** | Provider-backed assistance | Only when explicit configuration permits |
+| **Controlled live canary** | Synthetic, explicitly activated integration evidence | Strict call and cost controls |
+| **Human review** | All generated or advisory output | Subject to user review and manual action |
 
-Evidence: `docs/evidence/final_release_review_sprint_52_59.md`, plus per-sprint docs under `docs/evidence/sprint_5*.md`.
+ -> **Authenticated evidence surface:** `/dashboard/career-evidence/ai-engineering/`
 
-## Career Intelligence Screenshot Evidence
+<details>
+<summary><strong>Controlled provider activation - how live execution is gated</strong></summary>
 
-Final screenshot evidence for the Sprint 53-59 Career Intelligence pipeline is stored in:
+<br>
 
-```text
-docs/screenshots/intelligence/
-```
+Live-provider execution is explicitly configuration-gated:
 
-The screenshot set covers:
+- **Provider mode is authoritative.** The presence of an API key alone is not sufficient to activate live execution.
+- **Some AI paths add their own feature or canary gates** on top of provider mode.
+- **Controlled live-evaluation paths require additional explicit activation and confirmation.**
+- **Default behaviour remains non-live** unless the required configuration is deliberately enabled.
 
-| Screenshot | Page |
-| --- | --- |
-| `01-ai-capability-framework.png` | AI Capability Framework |
-| `02-ai-readiness-report.png` | AI Readiness Report |
-| `03-job-ai-capability-match.png` | Job-to-AI Capability Match |
-| `04-learning-recommendations.png` | Learning Recommendations |
-| `05-career-readiness-dashboard.png` | Career Readiness Dashboard |
-| `06-career-strategy-action-plan.png` | Career Strategy Action Plan |
-| `07-final-career-intelligence-workflow.png` | Final Career Intelligence Workflow |
+Provider-backed user-facing AI execution is configuration-gated and remains non-live by default. The deterministic workflow remains fully functional without live-provider activation.
 
-These screenshots are local reviewer evidence only. They do not claim a live hosted demo, production deployment, customers, SaaS usage, external AI API calls, scraping, auto-apply, Gmail integration, Calendar integration, or automated job-search actions.
+</details>
 
+<details>
+<summary><strong>Controlled live-provider canary - exactly what was proven</strong></summary>
 
-## Business Problem
+<br>
 
-Job-search activity quickly becomes fragmented across job boards, spreadsheets, CV versions, follow-up reminders, and interview notes. That makes it hard to answer basic reporting questions:
+The repository includes controlled live-provider canary evidence using:
+
+| Control | Value |
+| :--- | :--- |
+| Calls | **1** (single synthetic call) |
+| Activation | **Explicit** |
+| Call cap | **1** |
+| Retries | **0** |
+| Cost | **Bounded** |
+| Input | **Synthetic only** |
+
+This demonstrates controlled integration under constrained test conditions only.
+
+> It does **not** prove production reliability, continuous live operation, production-scale throughput, or customer-facing availability.
+
+</details>
+
+---
+
+## Evaluation Evidence
+
+> **Read this first.** The following are historical, offline closure evidence from validated repository states. They are **not** production accuracy, reliability, throughput, or customer-performance metrics.
+
+| Evaluation suite | Result | State | Qualification |
+| :--- | :--- | :--- | :--- |
+| Offline RAG evaluation | **31 / 31 passed** | Sprint 122 validated | Historical closure evidence, not production accuracy |
+| Bounded read-only tool-assistant | **81 / 81 passed** | Sprint 122 validated | Historical closure evidence, not production agent performance |
+| Offline AI quality lifecycle | **54 / 54 passed** | Sprint 122 validated | Historical closure evidence, not production quality or reliability |
+
+**What passing means:** conformance to defined expected behaviour within version-controlled datasets and repository states.
+
+**What it does not mean:** general correctness, intelligence, model quality, production readiness, deployment readiness, commercial readiness, customer value, production reliability, or production monitoring.
+
+<details>
+<summary><strong>Deterministic claim-safety reviewer - version-controlled dataset</strong></summary>
+
+<br>
+
+A **deterministic, rule-based** reviewer checks whether a written claim is supported by recorded evidence. It is **not** a live AI/LLM integration.
+
+| Metric | Count |
+| :--- | :--- |
+| Total version-controlled cases | 22 |
+| Defined risk categories | 20 |
+| Conformance cases | 20 |
+| Documented known-limitation cases | 2 |
+
+Evidence:
+- `docs/evidence/sprint_107_claim_safety_evaluation_report.md`
+- `docs/evidence/sprint_107_claim_safety_evaluation_summary.md`
+- `docs/evidence/sprint_108_claim_safety_recruiter_evidence_summary.md`
+- `docs/evidence/sprint_108_claim_safety_overstatement_guardrails.md`
+
+</details>
+
+---
+
+## The Problem
+
+Job-search activity fragments across job boards, spreadsheets, CV versions, follow-up reminders, and interview notes - making basic reporting questions hard to answer:
 
 - Which sources produce stronger responses?
 - Which CV versions are associated with better outcomes?
@@ -84,298 +179,271 @@ Job-search activity quickly becomes fragmented across job boards, spreadsheets, 
 - Which records are too incomplete for reliable analysis?
 - What should be reviewed next?
 
-CareerFunnel Tracker treats the job search as a small analytics domain. It shows how operational records can be converted into governed metrics, quality warnings, and evidence that a reviewer can inspect.
+CareerFunnel treats the job search as a **small analytics domain** - converting operational records into governed metrics, quality warnings, and inspectable evidence.
 
-## What The Platform Does
+### What the platform does
 
-- Tracks applications, sources, statuses, CV versions, follow-up dates, job descriptions, required skills, interviews, notes, daily activity, and weekly reviews.
-- Calculates funnel metrics, source performance, CV version performance, rejection patterns, weekly trends, application quality, and data quality readiness.
-- Provides rule-based decision support for job-posting fit review, next actions, follow-up drafting, interview prep, and quality warnings.
-- Exports workbook evidence for review, backup, and BI-style analysis.
-- Documents metric definitions, analytics lineage, sprint evidence, and limitations.
+| Capability | Detail |
+| :--- | :--- |
+| **Tracks** | Applications, sources, statuses, CV versions, follow-ups, job descriptions, required skills, interviews, notes, daily activity, weekly reviews |
+| **Calculates** | Funnel metrics, source performance, CV version performance, rejection patterns, weekly trends, application quality, data-quality readiness |
+| **Supports** | Rule-based decision support for fit review, next actions, follow-up drafting, interview prep, quality warnings |
+| **Exports** | Workbook evidence for review, backup, and BI-style analysis |
+| **Documents** | Metric definitions, analytics lineage, sprint evidence, limitations |
 
-### Recruiter email workflow (Sprint 29)
+---
 
-On Application Detail, manually imported recruiter emails support a rule-based, advisory-only workflow:
+## Career Intelligence Pipeline
 
-```text
-Manual recruiter email import -> rule-based action summary -> recruiter communication context -> interview-prep recommendation -> user-controlled manual action
-```
-
-Implemented surfaces:
-
-- **Recruiter Email Actions** -- needs reply, reply status, action due, suggested status (suggestion only), interview/screening signal
-- **Recruiter Communication Context** -- latest recruiter email, date received, requires reply, manual follow-up guidance
-- **Interview Prep Recommended** -- contextual prompt and **Create Interview Prep** link when `matched_signals` contains interview or screening language
-
-This remains manual, rule-based, and advisory only. The repository does not implement or claim Gmail, OAuth, inbox sync, automatic email sending, automatic application status mutation, automatic interview prep creation, or external AI integration. Evidence: `docs/evidence/sprint_29_recruiter_email_workflow_enhancements.md`.
-
-Sprint **35** extends this path with clearer cross-links between Application Detail, recruiter email import/detail, interview prep (including `?application=` pre-fill), and the Application AI Pack - still manual and advisory only. Evidence: `docs/evidence/sprint_35_interview_email_workflow_polish.md`.
-
-### Application Document Pack (Sprint 60)
-
-**Application Document Pack:** CareerFunnel stores/references externally generated final CV and cover-letter documents, including outputs from ChatGPT Tailoring v3 / CV V3.1 as the external final-document tailoring source. It can also save rule-based draft CV tailoring notes and draft cover-letter records to each application for manual review, call preparation, and DOCX/PDF download from saved database text. The workflow remains manual-review only and does not perform automatic submission, upload files, or connect to Gmail/Calendar/OAuth.
+> **Sprints 52-59 are deterministic, rule-based, manual, advisory, and evidence-based.** They use portfolio baseline and sample inputs. They do **not** call external AI APIs, do not scrape, do not auto-apply, and do not send emails.
 
 ```text
-Smart Review / job analysis -> draft documents -> save to document pack -> select documents -> download DOCX/PDF -> manual review before use
+PPTX / AI Capability Framework
+ -> AI Readiness Scoring
+ -> Job-to-AI Capability Matching
+ -> Learning Recommendations
+ -> Career Readiness Dashboard
+ -> Career Strategy Action Plan / Progress Tracking
+ -> Final Career Intelligence Workflow
 ```
 
-Evidence: `docs/evidence/sprint_60_application_document_pack_closure.md`.
+<details>
+<summary><strong>Pipeline routes and screenshot evidence</strong></summary>
 
-## How to review this project
+<br>
 
-CareerFunnel Tracker is a **local Django portfolio project** for one job seeker. It turns manually logged applications, follow-ups, interviews, and reviews into explainable funnel metrics, data-quality signals, and reviewer-ready evidence. The workflow is **manual, advisory, deterministic, and evidence-based** - not a live SaaS product.
+| Stage | Route |
+| :--- | :--- |
+| AI Capability Framework | `/skills/ai-capability-framework/` |
+| AI Readiness Scoring | `/skills/ai-readiness-report/` |
+| Job-to-AI Capability Matching | `/skills/job-ai-capability-match/` |
+| Learning Recommendations | `/skills/learning-recommendations/` |
+| Career Readiness Dashboard | `/skills/career-readiness-dashboard/` |
+| Career Strategy Action Plan | `/skills/career-strategy-action-plan/` |
+| Final Career Intelligence Workflow | `/skills/final-career-intelligence-workflow/` |
 
-**Implemented manual workflow (high level):**
+Screenshot evidence: `docs/screenshots/intelligence/` - seven captures covering each stage. These are local reviewer evidence only; they do not claim a hosted demo, production deployment, customers, or external AI API calls.
 
-- Job and application tracking with statuses, sources, CV versions, and save-quality warnings.
-- Funnel metrics, exports, and data-quality reporting from authenticated records.
-- Rule-based decision support (fit review, follow-ups, interview prep handoffs) without automatic submission.
-- Application Document Pack on Application Detail: save rule-based draft CV/cover-letter records, select documents for Quick Call Review, download DOCX/PDF from saved text (manual review before employer use).
-- Skill Intelligence Dashboard at `/skill-gaps/` with saved skill gaps plus read-only advisory sections: action plan, learning plan, evidence readiness, portfolio evidence mapping, interview story mapping, and CV bullet mapping.
-- Career Intelligence pipeline (Sprints 53-59) at `/skills/` routes: AI Capability Framework, AI Readiness Report, Job-to-AI Capability Match, Learning Recommendations, Career Readiness Dashboard, Career Strategy Action Plan, and Final Career Intelligence Workflow.
-- Career Evidence OS (markdown + dashboard viewer) for portfolio and recruiter review.
+Evidence: `docs/evidence/final_release_review_sprint_52_59.md`, plus per-sprint docs under `docs/evidence/sprint_5*.md`.
 
-**Deterministic rule-based review and evaluation:**
+</details>
 
-CareerFunnel Tracker includes a deterministic, rule-based reviewer that checks whether a written claim is supported by recorded evidence. It is not a live AI/LLM integration.
+---
 
-Version-controlled evaluation evidence:
+## Screenshots
 
-- 22 total version-controlled cases
-- 20 defined risk categories
-- 20 conformance cases
-- 2 documented known-limitation cases
+<details>
+<summary><strong>Curated reviewer-facing gallery (8 captures)</strong></summary>
 
-Passing evaluation cases confirms conformance to defined expected behaviour within the version-controlled dataset. It does not prove general correctness, intelligence, model quality, production readiness, deployment readiness, commercial readiness, or customer value.
+<br>
 
-- Evaluation report: `docs/evidence/sprint_107_claim_safety_evaluation_report.md`
-- Evaluation summary: `docs/evidence/sprint_107_claim_safety_evaluation_summary.md`
-- Recruiter evidence summary: `docs/evidence/sprint_108_claim_safety_recruiter_evidence_summary.md`
-- Overstatement guardrails: `docs/evidence/sprint_108_claim_safety_overstatement_guardrails.md`
+Refreshed after Sprint 21 UI polish using real local browser captures. Reviewer-facing evidence, not a live deployment claim.
 
-- No auto-apply, auto-send, or automatic application status updates.
-- No Gmail, Calendar, OAuth, inbox sync, or scraping.
-- No automatic CV rewriting, automatic interview prep generation, or automatic skill-gap creation.
-- No fake AI/ML prediction claims; optional Claude paths are advisory and fall back to rule-based logic when not configured.
-- No live SaaS users, production deployment claims, billing, or subscription claims.
+![Dashboard overview](docs/screenshots/curated/01-dashboard-overview.png)
+*Dashboard overview - reviewer-friendly tracker rather than a raw admin tool.*
 
-Evidence index: `docs/evidence/evidence_index.md`. Final release review: `docs/evidence/final_release_review_sprint_52_59.md`. Sprint 51 reviewer polish: `docs/evidence/sprint_51_final_reviewer_walkthrough_polish.md`.
+![Evaluation Queue](docs/screenshots/curated/02-evaluation-queue.png)
+*Evaluation Queue for roles found or fit-checked that need a deliberate next step.*
 
-## Five-Minute Reviewer Path
+![Job Posting Analyzer](docs/screenshots/curated/03-job-posting-analyzer-conversion.png)
+*Job Posting Analyzer conversion bridge - pre-fills an Add Application form for user review before saving.*
 
-1. Open the dashboard (`/dashboard/`) and read the reviewer walkthrough note, then scan today signals and pipeline health.
-2. Review the Evaluation Queue for opportunities that need fit checks or conversion into applications.
-3. Open Funnel Metrics and inspect weekly trend, source performance, CV version performance, and rejection patterns.
-4. Open **Skill Intelligence Dashboard** at `/skill-gaps/` and walk the manual action plan through CV bullet mapping sections (all read-only).
-5. Walk the **Career Intelligence pipeline** (Sprints 53-59) in order: `/skills/ai-capability-framework/` -> `/skills/ai-readiness-report/` -> `/skills/job-ai-capability-match/` -> `/skills/learning-recommendations/` -> `/skills/career-readiness-dashboard/` -> `/skills/career-strategy-action-plan/` -> `/skills/final-career-intelligence-workflow/`.
-6. Create or edit an application and observe the save-quality warnings for analytics-critical gaps.
-7. Open the Data Quality Report and connect the warnings back to reporting impact.
-8. Review `docs/analytics/metric_definitions.md`, `docs/analytics/analytics_lineage.md`, and `docs/evidence/evidence_index.md` for the supporting evidence trail.
+![Funnel Metrics](docs/screenshots/curated/04-funnel-metrics-weekly-trend.png)
+*Funnel Metrics weekly trend using Monday-starting buckets.*
 
-### Career Evidence reviewer path (Sprint 23)
+![Save quality warnings](docs/screenshots/curated/05-save-quality-warnings.png)
+*Post-save advisory warnings for analytics-critical gaps.*
 
-After the core tracker walkthrough above, use this path for the Career Evidence OS:
+![Data Quality Report](docs/screenshots/curated/06-data-quality-impact-report.png)
+*Data Quality Report showing how missing fields affect downstream analytics trust.*
 
-1. Read `docs/evidence/career_evidence_walkthrough.md` for purpose, V1-V6 flow, and claims boundaries.
-2. Open **Career Evidence** at `/dashboard/career-evidence/` (local dev server; login required).
-3. Inspect the four dashboard surfaces: overview, Project Evidence (V1), Job-Fit Matrix (V2), and Recruiter Pack (V3).
-4. Compare UI content to markdown under `docs/career_evidence/` (`01_project_evidence_report.md`, `02_job_fit_matrix.md`, `03_recruiter_evidence_pack.md`).
-5. Review Playwright screenshot evidence in `docs/screenshots/career_evidence/` (V5).
-6. Optional: read `docs/notion/README.md` for V6 metadata-only Notion sync (no runtime dependency on Notion).
+![Visual Analytics](docs/screenshots/curated/07-visual-analytics-dashboard.png)
+*BI-style reporting from dashboard-ready synthetic exports.*
 
-Regenerate V1-V3 markdown from the repository root when evidence changes materially; see `docs/career_evidence/README.md`.
+![Interview Evidence Workspace](docs/screenshots/curated/08-interview-evidence-workspace.png)
+*Interview preparation evidence linked to application readiness and Smart Review positioning.*
+
+</details>
+
+---
+
+## Analytics Modules
+
+| Module | What it reports |
+| :--- | :--- |
+| **Funnel Metrics** | Total applications, response/interview/offer rates, stage breakdown, daily target progress, weekly trend |
+| **Source ROI** | Source-level outcome performance - *channel performance, not financial return* |
+| **CV Version Performance** | Directional comparison by responses, interviews, offers, rejections |
+| **Rejection Pattern Analysis** | Rejection counts, auto-rejection rates, source and CV patterns, seniority risk, recommended actions |
+| **Application Quality Report** | Record-level completeness checks for downstream reporting |
+| **Data Quality Report** | Analytics-ready rate, quality score, missing-field counts, cleanup actions, impact notes |
+| **Export Centre** | Workbook exports for applications, logs, reviews, interview prep, notes, full tracker |
+
+<details>
+<summary><strong>BI / visual analytics and Interview Evidence Workspace</strong></summary>
+
+<br>
+
+**BI evidence (Sprint 18).** Dashboard CSV exports at `dashboards/data/` for synthetic demo data only. Local Tableau workbook at `dashboards/tableau/careerfunnel_sprint18_tableau_workbook.twbx` with screenshots under `docs/evidence/screenshots/`. Funnel Metrics includes a Chart.js weekly trend rendered safely via Django `json_script`. Tableau evidence is local workbook plus screenshots only - no Tableau Public URL is claimed.
+
+**Interview Evidence Workspace (Sprint 19).** Rule-based workspace surfacing ready evidence, missing evidence, recommended next improvement, recommended CV, recommended projects, required skills, job description, and the manual preparation checklist. Local, rule-based, manually used - no interview automation or external AI/API actions.
+
+</details>
+
+---
+
+## Manual Workflow Boundaries
+
+Every user-facing action is manual and approval-based. The system pre-fills and advises; it never submits.
+
+```text
+Analyse -> Review -> Approve -> Pre-fill Add Application -> Manual Save
+```
+
+<details>
+<summary><strong>Recruiter email workflow (Sprint 29) and Application Document Pack (Sprint 60)</strong></summary>
+
+<br>
+
+**Recruiter email workflow.** Manually imported recruiter emails support a rule-based, advisory-only path:
+
+```text
+Manual import -> rule-based action summary -> communication context -> interview-prep recommendation -> user-controlled manual action
+```
+
+Surfaces: Recruiter Email Actions (needs reply, reply status, action due, suggested status, interview/screening signal), Recruiter Communication Context, and Interview Prep Recommended. Manual, rule-based, advisory only. No Gmail, OAuth, inbox sync, automatic email sending, automatic status mutation, automatic interview prep creation, or external AI integration.
+
+Evidence: `docs/evidence/sprint_29_recruiter_email_workflow_enhancements.md`, `docs/evidence/sprint_35_interview_email_workflow_polish.md`
+
+**Application Document Pack.** Stores and references externally generated final CV and cover-letter documents. Can save rule-based draft CV tailoring notes and draft cover-letter records for manual review, call preparation, and DOCX/PDF download from saved database text.
+
+```text
+Smart Review -> draft documents -> save to pack -> select -> download DOCX/PDF -> manual review before use
+```
+
+Manual-review only. No automatic submission, file upload, or Gmail/Calendar/OAuth connection.
+
+Evidence: `docs/evidence/sprint_60_application_document_pack_closure.md`
+
+</details>
+
+---
 
 ## Career Evidence OS
 
-The **Career Evidence OS** is a local, repository-derived evidence layer for portfolio and recruiter review. It does not add external AI, live deployment claims, or job-search automation. Tools use the Python standard library and existing repo paths only.
+A local, repository-derived evidence layer for portfolio and recruiter review. No external AI, live deployment claims, or job-search automation. Tools use the Python standard library and existing repo paths only.
 
 | Version | Deliverable | What reviewers see |
-| --- | --- | --- |
-| **V1** | Project Evidence Report | Inventory of docs, tests, templates, screenshots, and Git context (`docs/career_evidence/01_project_evidence_report.md`) |
-| **V2** | Job-Fit Matrix | Requirement-to-repository mapping with evidence strength (`docs/career_evidence/02_job_fit_matrix.md`) |
-| **V3** | Recruiter Evidence Pack | CV bullets, LinkedIn summary, and interview points traced to V1/V2 (`docs/career_evidence/03_recruiter_evidence_pack.md`) |
-| **V4** | Dashboard UI | Authenticated pages that render the markdown evidence for browser review (`/dashboard/career-evidence/`) |
-| **V5** | Playwright screenshots | Curated PNGs in `docs/screenshots/career_evidence/` (local capture; not production monitoring) |
-| **V6** | Notion sync (optional) | Metadata/status upsert only; see `docs/notion/README.md` |
+| :--- | :--- | :--- |
+| **V1** | Project Evidence Report | Inventory of docs, tests, templates, screenshots, Git context |
+| **V2** | Job-Fit Matrix | Requirement-to-repository mapping with evidence strength |
+| **V3** | Recruiter Evidence Pack | CV bullets, LinkedIn summary, interview points traced to V1/V2 |
+| **V4** | Dashboard UI | Authenticated pages rendering the markdown evidence |
+| **V5** | Playwright screenshots | Curated PNGs (local capture, not production monitoring) |
+| **V6** | Notion sync *(optional)* | Metadata/status upsert only |
 
-Evidence flow: generate **V1 -> V2 -> V3** markdown with `tools/`, review in **V4**, refresh **V5** screenshots when UI or content changes, optionally run **V6** to mirror status in Notion. Full walkthrough: `docs/evidence/career_evidence_walkthrough.md`. Index: `docs/evidence/evidence_index.md` (Sprint 23 section).
+<details>
+<summary><strong>Career Evidence reviewer path (Sprint 23)</strong></summary>
 
-## Curated Screenshot Gallery
+<br>
 
-The curated screenshot set was refreshed after Sprint 21 UI polish using real local browser captures. It remains reviewer-facing evidence, not a live deployment claim.
+1. Read `docs/evidence/career_evidence_walkthrough.md` for purpose, V1-V6 flow, and claims boundaries.
+2. Open **Career Evidence** at `/dashboard/career-evidence/` (local dev server, login required).
+3. Inspect the four dashboard surfaces: overview, Project Evidence (V1), Job-Fit Matrix (V2), Recruiter Pack (V3).
+4. Compare UI content to markdown under `docs/career_evidence/`.
+5. Review Playwright screenshot evidence in `docs/screenshots/career_evidence/` (V5).
+6. Optional: `docs/notion/README.md` for V6 metadata-only Notion sync.
 
-![Dashboard overview](docs/screenshots/curated/01-dashboard-overview.png)
+Regenerate V1-V3 markdown from the repository root when evidence changes materially - see `docs/career_evidence/README.md`.
 
-Dashboard overview showing the project as a reviewer-friendly tracker rather than a raw admin tool.
+</details>
 
-![Evaluation Queue](docs/screenshots/curated/02-evaluation-queue.png)
-
-Evaluation Queue for roles that have been found or fit-checked and need a deliberate next step.
-
-![Job Posting Analyzer conversion](docs/screenshots/curated/03-job-posting-analyzer-conversion.png)
-
-Job Posting Analyzer conversion bridge that pre-fills an Add Application form for user review before saving.
-
-![Funnel Metrics weekly trend](docs/screenshots/curated/04-funnel-metrics-weekly-trend.png)
-
-Funnel Metrics weekly trend using Monday-starting weekly buckets for applications, responses, and response rate.
-
-![Save quality warnings](docs/screenshots/curated/05-save-quality-warnings.png)
-
-Post-save advisory warnings for analytics-critical gaps such as missing source detail, CV version, job description, or required skills.
-
-![Data Quality Impact Report](docs/screenshots/curated/06-data-quality-impact-report.png)
-
-Data Quality Report showing how missing fields affect downstream analytics trust.
-
-![Visual Analytics Dashboard](docs/screenshots/curated/07-visual-analytics-dashboard.png)
-
-Visual analytics dashboard evidence showing Sprint 18 BI-style reporting from dashboard-ready synthetic exports.
-
-![Interview Evidence Workspace](docs/screenshots/curated/08-interview-evidence-workspace.png)
-
-Interview Evidence Workspace showing Sprint 19 interview preparation evidence linked to application readiness and Smart Review positioning.
-
-## Key Analytics Modules
-
-- **Funnel Metrics:** total applications, response rate, interview rate, offer rate, stage breakdown, daily target progress, and weekly trend.
-- **Source ROI:** source-level outcome performance for applications, responses, interviews, and offers. The term ROI is used as channel performance, not financial return.
-- **CV Version Performance:** directional comparison of CV versions by responses, interviews, offers, and rejections.
-- **Rejection Pattern Analysis:** rejection counts, auto-rejection rates, source patterns, CV-version patterns, seniority risk, and recommended actions.
-- **Application Quality Report:** record-level completeness checks for fields needed by later reporting.
-- **Data Quality Report:** analytics-ready rate, quality score, missing-field counts, checks, cleanup actions, and analytics impact notes.
-- **Export Centre:** workbook exports for applications, daily logs, weekly reviews, interview prep, notes, and the full tracker.
-
-## BI / Visual Analytics Evidence
-
-Sprint 18 adds dashboard CSV exports at `dashboards/data/applications.csv` and `dashboards/data/daily_logs.csv` for synthetic demo data only. Local Tableau evidence is stored in `dashboards/tableau/careerfunnel_sprint18_tableau_workbook.twbx`, with screenshots at `docs/evidence/screenshots/sprint-18-performance-dashboard.png` and `docs/evidence/screenshots/sprint-18-quality-dashboard.png`.
-
-Funnel Metrics now includes one Chart.js weekly trend chart, with screenshot evidence at `docs/evidence/screenshots/sprint-18-chartjs-weekly-trend.png`. Chart data is rendered safely with Django `json_script`, and the existing Weekly Trend table remains available. Tableau evidence is local workbook plus screenshots only unless a Tableau Public URL is later verified.
-
-## Interview Evidence Workspace
-
-Sprint 19 upgrades the Interview Prep detail page into a rule-based Interview Evidence Workspace. It uses existing `InterviewPrep`, `JobApplication`, application evidence readiness, and Smart Review logic to surface ready evidence, missing evidence, recommended next improvement, recommended CV, recommended projects, required skills, job description, and the manual preparation checklist.
-
-Screenshot evidence is stored at `docs/evidence/screenshots/sprint-19-interview-evidence-workspace.png`. This workspace is local, rule-based, and manually used by the user; it does not perform interview automation or external AI/API actions.
+---
 
 ## Technical Decisions
 
-### 1. Rule-Based Logic With Optional, Claim-Safe Claude Enhancement
+<details open>
+<summary><strong>1. Controlled LLM provider boundary</strong></summary>
 
-The project uses deterministic service-layer logic for fit review, recommendations, warnings, and CV tailoring guidance. Sprint 34 adds an **optional** Claude semantic path for the CV Tailoring Advisor when configured; it does not replace rule-based analysis and falls back cleanly when the provider is absent or fails. Fit scoring uses a separate mocked-first Claude provider pattern from Sprint 33. The repository does not claim scraping, auto-apply workflows, Gmail integration, Calendar automation, final CV generation, or cover letter body generation. Tests mock external API calls.
+<br>
 
-### 2. Data-Quality Rule Propagation
+Live-provider execution is explicitly configuration-gated. **Provider mode is authoritative**, and the presence of an API key alone is not sufficient to activate live execution. Some AI paths add their own feature or canary gates. Controlled live-evaluation paths require additional explicit activation and confirmation.
 
-Sprint 16 made analytics readiness visible in multiple places without creating separate definitions. The same readiness rule informs metric eligibility, entry-time warnings, and impact reporting, which mirrors an analytics-engineering pattern: define the rule once, then expose it where decisions are made.
+Optional provider-backed semantic paths exist for CV tailoring guidance and fit scoring. They supplement rather than replace rule-based analysis and fall back cleanly when no provider is configured. All such paths sit behind this boundary.
 
-### 3. SQLite For Portfolio-Scale Local Analytics
+</details>
 
-SQLite for portfolio-scale local analytics is a deliberate choice for the current scope. It keeps setup simple, supports local review, and is enough for the project's single-user demonstration scale. A production deployment with real users would need separate environment design, hosting decisions, and database planning.
+<details>
+<summary><strong>2. Data-quality rule propagation</strong></summary>
 
-## Data-Quality Governance Callout
+<br>
 
-The core governance pattern is `_application_is_analytics_ready` -> `build_save_quality_warnings` -> `analytics_impact_notes`.
+One analytics-readiness definition propagated across operational entry, metrics, and impact reporting - not three unrelated checks:
+
+```text
+_application_is_analytics_ready -> build_save_quality_warnings -> analytics_impact_notes
+```
 
 - `_application_is_analytics_ready` defines whether an application has the fields needed for reliable analytics.
-- `build_save_quality_warnings` surfaces the same readiness concerns at the point of entry after a successful save.
-- `analytics_impact_notes` explains how current gaps affect reports such as Source ROI, CV Version Performance, Funnel Metrics, and Data Quality.
+- `build_save_quality_warnings` surfaces the same readiness concerns at point of entry after a successful save.
+- `analytics_impact_notes` explains how current gaps affect Source ROI, CV Version Performance, Funnel Metrics, and Data Quality.
 
-This is one analytics-readiness definition propagated across operational entry, metrics, and impact reporting, not three unrelated checks.
+This mirrors an analytics-engineering pattern: define the rule once, then expose it where decisions are made.
 
-## Evidence And Verification
+</details>
 
-### Current verified evidence
+<details>
+<summary><strong>3. SQLite for portfolio-scale local analytics</strong></summary>
 
-- **2,000+ automated tests** across the full repository suite (repository-wide; not reviewer-specific).
-- **GitHub Actions CI** verified.
-- Deterministic, rule-based claim-safety review with version-controlled evaluation dataset (**22** total cases, **20** defined risk categories, **20** conformance cases, **2** documented known-limitation cases).
-- Recruiter-facing evidence summary and overstatement guardrails.
+<br>
 
-Key evidence files:
+A deliberate choice for the current scope - simple setup, local review, sufficient for single-user demonstration scale. A production deployment with real users would require separate environment design, hosting decisions, and database planning.
 
-- `docs/evidence/sprint_107_claim_safety_evaluation_report.md`
-- `docs/evidence/sprint_107_claim_safety_evaluation_summary.md`
-- `docs/evidence/sprint_108_claim_safety_source_of_truth_inventory.md`
-- `docs/evidence/sprint_108_claim_safety_skills_to_evidence_map.md`
-- `docs/evidence/sprint_108_claim_safety_recruiter_evidence_summary.md`
-- `docs/evidence/sprint_108_claim_safety_overstatement_guardrails.md`
-- `docs/evidence/evidence_index.md`
+</details>
 
-### Phase 4A reviewer evidence (public hardening)
+---
 
-- Current public test log: `docs/evidence/phase4a_current_public_test_log.md`
-- Screenshot safety checklist: `docs/evidence/phase4a_screenshot_safety_checklist.md`
-- Public evidence map: `docs/evidence/phase4a_public_evidence_map.md`
-- Claim safety review: `docs/evidence/phase4a_claim_safety_review.md`
+## Evidence and Verification
 
-### Phase 5A Claim-Safety Reviewer (planning only)
-
-- MVP planning pack: `docs/ai/claim_safety_reviewer/` (specification only; no runtime implementation in Phase 5A)
-
-### Phase 5B Claim-Safety Reviewer (mocked service)
-
-- Sprint evidence: `docs/evidence/sprint_5b_claim_safety_reviewer_mocked.md`
-- Service module: `apps/ai_agents/claim_safety_reviewer.py` (rule-based; no live LLM)
-
-For a portfolio-level evidence map across the user's major GitHub projects, see `docs/career_evidence/portfolio_project_index.md`.
-
-For recruiter-facing portfolio presentation materials, see `docs/career_evidence/portfolio_presentation_pack.md`.
-
-Sprint evidence is stored in `docs/evidence/`, with curated recruiter-facing screenshots copied to `docs/screenshots/curated/` and Sprint 53-59 intelligence screenshots stored in `docs/screenshots/intelligence/`. The main supporting documentation is:
-
-- `docs/analytics/metric_definitions.md`
-- `docs/analytics/analytics_lineage.md`
-- `docs/evidence/evidence_index.md`
-- `docs/evidence/final_release_review_sprint_52_59.md`
-- `docs/evidence/sprint_59_final_career_intelligence_workflow.md`
-- `docs/evidence/sprint_36_weekly_risk_os_polish.md`
-- `docs/evidence/sprint_35_interview_email_workflow_polish.md`
-- `docs/evidence/sprint_34_cv_tailoring_claude_enhancement.md`
-- `docs/evidence/sprint_29_recruiter_email_workflow_enhancements.md`
-- `docs/evidence/career_evidence_walkthrough.md`
-- `docs/career_evidence/README.md`
-- `DEVELOPMENT.md` for the previous internal/development README preserved during Sprint 17A
-
-### Assisted Intake Evidence
-
-The assisted intake workflow is documented as a manual, approval-based, rule-based path from job-posting review to tracker-ready application evidence. It does not claim scraping, auto-apply, external AI/API integration, Gmail, Calendar automation, or live SaaS usage.
-
-- Workflow evidence: `docs/evidence/assisted_job_intake_workflow.md`
-- Field audit: `docs/evidence/assisted_job_intake_field_audit.md`
-- Field decision plan: `docs/evidence/assisted_intake_field_decision_plan.md`
-- Reviewer path: `docs/evidence/assisted_intake_reviewer_path.md`
-
-Recommended verification commands:
+### Verification commands
 
 ```bash
 python manage.py test
 ruff check .
 python manage.py check
-python manage.py makemigrations --dry-run
-python manage.py test tests.test_career_evidence_audit tests.test_career_job_fit_matrix tests.test_career_recruiter_pack tests.test_career_evidence_views tests.test_career_evidence_screenshot_config tests.test_notion_sync_config
+python manage.py makemigrations --check --dry-run
 ```
 
-## Tech Stack
+### Current verified evidence
 
-- Python
-- Django
-- SQLite
-- Django Templates
-- HTML, CSS, and JavaScript
-- OpenPyXL
-- Ruff
-- Git
+| Item | Value |
+| :--- | :--- |
+| Automated tests | **3,005 passing** at Sprint 124 closure |
+| CI | GitHub Actions verified on `main` @ `d3f0ea578cdca668880401025142378ca467dc25` |
+| Completion tag | `sprint-124-ai-experience-evidence-ui-complete` |
+| Claim-safety dataset | 22 cases; 20 risk categories; 20 conformance; 2 known limitations |
+| AI evaluation | See [Evaluation Evidence](#evaluation-evidence) for qualified Sprint 122 historical offline results |
 
-## Public ZIP Export
+<details>
+<summary><strong>Evidence file index</strong></summary>
 
-To share a clean copy of the repository without local or private files, prefer Git archive from the repository root:
+<br>
 
-```bash
-git archive --format=zip HEAD -o careerfunnel-tracker-public.zip
-```
+**Claim safety:** `docs/evidence/sprint_107_claim_safety_evaluation_report.md` | `sprint_107_claim_safety_evaluation_summary.md` | `sprint_108_claim_safety_source_of_truth_inventory.md` | `sprint_108_claim_safety_skills_to_evidence_map.md` | `sprint_108_claim_safety_recruiter_evidence_summary.md` | `sprint_108_claim_safety_overstatement_guardrails.md`
 
-This is safer than manually zipping the project folder. Manual ZIPs often include `.git/`, `.env`, `db.sqlite3`, `.idea/`, `.venv/`, `.ruff_cache/`, `__pycache__/`, `staticfiles/`, and other local or private files.
+**Public hardening (Phase 4A):** `phase4a_current_public_test_log.md` | `phase4a_screenshot_safety_checklist.md` | `phase4a_public_evidence_map.md` | `phase4a_claim_safety_review.md`
+
+**Claim-Safety Reviewer:** Phase 5A planning pack at `docs/ai/claim_safety_reviewer/` (specification only) | Phase 5B evidence at `docs/evidence/sprint_5b_claim_safety_reviewer_mocked.md` | service module `apps/ai_agents/claim_safety_reviewer.py` (rule-based, no live LLM)
+
+**Assisted intake:** `assisted_job_intake_workflow.md` | `assisted_job_intake_field_audit.md` | `assisted_intake_field_decision_plan.md` | `assisted_intake_reviewer_path.md` - manual, approval-based, rule-based only
+
+**Analytics:** `docs/analytics/metric_definitions.md` | `docs/analytics/analytics_lineage.md`
+
+**Index:** `docs/evidence/evidence_index.md`
+
+</details>
+
+---
 
 ## Local Setup
 
@@ -394,62 +462,94 @@ python manage.py seed_demo_data
 python manage.py runserver
 ```
 
-Open the local development server at:
+Open `http://127.0.0.1:8000/`
 
-```text
-http://127.0.0.1:8000/
+<details>
+<summary><strong>Tech stack and public ZIP export</strong></summary>
+
+<br>
+
+**Stack:** Python | Django | SQLite | Django Templates | HTML/CSS/JavaScript | OpenPyXL | GitHub Actions | Ruff | Git
+
+**Public export.** Prefer Git archive from the repository root:
+
+```bash
+git archive --format=zip HEAD -o careerfunnel-tracker-public.zip
 ```
+
+Safer than manual zipping, which often includes `.git/`, `.env`, `db.sqlite3`, `.idea/`, `.venv/`, `.ruff_cache/`, `__pycache__/`, and `staticfiles/`.
+
+</details>
+
+---
 
 ## Repository Guide
 
-- `apps/applications/` contains application tracking workflows and save-quality warning integration.
-- `apps/metrics/` contains funnel, source, CV, rejection, quality, weekly trend, and data-quality reporting logic.
-- `apps/job_intelligence/` contains rule-based role-fit and job-posting review workflows.
-- `apps/skills/` contains the Sprint 53-59 Career Intelligence pipeline services and read-only report pages.
-- `apps/exports/` contains workbook export flows.
-- `docs/analytics/` contains metric definitions and analytics lineage.
-- `docs/evidence/` contains sprint evidence and historical screenshots.
-- `docs/career_evidence/` contains V1-V3 Career Evidence markdown generated from the repository.
-- `docs/screenshots/career_evidence/` contains Career Evidence dashboard screenshot evidence (Sprint 23E).
-- `docs/screenshots/curated/` contains the recruiter-facing screenshot set used by this README.
-- `docs/screenshots/intelligence/` contains final Sprint 53-59 Career Intelligence screenshot evidence.
-- `docs/notion/README.md` documents optional V6 Notion metadata sync (Sprint 23F).
-- `DEVELOPMENT.md` preserves the previous internal/development README.
+| Path | Contains |
+| :--- | :--- |
+| `apps/applications/` | Application tracking workflows, save-quality warnings |
+| `apps/ai_agents/` | Claim-safety, provider-boundary, evaluation, controlled LLM assistance - *historical `ai_agents` naming does not imply autonomous agency* |
+| `apps/skill_ledger/` | Private skill evidence, retrieval/RAG, bounded tool-assistant, AI-quality evaluation |
+| `apps/dashboard/` | Deterministic Sprint 124 AI engineering evidence contract |
+| `apps/metrics/` | Funnel, source, CV, rejection, quality, weekly trend, data-quality logic |
+| `apps/job_intelligence/` | Rule-based role-fit and job-posting review |
+| `apps/skills/` | Sprint 53-59 Career Intelligence pipeline |
+| `apps/exports/` | Workbook export flows |
+| `docs/analytics/` | Metric definitions and analytics lineage |
+| `docs/evidence/` | Sprint evidence and historical screenshots |
+| `docs/career_evidence/` | V1-V3 Career Evidence markdown |
+| `docs/screenshots/` | Curated, Career Evidence, and Intelligence screenshot sets |
+| `DEVELOPMENT.md` | Previous internal/development README |
+
+---
 
 ## What This Project Demonstrates
 
-- Django application structure with authenticated, user-specific records.
-- Service-layer analytics that turn operational records into BI-style reporting.
-- Metric governance, analytics lineage, and data-quality propagation.
-- Evidence-based delivery with sprint screenshots, documentation, and tests.
-- Practical trade-off communication for analytics and reporting roles.
-- Recruiter-readable positioning without overstating product maturity.
+**Engineering**
+- Django application structure with authenticated, user-specific records
+- Service-layer analytics converting operational records into BI-style reporting
+- Metric governance, analytics lineage, and data-quality propagation
+
+**AI engineering**
+- Evidence-grounded AI application workflow on top of deterministic logic
+- Controlled provider boundaries with fail-closed activation
+- Offline AI evaluation across retrieval, bounded tool use, quality lifecycle, and claim safety
+- Human-in-the-loop review and manual action boundaries
+
+**Communication**
+- Evidence-based delivery with sprint screenshots, documentation, and tests
+- Practical trade-off communication for analytics and reporting roles
+- Claim-safe positioning that distinguishes portfolio proof from production maturity
+
+---
 
 ## What Is Not Claimed
 
-- No verified live deployment URL is claimed.
-- No verified Tableau Public URL is claimed.
-- No Power BI implementation is claimed yet.
-- No real/private data is exported through the dashboard CSV pipeline.
-- No real customers, SaaS business, billing system, or production user base is claimed.
-- No final CV generation is claimed; the CV Tailoring Advisor suggests angles and evidence pointers only.
-- No cover letter body generation is claimed; only cover-letter **themes** are suggested.
-- No automatic application submission is claimed.
-- No automatic application status updates from recruiter email classification are claimed.
-- No automatic interview prep creation is claimed.
-- No Gmail integration, Calendar integration, or OAuth integration is claimed.
-- No auto-send, auto-apply, or automatic submission workflows are claimed.
-- No auto-apply workflow is claimed.
-- Claude semantic enhancement is not claimed to run on every request - it is optional when configured, with rule-based fallback otherwise.
-- No interview automation or external AI/API interview assistant is claimed.
-- No email, calendar, scraping, auto-apply, background polling, or background automation is claimed.
-- No scientific CV A/B testing is claimed; CV Version Performance is directional reporting.
-- No financial return calculation is claimed; Source ROI means source outcome performance.
-- No production database architecture is claimed; SQLite is used for portfolio-scale local review.
+| Category | Not claimed |
+| :--- | :--- |
+| **Deployment** | Live deployment URL; production database architecture; production users; SaaS business; billing |
+| **AI maturity** | Production-grade autonomous agents; autonomous job-application workflow; enterprise RAG; production vector database; production AI reliability; production LLM monitoring |
+| **Automation** | Auto-apply; auto-send; automatic submission; automatic status updates; automatic interview prep creation; background polling |
+| **Integrations** | Gmail; Calendar; OAuth; inbox sync; scraping |
+| **Generation** | Final CV generation; cover-letter body generation *(themes only)* |
+| **Analytics** | Scientific CV A/B testing *(directional reporting)*; financial return *(Source ROI = channel performance)*; verified Tableau Public URL; Power BI implementation |
 
-## What's Next
+Controlled live-provider canaries are **integration evidence only**. Claude semantic enhancement is **optional when configured**, with rule-based fallback otherwise.
 
-- Verify any future deployment separately before adding a live demo URL.
-- Continue improving reviewer evidence with current screenshots and concise walkthrough notes.
-- Consider status-history and stage-transition modeling for stronger funnel analysis.
-- Expand analytics documentation when new reporting surfaces are added.
+---
+
+## Current Maintenance Priorities
+
+- Keep reviewer-facing evidence aligned with the current repository state.
+- Regenerate Career Evidence recruiter artefacts still containing older test counts or pre-AI positioning.
+- Address the known off-canvas sidebar keyboard-focus accessibility debt before final project freeze.
+- Refresh screenshots only when they materially improve recruiter review.
+- Verify any future deployment separately before adding a live demo URL or production claim.
+
+---
+
+<div align="center">
+
+<sub>Local Django portfolio project | 3,005 tests passing | No production claims made</sub>
+
+</div>
