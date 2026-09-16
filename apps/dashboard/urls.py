@@ -27,4 +27,9 @@ urlpatterns = [
         career_evidence_views.recruiter_pack_detail,
         name="career_evidence_recruiter",
     ),
+    path(
+        "career-evidence/ai-engineering/",
+        career_evidence_views.ai_engineering_evidence_detail,
+        name="career_evidence_ai_engineering",
+    ),
 ]

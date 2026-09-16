@@ -14,6 +14,11 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.utils import timezone
 
+from apps.dashboard.ai_engineering_evidence import (
+    build_ai_engineering_evidence,
+    build_ai_engineering_summary,
+)
+
 EVIDENCE_ROOT = Path(settings.BASE_DIR) / "docs" / "career_evidence"
 
 
@@ -331,6 +336,20 @@ def career_evidence_index(request):
             "cards": cards,
             "available_count": available_count,
             "total_count": len(cards),
+        },
+    )
+
+
+@login_required
+def ai_engineering_evidence_detail(request):
+    """Render read-only AI engineering evidence without executing AI services."""
+
+    return render(
+        request,
+        "dashboard/career_evidence/ai_engineering_evidence.html",
+        {
+            "evidence_items": build_ai_engineering_evidence(),
+            "evidence_summary": build_ai_engineering_summary(),
         },
     )
 

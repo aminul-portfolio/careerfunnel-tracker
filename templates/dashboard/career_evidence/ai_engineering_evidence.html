@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}AI Engineering Evidence | CareerFunnel Tracker{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/career_evidence.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-page career-evidence-page cf124-ai-evidence-page">
+    <section class="hero-panel dashboard-hero cf124-ai-evidence-hero">
+        <div class="cf124-ai-evidence-copy">
+            <p class="eyebrow">Career Evidence OS</p>
+            <h1>AI Engineering Evidence</h1>
+            <p>
+                Read-only evidence of implemented AI engineering controls,
+                evaluation workflows, claim-safety boundaries, and human review.
+            </p>
+
+            <div class="evidence-strip cf124-ai-evidence-strip">
+                <span class="evidence-strip-item">
+                    {{ evidence_summary.capability_count }} evidence areas
+                </span>
+                <span class="evidence-strip-item">Authenticated access</span>
+                <span class="evidence-strip-item">Read-only evidence</span>
+                <span class="evidence-strip-item">Human review required</span>
+            </div>
+        </div>
+    </section>
+
+    <section
+        class="cf124-ai-evidence-boundary content-card"
+        aria-labelledby="cf124-evidence-boundary-title"
+    >
+        <div>
+            <p class="eyebrow">Claim boundary</p>
+            <h2 id="cf124-evidence-boundary-title">What this page demonstrates</h2>
+        </div>
+
+        <p>
+            This page presents evidence from closed CareerFunnel engineering work.
+            Historical evaluation results are repository evidence, not production
+            reliability, accuracy, uptime, or service-level guarantees.
+        </p>
+
+        <p>
+            The implemented workflow uses bounded tool-calling, controlled provider
+            boundaries, deterministic evaluation, and human review. It does not
+            provide autonomous job application or unbounded external action.
+        </p>
+    </section>
+
+    <section
+        class="content-card cf124-evaluation-evidence"
+        aria-labelledby="cf124-evaluation-evidence-title"
+    >
+        <div class="cf124-evaluation-evidence-heading">
+            <div>
+                <p class="eyebrow">Evaluation &amp; Safety Evidence</p>
+                <h2 id="cf124-evaluation-evidence-title">
+                    How the AI workflow was evaluated
+                </h2>
+            </div>
+
+            <span class="badge badge-info">Qualified evidence</span>
+        </div>
+
+        <p class="cf124-evaluation-evidence-intro">
+            Offline deterministic evaluation is separated from controlled live-provider
+            integration evidence. Historical results describe validated repository states
+            and are not production accuracy or reliability guarantees.
+        </p>
+
+        <div class="cf124-evaluation-evidence-grid">
+            {% for item in evidence_items %}
+                {% if item.capability == "RAG and retrieval evaluation" or item.capability == "Bounded read-only tool-calling" or item.capability == "AI quality lifecycle" %}
+                <article class="cf124-evaluation-evidence-item">
+                    <div class="cf124-evaluation-evidence-item-header">
+                        <span class="badge badge-info">{{ item.execution_type }}</span>
+                        <span class="cf124-evaluation-mode-label">
+                            Offline deterministic
+                        </span>
+                    </div>
+
+                    <h3>{{ item.capability }}</h3>
+
+                    <p>
+                        <strong>Validation:</strong>
+                        {{ item.historical_validation }}
+                    </p>
+
+                    <p>
+                        <strong>Boundary:</strong>
+                        {{ item.claim_boundary }}
+                    </p>
+                </article>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="cf124-safety-evidence-grid">
+            {% for item in evidence_items %}
+                {% if item.capability == "Claim-safety controls" %}
+                <article class="cf124-safety-evidence-item">
+                    <p class="eyebrow">Claim safety</p>
+                    <h3>{{ item.capability }}</h3>
+
+                    <p>{{ item.evidence_source }}</p>
+
+                    <p>
+                        <strong>Evaluation:</strong>
+                        {{ item.evaluation_mode }}
+                    </p>
+
+                    <p>
+                        <strong>Historical evidence:</strong>
+                        {{ item.historical_validation }}
+                    </p>
+
+                    <p>
+                        <strong>Boundary:</strong>
+                        {{ item.claim_boundary }}
+                    </p>
+                </article>
+                {% endif %}
+
+                {% if item.capability == "Controlled live-provider canary" %}
+                <article class="cf124-safety-evidence-item">
+                    <p class="eyebrow">Controlled live evidence</p>
+                    <h3>{{ item.capability }}</h3>
+
+                    <p>{{ item.evidence_source }}</p>
+
+                    <p>
+                        <strong>Evaluation:</strong>
+                        {{ item.evaluation_mode }}
+                    </p>
+
+                    <p>
+                        <strong>Historical evidence:</strong>
+                        {{ item.historical_validation }}
+                    </p>
+
+                    <p>
+                        <strong>Boundary:</strong>
+                        {{ item.claim_boundary }}
+                    </p>
+                </article>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </section>
+
+    <section
+        class="content-card cf124-recruiter-proof"
+        aria-labelledby="cf124-recruiter-proof-title"
+    >
+        <div class="cf124-recruiter-proof-heading">
+            <div>
+                <p class="eyebrow">Recruiter / Portfolio Proof</p>
+                <h2 id="cf124-recruiter-proof-title">
+                    AI engineering evidence at a glance
+                </h2>
+            </div>
+
+            <span class="badge badge-info">Evidence-backed</span>
+        </div>
+
+        <p class="cf124-recruiter-proof-intro">
+            Concise evidence from closed CareerFunnel engineering work. These
+            statements describe implemented and validated controls without claiming
+            autonomous operation or production-scale AI infrastructure.
+        </p>
+
+        <div class="cf124-recruiter-proof-grid">
+            {% for item in evidence_items %}
+                {% if item.capability == "Evidence-grounded AI application workflow" %}
+                <article class="cf124-recruiter-proof-item">
+                    <p class="eyebrow">What was built</p>
+                    <h3>{{ item.capability }}</h3>
+
+                    <p>{{ item.evidence_source }}</p>
+
+                    <p>
+                        <strong>Boundary:</strong>
+                        {{ item.claim_boundary }}
+                    </p>
+                </article>
+                {% endif %}
+
+                {% if item.capability == "Controlled LLM provider boundary" %}
+                <article class="cf124-recruiter-proof-item">
+                    <p class="eyebrow">Provider engineering</p>
+                    <h3>{{ item.capability }}</h3>
+
+                    <p>{{ item.evidence_source }}</p>
+
+                    <p>
+                        <strong>Evidence:</strong>
+                        {{ item.historical_validation }}
+                    </p>
+                </article>
+                {% endif %}
+
+                {% if item.capability == "Human-in-the-loop review" %}
+                <article class="cf124-recruiter-proof-item">
+                    <p class="eyebrow">Human control</p>
+                    <h3>{{ item.capability }}</h3>
+
+                    <p>{{ item.evidence_source }}</p>
+
+                    <p>
+                        <strong>Boundary:</strong>
+                        {{ item.claim_boundary }}
+                    </p>
+                </article>
+                {% endif %}
+
+                {% if item.capability == "AI quality lifecycle" %}
+                <article class="cf124-recruiter-proof-item">
+                    <p class="eyebrow">Evaluation engineering</p>
+                    <h3>{{ item.capability }}</h3>
+
+                    <p>{{ item.evidence_source }}</p>
+
+                    <p>
+                        <strong>Historical evidence:</strong>
+                        {{ item.historical_validation }}
+                    </p>
+                </article>
+                {% endif %}
+
+                {% if item.capability == "Controlled live-provider canary" %}
+                <article class="cf124-recruiter-proof-item">
+                    <p class="eyebrow">Controlled live integration</p>
+                    <h3>{{ item.capability }}</h3>
+
+                    <p>{{ item.evidence_source }}</p>
+
+                    <p>
+                        <strong>Boundary:</strong>
+                        {{ item.claim_boundary }}
+                    </p>
+                </article>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="cf124-recruiter-proof-boundary">
+            <p class="eyebrow">Claim-safe summary</p>
+
+            <p>
+                Built an evidence-grounded AI application workflow with controlled provider boundaries,
+                offline evaluation, claim-safety controls and human review.
+            </p>
+
+            <p>
+                The portfolio evidence demonstrates bounded AI engineering practice.
+                It does not claim autonomous job application, enterprise RAG,
+                production vector-database infrastructure or production reliability.
+            </p>
+        </div>
+    </section>
+
+    <section
+        class="cf124-ai-evidence-grid"
+        aria-label="AI engineering evidence catalogue"
+    >
+        {% for item in evidence_items %}
+        <article class="content-card cf124-ai-evidence-card">
+            <header class="cf124-ai-evidence-card-header">
+                <div class="cf124-ai-evidence-card-title">
+                    <p class="eyebrow">AI Engineering Evidence</p>
+                    <h2>{{ item.capability }}</h2>
+                </div>
+
+                <span class="badge badge-info cf124-ai-evidence-type">
+                    {{ item.execution_type }}
+                </span>
+            </header>
+
+            <dl class="cf124-ai-evidence-meta">
+                <div>
+                    <dt>Evidence source</dt>
+                    <dd>{{ item.evidence_source }}</dd>
+                </div>
+
+                <div>
+                    <dt>Evaluation mode</dt>
+                    <dd>{{ item.evaluation_mode }}</dd>
+                </div>
+
+                <div>
+                    <dt>Historical validation</dt>
+                    <dd>{{ item.historical_validation }}</dd>
+                </div>
+
+                <div>
+                    <dt>Human review</dt>
+                    <dd>
+                        {% if item.human_review_required %}
+                            Required
+                        {% else %}
+                            Not required for this deterministic evidence check
+                        {% endif %}
+                    </dd>
+                </div>
+
+                <div>
+                    <dt>Claim boundary</dt>
+                    <dd>{{ item.claim_boundary }}</dd>
+                </div>
+
+                <div>
+                    <dt>Provenance</dt>
+                    <dd>{{ item.provenance }}</dd>
+                </div>
+            </dl>
+        </article>
+        {% endfor %}
+    </section>
+
+    <div class="form-actions cf124-ai-evidence-actions">
+        <a
+            href="{% url 'dashboard:career_evidence_index' %}"
+            class="btn btn-secondary"
+        >
+            Back to Career Evidence
+        </a>
+    </div>
+</div>
+{% endblock %}
