@@ -32,7 +32,7 @@ Presentation order and wording for LinkedIn Featured section, posts, and project
 | Field | Content |
 |---|---|
 | Short title | CareerFunnel Tracker -- Job Search Analytics (Django) |
-| Description | CareerFunnel Tracker is a Django/Python analytics workflow project that structures job-search activity into application records, funnel-stage metrics, source-performance reporting, data-quality warnings, manual job-post review, skill-gap tracking, and application readiness checks. Backed by 900+ validated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery. Not a live SaaS product. |
+| Description | CareerFunnel Tracker is a Django/Python analytics and AI application workflow with governed funnel/source/CV reporting, data-quality and skill evidence, a fail-closed LLM provider boundary, offline evaluation, small private-corpus RAG evaluation, bounded read-only tool-calling, claim-safety controls, and human review. **3,012 tests PASS as of Sprint 124B; GitHub Actions CI #241 PASS.** Portfolio project; not live SaaS. |
 | Best role signal | Data Analyst, BI Analyst, Analytics Engineer, Python/Django data product |
 | Screenshot angle | Dashboard funnel metrics; Career Evidence overview; data-quality report |
 | Link | https://github.com/aminul-portfolio/careerfunnel-tracker |
@@ -118,7 +118,7 @@ Same card content as above. Use when BI/commerce breadth is the story.
 
 ### CareerFunnel Tracker
 
-Built CareerFunnel Tracker -- a Django job-search analytics project that turns application activity into explainable funnel metrics, source/CV performance, and data-quality signals, plus workbook exports and a Career Evidence OS for portfolio review. Evidence-first build with 900+ validated tests. Portfolio project only -- not a live SaaS. #DataAnalytics #Django #Python #PortfolioProject
+Built CareerFunnel Tracker -- a Django/Python job-search analytics and AI application workflow combining governed funnel/source/CV reporting with a **controlled AI engineering layer**: fail-closed LLM integration, offline evaluation, small private-corpus RAG evaluation, bounded read-only tool-calling, claim-safety controls, and human review. Verified at **3,012 passing tests as of Sprint 124B** with GitHub Actions CI #241. Portfolio project only -- not live SaaS, autonomous agents, enterprise RAG, or production AI reliability. #AIEngineering #DataAnalytics #Django #Python
 
 ### BakeOps Intelligence
 
@@ -141,7 +141,7 @@ MarketVista Dashboard -- Django FinTech monitoring with severity-ranked signals,
 ## Claims safety reminders (LinkedIn)
 
 - Do not say "live product", "paying customers", or "deployed SaaS" without proof.
-- Do not say "AI-powered" for CareerFunnel (V7+ not implemented).
+- Do not use "AI-powered" as an unqualified standalone claim for CareerFunnel. Prefer "controlled AI engineering layer", "LLM-assisted", or "AI-assisted, advisory and human-reviewed"; keep the small-private-corpus RAG, bounded read-only tool-calling, one-call live-canary, and human-review qualifications.
 - Do not say projects are "integrated" unless code and tests prove it.
 - For repos except CareerFunnel: prefer "portfolio project" and "GitHub evidence" over "production-validated".
 - Do not claim CI passed for repos you have not verified recently.

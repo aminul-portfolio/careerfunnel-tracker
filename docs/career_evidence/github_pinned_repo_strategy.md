@@ -54,7 +54,7 @@ Use these as repository descriptions or pin summaries. Keep under ~350 character
 
 ### CareerFunnel Tracker
 
-Django job-search analytics: funnel metrics, source/CV performance, data-quality reporting, manual recruiter-email workflow (rule-based), workbook exports, and Career Evidence OS (V1-V6). Portfolio project with 900+ validated tests -- not a live SaaS.
+Django job-search analytics with governed metrics, Career Evidence, and a controlled AI engineering layer: fail-closed LLM integration, offline evaluation, small private-corpus RAG, bounded read-only tool-calling, and human review. **3,012 tests PASS as of Sprint 124B.** Portfolio project; not live SaaS.
 
 ### BakeOps Intelligence
 
@@ -87,7 +87,8 @@ Django commerce analytics: catalogue-to-order workflows, Stripe-ready payment bo
 ## Claims to avoid in GitHub repo descriptions
 
 - "Live SaaS", "production-ready platform", "real users/customers"
-- "AI-powered", "Gmail/Calendar integration", "auto-apply"
+- Unqualified "AI-powered"; for CareerFunnel use `controlled AI engineering layer`, `LLM-assisted`, or `AI-assisted, advisory and human-reviewed` with the documented boundaries
+- "Autonomous agents", "enterprise RAG", "production vector database", "production AI reliability", "Gmail/Calendar integration", scraping, or "auto-apply" unless separately implemented and verified
 - "CI passing" unless you have verified the latest workflow run
 - "Integrated suite" or "connected to [other repo]" unless built and tested
 - "Deployed at [URL]" unless deployment is verified and documented

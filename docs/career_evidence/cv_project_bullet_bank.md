@@ -4,7 +4,7 @@ Evidence-backed bullets derived from [portfolio_projects/](portfolio_projects/).
 
 ## Core CV project section recommendation
 
-- **Heading:** `Selected Portfolio Projects (Python / Django / Analytics)`
+- **Heading:** `Selected Portfolio Projects (Python / Django / Analytics / AI Engineering)`
 - **Lead line (optional):** Nine Django portfolio projects covering job-search analytics, operational KPIs, market ingestion, FinTech monitoring, risk planning, commerce reporting, and BI exports. Evidence available on GitHub.
 - **Format:** Project name | 2-3 bullets | GitHub URL
 - **Lead with BakeOps Intelligence, then CareerFunnel Tracker** for recruiter-facing packs (verified tests in this repository).
@@ -36,9 +36,11 @@ Omit TradeIntel and CineScope from the main six until tests/cleanup are complete
 
 **GitHub:** https://github.com/aminul-portfolio/careerfunnel-tracker
 
-- Built a job-search analytics tracker with structured application records, funnel-stage metrics, source-performance reporting, and data-quality warnings.
-- Delivered manual intake workflow with rule-based review, field audit, decision-evidence logging, skill-gap tracking, and application readiness checks.
-- Backed by 900+ validated tests, Ruff checks, Django system checks, migration dry-run discipline, and documented sprint-based delivery.
+- Built a Django/Python job-search analytics platform converting structured application activity into funnel metrics, source/CV performance reporting, data-quality signals, and reviewer-ready evidence.
+- Delivered a governed human-in-the-loop application workflow with field audit, skill-gap evidence, readiness checks, explicit approval, and manual action/save boundaries.
+- Built a controlled AI engineering layer with a fail-closed LLM provider boundary, offline evaluation harnesses, claim-safety controls, small private-corpus RAG evaluation, and bounded read-only tool-calling.
+- Implemented **166 offline AI evaluation cases** across AI quality, RAG, and bounded tool-assistant suites with regression and safe-rejection controls.
+- Verified **3,012 passing tests as of Sprint 124B**, with Ruff, Django system checks, migration-drift validation, browser UAT, and GitHub Actions CI #241 PASS.
 
 *Internal note: local validation complete in this repository.*
 
@@ -141,8 +143,8 @@ Omit TradeIntel and CineScope from the main six until tests/cleanup are complete
 
 Copy-ready bullets (mix across projects or use top three from CareerFunnel + one each from next three projects):
 
-1. Built a Django job-search analytics platform converting application activity into funnel metrics, source/CV performance reporting, and data-quality signals. *(CareerFunnel)*
-2. Delivered governed reporting, workbook exports, and a Career Evidence OS (V1-V6) with repository-derived recruiter documentation. *(CareerFunnel)*
+1. Built a Django/Python job-search analytics platform converting application activity into funnel metrics, source/CV performance reporting, data-quality signals, and reviewer-ready evidence. *(CareerFunnel)*
+2. Built a controlled AI engineering layer with a fail-closed LLM provider boundary, offline evaluation, claim-safety controls, small private-corpus RAG evaluation, and bounded read-only tool-calling. *(CareerFunnel)*
 3. Developed a Django bakery operations analytics platform with KPI dashboards, waste-adjusted margins, and BI-ready CSV exports from seeded operational data. *(BakeOps)*
 4. Built a Django market data ingestion platform with multi-provider clients, normalized OHLCV storage, and ETL run tracking. *(DataBridge)*
 5. Developed a Django pre-trade risk planning platform with Monte Carlo simulation, stress tests, and scenario comparison from uploaded trade history. *(RiskWise)*
